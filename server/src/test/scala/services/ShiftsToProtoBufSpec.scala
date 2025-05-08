@@ -42,7 +42,7 @@ class ShiftsToProtoBufSpec extends Specification {
         StaffAssignment("shift name", T1, start, end, 5, None),
         StaffAssignment("shift name", T1, start, end, 9, None)))
 
-      val shiftsMessage: Seq[ShiftMessage] = staffAssignmentsToShiftsMessages(staffAssignments, createdAt)
+      val shiftsMessage: Seq[ShiftMessage] = shiftAssignmentsToShiftsMessages(staffAssignments, createdAt)
 
       val expected = Seq(
         ShiftMessage(
@@ -66,7 +66,7 @@ class ShiftsToProtoBufSpec extends Specification {
         Some("shift name"), Some(T1.toString), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("9")
       )))
 
-      val shiftsString = shiftMessagesToStaffAssignments(shiftsMessage.shifts)
+      val shiftsString = shiftMessagesToShiftAssignments(shiftsMessage.shifts)
 
       val start = SDate("2017-01-20T10:00").millisSinceEpoch
       val end = SDate("2017-01-20T20:00").millisSinceEpoch
@@ -83,7 +83,7 @@ class ShiftsToProtoBufSpec extends Specification {
         Some("shift name"), Some(T1.toString), None, None, None, Some("9"), Some(1484906400000L), Some(1484942400000L)
       )))
 
-      val shiftsString = shiftMessagesToStaffAssignments(shiftsMessage.shifts)
+      val shiftsString = shiftMessagesToShiftAssignments(shiftsMessage.shifts)
 
       val start = SDate("2017-01-20T10:00").millisSinceEpoch
       val end = SDate("2017-01-20T20:00").millisSinceEpoch

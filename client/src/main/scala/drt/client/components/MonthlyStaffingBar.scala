@@ -37,7 +37,7 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
                                             state: MonthlyStaffing.State,
                                             scope: BackendScope[MonthlyStaffing.Props, MonthlyStaffing.State]) extends ConfirmAndSave {
   override def apply(): ReactEventFromInput => Callback = _ => Callback {
-    val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts,
+    val initialTimeSlots: Seq[Seq[Any]] = slotsFromShiftAssignments(state.shiftAssignments,
       props.terminalPageTab.terminal,
       viewingDate,
       props.timeSlotMinutes,

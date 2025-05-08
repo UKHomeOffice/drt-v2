@@ -1,6 +1,6 @@
 package services
 
-import actors.persistent.staffing.ShiftsActor.UpdateShifts
+import actors.persistent.staffing.LegacyStaffAssignmentsActor.UpdateShifts
 import org.apache.pekko.actor.Actor
 import org.apache.pekko.pattern.after
 import controllers.ArrivalGenerator

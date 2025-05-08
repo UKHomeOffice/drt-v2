@@ -5,12 +5,12 @@ import org.apache.pekko.actor.ActorRef
 trait ActorsServiceLike {
   val requestAndTerminateActor: ActorRef
   val portStateActor: ActorRef
-  val legacyStaffAssignmentsReadActor: ActorRef
-  val liveStaffAssignmentsReadActor: ActorRef
+  val legacyShiftAssignmentsReadActor: ActorRef
+  val liveShiftAssignmentsReadActor: ActorRef
   val liveFixedPointsReadActor: ActorRef
   val liveStaffMovementsReadActor: ActorRef
-  val legacyStaffAssignmentsSequentialWritesActor: ActorRef
-  val staffAssignmentsSequentialWritesActor: ActorRef
+  val legacyShiftAssignmentsSequentialWritesActor: ActorRef
+  val shiftAssignmentsSequentialWritesActor: ActorRef
   val fixedPointsSequentialWritesActor: ActorRef
   val staffMovementsSequentialWritesActor: ActorRef
 

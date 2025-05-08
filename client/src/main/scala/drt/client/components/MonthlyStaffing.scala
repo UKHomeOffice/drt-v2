@@ -43,7 +43,7 @@ object MonthlyStaffing {
                    showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
                    addShiftForm: Boolean,
-                   shifts: ShiftAssignments,
+                   shiftAssignments: ShiftAssignments,
                    shiftsLastLoaded: Option[Long] = None,
                   )
 
@@ -80,20 +80,20 @@ object MonthlyStaffing {
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-      val staffAssignmentsRCP = SPACircuit.connect(_.allShiftAssignments)
+      val shiftAssignmentsRCP = SPACircuit.connect(_.allShiftAssignments)
 
-      val modelChangeDetection = staffAssignmentsRCP { staffAssignmentsMP =>
-        val staffAssignmentsPot = staffAssignmentsMP()
+      val modelChangeDetection = shiftAssignmentsRCP { shiftAssignmentsMP =>
+        val shiftAssignmentsPot = shiftAssignmentsMP()
         val content = for {
-          monthOfShifts <- staffAssignmentsPot
+          monthOfShiftAssignments <- shiftAssignmentsPot
         } yield {
-          if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
-            val slots = slotsFromShifts(monthOfShifts,
+          if (monthOfShiftAssignments != state.shiftAssignments || state.timeSlots.isEmpty) {
+            val slots = slotsFromShiftAssignments(monthOfShiftAssignments,
               props.terminalPageTab.terminal,
               viewingDate,
               props.timeSlotMinutes,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"))
-            scope.modState(state => state.copy(shifts = monthOfShifts, timeSlots = Ready(slots),
+            scope.modState(state => state.copy(shiftAssignments = monthOfShiftAssignments, timeSlots = Ready(slots),
               shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))).runNow()
           }
           <.div()

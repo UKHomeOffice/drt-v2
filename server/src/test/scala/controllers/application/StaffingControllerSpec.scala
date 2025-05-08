@@ -13,20 +13,20 @@ import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, LegacyStaffAssignmentsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, LegacyShiftAssignmentsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
 import scala.concurrent.Future
 
-case class MockLegacyStaffAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyStaffAssignmentsService {
-  override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
+case class MockLegacyShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyShiftAssignmentsService {
+  override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shifts))
 
-  override def allShifts: Future[ShiftAssignments] =
+  override def allShiftAssignments: Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shifts))
 
-  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = Future.successful(ShiftAssignments(shifts))
+  override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = Future.successful(ShiftAssignments(shifts))
 }
 
 case class MockFixedPointsService(fixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsService {
@@ -52,63 +52,17 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   val now: () => SDateLike = () => SDate("2024-06-26T12:00")
 
-  val shifts: Seq[StaffAssignmentLike] =
-    Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None))
-
   val fixedPoints: Seq[StaffAssignmentLike] =
     Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None))
 
   val movements: Seq[StaffMovement] = Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
 
-  val controller: StaffingController = newController(newDrtInterface())
-
-  "getShifts" should {
-    "return the shifts from the mock service as json" in {
-      val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:view,LHR")
-      val result = controller
-        .getShifts("2024-06-26")
-        .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
-
-      status(result) must ===(OK)
-      contentAsString(result) must ===(write(ShiftAssignments(shifts)))
-    }
-  }
-
-  "saveShifts" should {
-    "return Accepted" in {
-      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
-      val result = controller
-        .saveShiftAssignments
-        .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(ShiftAssignments(shifts)))))
-
-      status(result) must ===(ACCEPTED)
-    }
-    "return BadRequest" in {
-      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
-      val result = controller
-        .saveShiftAssignments
-        .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
-
-      status(result) must ===(BAD_REQUEST)
-    }
-  }
-
-  "getShiftsForMonth" should {
-    "return the shifts from the mock service as json" in {
-      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
-      val result = controller
-        .getAllShiftAssignments
-        .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
-
-      status(result) must ===(OK)
-      contentAsString(result) must ===(write(ShiftAssignments(shifts)))
-    }
-  }
+  val staffingController: StaffingController = newStaffingController(newDrtInterface())
 
   "getFixedPoints" should {
     "return the fixed points from the mock service as json" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:view,LHR")
-      val result = controller
+      val result = staffingController
         .getFixedPoints
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
@@ -120,7 +74,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "saveFixedPoints" should {
     "return Accepted" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:edit,LHR")
-      val result = controller
+      val result = staffingController
         .saveFixedPoints
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(FixedPointAssignments(fixedPoints)))))
 
@@ -128,7 +82,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "return BadRequest" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:edit,LHR")
-      val result = controller
+      val result = staffingController
         .saveFixedPoints
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
@@ -139,7 +93,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "addStaffMovements" should {
     "return Accepted" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:edit,LHR")
-      val result = controller
+      val result = staffingController
         .addStaffMovements
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(movements))))
 
@@ -147,7 +101,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "return BadRequest" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:edit,LHR")
-      val result = controller
+      val result = staffingController
         .addStaffMovements
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
@@ -158,7 +112,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "removeStaffMovements" should {
     "return Accepted" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:edit,LHR")
-      val result = controller
+      val result = staffingController
         .removeStaffMovements("abc")
         .apply(FakeRequest(method = "DELETE", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
@@ -169,7 +123,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "getStaffMovements" should {
     "return the movements from the mock service as json" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "border-force-staff,LHR")
-      val result = controller
+      val result = staffingController
         .getStaffMovements("2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
@@ -181,7 +135,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "exportStaffMovements" should {
     "return the movements from the mock service in csv format" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:export,LHR")
-      val result = controller
+      val result = staffingController
         .exportStaffMovements("T1", "2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
@@ -193,64 +147,43 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   }
 
   "when called without necessary role header, the endpoints" should {
-    "return Forbidden for getShifts" in {
-      val result = controller
-        .getShifts("2024-06-26")
-        .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
-
-      status(result) must ===(FORBIDDEN)
-    }
-    "return Forbidden for saveShifts" in {
-      val result = controller
-        .saveShiftAssignments
-        .apply(FakeRequest(method = "POST", uri = "", headers = Headers(), body = AnyContentAsEmpty))
-
-      status(result) must ===(FORBIDDEN)
-    }
-    "return Forbidden for getShiftsForMonth" in {
-      val result = controller
-        .getAllShiftAssignments
-        .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
-
-      status(result) must ===(FORBIDDEN)
-    }
     "return Forbidden for getFixedPoints" in {
-      val result = controller
+      val result = staffingController
         .getFixedPoints
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
     }
     "return Forbidden for saveFixedPoints" in {
-      val result = controller
+      val result = staffingController
         .saveFixedPoints
         .apply(FakeRequest(method = "POST", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
     }
     "return Forbidden for addStaffMovements" in {
-      val result = controller
+      val result = staffingController
         .addStaffMovements
         .apply(FakeRequest(method = "POST", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
     }
     "return Forbidden for removeStaffMovements" in {
-      val result = controller
+      val result = staffingController
         .removeStaffMovements("abc")
         .apply(FakeRequest(method = "DELETE", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
     }
     "return Forbidden for getStaffMovements" in {
-      val result = controller
+      val result = staffingController
         .getStaffMovements("2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
     }
     "return Forbidden for exportStaffMovements" in {
-      val result = controller
+      val result = staffingController
         .exportStaffMovements("T1", "2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
@@ -258,11 +191,10 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
   }
 
-  private def newController(interface: DrtSystemInterface) =
+  private def newStaffingController(interface: DrtSystemInterface) =
     new StaffingController(
       Helpers.stubControllerComponents(),
       interface,
-      MockLegacyStaffAssignmentsService(shifts),
       MockFixedPointsService(fixedPoints),
       MockStaffMovementsService(movements),
     )

@@ -2,8 +2,8 @@ package uk.gov.homeoffice.drt.service.staffing
 
 import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.persistent.staffing.ShiftsActor.UpdateShifts
-import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor}
+import actors.persistent.staffing.LegacyStaffAssignmentsActor.UpdateShifts
+import actors.persistent.staffing.{LegacyStaffAssignmentsReadActor, ShiftAssignmentsActor}
 import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
@@ -16,19 +16,19 @@ import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object LegacyStaffAssignmentsServiceImpl {
+object ShiftAssignmentsServiceImpl {
   def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
-    val actorName = s"shifts-read-actor-" + UUID.randomUUID().toString
-    system.actorOf(ShiftsReadActor.props(ShiftsActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+    val actorName = s"staff-store-read-actor-" + UUID.randomUUID().toString
+    system.actorOf(LegacyStaffAssignmentsReadActor.props(ShiftAssignmentsActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
   }
 }
 
-case class LegacyStaffAssignmentsServiceImpl(liveShiftsActor: ActorRef,
-                                             shiftsWriteActor: ActorRef,
-                                             pitActor: SDateLike => ActorRef,
-                                            )
-                                            (implicit timeout: Timeout, ec: ExecutionContext) extends LegacyStaffAssignmentsService {
-  override def staffAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
+case class ShiftAssignmentsServiceImpl(liveStaffShiftsReadActor: ActorRef,
+                                       shiftsStaffSequentialWritesActor: ActorRef,
+                                       pitShiftAssignmentsActor: SDateLike => ActorRef,
+                                     )
+                                      (implicit timeout: Timeout, ec: ExecutionContext) extends ShiftAssignmentsService {
+  override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
     maybePointInTime match {
       case None =>
         liveShiftAssignmentsForDate(date)
@@ -38,38 +38,39 @@ case class LegacyStaffAssignmentsServiceImpl(liveShiftsActor: ActorRef,
     }
   }
 
-  override def allStaffAssignments: Future[ShiftAssignments] =
-    liveShiftsActor
+  override def allShiftAssignments: Future[ShiftAssignments] =
+    liveStaffShiftsReadActor
       .ask(GetState)
       .mapTo[ShiftAssignments]
 
   private def liveShiftAssignmentsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    liveShiftsActor.ask(GetStateForDateRange(start, end))
+    liveStaffShiftsReadActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
   }
 
   private def shiftAssignmentsForPointInTime(pointInTime: SDateLike): Future[ShiftAssignments] = {
-    val shiftsReadActor: ActorRef = pitActor(pointInTime)
+    val shiftAssignmentsReadActor: ActorRef = pitShiftAssignmentsActor(pointInTime)
 
     val start = pointInTime.getLocalLastMidnight.millisSinceEpoch
     val end = pointInTime.getLocalNextMidnight.addMinutes(-1).millisSinceEpoch
 
-    shiftsReadActor.ask(GetStateForDateRange(start, end))
+    shiftAssignmentsReadActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments =>
-        shiftsReadActor ! PoisonPill
+        shiftAssignmentsReadActor ! PoisonPill
         sa
       }
       .recoverWith {
         case t =>
-          shiftsReadActor ! PoisonPill
+          shiftAssignmentsReadActor ! PoisonPill
           throw t
       }
   }
 
-  override def updateStaffAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
-    shiftsWriteActor
+  override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
+    shiftsStaffSequentialWritesActor
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
 }
+

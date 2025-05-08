@@ -1,27 +1,27 @@
 package actors.persistent.staffing
 
-import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
+import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToShiftAssignments
 import org.apache.pekko.actor.Props
 import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
-object ShiftsReadActor {
+object LegacyStaffAssignmentsReadActor {
   def props(persistentId: String, pointInTime: SDateLike, expireBefore: () => SDateLike): Props =
-    Props(new ShiftsReadActor(persistentId, pointInTime, expireBefore))
+    Props(new LegacyStaffAssignmentsReadActor(persistentId, pointInTime, expireBefore))
 }
 
-class ShiftsReadActor(persistentId: String, pointInTime: SDateLike, expireBefore: () => SDateLike)
-  extends ShiftsActor(persistentId, () => pointInTime, expireBefore, ShiftsActor.snapshotInterval) {
+class LegacyStaffAssignmentsReadActor(persistentId: String, pointInTime: SDateLike, expireBefore: () => SDateLike)
+  extends LegacyStaffAssignmentsActor(persistentId, () => pointInTime, expireBefore, LegacyStaffAssignmentsActor.snapshotInterval) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToStaffAssignments(snapshot.shifts)
+    case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToShiftAssignments(snapshot.shifts)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case ShiftsMessage(shiftMessages, Some(createdAtMillis)) =>
       if (createdAtMillis <= pointInTime.millisSinceEpoch) {
         logRecoveryMessage(s"ShiftsMessage received with ${shiftMessages.length} shifts")
-        val shiftsToRecover = shiftMessagesToStaffAssignments(shiftMessages)
+        val shiftsToRecover = shiftMessagesToShiftAssignments(shiftMessages)
         val updatedShifts = state.applyUpdates(shiftsToRecover.assignments)
         purgeExpiredAndUpdateState(updatedShifts)
       }

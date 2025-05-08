@@ -66,11 +66,11 @@ POST          /fixed-points                                                     
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
 GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
 GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
-POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveStaffAssignments
-GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllStaffAssignments
-GET           /staff-assignments/:localDate                                           controllers.application.ShiftAssignmentsController.getStaffAssignmentsForDate(localDate: String)
+POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveShiftAssignments
+GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllShiftAssignments
+GET           /staff-assignments/:localDate                                           controllers.application.ShiftAssignmentsController.getShiftAssignmentsForDate(localDate: String)
 +nocsrf
-POST          /staff-assignments/migrate-legacy-staff-assignments                     controllers.application.LegacyStaffAssignmentsMigrationController.legacyToStaffAssignments
+POST          /staff-assignments/migrate-legacy-staff-assignments                     controllers.application.LegacyShiftAssignmentsMigrationController.legacyToShiftAssignments
 
 GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 

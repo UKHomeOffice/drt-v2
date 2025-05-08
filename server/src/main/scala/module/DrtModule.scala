@@ -90,26 +90,26 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
       drtProdSystem
   }
 
-  val legacyStaffAssignmentsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
-    provideDrtSystemInterface.actorService.legacyStaffAssignmentsReadActor,
-    provideDrtSystemInterface.actorService.legacyStaffAssignmentsSequentialWritesActor,
-    LegacyStaffAssignmentsServiceImpl.pitActor(provideActorSystem),
+  val legacyShiftAssignmentsService: LegacyShiftAssignmentsService = LegacyShiftAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.legacyShiftAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.legacyShiftAssignmentsSequentialWritesActor,
+    LegacyShiftAssignmentsServiceImpl.pitActor(provideActorSystem),
   )
-  val staffAssignmentsService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
-    provideDrtSystemInterface.actorService.liveStaffAssignmentsReadActor,
-    provideDrtSystemInterface.actorService.staffAssignmentsSequentialWritesActor,
-    StaffAssignmentsServiceImpl.pitActor(provideActorSystem),
+  val shiftAssignmentsService: ShiftAssignmentsService = ShiftAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.liveShiftAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.shiftAssignmentsSequentialWritesActor,
+    ShiftAssignmentsServiceImpl.pitActor(provideActorSystem),
   )
 
   @Provides
   @Singleton
-  def provideLegacyStaffAssignmentsService: LegacyStaffAssignmentsService = legacyStaffAssignmentsService
+  def provideLegacyShiftAssignmentsService: LegacyShiftAssignmentsService = legacyShiftAssignmentsService
 
   @Provides
   @Singleton
-  def provideStaffAssignmentsService: StaffAssignmentsService =
-    if (drtParameters.enableShiftPlanningChange) staffAssignmentsService
-    else legacyStaffAssignmentsService
+  def provideShiftAssignmentsService: ShiftAssignmentsService =
+    if (drtParameters.enableShiftPlanningChange) shiftAssignmentsService
+    else legacyShiftAssignmentsService
 
   @Provides
   @Singleton

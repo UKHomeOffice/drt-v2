@@ -3,30 +3,30 @@ package drt.client.components
 import drt.client.components.StaffingUtil.consecutiveDaysInMonth
 import drt.client.services.JSDateConversions
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.StaffAssignmentsLike
+import drt.shared.ShiftAssignments
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.mutable
 
 object MonthlyStaffingUtil {
-  def slotsFromShifts(shifts: StaffAssignmentsLike, terminal: Terminal, viewingDate: SDateLike, timeSlotMinutes: Int, dayRange: String): Seq[Seq[Any]] =
+  def slotsFromShiftAssignments(shiftAssignments: ShiftAssignments, terminal: Terminal, viewingDate: SDateLike, timeSlotMinutes: Int, dayRange: String): Seq[Seq[Any]] =
     dayRange match {
       case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
         case Some(slotDateTime) =>
-          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+          shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
         case None => "-"
       })
 
       case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
         case Some(slotDateTime) =>
-          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+          shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
         case None => "-"
       })
 
       case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map {
         case Some(slotDateTime) =>
-          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+          shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
         case None => "-"
       }.map(Seq(_))
     }

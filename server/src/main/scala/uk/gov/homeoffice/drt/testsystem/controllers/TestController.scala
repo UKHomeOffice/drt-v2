@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.persistent.staffing.ShiftsActor.ReplaceAllShifts
+import actors.persistent.staffing.LegacyStaffAssignmentsActor.ReplaceAllShifts
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.ask
@@ -166,8 +166,8 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
         maybeShifts match {
           case Some(shifts) =>
             log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.actorService.legacyStaffAssignmentsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
-            ctrl.actorService.staffAssignmentsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.actorService.legacyShiftAssignmentsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.actorService.shiftAssignmentsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
             ctrl.shiftsService.deleteShifts()
             Created
           case _ =>

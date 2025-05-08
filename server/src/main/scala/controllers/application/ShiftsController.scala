@@ -1,14 +1,13 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import drt.shared.{ShiftAssignments, Shift}
+import drt.shared.Shift
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.auth.Roles.{FixedPointsView, StaffEdit}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.service.staffing.StaffAssignmentsService
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
-import upickle.default.{read, write}
+import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
+import uk.gov.homeoffice.drt.time.LocalDate
+import upickle.default.write
 
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
@@ -86,7 +85,7 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
 
 class ShiftsController @Inject()(cc: ControllerComponents,
                                  ctrl: DrtSystemInterface,
-                                 staffAssignmentsService: StaffAssignmentsService,
+                                 shiftAssignmentsService: ShiftAssignmentsService,
                                 )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
   def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
@@ -107,9 +106,9 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       try {
         val shifts = convertTo(text)
         ctrl.shiftsService.saveShift(shifts).flatMap { result =>
-          staffAssignmentsService.allStaffAssignments.flatMap { allShifts =>
-            val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
-            staffAssignmentsService.updateStaffAssignments(updatedAssignments).map { s =>
+          shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+            val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShiftAssignments)
+            shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
               Ok(write(s))
             }
           }.recoverWith {
@@ -123,31 +122,31 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   }
 
 
-  def getStaffAssignments(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
-    Action.async { request: Request[AnyContent] =>
-      val date = SDate(localDateStr).toLocalDate
-      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-      staffAssignmentsService.staffAssignmentsForDate(date, maybePointInTime)
-        .map(sa => Ok(write(sa)))
-    }
-  }
+//  def getStaffAssignments(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
+//    Action.async { request: Request[AnyContent] =>
+//      val date = SDate(localDateStr).toLocalDate
+//      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
+//      staffAssignmentsService.staffAssignmentsForDate(date, maybePointInTime)
+//        .map(sa => Ok(write(sa)))
+//    }
+//  }
 
-  def getAllStaffAssignments: Action[AnyContent] = Action.async {
-    staffAssignmentsService.allStaffAssignments.map(s => Ok(write(s)))
-  }
+//  def getAllShiftAssignments: Action[AnyContent] = Action.async {
+//    staffAssignmentsService.allShiftAssignments.map(s => Ok(write(s)))
+//  }
 
-  def saveStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
-    Action.async { request =>
-      request.body.asText match {
-        case Some(text) =>
-          val shifts = read[ShiftAssignments](text)
-          staffAssignmentsService
-            .updateStaffAssignments(shifts.assignments)
-            .map(allShifts => Accepted(write(allShifts)))
-        case None =>
-          Future.successful(BadRequest)
-      }
-    }
-  }
+//  def saveStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
+//    Action.async { request =>
+//      request.body.asText match {
+//        case Some(text) =>
+//          val shifts = read[ShiftAssignments](text)
+//          staffAssignmentsService
+//            .updateShiftAssignments(shifts.assignments)
+//            .map(allShifts => Accepted(write(allShifts)))
+//        case None =>
+//          Future.successful(BadRequest)
+//      }
+//    }
+//  }
 
 }
