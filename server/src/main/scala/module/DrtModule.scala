@@ -83,7 +83,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
   @Provides
   @Singleton
-  lazy val provideDrtSystemInterface: DrtSystemInterface = {
+  def provideDrtSystemInterface: DrtSystemInterface = {
     if (drtParameters.isTestEnvironment)
       drtTestSystem
     else
