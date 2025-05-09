@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.actions.Actions.{DeleteEgateBanksUpdate, SaveEgateBanksUpdate}
 import drt.client.components.ConfirmDialog.ConfirmParams
-import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -120,7 +120,7 @@ object EgatesScheduleEditor {
 
         val today = SDate.now().getLocalLastMidnight.millisSinceEpoch
 
-        ThemeProvider(DrtTheme.theme)(
+        ThemeProvider(DrtReactTheme)(
           <.div(^.className := "terminal-config",
             s.confirm.map(ConfirmDialog(_)).toTagMod,
             <.h3(s"$terminal"),
@@ -138,12 +138,12 @@ object EgatesScheduleEditor {
                         ^.defaultValue := SDate(editing.update.effectiveFrom).toLocalDateTimeString,
                         ^.onChange ==> setDate
                       ),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank()),
+                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(Add)(fontSize = "large"), "Add bank", ^.onClick ==> addBank()),
                       editing.update.banks.zipWithIndex.map { case (egateBank, bankIdx) =>
                         MuiGrid(item = true, container = true, spacing = 1)(
                           <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px", "padding" -> "8px", "alignItems" -> "center"),
                             s"Bank ${bankIdx + 1}",
-                            MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "small"), ^.onClick ==> removeBank(bankIdx))
+                            MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "large"), ^.onClick ==> removeBank(bankIdx))
                           ),
                           MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
                             MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
@@ -180,7 +180,7 @@ object EgatesScheduleEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Open gates per bank")),
                 MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
                   MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                    MuiIcons(Add)(fontSize = "small"),
+                    MuiIcons(Add)(fontSize = "large"),
                     "Add e-Gates change",
                     ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today)))))),
               ),
@@ -203,10 +203,10 @@ object EgatesScheduleEditor {
                   MuiGrid(item = true, xs = 4)(
                     <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
                       MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Edit)(fontSize = "small"),
+                        MuiIcons(Edit)(fontSize = "large"),
                         ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
                       MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Delete)(fontSize = "small"),
+                        MuiIcons(Delete)(fontSize = "large"),
                         ^.onClick --> deleteUpdates(updates.effectiveFrom)),
                     )
                   )

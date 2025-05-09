@@ -6,7 +6,6 @@ import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.components.styles.DrtReactTheme
-import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
@@ -82,8 +81,7 @@ object Layout {
                           "textTransform" -> "none",
                           "border" -> "1px solid white",
                           "color" -> "white",
-                          "fontWeight" -> "bold",
-                          "fontSize" -> buttonTheme.typography.button.fontSize))
+                          "fontWeight" -> "bold"))
                         )(
                           "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank"))
                         )
