@@ -25,7 +25,7 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
     override def read(json: JsValue): LocalDate = json.asJsObject.getFields("year", "month", "day") match {
       case Seq(JsNumber(year), JsNumber(month), JsNumber(day)) =>
         LocalDate(year.toInt, month.toInt, day.toInt)
-      case _ => throw new DeserializationException("Expected LocalDate as JsObject with year, month, and day")
+      case _ => throw DeserializationException("Expected LocalDate as JsObject with year, month, and day")
     }
   }
 
@@ -120,33 +120,4 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       }
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
-
-
-//  def getStaffAssignments(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
-//    Action.async { request: Request[AnyContent] =>
-//      val date = SDate(localDateStr).toLocalDate
-//      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-//      staffAssignmentsService.staffAssignmentsForDate(date, maybePointInTime)
-//        .map(sa => Ok(write(sa)))
-//    }
-//  }
-
-//  def getAllShiftAssignments: Action[AnyContent] = Action.async {
-//    staffAssignmentsService.allShiftAssignments.map(s => Ok(write(s)))
-//  }
-
-//  def saveStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
-//    Action.async { request =>
-//      request.body.asText match {
-//        case Some(text) =>
-//          val shifts = read[ShiftAssignments](text)
-//          staffAssignmentsService
-//            .updateShiftAssignments(shifts.assignments)
-//            .map(allShifts => Accepted(write(allShifts)))
-//        case None =>
-//          Future.successful(BadRequest)
-//      }
-//    }
-//  }
-
 }

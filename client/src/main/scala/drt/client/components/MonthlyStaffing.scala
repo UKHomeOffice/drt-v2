@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.{UpdateShiftAssignments, UpdateStaffShifts}
+import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -24,6 +24,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+
 import scala.scalajs.js
 import scala.util.Try
 
@@ -174,7 +175,7 @@ object MonthlyStaffing {
                     interval = props.timeSlotMinutes,
                     handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
                       if (props.isStaffShiftPage)
-                        SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                        SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                       else
                         SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                       scope.modState(state => {
@@ -198,13 +199,11 @@ object MonthlyStaffing {
                             case (row, col, _, newVal: Int) => TimeSlotDay(row, col).key -> newVal
                           }.toMap
 
-                          scala.scalajs.js.timers.setTimeout(500) {
-                            scope.modState { state =>
-                              val updatedChanges = state.changes ++ tempChanges
-                              tempChanges = Map.empty
-                              state.copy(changes = updatedChanges)
-                            }.runNow()
-                          }
+                          scope.modState { state =>
+                            val updatedChanges = state.changes ++ tempChanges
+                            tempChanges = Map.empty
+                            state.copy(changes = updatedChanges)
+                          }.runNow()
                         },
                         lastDataRefresh = lastLoaded
                       ))

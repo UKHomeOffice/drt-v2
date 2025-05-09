@@ -43,15 +43,5 @@ class DayOfShiftAssignmentsHandler[M](getCurrentViewMode: () => ViewMode, modelR
           }
       )
       effectOnly(apiCallEffect)
-
-    case UpdateShiftAssignments(assignments) =>
-      val futureResponse = DrtApi.post("staff-assignments", write(ShiftAssignments(assignments)))
-        .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
-        .recoverWith {
-          case _ =>
-            log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(UpdateShiftAssignments(assignments), PollDelay.recoveryDelay))
-        }
-      effectOnly(Effect(futureResponse))
   }
 }

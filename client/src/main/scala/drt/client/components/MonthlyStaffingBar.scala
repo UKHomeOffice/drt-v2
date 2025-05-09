@@ -2,7 +2,8 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{UpdateShiftAssignments, UpdateStaffShifts}
+import drt.client.actions.Actions.UpdateShiftAssignments
+import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.navigationDates
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -16,14 +17,14 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, 
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagOf, VdomElement}
 import japgolly.scalajs.react.{BackendScope, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
-import MonthlyStaffingUtil._
+
 import scala.scalajs.js
 import scala.util.Try
 
@@ -62,7 +63,7 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
         "Save Monthly Staffing",
         s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
       if (props.isStaffShiftPage)
-        SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+        SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
       else
         SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
     }
@@ -88,7 +89,7 @@ case class ConfirmAndSaveForMonthlyShifts(shiftsData: Seq[ShiftSummaryStaffing],
       GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
         "Save Monthly Staffing",
         s"updated staff for ${MonthlyStaffingBar.whatDayChanged(changedAssignments)} $updatedMonth")
-      SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+      SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
       scope.modState(state => state.copy(changedAssignments = Seq.empty[StaffTableEntry])).runNow()
     }
   }

@@ -38,7 +38,7 @@ class ShiftAssignmentsController @Inject()(cc: ControllerComponents,
           val shifts = read[ShiftAssignments](text)
           shiftAssignmentsService
             .updateShiftAssignments(shifts.assignments)
-            .map(allShifts => Accepted(write(allShifts)))
+            .map(updated => Accepted(write(updated)))
         case None =>
           Future.successful(BadRequest)
       }

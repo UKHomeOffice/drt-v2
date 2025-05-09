@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.UpdateStaffShifts
+import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyShiftsUtil.{updateAssignments, updateChangeAssignment}
 import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
@@ -172,7 +172,7 @@ object MonthlyShifts {
                   ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                   interval = props.timeSlotMinutes,
                   handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
-                    SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                    SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                     scope.modState(state => {
                       val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
                       newState

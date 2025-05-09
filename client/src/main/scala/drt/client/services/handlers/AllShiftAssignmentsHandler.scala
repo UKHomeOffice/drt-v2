@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode._
 import diode.data.{Pending, Pot, Ready}
-import drt.client.actions.Actions.{GetAllShiftAssignments, RetryActionAfter, SetAllStaffShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.{GetAllShiftAssignments, RetryActionAfter, SetAllShiftAssignments, UpdateShiftAssignments}
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.ShiftAssignments
@@ -15,7 +15,7 @@ class AllShiftAssignmentsHandler[M](modelRW: ModelRW[M, Pot[ShiftAssignments]]) 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAllShiftAssignments =>
       val apiCallEffect = Effect(DrtApi.get("staff-assignments")
-        .map(r => SetAllStaffShifts(read[ShiftAssignments](r.responseText)))
+        .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case t =>
             log.error(msg = s"Failed to get all shifts: ${t.getMessage}")
@@ -23,16 +23,16 @@ class AllShiftAssignmentsHandler[M](modelRW: ModelRW[M, Pot[ShiftAssignments]]) 
         })
       updated(Pending(), apiCallEffect)
 
-    case SetAllStaffShifts(monthOfRawShifts) =>
+    case SetAllShiftAssignments(monthOfRawShifts) =>
       updated(Ready(monthOfRawShifts))
 
-    case UpdateStaffShifts(assignments) =>
+    case UpdateShiftAssignments(assignments) =>
       val futureResponse = DrtApi.post("staff-assignments", write(ShiftAssignments(assignments)))
-        .map(r => SetAllStaffShifts(read[ShiftAssignments](r.responseText)))
+        .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(UpdateStaffShifts(assignments), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(UpdateShiftAssignments(assignments), PollDelay.recoveryDelay))
         }
       effectOnly(Effect(futureResponse))
   }
