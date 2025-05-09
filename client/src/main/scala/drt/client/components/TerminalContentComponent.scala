@@ -258,7 +258,6 @@ object TerminalContentComponent {
               if (state.activeTab == "arrivals") {
                 val maybeArrivalsComp = for {
                   features <- props.featureFlags
-                  redListPorts <- props.redListPorts
                   redListUpdates <- props.redListUpdates
                   walkTimes <- props.walkTimes
                 } yield {
@@ -273,7 +272,7 @@ object TerminalContentComponent {
                       redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
                       terminal = terminal,
                       portCode = props.airportConfig.portCode,
-                      redListPorts = redListPorts,
+                      redListPorts = props.redListPorts.getOrElse(HashSet()),
                       airportConfig = props.airportConfig,
                       redListUpdates = redListUpdates,
                       walkTimes = walkTimes,

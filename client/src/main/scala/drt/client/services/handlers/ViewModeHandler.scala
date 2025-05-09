@@ -23,8 +23,8 @@ class ViewModeHandler[M](now: () => SDateLike,
       val (currentViewMode, _, _) = value
 
       (newViewMode, currentViewMode) match {
-        case (newVm, oldVm) if newVm.uUID != oldVm.uUID || value._2.isEmpty =>
-          updated((newViewMode, Pot.empty[PortState], 0L), initialRequests(currentViewMode, newViewMode))
+        case (newVm, oldVm) if newVm.localDate != oldVm.localDate || newVm.maybePointInTime != oldVm.maybePointInTime || value._2.isEmpty =>
+          updated((newViewMode, value._2, 0L), initialRequests(currentViewMode, newViewMode))
         case _ =>
           noChange
       }

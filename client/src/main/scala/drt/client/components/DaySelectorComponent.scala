@@ -149,11 +149,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           UrlTimeSelectedParameter(Option(s.time))
         )
 
-
         GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
         props.router.set(
-          props.terminalPageTab.withUrlParameters(params: _*),
-          SetRouteVia.WindowLocation
+          props.terminalPageTab.withUrlParameters(params: _*)
         )
       }
 
@@ -166,8 +164,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         )
 
         props.router.set(
-          props.terminalPageTab.withUrlParameters(params: _*),
-          SetRouteVia.WindowLocation
+          props.terminalPageTab.withUrlParameters(params: _*)
         )
       }
 
