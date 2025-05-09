@@ -4,7 +4,7 @@ import diode.AnyAction.aType
 import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ReactConnectProxy
-import drt.client.components.styles.{DrtTheme, WithScalaCssImplicits}
+import drt.client.components.styles.{DrtReactTheme, WithScalaCssImplicits}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.{CreateDropInRegistration, GetDropInRegistrations}
@@ -89,7 +89,7 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
           val showDropIns = {
             props.dropIns.nonEmpty match {
               case true =>
-                ThemeProvider(DrtTheme.theme)(
+                ThemeProvider(DrtReactTheme)(
                   MuiGrid(sx = SxProps(Map(
                     "backgroundColor" -> "#FFFFFF",
                     "paddingTop" -> "24px",

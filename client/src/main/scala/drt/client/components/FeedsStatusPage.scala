@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.actions.Actions.{RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
 import drt.client.components.ToolTips._
-import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -78,7 +78,7 @@ object FeedsStatusPage {
               if (feed.feedSource.name == "API")
                 <.h3(<.div(^.className := "flex-horizontally", feed.feedSource.displayName, apiDataTooltip))
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.primary)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.primary)(MuiIcons(RefreshOutlined)(fontSize = "large"), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
                 <.h3("Live arrival")
               else
@@ -123,7 +123,7 @@ object FeedsStatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              ThemeProvider(DrtTheme.theme)(
+              ThemeProvider(DrtReactTheme)(
                 MuiButton(variant = "outlined", color = Color.primary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),

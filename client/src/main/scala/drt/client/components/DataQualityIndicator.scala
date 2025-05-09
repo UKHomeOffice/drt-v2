@@ -1,17 +1,16 @@
 package drt.client.components
 
-import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import io.kinoplan.scalajs.react.bridge.WithProps
-import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{CtorType, _}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import io.kinoplan.scalajs.react.material.ui.core.MuiTooltip
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.{CtorType, _}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object DataQualityIndicator {
   case class Props(dq: FlightComponents.DataQuality, terminal: Terminal, classPrefix: String, icon: Boolean)
@@ -60,14 +59,14 @@ object DataQualityIndicator {
               ^.onClick ==> {
                 handleOnClick
               },
-              MuiIcons(Info)(fontSize = "inherit")
+              MuiIcons(Info)(fontSize = "large")
             )),
           )
         }
       )
 
       <.div(
-        ThemeProvider(DrtTheme.tooltipTheme)(
+        ThemeProvider(DrtReactTheme)(
           if (props.icon) iconTooltip else dfnTooltip
         ),
         ^.className := s"data-quality data-quality__${props.dq.`type`} ${props.classPrefix}-${props.dq.`type`}",

@@ -1,13 +1,11 @@
 package drt.client.components
 
-import drt.client.components.styles.{DrtReactTheme, DrtTheme, WithScalaCssImplicits}
-import drt.client.modules.GoogleEventTracker
-import io.kinoplan.scalajs.react.material.ui.core._
+import drt.client.components.styles.{DrtReactTheme, WithScalaCssImplicits}
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
+import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
-import io.kinoplan.scalajs.react.material.ui.core.{MuiDialog, MuiDialogContent, MuiDialogTitle}
 
 object DropInDialog extends WithScalaCssImplicits {
 
@@ -34,9 +32,9 @@ object DropInDialog extends WithScalaCssImplicits {
 
     def render(props: Props, state: State) = {
       val headingColor = if (props.title == "Booking Confirmed")
-        DrtTheme.theme.palette.grey.`400`
+        DrtReactTheme.palette.grey.`400`
       else
-        DrtTheme.theme.palette.primary.`500`
+        DrtReactTheme.palette.primary.`500`
 
       ThemeProvider(DrtReactTheme)(
         MuiDialog(open = props.showDialog, maxWidth = "sm")(
@@ -47,8 +45,8 @@ object DropInDialog extends WithScalaCssImplicits {
               MuiGrid(item = true, xs = 11)(
                 MuiDialogTitle(sx = SxProps(centeredStyle ++ Map(
                   "color" -> "#FFFFFF",
-                  "fontSize" -> DrtTheme.theme.typography.h3.fontSize,
-                  "fontWeight" -> DrtTheme.theme.typography.h3.fontWeight
+                  "fontSize" -> "28px",
+                  "fontWeight" -> "bold",
                 )))(<.span(props.title))),
               MuiGrid(item = true, xs = 1)(
                 MuiDialogActions()(
