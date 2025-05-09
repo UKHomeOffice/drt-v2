@@ -6,7 +6,7 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
-import actors.persistent.staffing.{FixedPointsActor, LegacyStaffAssignmentsActor, ShiftAssignmentsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, LegacyShiftAssignmentsActor, ShiftAssignmentsActor, ShiftAssignmentsActorLike, StaffMovementsActor}
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
@@ -176,7 +176,7 @@ class TestDrtActor extends Actor {
         AclFeedSource -> forecastBaseFeedStatusWriteActor,
       )
 
-      val liveShiftsReadActor: ActorRef = system.actorOf(LegacyStaffAssignmentsActor.streamingUpdatesProps(LegacyStaffAssignmentsActor.persistenceId,
+      val liveShiftsReadActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.streamingUpdatesProps(LegacyShiftAssignmentsActor.persistenceId,
         journalType, tc.now), name = "shifts-read-actor")
 
       val liveShiftAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(ShiftAssignmentsActor.persistenceId,
@@ -186,7 +186,7 @@ class TestDrtActor extends Actor {
       val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
         journalType), name = "staff-movements-read-actor")
 
-      val shiftsSequentialWritesActor: ActorRef = system.actorOf(LegacyStaffAssignmentsActor.sequentialWritesProps(
+      val shiftsSequentialWritesActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.sequentialWritesProps(
         tc.now, startOfTheMonth(tc.now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
       val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
         tc.now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")

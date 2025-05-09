@@ -134,7 +134,7 @@ class HealthCheckControllerSpec extends PlaySpec {
         params.forecastMaxDays,
         flightLookups,
         minuteLookups,
-      )(system, timeout, ec) {
+      )(system, timeout) {
         override val queuesRouterActor: ActorRef = system.actorOf(Props(new MockQueuesRouterActor(minutes)))
       }
 

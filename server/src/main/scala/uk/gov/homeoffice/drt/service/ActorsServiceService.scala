@@ -25,9 +25,9 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
                                )
                                (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext) extends ActorsServiceLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
-  override val liveShiftAssignmentsReadActor: ActorRef = system.actorOf(LegacyStaffAssignmentsActor.streamingUpdatesProps(ShiftAssignmentsActor.persistenceId,
+  override val liveShiftAssignmentsReadActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.streamingUpdatesProps(ShiftAssignmentsActor.persistenceId,
     journalType, now), name = "staff-assignments-read-actor")
-  override val legacyShiftAssignmentsReadActor: ActorRef = system.actorOf(LegacyStaffAssignmentsActor.streamingUpdatesProps(LegacyStaffAssignmentsActor.persistenceId,
+  override val legacyShiftAssignmentsReadActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.streamingUpdatesProps(LegacyShiftAssignmentsActor.persistenceId,
     journalType, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
     journalType, now, forecastMaxDays), name = "fixed-points-read-actor")
@@ -37,7 +37,7 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
   override val shiftAssignmentsSequentialWritesActor: ActorRef = system.actorOf(ShiftAssignmentsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "staff-assignments-sequential-writes-actor")
 
-  override val legacyShiftAssignmentsSequentialWritesActor: ActorRef = system.actorOf(LegacyStaffAssignmentsActor.sequentialWritesProps(
+  override val legacyShiftAssignmentsSequentialWritesActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
   override val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
     now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")

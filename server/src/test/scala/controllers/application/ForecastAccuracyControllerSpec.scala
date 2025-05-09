@@ -186,7 +186,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
           now,
           params.forecastMaxDays,
           flightLookups,
-          minuteLookups)(system, timeout, ec) {
+          minuteLookups)(system, timeout) {
           override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
         }
       }

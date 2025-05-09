@@ -1,7 +1,7 @@
 package actors
 
-import actors.persistent.staffing.LegacyStaffAssignmentsActor.UpdateShifts
-import actors.persistent.staffing.{LegacyStaffAssignmentsActor, LegacyStaffAssignmentsReadActor}
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
+import actors.persistent.staffing.{LegacyShiftAssignmentsActor, ShiftAssignmentsActorLike, ShiftAssignmentsReadActor}
 import org.apache.pekko.actor.{ActorRef, PoisonPill, Props}
 import org.apache.pekko.testkit.ImplicitSender
 import drt.shared._
@@ -21,7 +21,7 @@ object StaffAssignmentGenerator {
   }
 }
 
-class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender {
+class ShiftAssignmentsActorLikeSpec extends CrunchTestLike with ImplicitSender {
   sequential
   isolated
 
@@ -47,7 +47,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor")
+      val actor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor")
       actor ! UpdateShifts(shifts.assignments)
       val response = expectMsgType[ShiftAssignments]
       val sortedResponse = response.assignments.sortBy(_.start)
@@ -55,7 +55,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       assert(sortedResponse == sortedExpectedShifts)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
       val newResponse = expectMsgType[ShiftAssignments]
@@ -80,7 +80,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor1")
 
       val expectedShifts = ShiftAssignments(Seq(
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
@@ -105,7 +105,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       assertExpectedResponse(expectedShifts)
 
       actor ! PoisonPill
-      val newActor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
       assertExpectedResponse(expectedShifts)
@@ -124,7 +124,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 1)), "shiftsActor")
+      val actor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 1)), "shiftsActor")
 
       val expectedShifts = ShiftAssignments(Seq(
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
@@ -135,7 +135,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       assertExpectedResponse(expectedShifts)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 1)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 1)), "shiftsActor2")
       newActor ! GetState
       assertExpectedResponse(expectedShifts)
       true
@@ -148,7 +148,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor-1")
+      val actor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor-1")
       actor ! UpdateShifts(Seq(shift1, shift2))
 
       val expectedShifts = ShiftAssignments(Seq(
@@ -173,7 +173,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       assertExpectedResponse(updatedExpectedShifts)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor-2")
+      val newActor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor-2")
 
       newActor ! GetState
 
@@ -254,7 +254,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2, shift3, shift4))
       assertExpectedResponse(ShiftAssignments(expectedShift))
@@ -329,7 +329,7 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
       actor ! PoisonPill
 
 
-      val newActor = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
       val expected = expectedUpdated1And2Shift.toSet
@@ -514,9 +514,9 @@ class LegacyStaffAssignmentsActorSpec extends CrunchTestLike with ImplicitSender
   }
 
 
-  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new LegacyStaffAssignmentsActor(LegacyStaffAssignmentsActor.persistenceId, now, expiryDateXDaysFrom(now, 1), 10)))
+  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftAssignmentsActorLike(LegacyShiftAssignmentsActor.persistenceId, now, expiryDateXDaysFrom(now, 1), 10)))
 
-  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new LegacyStaffAssignmentsReadActor(LegacyStaffAssignmentsActor.persistenceId, now(), expiryDateXDaysFrom(now, 1))))
+  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftAssignmentsReadActor(LegacyShiftAssignmentsActor.persistenceId, now(), expiryDateXDaysFrom(now, 1))))
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 

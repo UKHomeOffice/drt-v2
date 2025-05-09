@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.service.staffing
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.persistent.staffing.LegacyStaffAssignmentsActor.UpdateShifts
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
 import org.apache.pekko.Done
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.testkit.{TestKit, TestProbe}

@@ -4,8 +4,8 @@ import actors.DrtStaticParameters.startOfTheMonth
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.LegacyStaffAssignmentsActor.{ReplaceAllShifts, UpdateShifts}
-import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToShiftAssignments
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.{ReplaceAllShifts, UpdateShifts}
+import actors.persistent.staffing.ShiftAssignmentsMessageParser.shiftMessagesToShiftAssignments
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, Scheduler}
@@ -90,32 +90,11 @@ trait ShiftsActorLike {
     }.flatten
 }
 
-object LegacyStaffAssignmentsActor extends ShiftsActorLike {
-  val snapshotInterval = 5000
-
-  val persistenceId = "shifts-store"
-
-  case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
-
-  case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
-
-  def sequentialWritesProps(now: () => SDateLike,
-                            expireBefore: () => SDateLike,
-                            requestAndTerminateActor: ActorRef,
-                            system: ActorSystem
-                           )
-                           (implicit timeout: Timeout): Props =
-    Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new LegacyStaffAssignmentsActor(persistenceId, now, expireBefore, snapshotInterval)), s"shifts-actor-writes")
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
-    }))
-}
-
-class LegacyStaffAssignmentsActor(val persistenceId: String,
-                                  val now: () => SDateLike,
-                                  val expireBefore: () => SDateLike,
-                                  val snapshotInterval: Int,
-                                 ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
+class ShiftAssignmentsActorLike(val persistenceId: String,
+                                val now: () => SDateLike,
+                                val expireBefore: () => SDateLike,
+                                val snapshotInterval: Int,
+                               ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val scheduler: Scheduler = this.context.system.scheduler
@@ -126,7 +105,7 @@ class LegacyStaffAssignmentsActor(val persistenceId: String,
 
   def initialState: ShiftAssignments = ShiftAssignments.empty
 
-  import ShiftsMessageParser._
+  import ShiftAssignmentsMessageParser._
 
   override def stateToMessage: GeneratedMessage = {
     terminalDays.foreach {
@@ -206,7 +185,6 @@ class LegacyStaffAssignmentsActor(val persistenceId: String,
         sender() ! Iterable()
       }
 
-
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
       ackIfRequired()
@@ -218,70 +196,4 @@ class LegacyStaffAssignmentsActor(val persistenceId: String,
 
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
-}
-
-object ShiftsMessageParser {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def staffAssignmentToMessage(assignment: StaffAssignmentLike, createdAt: SDateLike): ShiftMessage = ShiftMessage(
-    name = Option(assignment.name),
-    terminalName = Option(assignment.terminal.toString),
-    numberOfStaff = Option(assignment.numberOfStaff.toString),
-    startTimestamp = Option(assignment.start),
-    endTimestamp = Option(assignment.end),
-    createdAt = Option(createdAt.millisSinceEpoch)
-  )
-
-  private def shiftMessageToStaffAssignmentv1(shiftMessage: ShiftMessage): Option[StaffAssignment] = {
-    val maybeSt: Option[SDateLike] = parseDayAndTimeToSdate(shiftMessage.startDayOLD, shiftMessage.startTimeOLD)
-    val maybeEt: Option[SDateLike] = parseDayAndTimeToSdate(shiftMessage.startDayOLD, shiftMessage.endTimeOLD)
-    for {
-      startDt <- maybeSt
-      endDt <- maybeEt
-    } yield {
-      StaffAssignment(
-        name = shiftMessage.name.getOrElse(""),
-        terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-        start = startDt.roundToMinute().millisSinceEpoch,
-        end = endDt.roundToMinute().millisSinceEpoch,
-        numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
-        createdBy = None
-      )
-    }
-  }
-
-  private def parseDayAndTimeToSdate(maybeDay: Option[String], maybeTime: Option[String]): Option[SDateLike] = {
-    val maybeDayMonthYear = maybeDay.getOrElse("1/1/0").split("/") match {
-      case Array(d, m, y) => Try((d.toInt, m.toInt, y.toInt + 2000)).toOption
-      case _ => None
-    }
-    val maybeHourMinute = maybeTime.getOrElse("00:00").split(":") match {
-      case Array(a, b) => Try((a.toInt, b.toInt)).toOption
-      case _ => None
-    }
-
-    for {
-      (d, m, y) <- maybeDayMonthYear
-      (hr, min) <- maybeHourMinute
-    } yield SDate(y, m, d, hr, min, europeLondonTimeZone)
-  }
-
-  private def shiftMessageToStaffAssignmentv2(shiftMessage: ShiftMessage): Option[StaffAssignment] = Option(StaffAssignment(
-    name = shiftMessage.name.getOrElse(""),
-    terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-    start = shiftMessage.startTimestamp.getOrElse(0L),
-    end = shiftMessage.endTimestamp.getOrElse(0L),
-    numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
-    createdBy = None
-  ))
-
-  def shiftAssignmentsToShiftsMessages(shiftAssignments: ShiftAssignments,
-                                       createdAt: SDateLike): Seq[ShiftMessage] =
-    shiftAssignments.assignments.map(a => staffAssignmentToMessage(a, createdAt))
-
-  def shiftMessagesToShiftAssignments(shiftMessages: Seq[ShiftMessage]): ShiftAssignments =
-    ShiftAssignments(shiftMessages.collect {
-      case sm@ShiftMessage(Some(_), Some(_), Some(_), Some(_), Some(_), Some(_), None, None, _) => shiftMessageToStaffAssignmentv1(sm)
-      case sm@ShiftMessage(Some(_), Some(_), None, None, None, Some(_), Some(_), Some(_), _) => shiftMessageToStaffAssignmentv2(sm)
-    }.flatten)
 }

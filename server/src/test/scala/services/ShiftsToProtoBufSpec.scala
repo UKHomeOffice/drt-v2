@@ -1,6 +1,6 @@
 package services
 
-import actors.persistent.staffing.ShiftsMessageParser._
+import actors.persistent.staffing.ShiftAssignmentsMessageParser._
 import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.T1

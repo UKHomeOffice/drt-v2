@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.persistent.staffing.LegacyStaffAssignmentsActor.ReplaceAllShifts
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.ReplaceAllShifts
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.ask

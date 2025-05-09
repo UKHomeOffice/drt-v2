@@ -2,8 +2,8 @@ package uk.gov.homeoffice.drt.service.staffing
 
 import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.persistent.staffing.LegacyStaffAssignmentsActor.UpdateShifts
-import actors.persistent.staffing.{LegacyStaffAssignmentsReadActor, ShiftAssignmentsActor}
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
+import actors.persistent.staffing.{ShiftAssignmentsReadActor, ShiftAssignmentsActor}
 import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object ShiftAssignmentsServiceImpl {
   def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
     val actorName = s"staff-store-read-actor-" + UUID.randomUUID().toString
-    system.actorOf(LegacyStaffAssignmentsReadActor.props(ShiftAssignmentsActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+    system.actorOf(ShiftAssignmentsReadActor.props(ShiftAssignmentsActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
   }
 }
 
