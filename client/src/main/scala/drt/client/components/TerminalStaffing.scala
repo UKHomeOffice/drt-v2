@@ -33,18 +33,18 @@ object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(terminal: Terminal,
-                   potLegacyDayOfShiftAssignments: Pot[ShiftAssignments],
-                   potFixedPoints: Pot[FixedPointAssignments],
-                   potStaffMovements: Pot[StaffMovements],
-                   removedStaffMovements: Set[String],
-                   airportConfig: AirportConfig,
-                   loggedInUser: LoggedInUser,
-                   viewMode: ViewMode
+                    dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+                    potFixedPoints: Pot[FixedPointAssignments],
+                    potStaffMovements: Pot[StaffMovements],
+                    removedStaffMovements: Set[String],
+                    airportConfig: AirportConfig,
+                    loggedInUser: LoggedInUser,
+                    viewMode: ViewMode
                   ) extends UseValueEq
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
-      props.potLegacyDayOfShiftAssignments.render { legacyDayOfShiftAssignments =>
+      props.dayOfShiftAssignmentsPot.render { legacyDayOfShiftAssignments =>
         props.potFixedPoints.render { fixedPoints =>
           props.potStaffMovements.render { movements =>
             val movementsForTheDay = movements

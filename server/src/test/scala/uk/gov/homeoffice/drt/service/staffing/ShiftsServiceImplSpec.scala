@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.service.staffing
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.persistent.staffing.ShiftsActor.UpdateShifts
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
 import org.apache.pekko.Done
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.testkit.{TestKit, TestProbe}
@@ -28,32 +28,32 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
   val pitProbe: TestProbe = TestProbe("pit")
 
   "A ShiftsServiceImpl" should {
-    val service = LegacyStaffAssignmentsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
+    val service = LegacyShiftAssignmentsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
     val assignments = ShiftAssignments(Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None)))
     "return a list of staff assignments for a given date" in {
       MockActor.response = assignments
-      val result = service.shiftsForDate(LocalDate(2024, 7, 1), None)
+      val result = service.shiftAssignmentsForDate(LocalDate(2024, 7, 1), None)
       result.futureValue should ===(assignments)
       liveProbe.expectMsgClass(classOf[GetStateForDateRange])
     }
 
     "return a list of staff assignments for a given point in time" in {
       MockActor.response = assignments
-      val result = service.shiftsForDate(LocalDate(2024, 7, 1), Some(SDate("2024-07-01T05:00").millisSinceEpoch))
+      val result = service.shiftAssignmentsForDate(LocalDate(2024, 7, 1), Some(SDate("2024-07-01T05:00").millisSinceEpoch))
       result.futureValue should ===(assignments)
       pitProbe.expectMsgClass(classOf[GetStateForDateRange])
     }
 
     "return a list of staff assignments for a month" in {
       MockActor.response = assignments
-      val result = service.allShifts
+      val result = service.allShiftAssignments
       result.futureValue.getClass should ===(classOf[ShiftAssignments])
       liveProbe.expectMsg(GetState)
     }
 
     "update shifts" in {
       MockActor.response = Done
-      service.updateShifts(assignments.assignments)
+      service.updateShiftAssignments(assignments.assignments)
       writeProbe.expectMsg(UpdateShifts(assignments.assignments))
     }
   }

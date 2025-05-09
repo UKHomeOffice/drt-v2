@@ -23,8 +23,8 @@ class ViewModeHandler[M](now: () => SDateLike,
       val (currentViewMode, _, _) = value
 
       (newViewMode, currentViewMode) match {
-        case (newVm, oldVm) if newVm.uUID != oldVm.uUID || value._2.isEmpty =>
-          updated((newViewMode, Pot.empty[PortState], 0L), initialRequests(currentViewMode, newViewMode))
+        case (newVm, oldVm) if newVm.localDate != oldVm.localDate || newVm.maybePointInTime != oldVm.maybePointInTime || value._2.isEmpty =>
+          updated((newViewMode, value._2, 0L), initialRequests(currentViewMode, newViewMode))
         case _ =>
           noChange
       }
@@ -33,8 +33,8 @@ class ViewModeHandler[M](now: () => SDateLike,
   def initialRequests(currentViewMode: ViewMode, newViewMode: ViewMode): EffectSet = {
     val effects = Effect(Future(GetInitialPortState(newViewMode))) +
       Effect(Future(GetStaffMovements(newViewMode))) +
-      Effect(Future(GetShifts(newViewMode))) +
-      Effect(Future(GetStaffAssignments(newViewMode))) +
+      Effect(Future(GetDayOfShiftAssignments(newViewMode))) +
+      Effect(Future(GetShiftAssignments(newViewMode))) +
       Effect(Future(GetFixedPoints(newViewMode))) +
       Effect(Future(GetManifestSummariesForDate(newViewMode.dayEnd.toUtcDate))) +
       Effect(Future(GetManifestSummariesForDate(newViewMode.dayEnd.addDays(-1).toUtcDate)))

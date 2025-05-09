@@ -27,7 +27,7 @@ import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val system: ActorSystem = ActorSystem("test-1")
@@ -134,6 +134,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
            |""".stripMargin)
 
       val resultCached = controller.forecastModelComparison(modelId, "T1", "2024-02-14", "2024-02-14").apply(request)
+
       contentAsString(resultCached) must ===(
         f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
            |2024-02-14,$flightsCount,$flightsCount,0.00,200,200,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
@@ -147,9 +148,10 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
                                          mlPred: Int,
                                          flights: FlightsWithSplits) = {
     val module: DrtModule = new TestDrtModule() {
-      override val now: () => SDateLike = () => NowProvider.now
 
-      override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(Test.config, drtParameters, now)(mat, ec, system, timeout) {
+      override lazy val now: () => SDateLike = () => NowProvider.now
+
+      override lazy val provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(Test.config, drtParameters, now)(mat, ec, system, timeout) {
         lazy override val feedService: ProdFeedService = new ProdFeedService(journalType, airportConfig, now, params,
           config, paxFeedSourceOrder, flightLookups, manifestLookups, actorService.requestAndTerminateActor,
           drtParameters.forecastMaxDays, SDate("2024-04-03"))(this.system, ec, timeout) {
@@ -184,7 +186,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
           now,
           params.forecastMaxDays,
           flightLookups,
-          minuteLookups)(system, timeout, ec) {
+          minuteLookups)(system, timeout) {
           override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
         }
       }

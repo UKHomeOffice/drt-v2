@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DrtModule extends AbstractModule with PekkoGuiceSupport {
-  val now: () => SDateLike = () => SDate.now()
+  lazy val now: () => SDateLike = () => SDate.now()
 
   val config: Configuration = new Configuration(ConfigFactory.load)
 
@@ -69,8 +69,9 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
     bind(classOf[WalkTimeController]).asEagerSingleton()
   }
 
+
   @Provides
-  def provideTestDrtSystem = drtTestSystem
+  def provideTestDrtSystem: TestDrtSystem = drtTestSystem
 
   @Provides
   @Singleton
@@ -89,21 +90,26 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
       drtProdSystem
   }
 
-  @Provides
-  @Singleton
-  def provideLegacyStaffAssignmentsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
-    provideDrtSystemInterface.actorService.legacyStaffAssignmentsReadActor,
-    provideDrtSystemInterface.actorService.legacyStaffAssignmentsSequentialWritesActor,
-    LegacyStaffAssignmentsServiceImpl.pitActor(provideActorSystem),
-    )
+  val legacyShiftAssignmentsService: LegacyShiftAssignmentsService = LegacyShiftAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.legacyShiftAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.legacyShiftAssignmentsSequentialWritesActor,
+    LegacyShiftAssignmentsServiceImpl.pitActor(provideActorSystem),
+  )
+  val shiftAssignmentsService: ShiftAssignmentsService = ShiftAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.liveShiftAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.shiftAssignmentsSequentialWritesActor,
+    ShiftAssignmentsServiceImpl.pitActor(provideActorSystem),
+  )
 
   @Provides
   @Singleton
-  def provideStaffAssignmentsService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
-    provideDrtSystemInterface.actorService.liveStaffAssignmentsReadActor,
-    provideDrtSystemInterface.actorService.staffAssignmentsSequentialWritesActor,
-    StaffAssignmentsServiceImpl.pitActor(provideActorSystem),
-  )
+  def provideLegacyShiftAssignmentsService: LegacyShiftAssignmentsService = legacyShiftAssignmentsService
+
+  @Provides
+  @Singleton
+  def provideShiftAssignmentsService: ShiftAssignmentsService =
+    if (drtParameters.enableShiftPlanningChange) shiftAssignmentsService
+    else legacyShiftAssignmentsService
 
   @Provides
   @Singleton

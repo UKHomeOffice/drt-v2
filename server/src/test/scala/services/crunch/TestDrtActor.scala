@@ -6,7 +6,7 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffAssignmentsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, LegacyShiftAssignmentsActor, ShiftAssignmentsActor, ShiftAssignmentsActorLike, StaffMovementsActor}
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
@@ -176,17 +176,17 @@ class TestDrtActor extends Actor {
         AclFeedSource -> forecastBaseFeedStatusWriteActor,
       )
 
-      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(ShiftsActor.persistenceId,
+      val liveShiftsReadActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.streamingUpdatesProps(LegacyShiftAssignmentsActor.persistenceId,
         journalType, tc.now), name = "shifts-read-actor")
 
-       val liveStaffAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(StaffAssignmentsActor.persistenceId,
-        journalType,tc.now), name = "staff-assignments-read-actor")
+      val liveShiftAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(ShiftAssignmentsActor.persistenceId,
+        journalType, tc.now), name = "staff-assignments-read-actor")
       val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
         journalType, tc.now, tc.forecastMaxDays), name = "fixed-points-read-actor")
       val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
         journalType), name = "staff-movements-read-actor")
 
-      val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
+      val shiftsSequentialWritesActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.sequentialWritesProps(
         tc.now, startOfTheMonth(tc.now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
       val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
         tc.now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
@@ -341,7 +341,7 @@ class TestDrtActor extends Actor {
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
           staffingQueueActor = TestProbe().ref,
           staffQueue = SortedSet.empty[TerminalUpdateRequest],
-          staffAssignmentsReadActor = if (tc.enableShiftPlanningChanges) liveStaffAssignmentsReadActor
+          shiftAssignmentsReadActor = if (tc.enableShiftPlanningChanges) liveShiftAssignmentsReadActor
           else liveShiftsReadActor,
           fixedPointsActor = liveFixedPointsReadActor,
           movementsActor = liveStaffMovementsReadActor,

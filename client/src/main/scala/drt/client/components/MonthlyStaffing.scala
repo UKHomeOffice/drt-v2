@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.{UpdateShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -24,6 +24,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+
 import scala.scalajs.js
 import scala.util.Try
 
@@ -43,7 +44,7 @@ object MonthlyStaffing {
                    showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
                    addShiftForm: Boolean,
-                   shifts: ShiftAssignments,
+                   shiftAssignments: ShiftAssignments,
                    shiftsLastLoaded: Option[Long] = None,
                   )
 
@@ -80,21 +81,20 @@ object MonthlyStaffing {
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.allShifts))
+      val shiftAssignmentsRCP = SPACircuit.connect(_.allShiftAssignments)
 
-      val modelChangeDetection = staffRCP { modelMP =>
-        val model = modelMP()
+      val modelChangeDetection = shiftAssignmentsRCP { shiftAssignmentsMP =>
+        val shiftAssignmentsPot = shiftAssignmentsMP()
         val content = for {
-          monthOfShifts <- if (props.isStaffShiftPage) model.monthOfStaffShiftsPot else model.monthOfShiftsPot
+          monthOfShiftAssignments <- shiftAssignmentsPot
         } yield {
-          if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
-            val slots = slotsFromShifts(monthOfShifts,
+          if (monthOfShiftAssignments != state.shiftAssignments || state.timeSlots.isEmpty) {
+            val slots = slotsFromShiftAssignments(monthOfShiftAssignments,
               props.terminalPageTab.terminal,
               viewingDate,
               props.timeSlotMinutes,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"))
-            scope.modState(state => state.copy(shifts = monthOfShifts, timeSlots = Ready(slots),
+            scope.modState(state => state.copy(shiftAssignments = monthOfShiftAssignments, timeSlots = Ready(slots),
               shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))).runNow()
           }
           <.div()
@@ -174,18 +174,11 @@ object MonthlyStaffing {
                     ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                     interval = props.timeSlotMinutes,
                     handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
-                      if (props.isStaffShiftPage)
-                        SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
-                      else
-                        SPACircuit.dispatch(UpdateShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
-                      scope.modState(state => {
-                        val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
-                        newState
-                      }).runNow()
+                      SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                      scope.modState(_.copy(showEditStaffForm = false, showStaffSuccess = true)).runNow()
                     },
-                    cancelHandler = () => {
-                      scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
-                    })))),
+                    cancelHandler = () => scope.modState(_.copy(showEditStaffForm = false)).runNow()
+                  )))),
                 <.div(^.className := "staffing-table",
                   state.shiftsLastLoaded.map(lastLoaded =>
                     <.div(^.className := "staffing-table-content",
@@ -199,13 +192,11 @@ object MonthlyStaffing {
                             case (row, col, _, newVal: Int) => TimeSlotDay(row, col).key -> newVal
                           }.toMap
 
-                          scala.scalajs.js.timers.setTimeout(500) {
-                            scope.modState { state =>
-                              val updatedChanges = state.changes ++ tempChanges
-                              tempChanges = Map.empty
-                              state.copy(changes = updatedChanges)
-                            }.runNow()
-                          }
+                          scope.modState { state =>
+                            val updatedChanges = state.changes ++ tempChanges
+                            tempChanges = Map.empty
+                            state.copy(changes = updatedChanges)
+                          }.runNow()
                         },
                         lastDataRefresh = lastLoaded
                       ))

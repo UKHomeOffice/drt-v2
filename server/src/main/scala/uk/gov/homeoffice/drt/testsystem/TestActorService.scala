@@ -3,15 +3,13 @@ package uk.gov.homeoffice.drt.testsystem
 import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors._
 import actors.daily.RequestAndTerminateActor
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffAssignmentsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, LegacyShiftAssignmentsActor, ShiftAssignmentsActor, StaffMovementsActor}
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.concurrent.ExecutionContext
 
 case class TestActorService(journalType: StreamingJournalLike,
                             airportConfig: AirportConfig,
@@ -20,20 +18,20 @@ case class TestActorService(journalType: StreamingJournalLike,
                             flightLookups: FlightLookupsLike,
                             minuteLookups: MinuteLookupsLike,
                            )
-                           (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext) extends ActorsServiceLike {
+                           (implicit system: ActorSystem, timeout: Timeout) extends ActorsServiceLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
-  override val legacyStaffAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(ShiftsActor.persistenceId,
+  override val legacyShiftAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(LegacyShiftAssignmentsActor.persistenceId,
     journalType, now), name = "shifts-read-actor")
-  override val liveStaffAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(StaffAssignmentsActor.persistenceId,
+  override val liveShiftAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(ShiftAssignmentsActor.persistenceId,
     journalType, now), name = "staff-assignments-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(TestFixedPointsActor.streamingUpdatesProps(
     journalType, now, forecastMaxDays), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(TestStaffMovementsActor.streamingUpdatesProps(
     journalType), name = "staff-movements-read-actor")
 
-  override val legacyStaffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
+  override val legacyShiftAssignmentsSequentialWritesActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
-  override val staffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(StaffAssignmentsActor.sequentialWritesProps(
+  override val shiftAssignmentsSequentialWritesActor: ActorRef = system.actorOf(ShiftAssignmentsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "staff-assignments-sequential-writes-actor")
 
   override val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(

@@ -217,10 +217,8 @@ object SPAMain {
       (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
 
     def loadAction: Action = mode match {
-      case Staffing =>
-        GetAllLegacyStaffAssignments
-      case Shifts =>
-        GetAllStaffAssignments
+      case Staffing | Shifts =>
+        GetAllShiftAssignments
       case _ =>
         SetViewMode(viewMode)
     }

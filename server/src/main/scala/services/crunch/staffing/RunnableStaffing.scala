@@ -26,7 +26,7 @@ object RunnableStaffing extends DrtRunnableGraph {
 
   def apply(staffingQueueActor: ActorRef,
             staffQueue: SortedSet[TerminalUpdateRequest],
-            staffAssignmentsReadActor: ActorRef,
+            shiftAssignmentsReadActor: ActorRef,
             fixedPointsActor: ActorRef,
             movementsActor: ActorRef,
             staffMinutesActor: ActorRef,
@@ -35,7 +35,7 @@ object RunnableStaffing extends DrtRunnableGraph {
            )
            (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
 
-    val shiftsProvider = (r: TerminalUpdateRequest) => staffAssignmentsReadActor.ask(r).mapTo[ShiftAssignments]
+    val shiftsProvider = (r: TerminalUpdateRequest) => shiftAssignmentsReadActor.ask(r).mapTo[ShiftAssignments]
     val fixedPointsProvider = (r: TerminalUpdateRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
     val movementsProvider = (r: TerminalUpdateRequest) => movementsActor.ask(r).mapTo[StaffMovements]
 
@@ -80,7 +80,7 @@ object RunnableStaffing extends DrtRunnableGraph {
           val shifts = staff.shifts.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
           val fixedPoints = staff.fixedPoints.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
           val movements = staff.movements.terminalStaffAt(processingRequest.terminal, minute)
-          
+
           StaffMinute(processingRequest.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))
         }).asContainer
       }

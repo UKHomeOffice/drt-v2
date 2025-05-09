@@ -39,22 +39,22 @@ object TerminalComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
-  private case class TerminalModel(userPreferences: Pot[UserPreferences],
-                                   legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
-                                   potFixedPoints: Pot[FixedPointAssignments],
-                                   potStaffMovements: Pot[StaffMovements],
+  private case class TerminalModel(userPreferencesPot: Pot[UserPreferences],
+                                   dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+                                   fixedPointsPot: Pot[FixedPointAssignments],
+                                   staffMovementsPot: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
-                                   airportConfig: Pot[AirportConfig],
-                                   slaConfigs: Pot[SlaConfigs],
+                                   airportConfigPot: Pot[AirportConfig],
+                                   slaConfigsPot: Pot[SlaConfigs],
                                    loadingState: LoadingState,
                                    showActuals: Boolean,
                                    loggedInUserPot: Pot[LoggedInUser],
                                    viewMode: ViewMode,
-                                   featureFlags: Pot[FeatureFlags],
-                                   redListPorts: Pot[HashSet[PortCode]],
-                                   redListUpdates: Pot[RedListUpdates],
+                                   featureFlagsPot: Pot[FeatureFlags],
+                                   redListPortsPot: Pot[HashSet[PortCode]],
+                                   redListUpdatesPot: Pot[RedListUpdates],
                                    timeMachineEnabled: Boolean,
-                                   walkTimes: Pot[WalkTimes],
+                                   walkTimesPot: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
                                    shiftsPot: Pot[Seq[Shift]],
                                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
@@ -79,22 +79,22 @@ object TerminalComponent {
     def render(props: Props): VdomElement = {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        userPreferences = model.userPreferences,
-        legacyDayOfShiftAssignmentsPot = model.legacyDayOfStaffAssignments,
-        potFixedPoints = model.fixedPoints,
-        potStaffMovements = model.staffMovements,
+        userPreferencesPot = model.userPreferences,
+        dayOfShiftAssignmentsPot = model.dayOfShiftAssignments,
+        fixedPointsPot = model.fixedPoints,
+        staffMovementsPot = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
-        airportConfig = model.airportConfig,
-        slaConfigs = model.slaConfigs,
+        airportConfigPot = model.airportConfig,
+        slaConfigsPot = model.slaConfigs,
         loadingState = model.loadingState,
         showActuals = model.showActualIfAvailable,
         loggedInUserPot = model.loggedInUserPot,
         viewMode = model.viewMode,
-        featureFlags = model.featureFlags,
-        redListPorts = model.redListPorts,
-        redListUpdates = model.redListUpdates,
+        featureFlagsPot = model.featureFlags,
+        redListPortsPot = model.redListPorts,
+        redListUpdatesPot = model.redListUpdates,
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
-        walkTimes = model.gateStandWalkTime,
+        walkTimesPot = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
         shiftsPot = model.shifts,
         addedStaffMovementMinutes = model.addedStaffMovementMinutes,
@@ -108,11 +108,11 @@ object TerminalComponent {
           val terminalModel: TerminalModel = modelMP()
 
           for {
-            featureFlags <- terminalModel.featureFlags
-            airportConfig <- terminalModel.airportConfig
+            featureFlags <- terminalModel.featureFlagsPot
+            airportConfig <- terminalModel.airportConfigPot
             loggedInUser <- terminalModel.loggedInUserPot
-            redListUpdates <- terminalModel.redListUpdates
-            userPreferences <- terminalModel.userPreferences
+            redListUpdates <- terminalModel.redListUpdatesPot
+            userPreferences <- terminalModel.userPreferencesPot
           } yield {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -157,7 +157,7 @@ object TerminalComponent {
                       val hoursToView = timeWindow.endInt - timeWindow.startInt
 
                       val terminal = props.terminalPageTab.terminal
-                      val queues = terminalModel.airportConfig.map(_.nonTransferQueues(terminal).toList)
+                      val queues = terminalModel.airportConfigPot.map(_.nonTransferQueues(terminal).toList)
                       val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q).toMap))
                       val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
@@ -178,9 +178,9 @@ object TerminalComponent {
                           PcpPaxSummariesComponent(terminalModel.viewMode, mt, ps.map(_.crunchMinutes.values.toSeq))
                         ),
                         TerminalContentComponent(TerminalContentComponent.Props(
-                          legacyDayOfShiftAssignments = terminalModel.legacyDayOfShiftAssignmentsPot,
-                          potFixedPoints = terminalModel.potFixedPoints,
-                          potStaffMovements = terminalModel.potStaffMovements,
+                          dayOfShiftAssignmentsPot = terminalModel.dayOfShiftAssignmentsPot,
+                          potFixedPoints = terminalModel.fixedPointsPot,
+                          potStaffMovements = terminalModel.staffMovementsPot,
                           removedStaffMovements = terminalModel.removedStaffMovements,
                           airportConfig = airportConfig,
                           slaConfigs = slas,
@@ -190,10 +190,10 @@ object TerminalComponent {
                           showActuals = terminalModel.showActuals,
                           viewMode = terminalModel.viewMode,
                           loggedInUser = loggedInUser,
-                          featureFlags = terminalModel.featureFlags,
-                          redListPorts = terminalModel.redListPorts,
-                          redListUpdates = terminalModel.redListUpdates,
-                          walkTimes = terminalModel.walkTimes,
+                          featureFlags = terminalModel.featureFlagsPot,
+                          redListPorts = terminalModel.redListPortsPot,
+                          redListUpdates = terminalModel.redListUpdatesPot,
+                          walkTimes = terminalModel.walkTimesPot,
                           paxFeedSourceOrder = terminalModel.paxFeedSourceOrder,
                           flights = flightsForWindow(viewStart, viewEnd),
                           flightManifestSummaries = manSums,
@@ -218,11 +218,11 @@ object TerminalComponent {
                           airportConfig = airportConfig,
                           slaConfigs = slas,
                           router = props.router,
-                          featureFlags = terminalModel.featureFlags,
+                          featureFlags = terminalModel.featureFlagsPot,
                           loggedInUser = loggedInUser,
-                          redListPorts = terminalModel.redListPorts,
+                          redListPorts = terminalModel.redListPortsPot,
                           redListUpdates = redListUpdates,
-                          walkTimes = terminalModel.walkTimes,
+                          walkTimes = terminalModel.walkTimesPot,
                           paxFeedSourceOrder = terminalModel.paxFeedSourceOrder,
                           portState = ps,
                           flightManifestSummaries = manSums,
@@ -233,7 +233,7 @@ object TerminalComponent {
                       )
 
                     case Planning =>
-                      <.div(terminalModel.userPreferences.render { userPreferences =>
+                      <.div(terminalModel.userPreferencesPot.render { userPreferences =>
                         TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router,
                           userPreferences.userSelectedPlanningTimePeriod,
                           airportConfig))

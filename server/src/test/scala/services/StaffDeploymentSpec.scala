@@ -1,7 +1,7 @@
 package services
 
 import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
-import actors.persistent.staffing.ShiftsActor.UpdateShifts
+import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
