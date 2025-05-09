@@ -30,7 +30,6 @@ import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.util.Try
 
 object SPAMain {
-
   sealed trait Loc {
     val url: String
 
@@ -39,8 +38,8 @@ object SPAMain {
       case None => url
     }
 
-    val portCodeStr = dom.document.getElementById("port-code").getAttribute("value")
-    val portConfig = DrtPortConfigs.confByPort(PortCode(portCodeStr))
+    val portCodeStr: String = dom.document.getElementById("port-code").getAttribute("value")
+    val portConfig: AirportConfig = DrtPortConfigs.confByPort(PortCode(portCodeStr))
 
     def terminalPart(maybeTerminal: Option[Terminal]): String = {
       val terminalShortName = maybeTerminal.map { t =>
@@ -325,7 +324,7 @@ object SPAMain {
     }
     .renderWith(Layout(_, _))
     .setTitle(_.title(maybeTerminal))
-    .onPostRender((maybePrevLoc, currentLoc) => {
+    .setPostRender { (maybePrevLoc, currentLoc) =>
       val title = currentLoc.title(maybeTerminal)
       log.info(s"Sending page view: $title (${currentLoc.href})")
       Callback(GoogleEventTracker.sendPageView(title, currentLoc.href)) >>
@@ -340,7 +339,7 @@ object SPAMain {
             case _ =>
           }
         )
-    })
+    }
 
   private def maybeTerminal: Option[Terminal] = {
     val terminalRegex = """.+terminal/([A-Z0-9]+)/.+""".r
@@ -400,7 +399,7 @@ object SPAMain {
       (TerminalPageTabLoc.hashValue / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
-        ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
+        ThemeProvider(DrtReactTheme)(TerminalComponent(props))
       }
   }
 
@@ -422,7 +421,7 @@ object SPAMain {
       dynRenderR { case (page: TrainingHubLoc, router) =>
         proxy { p =>
           val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
-          ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
+          ThemeProvider(DrtReactTheme)(TrainingHubComponent(props))
         }
       }
   }

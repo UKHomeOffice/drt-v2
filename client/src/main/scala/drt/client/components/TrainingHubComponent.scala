@@ -8,6 +8,7 @@ import drt.client.services._
 import drt.client.spa.TrainingHubPageMode
 import drt.client.spa.TrainingHubPageModes.{DropInBooking, TrainingMaterial}
 import drt.shared.{DropIn, DropInRegistration}
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -31,7 +32,7 @@ object TrainingHubComponent {
   private case class TrainingModel(airportConfig: Pot[AirportConfig],
                                    loggedInUserPot: Pot[LoggedInUser],
                                    dropIns: Pot[Seq[DropIn]],
-                                   dropInRegistrations : Pot[Seq[DropInRegistration]]
+                                   dropInRegistrations: Pot[Seq[DropInRegistration]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -48,20 +49,21 @@ object TrainingHubComponent {
       <.div(
         modelRCP(modelMP => {
           val model: TrainingModel = modelMP()
-            <.div(
-              <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
-              <.div(^.className := "tab-content",
-                props.trainingHubLoc.modeStr match {
-                  case "trainingMaterial" =>
-                    TrainingMaterialComponent()
-                  case "dropInBooking" =>
-                    <.div(model.dropIns.render(dropIns => {
-                      DropInComponent(dropIns)
-                    }))
+          <.div(
+            MuiTypography(variant = "h1")(s"Training Hub"),
+            <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
+            <.div(^.className := "tab-content",
+              props.trainingHubLoc.modeStr match {
+                case "trainingMaterial" =>
+                  TrainingMaterialComponent()
+                case "dropInBooking" =>
+                  <.div(model.dropIns.render(dropIns => {
+                    DropInComponent(dropIns)
+                  }))
 
-                }
-              )
+              }
             )
+          )
         }
         ))
     }
@@ -77,11 +79,13 @@ object TrainingHubComponent {
           ^.id := "dropInBooking", "Book a Drop-in Session", VdomAttr("data-toggle") := "tab"
         )
       ),
-      <.li(^.className := tabClass(TrainingMaterial),
-        props.router.link(props.trainingHubLoc.copy(modeStr = TrainingMaterial.asString))(
-          ^.id := "trainingMaterial", "Training Material", VdomAttr("data-toggle") := "tab"
+      if (false) { //temporary setting to false as it will be coming in future
+        <.li(^.className := tabClass(TrainingMaterial),
+          props.router.link(props.trainingHubLoc.copy(modeStr = TrainingMaterial.asString))(
+            ^.id := "trainingMaterial", "Training Material", VdomAttr("data-toggle") := "tab"
+          )
         )
-      )
+      } else EmptyVdom
     )
   }
 

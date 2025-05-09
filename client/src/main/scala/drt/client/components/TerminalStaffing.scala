@@ -10,7 +10,7 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
@@ -32,8 +32,7 @@ import scala.util.Success
 object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(
-                    terminal: Terminal,
+  case class Props(terminal: Terminal,
                     dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[StaffMovements],
@@ -52,6 +51,7 @@ object TerminalStaffing {
               .forDay(props.viewMode.localDate)(ld => SDate(ld))
               .filter(sm => !props.removedStaffMovements.contains(sm.uUID))
             <.div(
+              MuiTypography(variant = "h2")(s"Staff movements at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
@@ -66,20 +66,20 @@ object TerminalStaffing {
 
     private def staffOverTheDay(localDate: LocalDate,
                                 movements: Seq[StaffMovement],
-                                shifts: ShiftAssignments,
+                                dayOfStaffAssignments: ShiftAssignments,
                                 terminalName: Terminal): VdomTagOf[Div] = {
-      val terminalShifts = ShiftAssignments(shifts.forTerminal(terminalName))
+      val terminalShifts = ShiftAssignments(dayOfStaffAssignments.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
 
       <.div(
-        <.h2("Staff over the day"),
+        <.h3("Staff over the day"),
         staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate(localDate)), staffWithShiftsAndMovementsAt)
       )
     }
 
     private def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
       val terminalMovements = movements.filter(_.terminal == terminalName)
-      <.div(^.className := "staff-movements-list", <.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
+      <.div(^.className := "staff-movements-list", <.h3("Movements"), movementsListTagMod(terminalMovements, terminalName))
     }
 
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
@@ -112,7 +112,7 @@ object TerminalStaffing {
             defaultExamples
 
           <.div(
-            <.h2("Miscellaneous Staff"),
+            <.h3("Miscellaneous Staff"),
             if (props.loggedInUser.roles.contains(StaffEdit)) {
               <.div(
                 <.p("One entry per line with values separated by commas, e.g.:"),

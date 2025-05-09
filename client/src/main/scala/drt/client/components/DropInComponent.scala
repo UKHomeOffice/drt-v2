@@ -82,6 +82,7 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
 
     def render(props: Props, state: State) = {
       <.div(
+        MuiTypography(variant = "h2")("Book a Drop-in Session"),
         modelRCP(modelMP => {
           val model: DropInRegistrationModel = modelMP()
 
@@ -89,16 +90,6 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
             props.dropIns.nonEmpty match {
               case true =>
                 ThemeProvider(DrtTheme.theme)(
-                  <.div(
-                    MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
-                      "backgroundColor" -> "#FFFFFF",
-                    )))(
-                      MuiGrid(sx = SxProps(Map(
-                        "padding-top" -> "24px",
-                        "fontSize" -> DrtTheme.theme.typography.h3.fontSize,
-                        "fontWeight" -> DrtTheme.theme.typography.h3.fontWeight
-                      )))(<.span(s"Book a Drop-in Session")),
-                    )),
                   MuiGrid(sx = SxProps(Map(
                     "backgroundColor" -> "#FFFFFF",
                     "paddingTop" -> "24px",

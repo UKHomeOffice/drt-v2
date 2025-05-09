@@ -17,6 +17,7 @@ import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiMenu, MuiMenuItem}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
@@ -175,8 +176,8 @@ object TerminalContentComponent {
                 props.terminalPageTab.dateFromUrlOrNow,
                 props.loggedInUser,
                 props.viewMode),
-              MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                MuiIcons(GetApp)(fontSize = "small"),
+              MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
+                MuiIcons(GetApp)(fontSize = "large"),
                 "Advanced Downloads",
                 ^.className := "btn btn-default",
                 ^.onClick ==> handleMenuOpen
@@ -340,8 +341,8 @@ object TerminalContentComponent {
     val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
     <.div(
       ^.key := keyValue,
-      MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-        MuiIcons(GetApp)(fontSize = "small"),
+      MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
+        MuiIcons(GetApp)(fontSize = "large"),
         s" ${exportType.linkLabel}",
         maybeExtraIcon.getOrElse(EmptyVdom),
         ^.className := "btn btn-default",
