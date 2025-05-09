@@ -34,7 +34,7 @@ object TerminalStaffing {
 
   case class Props(
                     terminal: Terminal,
-                    legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+                    dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[StaffMovements],
                     removedStaffMovements: Set[String],
@@ -45,7 +45,7 @@ object TerminalStaffing {
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
-      props.legacyDayOfShiftAssignmentsPot.render { legacyDayOfShiftAssignments =>
+      props.dayOfShiftAssignmentsPot.render { legacyDayOfShiftAssignments =>
         props.potFixedPoints.render { fixedPoints =>
           props.potStaffMovements.render { movements =>
             val movementsForTheDay = movements

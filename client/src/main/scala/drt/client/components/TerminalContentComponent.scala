@@ -40,7 +40,7 @@ import scala.collection.immutable.HashSet
 import scala.scalajs.js.JSConverters.JSRichOption
 
 object TerminalContentComponent {
-  case class Props(legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+  case class Props(dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
                    removedStaffMovements: Set[String],
@@ -314,7 +314,7 @@ object TerminalContentComponent {
               if (state.activeTab == "staffing") {
                 TerminalStaffing(TerminalStaffing.Props(
                   terminal = terminal,
-                  legacyDayOfShiftAssignmentsPot = props.legacyDayOfShiftAssignmentsPot,
+                  dayOfShiftAssignmentsPot = props.dayOfShiftAssignmentsPot,
                   potFixedPoints = props.potFixedPoints,
                   potStaffMovements = props.potStaffMovements,
                   removedStaffMovements = props.removedStaffMovements,

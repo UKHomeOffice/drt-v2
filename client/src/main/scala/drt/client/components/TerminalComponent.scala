@@ -40,7 +40,7 @@ object TerminalComponent {
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
   private case class TerminalModel(userPreferencesPot: Pot[UserPreferences],
-                                   legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+                                   dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                                    fixedPointsPot: Pot[FixedPointAssignments],
                                    staffMovementsPot: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
@@ -80,7 +80,7 @@ object TerminalComponent {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userPreferencesPot = model.userPreferences,
-        legacyDayOfShiftAssignmentsPot = model.dayOfShiftAssignments,
+        dayOfShiftAssignmentsPot = model.dayOfShiftAssignments,
         fixedPointsPot = model.fixedPoints,
         staffMovementsPot = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
@@ -177,7 +177,7 @@ object TerminalComponent {
                           PcpPaxSummariesComponent(terminalModel.viewMode, mt, ps.map(_.crunchMinutes.values.toSeq))
                         ),
                         TerminalContentComponent(TerminalContentComponent.Props(
-                          legacyDayOfShiftAssignmentsPot = terminalModel.legacyDayOfShiftAssignmentsPot,
+                          dayOfShiftAssignmentsPot = terminalModel.dayOfShiftAssignmentsPot,
                           potFixedPoints = terminalModel.fixedPointsPot,
                           potStaffMovements = terminalModel.staffMovementsPot,
                           removedStaffMovements = terminalModel.removedStaffMovements,
