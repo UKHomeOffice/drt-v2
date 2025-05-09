@@ -23,8 +23,8 @@ object ShiftAssignmentsServiceImpl {
   }
 }
 
-case class ShiftAssignmentsServiceImpl(liveStaffShiftsReadActor: ActorRef,
-                                       shiftsStaffSequentialWritesActor: ActorRef,
+case class ShiftAssignmentsServiceImpl(liveShiftAssignmentsActor: ActorRef,
+                                       shiftAssignmentsSequentialWriteActor: ActorRef,
                                        pitShiftAssignmentsActor: SDateLike => ActorRef,
                                      )
                                       (implicit timeout: Timeout, ec: ExecutionContext) extends ShiftAssignmentsService {
@@ -39,14 +39,14 @@ case class ShiftAssignmentsServiceImpl(liveStaffShiftsReadActor: ActorRef,
   }
 
   override def allShiftAssignments: Future[ShiftAssignments] =
-    liveStaffShiftsReadActor
+    liveShiftAssignmentsActor
       .ask(GetState)
       .mapTo[ShiftAssignments]
 
   private def liveShiftAssignmentsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    liveStaffShiftsReadActor.ask(GetStateForDateRange(start, end))
+    liveShiftAssignmentsActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
   }
 
@@ -69,7 +69,7 @@ case class ShiftAssignmentsServiceImpl(liveStaffShiftsReadActor: ActorRef,
   }
 
   override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
-    shiftsStaffSequentialWritesActor
+    shiftAssignmentsSequentialWriteActor
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
 }

@@ -23,9 +23,9 @@ object LegacyShiftAssignmentsServiceImpl {
   }
 }
 
-case class LegacyShiftAssignmentsServiceImpl(liveShiftsActor: ActorRef,
-                                             shiftsWriteActor: ActorRef,
-                                             pitActor: SDateLike => ActorRef,
+case class LegacyShiftAssignmentsServiceImpl(liveShiftAssignmentsActor: ActorRef,
+                                             shiftAssignmentsSequentialWriteActor: ActorRef,
+                                             pitShiftAssignmentsActor: SDateLike => ActorRef,
                                             )
                                             (implicit timeout: Timeout, ec: ExecutionContext) extends LegacyShiftAssignmentsService {
   override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
@@ -39,19 +39,19 @@ case class LegacyShiftAssignmentsServiceImpl(liveShiftsActor: ActorRef,
   }
 
   override def allShiftAssignments: Future[ShiftAssignments] =
-    liveShiftsActor
+    liveShiftAssignmentsActor
       .ask(GetState)
       .mapTo[ShiftAssignments]
 
   private def liveShiftAssignmentsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    liveShiftsActor.ask(GetStateForDateRange(start, end))
+    liveShiftAssignmentsActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
   }
 
   private def shiftAssignmentsForPointInTime(pointInTime: SDateLike): Future[ShiftAssignments] = {
-    val shiftsReadActor: ActorRef = pitActor(pointInTime)
+    val shiftsReadActor: ActorRef = pitShiftAssignmentsActor(pointInTime)
 
     val start = pointInTime.getLocalLastMidnight.millisSinceEpoch
     val end = pointInTime.getLocalNextMidnight.addMinutes(-1).millisSinceEpoch
@@ -69,7 +69,11 @@ case class LegacyShiftAssignmentsServiceImpl(liveShiftsActor: ActorRef,
   }
 
   override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
-    shiftsWriteActor
+    shiftAssignmentsSequentialWriteActor
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
+//      .map { a =>
+//        println(s"Updated shift assignments: ${a.assignments.sortBy(_.start).map(a => s"${SDate(a.start).toISOString}: ${a.numberOfStaff}").mkString("\n")}")
+//        a
+//      }
 }
