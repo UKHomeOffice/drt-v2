@@ -174,18 +174,11 @@ object MonthlyStaffing {
                     ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                     interval = props.timeSlotMinutes,
                     handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
-                      if (props.isStaffShiftPage)
-                        SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
-                      else
-                        SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
-                      scope.modState(state => {
-                        val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
-                        newState
-                      }).runNow()
+                      SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                      scope.modState(_.copy(showEditStaffForm = false, showStaffSuccess = true)).runNow()
                     },
-                    cancelHandler = () => {
-                      scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
-                    })))),
+                    cancelHandler = () => scope.modState(_.copy(showEditStaffForm = false)).runNow()
+                  )))),
                 <.div(^.className := "staffing-table",
                   state.shiftsLastLoaded.map(lastLoaded =>
                     <.div(^.className := "staffing-table-content",
