@@ -329,11 +329,11 @@ object TerminalDesksAndQueues {
       .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
 
   private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
-    <.div(^.className := "view-controls-selector", MuiButton(
+    <.div(^.className := "re-crunch", MuiButton(
       variant = "outlined",
       size = "medium",
       color = Color.primary,
-    )(MuiIcons(RefreshOutlined)(),
+    )(MuiIcons(RefreshOutlined)(fontSize = "large"),
       ^.onClick --> requestForecastRecrunch(),
       "Request re-crunch")
     )
