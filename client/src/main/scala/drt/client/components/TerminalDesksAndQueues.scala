@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlTimeIntervalType, UrlViewType}
 import drt.client.actions.Actions.RequestDateRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -81,7 +81,19 @@ object TerminalDesksAndQueues {
     override val queryParamsValue: String = "charts"
   }
 
-  case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, showWaitColumn: Boolean) extends UseValueEq
+  sealed trait TimeInterval {
+    val queryParamsValue: String
+  }
+
+  case object Hourly extends TimeInterval {
+    override val queryParamsValue: String = "hourly"
+  }
+
+  case object Quarterly extends TimeInterval {
+    override val queryParamsValue: String = "quarterly"
+  }
+
+  case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, timeInterval: TimeInterval, showWaitColumn: Boolean) extends UseValueEq
 
   class Backend() {
     def render(props: Props, state: State): VdomTagOf[Div] = {
@@ -173,6 +185,22 @@ object TerminalDesksAndQueues {
         )
       }
 
+      def toggleHourly(timeInterval: TimeInterval) = (e: ReactEventFromInput) => {
+        e.preventDefault()
+        GoogleEventTracker.sendEvent(s"$terminal", "Select hourly interval", timeInterval.toString)
+        props.router.set(
+          props.terminalPageTab.withUrlParameters(UrlTimeIntervalType(Option(timeInterval)))
+        )
+      }
+
+      def toggleQuaterly(timeInterval: TimeInterval) = (e: ReactEventFromInput) => {
+        e.preventDefault()
+        GoogleEventTracker.sendEvent(s"$terminal", "Select quaterly interval", timeInterval.toString)
+        props.router.set(
+          props.terminalPageTab.withUrlParameters(UrlTimeIntervalType(Option(timeInterval)))
+        )
+      }
+
       def requestForecastRecrunch(): Callback = Callback {
         SPACircuit.dispatch(RequestDateRecrunch(props.viewStart.toLocalDate))
       }
@@ -198,9 +226,23 @@ object TerminalDesksAndQueues {
             <.label(^.`for` := "display-charts", "Charts view")
           ))
 
+
+        val displayIntervalControls = List(
+          <.div(^.className := s"controls-radio-wrapper",
+            <.input.radio(^.checked := state.timeInterval == Hourly, ^.onChange ==> toggleHourly(Hourly), ^.id := "display-hourly-interval"),
+            <.label(^.`for` := "display-hourly-interval", "Hourly")
+          ),
+          <.div(^.className := s"controls-radio-wrapper",
+            <.input.radio(^.checked := state.timeInterval == Quarterly, ^.onChange ==> toggleQuaterly(Quarterly), ^.id := "display-quaterly-interval"),
+            <.label(^.`for` := "display-quaterly-interval", "Quaterly")
+          ))
+
         <.div(^.className := "view-controls",
-          <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod),
-          <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod),
+          <.div(^.className := "view-controls-label", "Staff:", <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)),
+          <.span(^.className := "separator"),
+          <.div(^.className := "view-controls-label", "Format:", <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)),
+          <.span(^.className := "separator"),
+          <.div(^.className := "view-controls-label", "Intervals:", <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)),
         )
       }
 
@@ -213,7 +255,8 @@ object TerminalDesksAndQueues {
         } yield {
           val slas = slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
           val queues = props.airportConfig.nonTransferQueues(terminal).toList
-          val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by 15 * 60000
+          val interval = if (state.timeInterval == Hourly) 60 else 15
+          val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by interval * 60000
 
           val maxPaxInQueues: Map[Queue, Int] = windowCrunchMinutes
             .toList
@@ -231,15 +274,15 @@ object TerminalDesksAndQueues {
 
           <.div(^.className := "desks-queues-title",
             MuiTypography(variant = "h2")(s"Desks and queues at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminal}"),
+            StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
               if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,
-              StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
             ),
             if (state.displayType == ChartsView) {
               props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
                 val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
-                QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), state.deskType))
+                QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), interval, state.deskType))
               }.toTagMod
             } else {
               <.div(
@@ -286,10 +329,10 @@ object TerminalDesksAndQueues {
       .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
 
   private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
-    <.div(MuiButton(
+    <.div(^.className := "view-controls-selector", MuiButton(
       variant = "outlined",
       size = "medium",
-      color = Color.primary
+      color = Color.primary,
     )(MuiIcons(RefreshOutlined)(),
       ^.onClick --> requestForecastRecrunch(),
       "Request re-crunch")
@@ -302,6 +345,7 @@ object TerminalDesksAndQueues {
         showActuals = p.airportConfig.hasActualDeskStats && p.showActuals,
         deskType = p.terminalPageTab.deskType,
         displayType = p.terminalPageTab.displayAs,
+        timeInterval = p.terminalPageTab.timeIntervalAs,
         showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
     }
     .renderBackend[Backend]

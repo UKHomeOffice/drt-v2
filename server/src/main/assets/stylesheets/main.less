@@ -41,6 +41,10 @@ footer {
   text-align: center;
 }
 
+label {
+  font-weight: normal;
+}
+
 .badge-text {
   margin-left: 12px;
 }
@@ -688,6 +692,7 @@ table.headlines tr:nth-child(odd) {
   align-content: flex-start;
   gap: 10px;
   margin: 5px 0;
+  background-color: #E6E9F1;
 }
 
 .terminal-nav-wrapper {
@@ -983,19 +988,32 @@ rect.bordered {
   margin-right: 10px;
 }
 
+.separator {
+  margin: 10px 10px;
+  color: #ccc;
+  font-weight: bold;
+  display: inline-block;
+  border: 1px solid
+}
+
 .view-controls {
   display: flex;
-  flex-direction: column;
   gap: 10px;
+}
+
+.view-controls-label {
+  margin-left: 10px;
+  margin-top: 10px;
+  font-weight: bold;
 }
 
 .view-controls-selector {
   display: flex;
   justify-content: space-between;
-  background-color: #eee;
   border-radius: 5px;
-  margin: 2px 0px;
+  margin: 2px 0;
   padding: 5px 10px;
+  font-weight: normal;
 }
 
 .controls-radio-wrapper {

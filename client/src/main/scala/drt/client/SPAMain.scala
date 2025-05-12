@@ -4,7 +4,7 @@ import diode.Action
 import diode.data.Pot
 import diode.react.ReactConnectProxy
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
+import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Hourly, Ideal, Quarterly, TableView, TimeInterval}
 import drt.client.components.styles._
 import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
@@ -108,6 +108,15 @@ object SPAMain {
     }
   }
 
+  object UrlTimeIntervalType {
+    val paramName = "timeInterval"
+
+    def apply(viewType: Option[TimeInterval]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = viewType.map(_.queryParamsValue)
+    }
+  }
+
   object UrlDayRangeType {
     val paramName = "dayRange"
 
@@ -181,9 +190,14 @@ object SPAMain {
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+:[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+:[0-9]+[ +1]*"))
 
-    val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
-    val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
+    val deskType: DeskType = queryParams.get(UrlViewType.paramName)
+      .map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
+    val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName)
+      .map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
+    val timeIntervalAs: TimeInterval = queryParams.get(UrlTimeIntervalType.paramName)
+      .map(vt => if (Hourly.queryParamsValue == vt) Hourly else Quarterly).getOrElse(Hourly)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
+
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>
