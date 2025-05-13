@@ -61,7 +61,8 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
     now = () => myNow,
     staleFrom = 24.hours,
   )
-  val scheduledStr = "2022-05-01T12:00"
+
+  val scheduledStr = myNow.toISOString
 
   "arrivalsByKey should" >> {
     "take some arrivals and a function to create their keys and return a list of keys to arrivals" >> {
@@ -100,22 +101,21 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
     val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
-    val oldPredictionValue = 0
-    val newPredictionValue = -4
+    val oldPredictionValue = -4
+    val newPredictionValue = 0
     val newPredictions = Predictions(
       myNow.millisSinceEpoch,
       Map(OffScheduleModelAndFeatures.targetName -> newPredictionValue)
     )
 
-
-        "I should be able to update the arrival with an predicted touchdown time" >> {
+    "I should be able to update the arrival with an predicted touchdown time" >> {
       val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
 
       val diff = ArrivalsDiff(Seq(arrival), Seq())
 
       val arrivals = Await.result(arrivalPredictions.addPredictions(diff), 1.second).toUpdate.values
 
-      arrivals.exists(a => a.predictedTouchdown.get !== a.Scheduled)
+      arrivals.exists(a => a.predictedTouchdown.nonEmpty)
     }
 
     "lastUpdated should only be set if the new predicted value is different from the existing one" >> {

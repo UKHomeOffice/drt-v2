@@ -31,6 +31,8 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
                               staleFrom: FiniteDuration,
                              )
                              (implicit ec: ExecutionContext, mat: Materializer) {
+  private val log = LoggerFactory.getLogger(getClass)
+
   val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => {
       val byKey = arrivalsByKey(diff.toUpdate.values, modelKeys)
@@ -54,27 +56,17 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
     getModels(modelKey).map { models =>
       arrivals
         .filter { arrival =>
-          val sinceLastCheck = (now().millisSinceEpoch - arrival.Predictions.lastChecked).millis
+          val sinceLastCheck = (now().millisSinceEpoch - arrival.Predictions.lastUpdated).millis
           sinceLastCheck >= staleFrom
         }
         .map { arrival =>
-          val updates = models.models.values
-            .map { case model: ArrivalModelAndFeatures =>
-              val maybePrediction = model.maybePrediction(arrival, minimumImprovementPctThreshold, modelThresholds.get(model.targetName))
-              (model.targetName, maybePrediction)
-            }
-            .collect {
-              case (targetName, Some(prediction)) => (targetName, prediction)
-            }
-            .filterNot {
-              case (targetName, prediction) => arrival.Predictions.predictions.get(targetName).contains(prediction)
-            }
-
-          if (updates.nonEmpty) {
-            val updatedPredictionValues = arrival.Predictions.predictions ++ updates.toMap
-            val updatedPredictions = arrival.Predictions.copy(predictions = updatedPredictionValues, lastChecked = now().millisSinceEpoch)
-            arrival.copy(Predictions = updatedPredictions)
-          } else arrival
+          models.models.values.foldLeft(arrival) {
+            case (arrival, model: ArrivalModelAndFeatures) =>
+              model.updatePrediction(arrival, minimumImprovementPctThreshold, modelThresholds.get(model.targetName), now())
+            case (_, unknownModel) =>
+              log.error(s"Unknown model type ${unknownModel.getClass}")
+              arrival
+          }
         }
     }
 }
