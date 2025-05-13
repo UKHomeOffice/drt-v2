@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode._
-import diode.data.Pot
+import diode.data.{Pending, Pot}
 import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
@@ -24,7 +24,7 @@ class ViewModeHandler[M](now: () => SDateLike,
 
       (newViewMode, currentViewMode) match {
         case (newVm, oldVm) if newVm.localDate != oldVm.localDate || newVm.maybePointInTime != oldVm.maybePointInTime || value._2.isEmpty =>
-          updated((newViewMode, value._2, 0L), initialRequests(currentViewMode, newViewMode))
+          updated((newViewMode, Pending(), 0L), initialRequests(currentViewMode, newViewMode))
         case _ =>
           noChange
       }
