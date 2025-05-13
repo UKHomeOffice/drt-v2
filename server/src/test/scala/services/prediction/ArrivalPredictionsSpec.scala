@@ -52,10 +52,13 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
   )
 
   val arrivalPredictions: ArrivalPredictions = ArrivalPredictions(
-    modelKeysForArrival,
-    MockFlightPersistence().getModels(Seq(OffScheduleModelAndFeatures.targetName), None),
-    Map(OffScheduleModelAndFeatures.targetName -> minutesOffScheduledThreshold),
-    10)
+    modelKeys = modelKeysForArrival,
+    getModels = MockFlightPersistence().getModels(Seq(OffScheduleModelAndFeatures.targetName), None),
+    modelThresholds = Map(OffScheduleModelAndFeatures.targetName -> minutesOffScheduledThreshold),
+    minimumImprovementPctThreshold = 10,
+    now = () => SDate.now(),
+    staleFrom = 24.hours,
+  )
   val scheduledStr = "2022-05-01T12:00"
 
   "arrivalsByKey should" >> {

@@ -109,6 +109,12 @@ class TerminalDayFlightActor(year: Int,
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
   override def postRecoveryComplete(): Unit = {
+    println(
+      s"""Recovery stats $persistenceId:
+         |fwsMsgCount: $fwsMsgCount, fwsUpdatesCount: $fwsUpdatesCount
+         |fsMsgCount: $fsMsgCount, fsUpdatesCount: $fsUpdatesCount
+         |splitsMsgCount: $splitsMsgCount, splitsUpdatesCount: $splitsUpdatesCount
+      """.stripMargin)
     state = state.copy(flights = restorer.arrivals.filter(_._1.number != 0))
     restorer.finish()
 
@@ -245,6 +251,13 @@ class TerminalDayFlightActor(year: Int,
     case None => true
   }
 
+  var fwsMsgCount = 0
+  var fwsUpdatesCount = 0
+  var fsMsgCount = 0
+  var fsUpdatesCount = 0
+  var splitsMsgCount = 0
+  var splitsUpdatesCount = 0
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case FlightsWithSplitsDiffMessage(Some(createdAt), removals, updates) =>
       maybePointInTime match {
@@ -254,6 +267,8 @@ class TerminalDayFlightActor(year: Int,
           if (isBeforeCutoff(createdAt))
             restorer.remove(uniqueArrivalsFromMessages(removals))
 
+          fwsMsgCount = fwsMsgCount + 1
+          fwsUpdatesCount = fwsUpdatesCount + updates.size
           val incomingFws = updates.map(flightWithSplitsFromMessage).map(fws => (fws.unique, fws)).toMap
           val updateFws: (Option[ApiFlightWithSplits], ApiFlightWithSplits) => Option[ApiFlightWithSplits] = (maybeExisting, newFws) =>
             Option(maybeExisting.map(_.update(newFws)).getOrElse(newFws))
@@ -268,11 +283,46 @@ class TerminalDayFlightActor(year: Int,
           if (isBeforeCutoff(createdAt))
             restorer.remove(uniqueArrivalsFromMessages(removals))
 
+          fsMsgCount = fsMsgCount + 1
+          fsUpdatesCount = fsUpdatesCount + updates.size
           val incomingArrivals = updates.map(flightMessageToApiFlight).map(a => (a.unique, a)).toMap
           val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeExistingFws, incoming) => {
             val updated = maybeExistingFws
-              .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
-              .getOrElse(ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt)))
+              .map { existingFws =>
+                if (persistenceId == "terminal-flights-t5-2025-04-19" && existingFws.apiFlight == incoming) {
+                  log.info(s"Got an update for the same flight ${existingFws.apiFlight.flightCodeString} - ignoring")
+                  existingFws
+                } else {
+                  if (persistenceId == "terminal-flights-t5-2025-04-19") {
+                    if (existingFws.apiFlight.CarrierCode != incoming.CarrierCode) println(s"**Got a CarrierCode update for ${incoming.flightCodeString} ${existingFws.apiFlight.CarrierCode} ${incoming.CarrierCode}")
+                    if (existingFws.apiFlight.Status != incoming.Status) println(s"**Got a Status update for ${incoming.flightCodeString} ${existingFws.apiFlight.Status} ${incoming.Status}")
+                    if (existingFws.apiFlight.Estimated != incoming.Estimated) println(s"**Got a Estimated update for ${incoming.flightCodeString} ${existingFws.apiFlight.Estimated} ${incoming.Estimated}")
+                    if (existingFws.apiFlight.Predictions != incoming.Predictions) println(s"**Got a Predictions update for ${incoming.flightCodeString} ${existingFws.apiFlight.Predictions} ${incoming.Predictions}")
+                    if (existingFws.apiFlight.Actual != incoming.Actual) println(s"**Got a Actual update for ${incoming.flightCodeString} ${existingFws.apiFlight.Actual} ${incoming.Actual}")
+                    if (existingFws.apiFlight.EstimatedChox != incoming.EstimatedChox) println(s"**Got a EstimatedChox update for ${incoming.flightCodeString} ${existingFws.apiFlight.EstimatedChox} ${incoming.EstimatedChox}")
+                    if (existingFws.apiFlight.ActualChox != incoming.ActualChox) println(s"**Got a ActualChox update for ${incoming.flightCodeString} ${existingFws.apiFlight.ActualChox} ${incoming.ActualChox}")
+                    if (existingFws.apiFlight.Gate != incoming.Gate) println(s"**Got a Gate update for ${incoming.flightCodeString} ${existingFws.apiFlight.Gate} ${incoming.Gate}")
+                    if (existingFws.apiFlight.Stand != incoming.Stand) println(s"**Got a Stand update for ${incoming.flightCodeString} ${existingFws.apiFlight.Stand} ${incoming.Stand}")
+                    if (existingFws.apiFlight.MaxPax != incoming.MaxPax) println(s"**Got a MaxPax update for ${incoming.flightCodeString} ${existingFws.apiFlight.MaxPax} ${incoming.MaxPax}")
+                    if (existingFws.apiFlight.RunwayID != incoming.RunwayID) println(s"**Got a RunwayID update for ${incoming.flightCodeString} ${existingFws.apiFlight.RunwayID} ${incoming.RunwayID}")
+                    if (existingFws.apiFlight.BaggageReclaimId != incoming.BaggageReclaimId) println(s"**Got a BaggageReclaimId update for ${incoming.flightCodeString} ${existingFws.apiFlight.BaggageReclaimId} ${incoming.BaggageReclaimId}")
+                    if (existingFws.apiFlight.AirportID != incoming.AirportID) println(s"**Got a AirportID update for ${incoming.flightCodeString} ${existingFws.apiFlight.AirportID} ${incoming.AirportID}")
+                    if (existingFws.apiFlight.PreviousPort != incoming.PreviousPort) println(s"**Got a PreviousPort update for ${incoming.flightCodeString} ${existingFws.apiFlight.PreviousPort} ${incoming.PreviousPort}")
+                    if (existingFws.apiFlight.PcpTime != incoming.PcpTime) println(s"**Got a PcpTime update for ${incoming.flightCodeString} ${existingFws.apiFlight.PcpTime} ${incoming.PcpTime}")
+                    if (existingFws.apiFlight.FeedSources != incoming.FeedSources) println(s"**Got a FeedSources update for ${incoming.flightCodeString} ${existingFws.apiFlight.FeedSources} ${incoming.FeedSources}")
+                    if (existingFws.apiFlight.PassengerSources != incoming.PassengerSources) println(s"**Got a PassengerSources update for ${incoming.flightCodeString} ${existingFws.apiFlight.PassengerSources} ${incoming.PassengerSources}")
+                    if (existingFws.apiFlight.CarrierScheduled != incoming.CarrierScheduled) println(s"**Got a CarrierScheduled update for ${incoming.flightCodeString} ${existingFws.apiFlight.CarrierScheduled} ${incoming.CarrierScheduled}")
+                    if (existingFws.apiFlight.ScheduledDeparture != incoming.ScheduledDeparture) println(s"**Got a ScheduledDeparture update for ${incoming.flightCodeString} ${existingFws.apiFlight.ScheduledDeparture} ${incoming.ScheduledDeparture}")
+                  }
+
+                  existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming))
+                }
+              }
+              .getOrElse {
+                if (persistenceId == "terminal-flights-t5-2025-04-19")
+                  println(s"Got a new flight ${incoming.flightCodeString} ${SDate(incoming.Scheduled).toISOString} - ignoring")
+                ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt))
+              }
               .copy(lastUpdated = Option(createdAt))
             Option(updated)
           }
@@ -285,7 +335,9 @@ class TerminalDayFlightActor(year: Int,
         case Some(pit) if pit < createdAt =>
           log.debug(s"Ignoring diff created more recently than the recovery point in time")
         case _ =>
+          splitsMsgCount = splitsMsgCount + 1
           val incomingSplits = splitsForArrivalsFromMessage(msg).splits
+          splitsUpdatesCount = splitsUpdatesCount + incomingSplits.size
           val updateFws: (Option[ApiFlightWithSplits], Set[Splits]) => Option[ApiFlightWithSplits] = (maybeFws, incoming) => {
             maybeFws.map(fws => SplitsForArrivals.updateFlightWithSplits(fws, incoming, createdAt))
           }
