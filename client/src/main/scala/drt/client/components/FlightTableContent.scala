@@ -73,6 +73,7 @@ object FlightTableContent {
           props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
+      
       val content = for {
         flights <- props.flights
       } yield {
@@ -187,7 +188,7 @@ object FlightTableContent {
           )
         )
       }
-      content.getOrElse(<.div())
+      content.getOrElse(LoadingOverlay())
     }
   }
 
