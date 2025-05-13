@@ -1,16 +1,22 @@
 package services.arrivals
 
+import drt.shared.ArrivalGenerator
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.arrivals.MergeArrivals.FeedArrivalSet
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, UniqueArrival, VoyageNumber, Predictions => Preds}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 
 class MergeArrivalsSpec extends AnyWordSpec with Matchers {
@@ -317,4 +323,46 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       result(T1, UtcDate(2024, 6, 1)).failed.futureValue.getMessage should ===("Boom")
     }
   }
+
+  "processingRequestToArrivalsDiff" should {
+    val system = ActorSystem("processingRequestToArrivalsDiff")
+    implicit val mat = Materializer.matFromSystem(system)
+
+    var callCount = 0
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001").toArrival(LiveFeedSource)
+    val mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff] =
+      (_: Terminal, _: UtcDate) => Future.successful(ArrivalsDiff(Iterable(arrival), Iterable.empty[UniqueArrival]))
+    val setupPcpTimes: Seq[Arrival] => Future[Seq[Arrival]] =
+      arrivals => Future.successful(arrivals.map(a => a.copy(PcpTime = Some(a.Scheduled))))
+    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
+      arrivalsDiff => {
+        callCount += 1
+        Future.successful(arrivalsDiff)
+      }
+
+    "call addArrivalPredictions when the request date is not earlier than today" in {
+      val flow = MergeArrivals.processingRequestToArrivalsDiff(mergeArrivalsForDate, setupPcpTimes, addArrivalPredictions, () => LocalDate(2025, 5, 13))
+      callCount = 0
+      val runnable = Source(Seq(TerminalUpdateRequest(T1, LocalDate(2025, 5, 13))))
+        .via(flow)
+        .runWith(Sink.ignore)
+
+      Await.ready(runnable, 1.second)
+
+      assert(callCount == 1)
+    }
+
+    "not call addArrivalPredictions when the request date is not earlier than today" in {
+      val flow = MergeArrivals.processingRequestToArrivalsDiff(mergeArrivalsForDate, setupPcpTimes, addArrivalPredictions, () => LocalDate(2025, 5, 13))
+      callCount = 0
+      val runnable = Source(Seq(TerminalUpdateRequest(T1, LocalDate(2025, 5, 12))))
+        .via(flow)
+        .runWith(Sink.ignore)
+
+      Await.ready(runnable, 1.second)
+
+      assert(callCount == 0)
+    }
+  }
+
 }

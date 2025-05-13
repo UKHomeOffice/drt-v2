@@ -45,6 +45,7 @@ object RunnableMergedArrivals {
       mergeArrivalsForDate = merger,
       setPcpTimes = setPcpTimes,
       addArrivalPredictions = addArrivalPredictions,
+      () => SDate.now().toLocalDate
     )
 
     val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =

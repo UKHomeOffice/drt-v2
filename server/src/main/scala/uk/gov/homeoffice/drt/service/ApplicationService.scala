@@ -227,14 +227,16 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     ArrivalPredictions(
-      (a: Arrival) => Iterable(
+      modelKeys = (a: Arrival) => Iterable(
         TerminalOrigin(a.Terminal.toString, a.Origin.iata),
         TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
         PredictionModelActor.Terminal(a.Terminal.toString),
       ),
-      feedService.flightModelPersistence.getModels(enabledPredictionModelNamesWithUpperThresholds.keys.toSeq, None),
-      enabledPredictionModelNamesWithUpperThresholds,
-      minimumImprovementPctThreshold = 15
+      getModels = feedService.flightModelPersistence.getModels(enabledPredictionModelNamesWithUpperThresholds.keys.toSeq, None),
+      modelThresholds = enabledPredictionModelNamesWithUpperThresholds,
+      minimumImprovementPctThreshold = 15,
+      now = now,
+      24.hours,
     ).addPredictions
 
   val startUpdateGraphs: (

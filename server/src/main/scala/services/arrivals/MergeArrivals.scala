@@ -5,7 +5,7 @@ import org.apache.pekko.stream.scaladsl.Flow
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{DateLike, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDate, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -122,13 +122,17 @@ object MergeArrivals {
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff],
                                       setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                                      today: () => LocalDate,
                                      )
                                      (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, ArrivalsDiff, NotUsed] =
     Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>
           mergeArrivalsForDate(request.terminal, SDate(request.date).toUtcDate)
-            .flatMap(addArrivalPredictions)
+            .flatMap { arrivalsDiff =>
+              if (request.date >= today()) addArrivalPredictions(arrivalsDiff)
+              else Future.successful(arrivalsDiff)
+            }
             .flatMap { diff =>
               setPcpTimes(diff.toUpdate.values.toSeq)
                 .map(arrivals => diff.copy(toUpdate = arrivals.map(a => a.unique -> a).toMap))
