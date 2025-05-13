@@ -108,15 +108,6 @@ object SPAMain {
     }
   }
 
-  object UrlTimeIntervalType {
-    val paramName = "timeInterval"
-
-    def apply(viewType: Option[TimeInterval]): UrlParameter = new UrlParameter {
-      override val name: String = paramName
-      override val value: Option[String] = viewType.map(_.queryParamsValue)
-    }
-  }
-
   object UrlDayRangeType {
     val paramName = "dayRange"
 
@@ -125,8 +116,6 @@ object SPAMain {
       override val value: Option[String] = viewType
     }
   }
-
-  case class PortConfigPageLoc()
 
   object AccessibilityStatementLoc {
     val hashValue: String = "#accessibility"
@@ -194,8 +183,6 @@ object SPAMain {
       .map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName)
       .map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
-    val timeIntervalAs: TimeInterval = queryParams.get(UrlTimeIntervalType.paramName)
-      .map(vt => if (Hourly.queryParamsValue == vt) Hourly else Quarterly).getOrElse(Hourly)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
 
     def viewMode: ViewMode = {

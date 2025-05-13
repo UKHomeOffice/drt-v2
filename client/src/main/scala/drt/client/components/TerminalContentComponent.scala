@@ -249,6 +249,7 @@ object TerminalContentComponent {
                       windowStaffSummaries = props.windowStaffSummaries,
                       addedStaffMovementMinutes = props.addedStaffMovementMinutes,
                       terminal = terminal,
+                      userPreferences = props.userPreferences,
                     )
                   )
                 }

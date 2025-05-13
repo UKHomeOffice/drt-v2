@@ -147,7 +147,7 @@ trait AggregatedDbTables extends CentralDatabase {
   }
 
   class UserTable(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
-    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes, hide_pax_data_source_description, show_staffing_shift_view) <> (UserRow.tupled, UserRow.unapply)
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes, hide_pax_data_source_description, show_staffing_shift_view, desks_and_queues_interval_minutes) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
     val userName: Rep[String] = column[String]("username")
@@ -161,6 +161,7 @@ trait AggregatedDbTables extends CentralDatabase {
     val staff_planning_interval_minutes = column[Option[Int]]("staff_planning_interval_minutes")
     val hide_pax_data_source_description = column[Option[Boolean]]("hide_pax_data_source_description")
     val show_staffing_shift_view = column[Option[Boolean]]("show_staffing_shift_view")
+    val desks_and_queues_interval_minutes = column[Option[Int]]("desks_and_queues_interval_minutes")
     val pk = primaryKey("user_pkey", (id))
 
     index("username", userName)

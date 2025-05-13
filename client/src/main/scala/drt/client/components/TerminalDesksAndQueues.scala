@@ -2,11 +2,12 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlTimeIntervalType, UrlViewType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType}
 import drt.client.actions.Actions.RequestDateRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.services.{SPACircuit, StaffMovementMinute, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
@@ -28,7 +29,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
-
 
 object TerminalDesksAndQueues {
 
@@ -55,6 +55,7 @@ object TerminalDesksAndQueues {
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
                    terminal: Terminal,
+                   userPreferences: UserPreferences
                   ) extends UseValueEq
 
   sealed trait DeskType {
@@ -177,27 +178,18 @@ object TerminalDesksAndQueues {
         )
       }
 
+       def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) =>  Callback{
+        e.preventDefault()
+         GoogleEventTracker.sendEvent(s"$terminal", s"Select ${timeInterval.queryParamsValue} interval", timeInterval.toString)
+         SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes = if (timeInterval == Hourly) 60 else 15)))
+       }
+
+
       def toggleDisplayType(newDisplayType: DisplayType) = (e: ReactEventFromInput) => {
         e.preventDefault()
         GoogleEventTracker.sendEvent(s"$terminal", "Select display type", newDisplayType.toString)
         props.router.set(
           props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
-        )
-      }
-
-      def toggleHourly(timeInterval: TimeInterval) = (e: ReactEventFromInput) => {
-        e.preventDefault()
-        GoogleEventTracker.sendEvent(s"$terminal", "Select hourly interval", timeInterval.toString)
-        props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlTimeIntervalType(Option(timeInterval)))
-        )
-      }
-
-      def toggleQuaterly(timeInterval: TimeInterval) = (e: ReactEventFromInput) => {
-        e.preventDefault()
-        GoogleEventTracker.sendEvent(s"$terminal", "Select quaterly interval", timeInterval.toString)
-        props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlTimeIntervalType(Option(timeInterval)))
         )
       }
 
@@ -229,12 +221,12 @@ object TerminalDesksAndQueues {
 
         val displayIntervalControls = List(
           <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.timeInterval == Hourly, ^.onChange ==> toggleHourly(Hourly), ^.id := "display-hourly-interval"),
-            <.label(^.`for` := "display-hourly-interval", "Hourly")
+            <.input.radio(^.checked := state.timeInterval == Quarterly, ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Quarterly)), ^.id := "display-quaterly-interval"),
+            <.label(^.`for` := "display-quaterly-interval", "Every 15 minutes")
           ),
           <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.timeInterval == Quarterly, ^.onChange ==> toggleQuaterly(Quarterly), ^.id := "display-quaterly-interval"),
-            <.label(^.`for` := "display-quaterly-interval", "Quaterly")
+            <.input.radio(^.checked := state.timeInterval == Hourly, ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Hourly)), ^.id := "display-hourly-interval"),
+            <.label(^.`for` := "display-hourly-interval", "Hourly")
           ))
 
         <.div(^.className := "view-controls",
@@ -345,7 +337,10 @@ object TerminalDesksAndQueues {
         showActuals = p.airportConfig.hasActualDeskStats && p.showActuals,
         deskType = p.terminalPageTab.deskType,
         displayType = p.terminalPageTab.displayAs,
-        timeInterval = p.terminalPageTab.timeIntervalAs,
+        timeInterval = p.userPreferences.desksAndQueuesIntervalMinutes match {
+          case 60 => Hourly
+          case _ => Quarterly
+        },
         showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
     }
     .renderBackend[Backend]
