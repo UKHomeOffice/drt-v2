@@ -31,8 +31,6 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
                               staleFrom: FiniteDuration,
                              )
                              (implicit ec: ExecutionContext, mat: Materializer) {
-  private val log = LoggerFactory.getLogger(getClass)
-
   val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => {
       val byKey = arrivalsByKey(diff.toUpdate.values, modelKeys)

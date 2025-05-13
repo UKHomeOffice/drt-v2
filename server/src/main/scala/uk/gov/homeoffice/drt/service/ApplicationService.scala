@@ -236,6 +236,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       modelThresholds = enabledPredictionModelNamesWithUpperThresholds,
       minimumImprovementPctThreshold = 15,
       now = now,
+      24.hours,
     ).addPredictions
 
   val startUpdateGraphs: (
