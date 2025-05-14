@@ -12,6 +12,7 @@ CREATE TABLE public.user
     staff_planning_interval_minutes  integer,
     hide_pax_data_source_description boolean,
     show_staffing_shift_view         boolean,
+    desks_and_queues_interval_minutes integer,
     PRIMARY KEY (id)
 );
 
