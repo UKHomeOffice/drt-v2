@@ -3,7 +3,6 @@ package drt.client.components
 import drt.client.components.ChartJSComponent._
 import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Ideal}
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.model.CrunchMinute
@@ -20,7 +19,9 @@ object QueueChartComponent {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("QueueChart")
     .render_P { props =>
-      val labels: Seq[String] = (0 until 96).map(m => SDate("2022-08-17T23:00").addMinutes(m * props.interval).toHoursAndMinutes)
+      val minutesInADay = 1440
+      val intervalRange = minutesInADay / props.interval
+      val labels: Seq[String] = (0 until intervalRange).map(m => SDate("2022-08-17T23:00").addMinutes(m * props.interval).toHoursAndMinutes)
       val paxInQueueSet: ChartJsDataSet = ChartJsDataSet.line(
         label = "Pax in queue",
         data = props.queueSummaries.map {
