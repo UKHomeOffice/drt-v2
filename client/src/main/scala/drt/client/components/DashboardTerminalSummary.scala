@@ -13,7 +13,8 @@ import uk.gov.homeoffice.drt.ports.Queues.{InvalidQueue, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
-
+import scala.scalajs.js
+import scala.scalajs.js.JSConverters._
 
 object DashboardTerminalSummary {
 
@@ -149,7 +150,7 @@ object DashboardTerminalSummary {
         def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
-        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
+//        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
@@ -160,62 +161,115 @@ object DashboardTerminalSummary {
 
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
-        <.div(^.className := "dashboard-summary container-fluid",
-          <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
-            <.span(^.className := "flights-total", f"${props.flights.size}%,d Flights"),
-            <.table(^.className := s"summary-box-count rag-desks",
-              <.tbody(
-                <.tr(
-                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime}")
-                ),
-                <.tr(
-                  <.td("Staff"), <.td("Desks")
-                ),
-                <.tr(
-                  <.td(s"$pressurePointAvailableStaff"),
-                  <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
-                )
-              )
-            )),
-          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)),
-          <.div(^.className := "summary-box-container col-sm-4 dashboard-summary__pax-summary",
-            <.table(^.className := "dashboard-summary__pax-summary-table",
-              <.tbody(
-                <.tr(^.className := "dashboard-summary__pax-summary-row",
-                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
-                  <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
-                    <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
-                summary.map {
+        def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
+          val labels = splitsForPeriod.keys.map(_.displayName).toJSArray
+          val data = splitsForPeriod.values.toJSArray
 
-                  case DashboardSummary(start, _, paxPerQueue) =>
-
-                    val totalPax = paxPerQueue.values.map(Math.round).sum
-                    <.tr(^.className := "dashboard-summary__pax-summary-row",
-                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime} - ${SDate(MilliDate(start)).addHours(1).prettyTime}"),
-                      <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
-                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
-                    )
-                }.toTagMod,
-                <.tr(^.className := "dashboard-summary__pax-summary-row",
-                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell heading pax-summary-cell--left", "3 Hour Total"),
-                  <.th(totalPaxAcrossQueues, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
-                  props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
-                )
-              )
-            )
-          ),
-          <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
-            <.div(^.className := "pcp-pressure",
-              <.div(^.className := "title", "PCP Pressure"),
-              <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
-                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime}"
-              ),
-              <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
-                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime}"
+          ChartData(
+            labels = labels,
+            datasets = js.Array(
+              Dataset(
+                data = data,
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82")
               )
             )
           )
-        )
+        }
+
+        // Define a function to create the PaxTerminalOverviewComponent
+        def renderPaxTerminalOverview(summary: Seq[DashboardSummary], splitsForPeriod: Map[PaxTypeAndQueue, Int]) = {
+          PaxTerminalOverviewComponent(IPaxTerminalOverview(
+            currentTime = SDate.now().prettyTime,
+            desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
+            staff = pressurePointAvailableStaff,
+            flights = js.Array(props.flights.size),
+            chartData = createChartData(splitsForPeriod),
+            pressure = js.Array(
+              Pressure(
+                pressure = s"+",
+                from = SDate(MilliDate(pcpHighestTimeSlot)).prettyTime,
+                to = SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime
+              ),
+              Pressure(
+                pressure = s"-",
+                from = SDate(MilliDate(pcpLowestTimeSlot)).prettyTime,
+                to = SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime
+              )
+            ),
+            estimates =
+              summary.map { s =>
+                Estimate(
+                  from = SDate(s.startTime).prettyTime,
+                  to = SDate(s.startTime).addMinutes(15).prettyTime,
+                  egate = s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int],
+                  eea = s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int],
+                  noneea = s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]
+                )
+              }.toJSArray
+
+          ))
+        }
+
+        val paxTerminalOverviewComponents = renderPaxTerminalOverview(summary, splitsForPeriod)
+
+        <.div(paxTerminalOverviewComponents)
+
+        //        <.div(^.className := "dashboard-summary container-fluid",
+        //          <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
+        //            <.span(^.className := "flights-total", f"${props.flights.size}%,d Flights"),
+        //            <.table(^.className := s"summary-box-count rag-desks",
+        //              <.tbody(
+        //                <.tr(
+        //                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime}")
+        //                ),
+        //                <.tr(
+        //                  <.td("Staff"), <.td("Desks")
+        //                ),
+        //                <.tr(
+        //                  <.td(s"$pressurePointAvailableStaff"),
+        //                  <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
+        //                )
+        //              )
+        //            )),
+        //          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)),
+        //          <.div(^.className := "summary-box-container col-sm-4 dashboard-summary__pax-summary",
+        //            <.table(^.className := "dashboard-summary__pax-summary-table",
+        //              <.tbody(
+        //                <.tr(^.className := "dashboard-summary__pax-summary-row",
+        //                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
+        //                  <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
+        //                    <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
+        //                summary.map {
+        //
+        //                  case DashboardSummary(start, _, paxPerQueue) =>
+        //
+        //                    val totalPax = paxPerQueue.values.map(Math.round).sum
+        //                    <.tr(^.className := "dashboard-summary__pax-summary-row",
+        //                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime} - ${SDate(MilliDate(start)).addHours(1).prettyTime}"),
+        //                      <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+        //                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
+        //                    )
+        //                }.toTagMod,
+        //                <.tr(^.className := "dashboard-summary__pax-summary-row",
+        //                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell heading pax-summary-cell--left", "3 Hour Total"),
+        //                  <.th(totalPaxAcrossQueues, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+        //                  props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
+        //                )
+        //              )
+        //            )
+        //          ),
+        //          <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
+        //            <.div(^.className := "pcp-pressure",
+        //              <.div(^.className := "title", "PCP Pressure"),
+        //              <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
+        //                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime}"
+        //              ),
+        //              <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
+        //                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime}"
+        //              )
+        //            )
+        //          )
+        //        )
       }
     }.build
 
