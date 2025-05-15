@@ -1,9 +1,8 @@
 package manifests.paxinfo
 
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 
 object ManifestBuilder {

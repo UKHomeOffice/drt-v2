@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.FlightsApi.PaxForArrivals
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, FlightsWithSplitsDiff, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 

@@ -7,7 +7,7 @@ import drt.shared._
 import services.OptimiserWithFlexibleProcessors
 import services.graphstages.CrunchMocks
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, Queues}

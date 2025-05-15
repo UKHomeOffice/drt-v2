@@ -7,7 +7,7 @@ import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.graphstages.StaffDeploymentCalculator._
 import services.graphstages.{StaffAssignmentService, StaffSources}
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue

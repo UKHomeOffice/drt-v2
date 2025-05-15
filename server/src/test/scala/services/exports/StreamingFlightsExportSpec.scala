@@ -9,6 +9,7 @@ import services.exports.flights.templates.{FlightsWithSplitsWithActualApiExport,
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.models.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}

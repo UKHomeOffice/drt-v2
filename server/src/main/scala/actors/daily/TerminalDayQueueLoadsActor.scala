@@ -6,7 +6,7 @@ import drt.shared.CrunchApi
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.model.TQM
+import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}

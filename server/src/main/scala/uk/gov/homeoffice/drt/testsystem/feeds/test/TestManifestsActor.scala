@@ -4,8 +4,9 @@ import org.apache.pekko.actor.{Actor, ActorLogging, Scheduler}
 import org.apache.pekko.pattern.StatusReply
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifests}
 import services.OfferHandler
+import uk.gov.homeoffice.drt.models.VoyageManifest
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global

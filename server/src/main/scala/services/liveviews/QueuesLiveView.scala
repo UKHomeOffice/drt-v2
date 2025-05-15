@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.CrunchMinutes
 import org.slf4j.LoggerFactory
 import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.QueueSlotDao
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 

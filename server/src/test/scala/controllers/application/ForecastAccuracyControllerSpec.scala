@@ -27,7 +27,7 @@ import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val system: ActorSystem = ActorSystem("test-1")

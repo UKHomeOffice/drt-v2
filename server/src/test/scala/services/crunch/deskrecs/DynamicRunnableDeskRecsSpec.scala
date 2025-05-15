@@ -20,7 +20,7 @@ import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamInitialized
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._

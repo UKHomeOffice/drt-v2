@@ -14,7 +14,7 @@ import scalapb.GeneratedMessage
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
-import uk.gov.homeoffice.drt.model.MinuteLike
+import uk.gov.homeoffice.drt.models.MinuteLike
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 object StreamingUpdatesLike {

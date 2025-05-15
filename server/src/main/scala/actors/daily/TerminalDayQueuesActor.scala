@@ -4,7 +4,7 @@ import org.apache.pekko.actor.Props
 import drt.shared.CrunchApi
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}

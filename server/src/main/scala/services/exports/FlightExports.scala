@@ -1,18 +1,60 @@
 package services.exports
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings}
-import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.models.{AgeRange, FlightManifestSummary, ManifestKey, PassengerInfo, UnknownAge}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode, PortRegion}
 import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 object FlightExports {
   private val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
+
+  def dateAndFlightsToCsvRows(port: PortCode,
+                              terminal: Terminal,
+                              paxFeedSourceOrder: List[FeedSource],
+                              manifestsProvider: LocalDate => Future[VoyageManifests],
+                             )
+                             (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
+    val toCsv = flightsToCsvRows(port, terminal, paxFeedSourceOrder, manifestsProvider)
+    (date, flights) => toCsv(date, flights)
+  }
+
+  private def flightsToCsvRows(port: PortCode,
+                               terminal: Terminal,
+                               paxFeedSourceOrder: List[FeedSource],
+                               manifestsProvider: LocalDate => Future[VoyageManifests],
+                              )
+                              (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
+    val regionName = PortRegion.fromPort(port).name
+    val portName = port.iata
+    val toRow = flightWithSplitsToCsvFields(paxFeedSourceOrder)
+    (localDate, flights) => {
+      manifestsProvider(localDate).map { vms =>
+        flights
+          .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
+          .map { fws =>
+            val flightPart = toRow(fws.apiFlight).mkString(",")
+            val invalidApi = apiIsInvalid(fws)
+            val splitsPart = splitsForSources(fws, paxFeedSourceOrder).mkString(",")
+            val apiPart = actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings.split(",")).map(_.toString).mkString(",")
+            val maybeManifest = vms.manifests.find(_.maybeKey.exists(_ == ManifestKey(fws.apiFlight)))
+            val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToFlightManifestSummary)
+            val natsSummary = s""""${nationalitiesFromSummary(maybePaxSummary)}""""
+            val agesSummary = s""""${ageRangesFromSummary(maybePaxSummary)}""""
+            s"$regionName,$portName,$flightPart,$invalidApi,$splitsPart,$apiPart,$natsSummary,$agesSummary\n"
+          }
+      }
+    }
+  }
 
   def flightWithSplitsToCsvFields(paxFeedSourceOrder: Seq[FeedSource]): Arrival => List[String] =
     arrival => List(

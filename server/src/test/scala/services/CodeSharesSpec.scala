@@ -3,7 +3,7 @@ package services
 import controllers.ArrivalGenerator.live
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
@@ -27,10 +27,6 @@ class CodeSharesSpec extends Specification {
     val expected = List((flight, Seq()))
 
     result === expected
-  }
-
-  private def aclPassengers(paxCount: Int): Map[FeedSource, Passengers] = {
-    Map(AclFeedSource -> Passengers(Option(paxCount), None))
   }
 
   "Given two flights which are codeshares of each other " +

@@ -4,11 +4,12 @@ import org.apache.pekko.pattern.StatusReply
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.testkit.TestProbe
 import controllers.ArrivalGenerator
-import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import services.crunch.VoyageManifestGenerator.euPassport
 import services.crunch.deskrecs.OptimisationProviders
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
+import uk.gov.homeoffice.drt.models.ManifestLike
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.time.SDateLike

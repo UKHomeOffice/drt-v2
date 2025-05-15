@@ -10,7 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}

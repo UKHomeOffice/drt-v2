@@ -4,11 +4,12 @@ import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
 import org.specs2.specification.Tables
 import org.specs2.specification.core.Fragments
-import passengersplits.core.PassengerTypeCalculator
-import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.models.CountryCodes._
+import uk.gov.homeoffice.drt.models.DocumentType
 import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.services.PassengerTypeCalculator
+import uk.gov.homeoffice.drt.services.PassengerTypeCalculator.PaxTypeInfo
 
 
 class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables {
@@ -28,7 +29,6 @@ class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables
   }
 
   def passengerType: Fragments = {
-    import CountryCodes._
     val lebanon = "LBN"
     val israel = "ISR"
     val haiti = "HTI"

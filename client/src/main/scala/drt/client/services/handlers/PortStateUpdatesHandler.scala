@@ -9,10 +9,9 @@ import drt.client.services._
 import drt.client.services.handlers.PortStateUpdatesHandler.splitsToManifestKeys
 import drt.shared.CrunchApi._
 import drt.shared._
-import drt.shared.api.FlightManifestSummary
 import org.scalajs.dom
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, SplitsForArrivals, UniqueArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.models.{CrunchMinute, FlightManifestSummary, ManifestKey, TQM}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.read

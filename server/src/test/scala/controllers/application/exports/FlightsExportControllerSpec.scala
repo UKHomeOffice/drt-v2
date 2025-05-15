@@ -1,18 +1,17 @@
 package controllers.application.exports
 
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
 import controllers.ArrivalGenerator
 import controllers.application.TestDrtModule
 import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play.PlaySpec
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser._
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.auth.Roles.ApiView
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PaxAge, PortCode}
 import uk.gov.homeoffice.drt.time.SDate

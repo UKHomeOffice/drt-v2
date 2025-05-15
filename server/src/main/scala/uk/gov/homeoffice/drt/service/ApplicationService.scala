@@ -49,7 +49,7 @@ import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeP
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -285,6 +285,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         mergeArrivalsQueue = mergeArrivalsQueue,
         setPcpTimes = setPcpTimes,
         addArrivalPredictions = addArrivalPredictions,
+        today = () => now().toLocalDate,
       )
 
       val paxLoadsRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(

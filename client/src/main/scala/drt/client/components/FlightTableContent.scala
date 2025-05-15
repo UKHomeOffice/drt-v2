@@ -9,9 +9,9 @@ import drt.client.components.ToolTips._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.UpdateUserPreferences
-import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
-import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import drt.shared._
+import drt.shared.api.WalkTimes
+import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiFormControl, MuiSwitch, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
@@ -22,6 +22,7 @@ import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, PaxAgeRange}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -73,7 +74,7 @@ object FlightTableContent {
           props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
-      
+
       val content = for {
         flights <- props.flights
       } yield {

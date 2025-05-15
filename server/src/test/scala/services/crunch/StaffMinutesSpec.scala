@@ -6,7 +6,7 @@ import actors.persistent.staffing.StaffMovementsActor.AddStaffMovements
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 

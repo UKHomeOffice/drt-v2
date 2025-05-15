@@ -1,10 +1,11 @@
 package controllers.application
 
-import drt.shared.{ArrivalGenerator, ManifestKey}
+import drt.shared.{ArrivalGenerator}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.models.ManifestKey
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 

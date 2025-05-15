@@ -8,7 +8,7 @@ import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.MinutesContainer
 import scalapb.GeneratedMessage
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage

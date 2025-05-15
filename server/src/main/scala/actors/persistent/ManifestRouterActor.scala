@@ -13,12 +13,13 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
+import uk.gov.homeoffice.drt.models.VoyageManifest
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}

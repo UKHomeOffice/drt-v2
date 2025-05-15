@@ -2,6 +2,7 @@ package manifests.passengers
 
 import manifests.UniqueArrivalKey
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumberLike}
+import uk.gov.homeoffice.drt.models.ManifestLike
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.time.SDateLike

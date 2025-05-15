@@ -6,10 +6,14 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
-import actors.persistent.staffing.{FixedPointsActor, LegacyShiftAssignmentsActor, ShiftAssignmentsActor, ShiftAssignmentsActorLike, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, LegacyShiftAssignmentsActor, ShiftAssignmentsActor, StaffMovementsActor}
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
+import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.queues.SplitsCalculator
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.apache.pekko.Done
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.{StatusReply, ask}
@@ -18,10 +22,6 @@ import org.apache.pekko.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComp
 import org.apache.pekko.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import org.apache.pekko.testkit.TestProbe
 import org.apache.pekko.util.Timeout
-import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
-import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
-import manifests.queues.SplitsCalculator
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import services.arrivals
@@ -39,7 +39,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -299,7 +299,9 @@ class TestDrtActor extends Actor {
           feedArrivalsForDate = feedProviders,
           mergeArrivalsQueue = SortedSet.empty[TerminalUpdateRequest],
           setPcpTimes = tc.setPcpTimes,
-          addArrivalPredictions = tc.addArrivalPredictions)
+          addArrivalPredictions = tc.addArrivalPredictions,
+          today = () => tc.now().toLocalDate,
+        )
 
         val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
           crunchQueueActor = TestProbe().ref,

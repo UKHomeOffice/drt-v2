@@ -1,13 +1,13 @@
 package scenarios
 
+import controllers.ArrivalGenerator
+import drt.shared._
+import manifests.queues.SplitsCalculator
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.{Actor, Props}
 import org.apache.pekko.pattern.StatusReply
 import org.apache.pekko.stream.scaladsl.Source
-import controllers.ArrivalGenerator
-import drt.shared._
-import manifests.queues.SplitsCalculator
-import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
+import queueus.{ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.crunch.CrunchTestLike
 import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.PortDeskLimits
@@ -16,6 +16,7 @@ import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.models.B5JPlusTypeAllocator
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}

@@ -1,10 +1,11 @@
 package services.exports.flights.templates
 
+import drt.shared.CodeShares
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
-import drt.shared.{ManifestKey, CodeShares}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.models.{ManifestKey, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.LocalDate

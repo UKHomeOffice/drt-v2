@@ -1,12 +1,12 @@
 package drt.client.components
 
-import drt.shared.ManifestKey
-import drt.shared.api.{FlightManifestSummary, PaxAgeRange}
-import japgolly.scalajs.react.vdom.{VdomElement, html_<^}
 import japgolly.scalajs.react.vdom.all.EmptyVdom
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
-import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.vdom.{VdomElement, html_<^}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, PaxAgeRange}
+import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
+
 import scala.scalajs.js
 
 object FlightHighlighter {

@@ -5,14 +5,13 @@ import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.persistent.staffing.GetFeedStatuses
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
+import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.testkit.TestProbe
-import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
@@ -20,6 +19,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.models.{DocumentType, EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
@@ -228,7 +228,8 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       ManifestDateOfArrival(date),
       ManifestTimeOfArrival("00:00"),
       List(
-        PassengerInfoJson(Option(DocumentType("P")),
+        PassengerInfoJson(
+          Option(DocumentType("P")),
           Nationality("GBR"),
           EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None),
         PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)

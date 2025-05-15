@@ -10,7 +10,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.MinuteAsAdjective
-import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
+import drt.shared.api.{WalkTimes}
 import drt.shared.redlist._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -22,6 +22,7 @@ import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.models.{FlightManifestSummary, PaxAgeRange}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

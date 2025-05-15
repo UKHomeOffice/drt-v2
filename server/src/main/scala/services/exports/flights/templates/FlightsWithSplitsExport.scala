@@ -1,9 +1,9 @@
 package services.exports.flights.templates
 
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.exports.FlightExports
 import services.exports.FlightExports.{apiIsInvalid, splitsForSources}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
+import uk.gov.homeoffice.drt.models.VoyageManifest
 
 
 trait FlightsWithSplitsExport extends FlightsExport {

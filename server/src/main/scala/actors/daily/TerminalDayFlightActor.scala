@@ -151,6 +151,7 @@ class TerminalDayFlightActor(year: Int,
         .forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
         .diff(state.flights.view.mapValues(_.apiFlight).toMap)
+      println(s"persisting diff with ${diff.toUpdate.size} updates and ${diff.toRemove.size} removals")
       updateAndPersistDiffAndAck(diff)
 
     case splits: SplitsForArrivals =>

@@ -63,7 +63,7 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
           models.models.values.foldLeft(arrival) {
             case (arrival, model: ArrivalModelAndFeatures) =>
               model.updatePrediction(arrival, minimumImprovementPctThreshold, modelThresholds.get(model.targetName), now())
-            case (_, unknownModel) =>
+            case (arrival, unknownModel) =>
               log.error(s"Unknown model type ${unknownModel.getClass}")
               arrival
           }

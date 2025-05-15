@@ -13,7 +13,6 @@ class StaffMinutesCheckerSpec extends Specification {
   "Given a StaffMinutesChecker with LHR's config and max-forecast-days of 2" >> {
     "I should see TerminalUpdateRequests for every terminal for the last 2 days of the max forecast period" >> {
       implicit val system: ActorSystem = ActorSystem("test")
-      implicit val ec: ExecutionContextExecutor = ExecutionContext.global
       val testProbe = TestProbe("staffing-update-requests-queue")
 
       val today = SDate("2023-01-08T10:00")

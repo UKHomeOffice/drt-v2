@@ -3,7 +3,7 @@ package services.crunch
 import drt.shared.CrunchApi.{ForecastTimeSlot, StaffMinute}
 import drt.shared.PortState
 import services.exports.Forecast
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.time.SDate

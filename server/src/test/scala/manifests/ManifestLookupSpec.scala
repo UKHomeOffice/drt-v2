@@ -1,15 +1,16 @@
 package manifests
 
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
+import manifests.passengers.BestAvailableManifest
 import org.specs2.specification.Before
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
 import services.crunch.CrunchTestLike
 import slickdb.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.models.DocumentType.Passport
+import uk.gov.homeoffice.drt.models.ManifestPassengerProfile
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
