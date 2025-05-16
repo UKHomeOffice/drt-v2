@@ -182,7 +182,7 @@ object DashboardTerminalSummary {
             currentTime = SDate.now().prettyTime,
             desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
             staff = pressurePointAvailableStaff,
-            flights = js.Array(props.flights.size),
+            flights = new js.Array(props.flights.size),
             chartData = createChartData(splitsForPeriod),
             pressure = js.Array(
               Pressure(
