@@ -1,10 +1,9 @@
 package actors.serializers
 
 import manifests.passengers.BestAvailableManifest
-import passengersplits.parsing.VoyageManifestParser._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
-import uk.gov.homeoffice.drt.models.{DocumentType, EeaFlag, InTransit, ManifestDateOfArrival, ManifestLike, ManifestPassengerProfile, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest._

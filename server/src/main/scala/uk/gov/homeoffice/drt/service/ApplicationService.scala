@@ -20,7 +20,6 @@ import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
 import org.apache.pekko.util.Timeout
 import org.apache.pekko.{Done, NotUsed}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser
 import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
@@ -49,7 +48,7 @@ import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeP
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.CrunchMinute
+import uk.gov.homeoffice.drt.models.{CrunchMinute, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -145,7 +144,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
       name = "voyage-manifests-router-actor-read-only")
 
-  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
+  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)

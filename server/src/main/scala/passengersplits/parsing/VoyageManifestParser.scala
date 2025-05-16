@@ -9,25 +9,12 @@ import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 
 import scala.util.{Success, Try}
 
+
 object VoyageManifestParser {
   def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
     import FlightPassengerInfoProtocol._
     import spray.json._
     Try(content.parseJson.convertTo[VoyageManifest])
-  }
-
-  case class VoyageManifests(manifests: Iterable[VoyageManifest]) {
-
-    def toMap: Map[ManifestKey, VoyageManifest] = manifests.collect {
-      case vm if vm.maybeKey.isDefined =>
-        vm.maybeKey.get -> vm
-    }.toMap
-
-    def ++(other: VoyageManifests): VoyageManifests = VoyageManifests(manifests ++ other.manifests)
-  }
-
-  object VoyageManifests {
-    def empty: VoyageManifests = VoyageManifests(Set())
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {

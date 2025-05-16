@@ -1,20 +1,19 @@
 package services.exports
 
+import controllers.application.exports.CsvFileStreaming.makeFileName
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
-import controllers.application.exports.CsvFileStreaming.makeFileName
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.Status.OK
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc.{ResponseHeader, Result, Results}
 import play.mvc.StaticFileMimeTypes.fileMimeTypes
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
-import uk.gov.homeoffice.drt.ports.{PortCode, SplitRatiosNs}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.jdk.OptionConverters.RichOptional
 
@@ -25,14 +24,6 @@ object Exports {
   def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalIsoDateOnly(europeLondonTimeZone)(millis)
 
   def millisToLocalDateTimeString: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toLocalDateTimeString
-
-  def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
-    .splits
-    .collect {
-      case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
-        s.splits.map(s => (s"API Actual - ${s.paxTypeAndQueue.displayName}", s.paxCount))
-    }
-    .flatten
 
   def streamExport(portCode: PortCode,
                    terminals: Seq[Terminal],

@@ -15,12 +15,11 @@ import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.passengerInfoResponseConverter
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightCode, LiveArrival}
-import uk.gov.homeoffice.drt.models.VoyageManifest
+import uk.gov.homeoffice.drt.models.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._

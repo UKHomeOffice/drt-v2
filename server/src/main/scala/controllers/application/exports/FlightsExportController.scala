@@ -2,25 +2,25 @@ package controllers.application.exports
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals, PointInTimeQuery}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import org.apache.pekko.NotUsed
-import org.apache.pekko.pattern.ask
-import org.apache.pekko.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.AuthController
 import drt.shared.CrunchApi.MillisSinceEpoch
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import org.apache.pekko.NotUsed
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.mvc._
 import services.exports.Exports.streamExport
 import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.models.VoyageManifests
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.services.exports.{AdminExportImpl, FlightsWithSplitsExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExportImpl}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.Future
@@ -41,7 +41,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
                                      terminals: Seq[Terminal],
                                      exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates) =>
                                        (LocalDate, LocalDate, Seq[Terminal]) =>
-                                         FlightsExport,
+                                         FlightsWithSplitsExport,
                                     ): Action[AnyContent] =
     Action.async {
       request =>
@@ -75,7 +75,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
                                    endLocalDateString: String,
                                    terminals: Seq[Terminal],
                                    exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates)
-                                     => (LocalDate, LocalDate, Seq[Terminal]) => FlightsExport,
+                                     => (LocalDate, LocalDate, Seq[Terminal]) => FlightsWithSplitsExport,
                                   ): Action[AnyContent] =
     Action.async {
       request =>
@@ -91,7 +91,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
         }
     }
 
-  private def requestToCsvStream(maybePointInTime: Option[MillisSinceEpoch], `export`: FlightsExport): Future[Source[String, NotUsed]] = {
+  private def requestToCsvStream(maybePointInTime: Option[MillisSinceEpoch], `export`: FlightsWithSplitsExport): Future[Source[String, NotUsed]] = {
     val eventualFlightsByDate = maybePointInTime match {
       case Some(pointInTime) =>
         val requestStart = SDate(`export`.start).millisSinceEpoch
@@ -114,7 +114,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
   }
 
-  private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (LocalDate, LocalDate, Seq[Terminal]) => FlightsExport =
+  private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (LocalDate, LocalDate, Seq[Terminal]) => FlightsWithSplitsExport =
     (user, _, _) =>
       (start, end, terminals) =>
         if (user.hasRole(SuperAdmin))
