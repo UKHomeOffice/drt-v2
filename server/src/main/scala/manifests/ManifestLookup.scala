@@ -71,7 +71,7 @@ case class ManifestLookup(tables: AggregatedDbTables)
 
   private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] =
     if (flightKeys.nonEmpty)
-      paxForArrivalQuery(flightKeys)
+      paxForArrivalsQuery(flightKeys)
     else
       Future(Vector.empty)
 
@@ -246,13 +246,13 @@ case class ManifestLookup(tables: AggregatedDbTables)
           """.as[(String, String, String, Timestamp)]
   }
 
-  private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {
+  private def paxForArrivalsQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {
     val q = tables.voyageManifestPassengerInfo
       .filter { vm =>
         vm.event_code === "DC" && flightKeys.map {
           case (destination, origin, voyageNumberString, scheduled) =>
             val voyageNumber = VoyageNumber(voyageNumberString)
-              vm.arrival_port_code === destination &&
+            vm.arrival_port_code === destination &&
               vm.departure_port_code === origin &&
               vm.voyage_number === voyageNumber.numeric &&
               vm.scheduled_date === scheduled

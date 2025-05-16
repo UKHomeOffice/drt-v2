@@ -9,7 +9,7 @@ import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistori
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
-import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
+import drt.server.feeds.api.{ApiFeedImpl, ApiManifestProvider, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -255,7 +255,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
       val manifestUpdatePersistence = ManifestPersistence.processManifestFeedResponse(None, actorService.flightsRouterActor, splitsCalculator.splitsForManifest)
-      val processManifestUpdates = DbManifestProcessor(aggregatedDb, airportConfig.portCode, manifestUpdatePersistence)
+      val processManifestUpdates = DbManifestProcessor(ApiManifestProvider(aggregatedDb), manifestUpdatePersistence)
       val dateToEventualArrivals = CrunchManagerActor.liveSplitsArrivalKeysForDate(flightsProvider.allTerminalsDateRangeScheduledOrPcp)
 
       val (liveSplitsQueueActor, liveSplitsKillSwitch) = RunnableLiveSplits(
@@ -477,7 +477,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
         val arrivalKeysProvider = DbManifestArrivalKeys(aggregatedDb, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(aggregatedDb, airportConfig.portCode, persistManifests)
+        val manifestProcessor = DbManifestProcessor(ApiManifestProvider(aggregatedDb), persistManifests)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
 
         system.scheduler.scheduleOnce(20.seconds) {

@@ -18,7 +18,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
-import uk.gov.homeoffice.drt.models.{VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.models.VoyageManifests
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
@@ -33,12 +33,6 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
   override val sourceType: FeedSource = ApiFeedSource
   override val persistenceId: String = "arrival-manifests"
 
-  sealed trait ManifestResult
-
-  case class ManifestFound(manifest: VoyageManifest) extends ManifestResult
-
-  case object ManifestNotFound extends ManifestResult
-
   private def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
                                   (start: SDateLike,
                                    end: SDateLike,
@@ -49,6 +43,7 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
       .utcDateRangeSource(start, end)
       .mapAsync(1)(d => manifestsByDayLookup(d, maybePit).map(m => (d, m)))
 
+  case class GetManifestsForDateRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch)
 }
 
 case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {

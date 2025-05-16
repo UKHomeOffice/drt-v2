@@ -1,6 +1,6 @@
 package providers
 
-import actors.PartitionedPortStateActor
+import actors.persistent.ManifestRouterActor
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
@@ -17,7 +17,7 @@ object ManifestsProvider {
       val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
       Source.future(
         manifestsRouterActor
-          .ask(PartitionedPortStateActor.GetStateForDateRange(startMillis, endMillis))
+          .ask(ManifestRouterActor.GetManifestsForDateRange(startMillis, endMillis))
           .mapTo[Source[(UtcDate, VoyageManifests), NotUsed]]
       ).flatMapConcat(identity)
     }

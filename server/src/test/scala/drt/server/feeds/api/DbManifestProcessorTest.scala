@@ -1,10 +1,10 @@
 package drt.server.feeds.api
 
-import org.apache.pekko.Done
-import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.api.DbHelper.addPaxRecord
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import manifests.UniqueArrivalKey
+import org.apache.pekko.Done
+import org.apache.pekko.testkit.TestProbe
 import org.specs2.specification.BeforeEach
 import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
@@ -124,6 +124,6 @@ class DbManifestProcessorTest
         Future(Done)
       }
 
-    DbManifestProcessor(AggregateDbH2, PortCode("LHR"), handleManifestResponse)
+    DbManifestProcessor(ApiManifestProvider(AggregateDbH2), handleManifestResponse)
   }
 }
