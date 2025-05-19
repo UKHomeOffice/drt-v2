@@ -4,10 +4,10 @@ import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import manifests.ManifestLookupLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.models.DocumentType
+import uk.gov.homeoffice.drt.models.{DocumentType, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

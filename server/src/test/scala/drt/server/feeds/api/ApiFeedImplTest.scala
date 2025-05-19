@@ -6,9 +6,9 @@ import org.apache.pekko.stream.KillSwitches
 import org.apache.pekko.stream.scaladsl.{Keep, Sink, Source}
 import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
-import manifests.UniqueArrivalKey
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
 

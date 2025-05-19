@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.arrivals.{CarrierCode, VoyageNumber}
 import uk.gov.homeoffice.drt.db.AggregateDbH2
 import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.models.DocumentType.Passport
-import uk.gov.homeoffice.drt.models.ManifestPassengerProfile
+import uk.gov.homeoffice.drt.models.{ManifestPassengerProfile, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.time.SDate

@@ -13,7 +13,7 @@ import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistori
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import manifests.ManifestLookupLike
 import org.apache.pekko.Done
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.{StatusReply, ask}
@@ -39,7 +39,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.CrunchMinute
+import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._

@@ -3,14 +3,14 @@ package uk.gov.homeoffice.drt.testsystem
 import actors.DrtParameters
 import com.google.inject.Inject
 import drt.shared.{DropIn, Shift}
+import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
-import uk.gov.homeoffice.drt.models.UserPreferences
+import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
