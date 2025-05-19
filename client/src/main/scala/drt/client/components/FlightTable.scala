@@ -8,7 +8,7 @@ import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.{WalkTimes}
+import drt.shared.api.WalkTimes
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -19,7 +19,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
-import uk.gov.homeoffice.drt.models.{AgeRange, FlightManifestSummary, ManifestKey}
+import uk.gov.homeoffice.drt.models.{AgeRange, FlightManifestSummary, ManifestKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}

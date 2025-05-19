@@ -12,13 +12,13 @@ import play.api.test._
 import slick.jdbc.H2Profile
 import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.db.AggregateDbH2
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.db.tables.CapacityHourlyRow
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 

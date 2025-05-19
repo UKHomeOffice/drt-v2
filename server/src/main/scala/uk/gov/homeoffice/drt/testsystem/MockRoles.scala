@@ -4,10 +4,10 @@ package uk.gov.homeoffice.drt.testsystem
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.UserTableLike
 import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.tables.UserTableLike
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 
 object MockRoles {

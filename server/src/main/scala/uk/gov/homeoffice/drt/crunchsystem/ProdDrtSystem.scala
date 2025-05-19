@@ -1,14 +1,15 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
+import com.google.inject.Inject
+import manifests.{ManifestLookup, ManifestLookupLike}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
-import com.google.inject.Inject
-import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
-import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, StaffShiftsDao, UserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao._
+import uk.gov.homeoffice.drt.db.tables.{UserTable, UserTableLike}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing.{ShiftsService, ShiftsServiceImpl}
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
@@ -24,7 +25,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
 
-  lazy override val aggregatedDb: AggregatedDbTables = AggregatedDbTables(config)
+  lazy override val aggregatedDb: AggregatedDbTables = AggregatedDbTables(config.get[String]("database-type"))
 
   lazy override val akkaDb: AkkaDbTables = AkkaDb
 

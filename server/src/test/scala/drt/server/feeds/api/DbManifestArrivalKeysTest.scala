@@ -6,10 +6,10 @@ import org.specs2.specification.BeforeEach
 import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
-import slickdb.{ProcessedJsonRow, ProcessedZipRow}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.db.AggregateDbH2
+import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp

@@ -7,10 +7,10 @@ import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.CarrierCode
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.time.SDate

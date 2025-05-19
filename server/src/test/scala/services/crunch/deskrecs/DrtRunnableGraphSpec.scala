@@ -3,10 +3,10 @@ package services.crunch.deskrecs
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.homeoffice.drt.db.AggregateDbH2
 import uk.gov.homeoffice.drt.db.tables.{StatusDaily, StatusDailyRow, StatusDailyTable}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.LocalDate
 
 import java.sql.Timestamp

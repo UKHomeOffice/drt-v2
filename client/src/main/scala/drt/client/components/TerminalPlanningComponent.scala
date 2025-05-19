@@ -11,7 +11,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
-import drt.shared.{Forecast, UserPreferences}
+import drt.shared.Forecast
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
@@ -27,6 +27,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
+import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}

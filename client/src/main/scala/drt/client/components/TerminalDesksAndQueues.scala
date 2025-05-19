@@ -23,7 +23,7 @@ import org.scalajs.dom.{DOMList, Node}
 import org.scalajs.dom.html.{Div, TableCell}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
-import uk.gov.homeoffice.drt.models.CrunchMinute
+import uk.gov.homeoffice.drt.models.{CrunchMinute, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs

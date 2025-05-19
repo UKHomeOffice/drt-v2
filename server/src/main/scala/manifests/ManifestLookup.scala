@@ -4,9 +4,9 @@ import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import slick.sql.SqlStreamingAction
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.models.{DocumentType, ManifestPassengerProfile}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}

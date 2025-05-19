@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
-import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey}
+import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}

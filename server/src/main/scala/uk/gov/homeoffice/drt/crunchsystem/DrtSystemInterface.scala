@@ -1,25 +1,26 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
+import com.typesafe.config.ConfigFactory
+import controllers._
+import manifests.ManifestLookupLike
+import manifests.queues.SplitsCalculator
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
-import com.typesafe.config.ConfigFactory
-import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, ShiftsProviderLike, UserFeedBackProviderLike}
-import manifests.ManifestLookupLike
-import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
 import services.liveviews.{FlightsLiveView, QueuesLiveView}
-import slickdb.{AggregatedDbTables, AkkaDbTables}
+import slickdb.AkkaDbTables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
