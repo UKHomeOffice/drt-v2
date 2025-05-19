@@ -32,7 +32,6 @@ import scala.util.Try
 object SPAMain {
   sealed trait Loc {
     val url: String
-
     def href: String = window.location.href.split("#").headOption match {
       case Some(head) => head + url
       case None => url
@@ -53,6 +52,10 @@ object SPAMain {
       s"$pageName at ${portConfig.portCode.iata} (${portConfig.portName})${terminalPart(maybeTerminal)} - DRT"
 
     def title(maybeTerminal: Option[Terminal]): String
+  }
+
+  trait DashboardLoc extends Loc {
+    def viewMode: ViewMode
   }
 
   sealed trait UrlParameter {
@@ -128,6 +131,7 @@ object SPAMain {
     }
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Accessibility Statement", maybeTerminal)
+
   }
 
   object TerminalPageTabLoc {
@@ -144,7 +148,7 @@ object SPAMain {
                                 modeStr: String = "current",
                                 subMode: String = "arrivals",
                                 queryParams: Map[String, String] = Map.empty[String, String]
-                               ) extends Loc {
+                               ) extends DashboardLoc {
     private val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
     override val url = s"${TerminalPageTabLoc.hashValue}/$terminalName/$modeStr/$subMode$queryString"
 
@@ -234,10 +238,14 @@ object SPAMain {
     val hashValue: String = "#portDashboard"
   }
 
-  case class PortDashboardLoc(period: Option[Int]) extends Loc {
-    override val url = s"${PortDashboardLoc.hashValue}/$period"
+  case class PortDashboardLoc(period: Option[Int], subMode: String = "180", queryParams: Map[String, String] = Map.empty[String, String]) extends DashboardLoc {
+    private val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
+    //    override val url = s"${TerminalPageTabLoc.hashValue}/$terminalName/$modeStr/$subMode$queryString"
+    override val url = s"${PortDashboardLoc.hashValue}/$period$subMode$queryString"
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
+
+    override def viewMode: ViewMode = ViewLive
   }
 
   case object StatusLoc extends Loc {
@@ -252,6 +260,7 @@ object SPAMain {
     override val url = ""
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
+
   }
 
   object TrainingHubLoc {
@@ -383,7 +392,7 @@ object SPAMain {
 
     val proxy = SPACircuit.connect(_.airportConfig)
 
-    dynamicRouteCT((PortDashboardLoc.hashValue / int.option).caseClass[PortDashboardLoc]) ~>
+    dynamicRouteCT((PortDashboardLoc.hashValue / int.option / string("[a-zA-Z0-9-]+") / "" ~ queryToMap).caseClass[PortDashboardLoc]) ~>
       dynRenderR { case (page: PortDashboardLoc, router) =>
         proxy(p => PortDashboardPage(router, page, p()))
       }

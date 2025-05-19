@@ -3,7 +3,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.SPAMain.TerminalPageTabLoc
+import drt.client.SPAMain.{DashboardLoc, Loc, TerminalPageTabLoc}
 import drt.client.components.DaySelectorComponent.searchForm
 import drt.client.components.ToolTips._
 import drt.client.services.JSDateConversions.SDate
@@ -51,7 +51,7 @@ object FlightTableContent {
                    shortLabel: Boolean = false,
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    userPreferences: UserPreferences,
-                   terminalPageTab: TerminalPageTabLoc,
+                   terminalPageTab: DashboardLoc,
                   ) extends UseValueEq
 
   class Backend {
@@ -98,7 +98,7 @@ object FlightTableContent {
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              <.div(^.style := js.Dictionary("paddingTop" -> "10px"), MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(s"Arrivals, ${displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}")),
+              <.div(^.style := js.Dictionary("paddingTop" -> "10px"), MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(s"Arrivals, ${displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab.asInstanceOf[TerminalPageTabLoc])}")),
               <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"))(
                 <.div {
                   val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals

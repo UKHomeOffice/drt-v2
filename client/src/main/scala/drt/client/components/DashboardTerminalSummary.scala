@@ -1,20 +1,35 @@
 package drt.client.components
 
 import diode.UseValueEq
+import diode.data.Pot
+import drt.client.SPAMain.{Loc, PortDashboardLoc, TerminalPageTabLoc}
+import drt.client.components.TerminalDashboardComponent.{defaultSlotSize, timeSlotForTime}
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.ViewLive
 import drt.shared.CrunchApi._
 import drt.shared._
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.{InvalidQueue, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
+import drt.client.components.TerminalContentComponent.originMapper
+
+import scala.collection.immutable.HashSet
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.URIUtils
+import scala.util.Try
 
 object DashboardTerminalSummary {
 
@@ -123,7 +138,21 @@ object DashboardTerminalSummary {
   def aggSplits(paxFeedSourceOrder: List[FeedSource], flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] =
     BigSummaryBoxes.aggregateSplits(flights, paxFeedSourceOrder)
 
-  case class Props(flights: List[ApiFlightWithSplits],
+  case class Props(portDashboardLoc: PortDashboardLoc,
+                   airportConfig: AirportConfig,
+                   //                   slaConfigs: Pot[SlaConfigs],
+                   router: RouterCtl[Loc],
+                   featureFlags: Pot[FeatureFlags],
+                   loggedInUser: LoggedInUser,
+                   redListPorts: Pot[HashSet[PortCode]],
+                   redListUpdates: RedListUpdates,
+                   walkTimes: Pot[WalkTimes],
+                   portState: Pot[PortState],
+                   flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                   flightHighlight: FlightHighlight,
+                   userPreferences: UserPreferences,
+                   flights: List[ApiFlightWithSplits],
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
                    terminal: Terminal,
@@ -150,7 +179,7 @@ object DashboardTerminalSummary {
         def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
-//        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
+        //        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
@@ -211,65 +240,96 @@ object DashboardTerminalSummary {
         }
 
         val paxTerminalOverviewComponents = renderPaxTerminalOverview(summary, splitsForPeriod)
+        val defaultSlotSize = 120
+
+        val slotSize = Try {
+          props.portDashboardLoc.subMode.toInt
+        }.getOrElse(defaultSlotSize)
+
+        <.div(^.className := "terminal-dashboard-side",
+          props.router
+            .link(props.portDashboardLoc.copy(
+              queryParams = props.portDashboardLoc.queryParams + ("showArrivals" -> "true")
+            ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
+          <.div(
+            ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
+            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label",
+              ^.aria.label := "Select timeslot size for PCP passengers display", "Time slot duration"),
+            <.select(
+              ^.onChange ==> ((e: ReactEventFromInput) =>
+                props.router.set(props.portDashboardLoc.copy(subMode = e.target.value))),
+              ^.value := slotSize,
+              <.option("15 minutes", ^.value := "15"),
+              <.option("30 minutes", ^.value := "30"),
+              <.option("1 hour", ^.value := "60"),
+              <.option("2 hours", ^.value := "120"),
+              <.option("3 hours", ^.value := "180")))
+        )
 
         <.div(paxTerminalOverviewComponents)
 
-        //        <.div(^.className := "dashboard-summary container-fluid",
-        //          <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
-        //            <.span(^.className := "flights-total", f"${props.flights.size}%,d Flights"),
-        //            <.table(^.className := s"summary-box-count rag-desks",
-        //              <.tbody(
-        //                <.tr(
-        //                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime}")
-        //                ),
-        //                <.tr(
-        //                  <.td("Staff"), <.td("Desks")
-        //                ),
-        //                <.tr(
-        //                  <.td(s"$pressurePointAvailableStaff"),
-        //                  <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
-        //                )
-        //              )
-        //            )),
-        //          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)),
-        //          <.div(^.className := "summary-box-container col-sm-4 dashboard-summary__pax-summary",
-        //            <.table(^.className := "dashboard-summary__pax-summary-table",
-        //              <.tbody(
-        //                <.tr(^.className := "dashboard-summary__pax-summary-row",
-        //                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
-        //                  <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
-        //                    <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
-        //                summary.map {
-        //
-        //                  case DashboardSummary(start, _, paxPerQueue) =>
-        //
-        //                    val totalPax = paxPerQueue.values.map(Math.round).sum
-        //                    <.tr(^.className := "dashboard-summary__pax-summary-row",
-        //                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime} - ${SDate(MilliDate(start)).addHours(1).prettyTime}"),
-        //                      <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
-        //                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
-        //                    )
-        //                }.toTagMod,
-        //                <.tr(^.className := "dashboard-summary__pax-summary-row",
-        //                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell heading pax-summary-cell--left", "3 Hour Total"),
-        //                  <.th(totalPaxAcrossQueues, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
-        //                  props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
-        //                )
-        //              )
-        //            )
-        //          ),
-        //          <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
-        //            <.div(^.className := "pcp-pressure",
-        //              <.div(^.className := "title", "PCP Pressure"),
-        //              <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
-        //                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime}"
-        //              ),
-        //              <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
-        //                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime}"
-        //              )
-        //            )
-        //          )
-        //        )
+        def timeSlotStart: SDateLike => SDateLike = timeSlotForTime(slotSize)
+
+        val startPoint = props.portDashboardLoc.queryParams.get("start")
+          .flatMap(s => SDate.parse(s))
+          .getOrElse(SDate.now())
+        val start = timeSlotStart(startPoint)
+        val end = start.addMinutes(slotSize)
+        val prevSlotStart = start.addMinutes(-slotSize)
+
+        val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString)
+        val urlNextTime = URIUtils.encodeURI(end.toISOString)
+
+//        val terminal = props.portDashboardLoc.terminal
+
+        val portStateForWindow = props.portState.map(_.window(start, end, props.paxFeedSourceOrder))
+
+        val pot = for {
+          featureFlags <- props.featureFlags
+          redListPorts <- props.redListPorts
+          walkTimes <- props.walkTimes
+          portState <- portStateForWindow
+        } yield {
+          if (props.portDashboardLoc.queryParams.contains("showArrivals")) {
+            val closeArrivalsPopupLink = props.portDashboardLoc.copy(
+              queryParams = props.portDashboardLoc.queryParams - "showArrivals"
+            )
+            <.div(<.div(^.className := "popover-overlay",
+              ^.onClick --> props.router.set(closeArrivalsPopupLink)),
+              <.div(^.className := "dashboard-arrivals-popup",
+                <.div(^.className := "terminal-dashboard__arrivals_popup_table",
+                  FlightTable(
+                    FlightTable.Props(
+                      queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminal),
+                      hasEstChox = props.airportConfig.hasEstChox,
+                      loggedInUser = props.loggedInUser,
+                      viewMode = ViewLive,
+                      hasTransfer = props.airportConfig.hasTransfer,
+                      displayRedListInfo = featureFlags.displayRedListInfo,
+                      redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, props.terminal),
+                      terminal = props.terminal,
+                      portCode = props.airportConfig.portCode,
+                      redListPorts = redListPorts,
+                      airportConfig = props.airportConfig,
+                      redListUpdates = props.redListUpdates,
+                      walkTimes = walkTimes,
+                      showFlagger = false,
+                      paxFeedSourceOrder = props.paxFeedSourceOrder,
+                      flightHighlight = props.flightHighlight,
+                      flights = portStateForWindow.map(_.flights.values.toSeq),
+                      flightManifestSummaries = props.flightManifestSummaries,
+                      arrivalSources = props.arrivalSources,
+                      originMapper = originMapper,
+                      userPreferences = props.userPreferences,
+                      terminalPageTab = props.portDashboardLoc
+                    )
+                  )
+                ),
+                props.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
+              ))
+          } else <.div()
+        }
+        <.div(pot.render(identity))
       }
     }.build
 
