@@ -100,9 +100,9 @@ object DashboardTerminalSummary {
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
     f.apiFlight.PcpTime.exists(millis => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch)
 
-  def windowStart(time: SDateLike): SDateLike = {
+  def windowStart(time: SDateLike, selectedTimeRange : Int): SDateLike = {
 
-    val minutes = (time.getMinutes / 15) * 15
+    val minutes = (time.getMinutes / selectedTimeRange) * selectedTimeRange
 
     SDate(f"${time.getFullYear}-${time.getMonth}%02d-${time.getDate}%02d ${time.getHours}%02d:$minutes%02d")
   }
@@ -170,7 +170,7 @@ object DashboardTerminalSummary {
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82")
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20"),
               )
             )
           )
@@ -179,6 +179,7 @@ object DashboardTerminalSummary {
         // Define a function to create the PaxTerminalOverviewComponent
         def renderPaxTerminalOverview(summary: Seq[DashboardSummary], splitsForPeriod: Map[PaxTypeAndQueue, Int]) = {
           PaxTerminalOverviewComponent(IPaxTerminalOverview(
+            terminal = props.terminal.toString,
             currentTime = SDate.now().prettyTime,
             desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
             staff = pressurePointAvailableStaff,

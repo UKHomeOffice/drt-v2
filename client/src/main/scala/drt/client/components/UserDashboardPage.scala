@@ -24,7 +24,7 @@ object UserDashboardPage {
           if (user.hasRole(PortOperatorStaff))
             PortExportDashboardPage(user)
           else if (user.hasRole(BorderForceStaff))
-            PortDashboardPage(p.router, PortDashboardLoc(None), airportConfig)
+            PortDashboardPage(p.router, PortDashboardLoc(Some(1)), airportConfig)
           else
             <.div("You have successfully logged into DRT but your account has not been configured correctly. Please contact us for assistance.")
         }))

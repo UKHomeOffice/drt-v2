@@ -234,8 +234,10 @@ object SPAMain {
     val hashValue: String = "#portDashboard"
   }
 
-  case class PortDashboardLoc(period: Option[Int]) extends Loc {
-    override val url = s"${PortDashboardLoc.hashValue}/$period"
+  case class PortDashboardLoc(period: Option[Int], subMode: Int = 180, queryParams: Map[String, String] = Map.empty[String, String]) extends Loc {
+    private val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
+    //    override val url = s"${TerminalPageTabLoc.hashValue}/$terminalName/$modeStr/$subMode$queryString"
+    override val url = s"${PortDashboardLoc.hashValue}$period$subMode$queryString"
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
   }
@@ -383,7 +385,7 @@ object SPAMain {
 
     val proxy = SPACircuit.connect(_.airportConfig)
 
-    dynamicRouteCT((PortDashboardLoc.hashValue / int.option).caseClass[PortDashboardLoc]) ~>
+    dynamicRouteCT((PortDashboardLoc.hashValue / int.option / int / "" ~ queryToMap).caseClass[PortDashboardLoc]) ~>
       dynRenderR { case (page: PortDashboardLoc, router) =>
         proxy(p => PortDashboardPage(router, page, p()))
       }
