@@ -24,7 +24,7 @@ import scala.util.Try
 
 object PortDashboardPage {
 
-  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc, airportConfig: Pot[AirportConfig]) extends UseValueEq
+  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc) extends UseValueEq
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike) {
     def duration: Int = ((end.millisSinceEpoch - start.millisSinceEpoch) / 1000).toInt
@@ -204,6 +204,7 @@ object PortDashboardPage {
                             displayPeriod.start,
                             displayPeriod.end,
                             portDashboardModel.paxFeedSourceOrder,
+                            selectedTimeRange
                           )
                         )
                       }
@@ -218,5 +219,5 @@ object PortDashboardPage {
     })
     .build
 
-  def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None), airportConfig: Pot[AirportConfig]): VdomElement = component(Props(router, dashboardPage, airportConfig))
+  def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None)): VdomElement = component(Props(router, dashboardPage))
 }

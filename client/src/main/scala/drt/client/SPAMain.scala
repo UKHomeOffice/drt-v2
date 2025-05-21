@@ -387,7 +387,7 @@ object SPAMain {
 
     dynamicRouteCT((PortDashboardLoc.hashValue / int.option / int / "" ~ queryToMap).caseClass[PortDashboardLoc]) ~>
       dynRenderR { case (page: PortDashboardLoc, router) =>
-        proxy(p => PortDashboardPage(router, page, p()))
+        proxy(_ => PortDashboardPage(router, page))
       }
   }
 

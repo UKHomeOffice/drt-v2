@@ -16,15 +16,15 @@ object UserDashboardPage {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("UserDashboard")
     .render_P(p => {
-      val loggedInUserRCP = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
+      val loggedInUserRCP = SPACircuit.connect(m => (m.loggedInUserPot))
       loggedInUserRCP { loggedInUserMP =>
-        val (loggedInUser, airportConfig) = loggedInUserMP()
+        val (loggedInUser) = loggedInUserMP()
 
         <.div(loggedInUser.renderReady(user => {
           if (user.hasRole(PortOperatorStaff))
             PortExportDashboardPage(user)
           else if (user.hasRole(BorderForceStaff))
-            PortDashboardPage(p.router, PortDashboardLoc(Some(1)), airportConfig)
+            PortDashboardPage(p.router, PortDashboardLoc(Some(1)))
           else
             <.div("You have successfully logged into DRT but your account has not been configured correctly. Please contact us for assistance.")
         }))

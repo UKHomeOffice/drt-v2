@@ -28,7 +28,7 @@ object DashboardTerminalSummary {
 
   def pcpLowest(cms: Seq[CrunchMinute]): CrunchMinute = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad < cm2.paxLoad) cm1 else cm2)
 
-  private def hourRange(start: SDateLike, numHours: Int): IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
+  private def minuteRange(start: SDateLike, numMinutes: Int): IndexedSeq[SDateLike] = (0 until 3).map(m => start.addMinutes(numMinutes * m))
 
   def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminal: Terminal): List[CrunchMinute] = {
     val emptyMinute = CrunchMinute(terminal, InvalidQueue, 0L, 0, 0, 0, 0, None, None, None, None, None)
@@ -62,11 +62,11 @@ object DashboardTerminalSummary {
       case somePaxInQueue => Option(somePaxInQueue.max)
     }
 
-  def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
-    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByHour(flights, start).toMap
-    val groupedCrunchMinutes = groupCrunchMinutesByHour(cms, start).toMap
+  def minSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, minuteRangeTime:Int): Seq[DashboardSummary] = {
+    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start , minuteRangeTime).toMap
+    val groupedCrunchMinutes = groupCrunchByMinutes(cms, start, minuteRangeTime).toMap
 
-    hourRange(start, 3).map(h => DashboardSummary(
+    minuteRange(start, minuteRangeTime).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
       groupedCrunchMinutes.getOrElse(h.millisSinceEpoch, List())
@@ -75,8 +75,8 @@ object DashboardTerminalSummary {
     ))
   }
 
-  def groupFlightsByHour(flights: List[ApiFlightWithSplits], startMin: SDateLike): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
-    val hourInMillis = 3600000
+  def groupFlightsByMinuteRange(flights: List[ApiFlightWithSplits], startMin: SDateLike, minuteRangeTime:Int): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
+    val hourInMillis = minuteRangeTime * 60 * 1000
     flights
       .filter { f => f.apiFlight.PcpTime.isDefined }
       .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
@@ -89,8 +89,8 @@ object DashboardTerminalSummary {
       .sortBy(_._1)
   }
 
-  private def groupCrunchMinutesByHour(cms: List[CrunchMinute], startMin: SDateLike): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val hourInMillis = 3600000
+  private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike,minuteRangeTime:Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+    val hourInMillis = minuteRangeTime * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
       val hoursSinceStart = ((cm.minute - startMin.millisSinceEpoch) / hourInMillis).toInt
       startMin.addHours(hoursSinceStart).millisSinceEpoch
@@ -132,6 +132,7 @@ object DashboardTerminalSummary {
                    timeWindowStart: SDateLike,
                    timeWindowEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
+                   selectedTimeRange: Int,
                   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
@@ -153,7 +154,7 @@ object DashboardTerminalSummary {
 //        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, props.flights)
-        val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
+        val summary: Seq[DashboardSummary] = minSummary(props.flights, props.crunchMinutes, props.timeWindowStart , props.selectedTimeRange)
         val queueTotals = totalsByQueue(summary)
 
         val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
@@ -201,7 +202,7 @@ object DashboardTerminalSummary {
               summary.map { s =>
                 Estimate(
                   from = SDate(s.startTime).prettyTime,
-                  to = SDate(s.startTime).addMinutes(15).prettyTime,
+                  to = SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime,
                   egate = s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int],
                   eea = s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int],
                   noneea = s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]
