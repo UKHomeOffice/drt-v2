@@ -7,16 +7,16 @@ import controllers.application.AuthController
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
 import org.apache.pekko.pattern.ask
-import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import play.api.mvc._
 import services.exports.Exports.streamExport
 import services.exports.flights.ArrivalFeedExport
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.models.VoyageManifests
+import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -92,7 +92,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
 
   private def requestToCsvStream(maybePointInTime: Option[MillisSinceEpoch], `export`: FlightsWithSplitsExport): Future[Source[String, NotUsed]] = {
-    val eventualFlightsByDate = maybePointInTime match {
+    val eventualFlightsByDate: Future[Source[(UtcDate, Iterable[ApiFlightWithSplits]), NotUsed]] = maybePointInTime match {
       case Some(pointInTime) =>
         val requestStart = SDate(`export`.start).millisSinceEpoch
         val requestEnd = SDate(`export`.end).addDays(1).addMinutes(-1).millisSinceEpoch
@@ -109,7 +109,17 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
       flightsStream =>
         export.csvStream(flightsStream.mapAsync(1) { case (d, flights) =>
           val sortedFlights = flights.toSeq.sortBy(_.apiFlight.PcpTime.getOrElse(0L))
-          ctrl.applicationService.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (sortedFlights, m))
+          Source(sortedFlights)
+            .mapAsync(1) { fws =>
+              ctrl.applicationService.manifestProvider(UniqueArrivalKey(fws.apiFlight, airportConfig.portCode))
+            }
+            .collect {
+              case Some(vm) => vm
+            }
+            .runWith(Sink.seq)
+            .map { manifests =>
+              (sortedFlights, VoyageManifests(manifests))
+            }
         })
     }
   }

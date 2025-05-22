@@ -50,7 +50,7 @@ import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateAct
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey, VoyageManifests}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey, VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -148,6 +148,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
+
+  val manifestProvider: UniqueArrivalKey => Future[Option[VoyageManifest]] =
+    ApiManifestProvider(aggregatedDb)
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)
 
