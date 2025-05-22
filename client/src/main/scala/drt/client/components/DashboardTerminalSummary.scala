@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.components.ChartJSComponent.Chart
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
 import drt.shared._
@@ -15,7 +16,6 @@ import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-
 object DashboardTerminalSummary {
 
   case class DashboardSummary(
@@ -64,8 +64,12 @@ object DashboardTerminalSummary {
 
   def minSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, minuteRangeTime:Int): Seq[DashboardSummary] = {
     val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start , minuteRangeTime).toMap
+    println(s"Grouped flights: ${groupedFlights.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
     val groupedCrunchMinutes = groupCrunchByMinutes(cms, start, minuteRangeTime).toMap
 
+    println(s"Grouped crunch minutes: ${groupedCrunchMinutes.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
+
+    minuteRange(start, minuteRangeTime).map(s => print(s"minuteRange: $s $minuteRangeTime"))
     minuteRange(start, minuteRangeTime).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
@@ -75,27 +79,57 @@ object DashboardTerminalSummary {
     ))
   }
 
-  def groupFlightsByMinuteRange(flights: List[ApiFlightWithSplits], startMin: SDateLike, minuteRangeTime:Int): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
-    val hourInMillis = minuteRangeTime * 60 * 1000
+  def groupFlightsByMinuteRange(
+                                 flights: List[ApiFlightWithSplits],
+                                 startMin: SDateLike,
+                                 minuteRangeTime: Int
+                               ): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
+    val rangeInMillis = minuteRangeTime * 60 * 1000
     flights
-      .filter { f => f.apiFlight.PcpTime.isDefined }
+      .filter(_.apiFlight.PcpTime.isDefined)
       .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
-      .groupBy(fws => {
-        val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
-        startMin.addHours(hoursSinceStart).millisSinceEpoch
-      })
+      .groupBy { flight =>
+        val pcpTime = flight.apiFlight.PcpTime.getOrElse(0L)
+        val intervalsSinceStart = ((pcpTime - startMin.millisSinceEpoch) / rangeInMillis).toInt
+        println(s"pcpTime: $pcpTime, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
+        println(s" groupFlightsByMinuteRange : intervalsSinceStart $intervalsSinceStart")
+        startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
+      }
       .view.mapValues(_.toSet)
       .toList
       .sortBy(_._1)
   }
 
-  private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike,minuteRangeTime:Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val hourInMillis = minuteRangeTime * 60 * 1000
+  private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike, minuteRangeTime: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+    val rangeInMillis  = minuteRangeTime * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
-      val hoursSinceStart = ((cm.minute - startMin.millisSinceEpoch) / hourInMillis).toInt
-      startMin.addHours(hoursSinceStart).millisSinceEpoch
+      val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / rangeInMillis).toInt
+      println(s" groupCrunchByMinutes :   intervalsSinceStart $intervalsSinceStart")
+      startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
     }).toList.sortBy(_._1)
   }
+
+//  def groupFlightsByMinuteRange(flights: List[ApiFlightWithSplits], startMin: SDateLike, minuteRangeTime:Int): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
+//    val hourInMillis = minuteRangeTime * 60 * 1000
+//    flights
+//      .filter { f => f.apiFlight.PcpTime.isDefined }
+//      .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
+//      .groupBy(fws => {
+//        val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
+//        startMin.addHours(hoursSinceStart).millisSinceEpoch
+//      })
+//      .view.mapValues(_.toSet)
+//      .toList
+//      .sortBy(_._1)
+//  }
+//
+//  private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike,minuteRangeTime:Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+//    val hourInMillis =  minuteRangeTime * 60 * 1000
+//    cms.sortBy(_.minute).groupBy(cm => {
+//      val hoursSinceStart = ((cm.minute - startMin.millisSinceEpoch) / hourInMillis).toInt
+//      startMin.addHours(hoursSinceStart).millisSinceEpoch
+//    }).toList.sortBy(_._1)
+//  }
 
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
     f.apiFlight.PcpTime.exists(millis => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch)
@@ -171,7 +205,7 @@ object DashboardTerminalSummary {
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20", "#FFB300", "#FF6F20"),
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20"),
               )
             )
           )
@@ -181,6 +215,7 @@ object DashboardTerminalSummary {
         def renderPaxTerminalOverview(summary: Seq[DashboardSummary], splitsForPeriod: Map[PaxTypeAndQueue, Int]) = {
           PaxTerminalOverviewComponent(IPaxTerminalOverview(
             terminal = props.terminal.toString,
+            timeRange = props.selectedTimeRange,
             currentTime = SDate.now().prettyTime,
             desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
             staff = pressurePointAvailableStaff,
@@ -199,14 +234,19 @@ object DashboardTerminalSummary {
               )
             ),
             estimates =
-              summary.map { s =>
-                Estimate(
+              summary.flatMap { s =>
+                println(s"""Summary:from = ${SDate(s.startTime).prettyTime},
+                  to = ${SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime},
+                  egate = ${s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int]},
+                  eea = ${s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int]},
+                  noneea = ${s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]}""")
+                List(Estimate(
                   from = SDate(s.startTime).prettyTime,
                   to = SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime,
                   egate = s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int],
                   eea = s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int],
                   noneea = s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]
-                )
+                )).toJSArray
               }.toJSArray
 
           ))

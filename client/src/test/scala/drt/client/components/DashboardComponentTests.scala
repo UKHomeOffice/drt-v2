@@ -89,28 +89,28 @@ object DashboardComponentTests extends TestSuite {
 
       "given 13:45 I should get back 13:45" - {
         val time = SDate("2017-11-30T13:45")
-        val result = DashboardTerminalSummary.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:46 I should get back 13:45" - {
         val time = SDate("2017-11-30T13:46")
-        val result = DashboardTerminalSummary.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:52 I should get back 13:45" - {
         val time = SDate("2017-11-30T13:52")
-        val result = DashboardTerminalSummary.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:02 I should get back 13:00" - {
         val time = SDate("2017-11-30T13:02")
-        val result = DashboardTerminalSummary.windowStart(time)
+        val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:00")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
@@ -129,7 +129,7 @@ object DashboardComponentTests extends TestSuite {
       val flights = List(flight1, flight2, flight3, flight4, flight5, flight6)
 
       val start = SDate("2017-11-01T09:45:00")
-      val result = DashboardTerminalSummary.groupFlightsByMinuteRange(flights, start)
+      val result = DashboardTerminalSummary.groupFlightsByMinuteRange(flights, start, 60)
 
 
       val expected = List(
@@ -200,7 +200,7 @@ object DashboardComponentTests extends TestSuite {
         )
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
 
-        val result = minSummary(flights, cms, startDate)
+        val result = minSummary(flights, cms, startDate, 60)
         val expected = List(
           DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 2, Map(Queues.EeaDesk -> 20)),
           DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
@@ -221,7 +221,7 @@ object DashboardComponentTests extends TestSuite {
         )
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
 
-        val result = minSummary(flights, cms, startDate)
+        val result = minSummary(flights, cms, startDate, 60)
         val expected = List(
           DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20)),
           DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),
@@ -247,7 +247,7 @@ object DashboardComponentTests extends TestSuite {
           CrunchMinute(T1, Queues.NonEeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None)
         )
 
-        val result = minSummary(flights, cms, startDate)
+        val result = minSummary(flights, cms, startDate ,60)
         val expected = List(
           DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20, Queues.NonEeaDesk -> 20)),
           DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 1, Map()),

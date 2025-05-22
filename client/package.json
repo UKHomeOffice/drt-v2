@@ -8,7 +8,7 @@
     "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify"
   },
   "dependencies": {
-    "@drt/drt-react": "UKHomeOffice/drt-react#06da9b1ca42bbdcf1749dca72276cf0976875b82",
+    "@drt/drt-react": "UKHomeOffice/drt-react#089817ab145847d933ded7a1eff1086f6e41e549",
     "@handsontable/react": "3.1.2",
     "@mui/icons-material": "5.16.5",
     "@mui/lab": "5.0.0-alpha.173",
@@ -18,7 +18,7 @@
     "@types/react-dom": "18.2.0",
     "bootstrap": "3.3.6",
     "build": "^0.1.4",
-    "chart.js": "^3.6.0",
+    "chart.js": "^4.4.9",
     "core-js": "3.23.3",
     "css-loader": "6.7.2",
     "flickity": "2.3.0",
@@ -27,7 +27,7 @@
     "moment": ">=2.29.4",
     "moment-timezone": "^0.5.43",
     "react": "18.2.0",
-    "react-chartjs-2": "^4.0.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "18.2.0",
     "react-flickity-component": "4.0.6",
     "react-markdown": "9.0.1"
