@@ -1,10 +1,10 @@
 package actors.routing.minutes
 
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import org.apache.pekko.actor.ActorRef
 import drt.shared.CrunchApi.MillisSinceEpoch
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import org.apache.pekko.actor.ActorRef
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.models.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.UtcDate
 

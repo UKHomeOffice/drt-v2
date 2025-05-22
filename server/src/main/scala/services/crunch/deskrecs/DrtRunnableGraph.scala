@@ -7,8 +7,8 @@ import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
 import org.apache.pekko.{Done, NotUsed}
 import org.slf4j.LoggerFactory
 import slick.lifted.Rep
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
 import uk.gov.homeoffice.drt.db.tables.{StatusDaily, StatusDailyTable}
 import uk.gov.homeoffice.drt.ports.PortCode

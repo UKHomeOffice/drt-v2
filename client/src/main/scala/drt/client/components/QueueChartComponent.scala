@@ -5,7 +5,7 @@ import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Idea
 import drt.client.services.JSDateConversions.SDate
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.scalajs.js

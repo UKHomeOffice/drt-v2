@@ -4,7 +4,7 @@ import org.apache.pekko.actor.Props
 import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.MinutesContainer
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}

@@ -5,7 +5,7 @@ import scala.util.Random
 object RandomString {
   def randomStringFromCharList(length: Int, chars: Seq[Char]): String = {
     val sb = new StringBuilder
-    for (i <- 1 to length) {
+    for (_ <- 1 to length) {
       val randomNum = Random.nextInt(chars.length)
       sb.append(chars(randomNum))
     }

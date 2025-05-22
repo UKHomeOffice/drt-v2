@@ -1,18 +1,18 @@
 package queues
 
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
+import manifests.passengers.BestAvailableManifest
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import queueus._
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
+import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, B5JPlusWithTransitTypeAllocator, DefaultPaxTypeAllocator, DocumentType, ManifestPassengerProfile}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.SDate
 
 class QueueAllocationSpec extends Specification {
   val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T1 -> Map(

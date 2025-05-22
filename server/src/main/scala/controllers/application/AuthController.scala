@@ -1,21 +1,21 @@
 package controllers.application
 
+import drt.http.ProdSendAndReceive
+import drt.shared.ErrorResponse
+import drt.users.KeyCloakClient
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.event.LoggingAdapter
 import org.apache.pekko.http.scaladsl.model.HttpResponse
 import org.apache.pekko.util.Timeout
-import drt.http.ProdSendAndReceive
-import drt.shared.ErrorResponse
-import drt.users.KeyCloakClient
 import play.api.Configuration
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.JsResult.Exception
 import play.api.libs.json.{JsError, JsObject, Json, Writes}
 import play.api.mvc._
-import slickdb.UserRow
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.db.tables.UserRow
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 

@@ -1,16 +1,12 @@
 package manifests.paxinfo
 
-import drt.shared._
-import drt.shared.api.{AgeRange, FlightManifestSummary, PaxAgeRange, UnknownAge}
-import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.{PaxTypes, PortCode}
-
-import scala.collection.immutable.List
+import uk.gov.homeoffice.drt.time.SDate
 
 
 class FlightManifestSummaryFromManifestSpec extends Specification {

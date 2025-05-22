@@ -8,7 +8,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import spray.json.enrichAny
-import drt.shared.{DrtPortConfigs, UserPreferences}
+import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -19,6 +19,7 @@ import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
+import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone

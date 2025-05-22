@@ -3,8 +3,8 @@ package drt.client.services.handlers
 import drt.client.components.ArrivalGenerator
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers.PortStateUpdatesHandler.splitsToManifestKeys
-import drt.shared.ManifestKey
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.models.ManifestKey
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike

@@ -3,14 +3,13 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import manifests.passengers.BestAvailableManifest
 import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.{CI, DC}
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._

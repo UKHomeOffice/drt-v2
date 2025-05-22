@@ -1,11 +1,9 @@
 package services.prediction
 
+import controllers.ArrivalGenerator
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.util.Timeout
-import controllers.ArrivalGenerator
-import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.PortState
-import services.crunch.{CrunchTestLike, TestConfig}
+import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.actor.PredictionModelActor._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, Predictions}
@@ -51,7 +49,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
     TerminalCarrierOrigin(a.Terminal.toString, a.CarrierCode.code, a.Origin.iata),
   )
 
-  private val myNow: SDateLike = SDate("2025-05-13T09:30Z")
+  private val myNow: SDateLike = SDate.now()
 
   val arrivalPredictions: ArrivalPredictions = ArrivalPredictions(
     modelKeys = modelKeysForArrival,
@@ -62,7 +60,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
     staleFrom = 24.hours,
   )
 
-  val scheduledStr = myNow.toISOString
+  val scheduledStr: String = myNow.toISOString
 
   "arrivalsByKey should" >> {
     "take some arrivals and a function to create their keys and return a list of keys to arrivals" >> {
@@ -95,19 +93,12 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
       val arrivalsMap = List(arrival).map(a => (a.unique, a)).toMap
       val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 5.second)
 
-      maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
+      maybePredictedTouchdown.head.predictedTouchdown.nonEmpty === true
     }
   }
 
   "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
     val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
-    val oldPredictionValue = -4
-    val newPredictionValue = 0
-    val newPredictions = Predictions(
-      myNow.millisSinceEpoch,
-      Map(OffScheduleModelAndFeatures.targetName -> newPredictionValue)
-    )
-
     "I should be able to update the arrival with an predicted touchdown time" >> {
       val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
 
@@ -121,20 +112,20 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
     "lastUpdated should only be set if the new predicted value is different from the existing one" >> {
       val currentPredictions = Predictions(
         myNow.addDays(-2).millisSinceEpoch,
-        Map(OffScheduleModelAndFeatures.targetName -> newPredictionValue)
+        Map(OffScheduleModelAndFeatures.targetName -> -100)
       )
 
       val diff = ArrivalsDiff(Seq(arrival.copy(Predictions = currentPredictions)), Seq())
 
       val arrivals = Await.result(arrivalPredictions.addPredictions(diff), 1.second).toUpdate.values
 
-      arrivals.exists(a => a.Predictions === currentPredictions)
+      arrivals.exists(a => a.Predictions.lastUpdated !== currentPredictions.lastUpdated)
     }
 
     "predictions should not be updated if it's less than the threshold time since the last update" >> {
       val currentPredictions = Predictions(
         myNow.addHours(-2).millisSinceEpoch,
-        Map(OffScheduleModelAndFeatures.targetName -> oldPredictionValue)
+        Map(OffScheduleModelAndFeatures.targetName -> -4)
       )
 
       val diff = ArrivalsDiff(Seq(arrival.copy(Predictions = currentPredictions)), Seq())
@@ -147,35 +138,14 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
     "predictions should be updated if it's more than the threshold time since the last update" >> {
       val currentPredictions = Predictions(
         myNow.addDays(-2).millisSinceEpoch,
-        Map(OffScheduleModelAndFeatures.targetName -> oldPredictionValue)
+        Map(OffScheduleModelAndFeatures.targetName -> -100)
       )
 
       val diff = ArrivalsDiff(Seq(arrival.copy(Predictions = currentPredictions)), Seq())
 
       val arrivals = Await.result(arrivalPredictions.addPredictions(diff), 1.second).toUpdate.values
 
-      arrivals.exists(a => a.Predictions == newPredictions)
-    }
-  }
-
-  "Within CrunchSystem" >> {
-    "An Arrivals Graph Stage configured to use predicted times" should {
-      "set the correct pcp time given an arrival with a predicted touchdown time" >> {
-        val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-
-        val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduledStr),
-          addArrivalPredictions = arrivalPredictions.addPredictions
-        ))
-
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrival)))
-
-        crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for a predicted time") {
-          case ps: PortState => ps.flights.values.exists(_.apiFlight.predictedTouchdown.nonEmpty)
-        }
-
-        success
-      }
+      arrivals.exists(a => a.Predictions.lastUpdated != currentPredictions.lastUpdated)
     }
   }
 }

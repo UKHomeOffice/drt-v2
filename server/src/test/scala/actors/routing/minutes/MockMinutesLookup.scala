@@ -4,7 +4,7 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.time.UtcDate
 import uk.gov.homeoffice.drt.time.SDate
 

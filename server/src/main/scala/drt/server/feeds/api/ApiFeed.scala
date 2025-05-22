@@ -1,10 +1,10 @@
 package drt.server.feeds.api
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.{Done, NotUsed}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import manifests.UniqueArrivalKey
 import org.slf4j.LoggerFactory
+import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.FiniteDuration

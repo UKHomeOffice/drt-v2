@@ -3,9 +3,9 @@ package uk.gov.homeoffice.drt.routes
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.UserTableLike
-import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
+import uk.gov.homeoffice.drt.db.tables.UserTableLike
 
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)

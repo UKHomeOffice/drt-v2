@@ -1,6 +1,7 @@
 package actors.persistent
 
 import actors.PartitionedPortStateActor._
+import actors.persistent.ManifestRouterActor.GetManifestsForDateRange
 import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
@@ -13,12 +14,12 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
+import uk.gov.homeoffice.drt.models.VoyageManifests
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
@@ -33,12 +34,6 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
   override val sourceType: FeedSource = ApiFeedSource
   override val persistenceId: String = "arrival-manifests"
 
-  sealed trait ManifestResult
-
-  case class ManifestFound(manifest: VoyageManifest) extends ManifestResult
-
-  case object ManifestNotFound extends ManifestResult
-
   private def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
                                   (start: SDateLike,
                                    end: SDateLike,
@@ -49,6 +44,7 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
       .utcDateRangeSource(start, end)
       .mapAsync(1)(d => manifestsByDayLookup(d, maybePit).map(m => (d, m)))
 
+  case class GetManifestsForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeMillisLike
 }
 
 case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
@@ -126,10 +122,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
 
       persistFeedStatus(newStatus)
 
-    case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
+    case PointInTimeQuery(pit, GetManifestsForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
 
-    case GetStateForDateRange(startMillis, endMillis) =>
+    case GetManifestsForDateRange(startMillis, endMillis) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), None)
 
     case GetState =>
