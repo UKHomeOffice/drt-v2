@@ -1,6 +1,7 @@
 package actors.persistent
 
 import actors.PartitionedPortStateActor._
+import actors.persistent.ManifestRouterActor.GetManifestsForDateRange
 import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
@@ -43,7 +44,7 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
       .utcDateRangeSource(start, end)
       .mapAsync(1)(d => manifestsByDayLookup(d, maybePit).map(m => (d, m)))
 
-  case class GetManifestsForDateRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch)
+  case class GetManifestsForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeMillisLike
 }
 
 case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
@@ -121,10 +122,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
 
       persistFeedStatus(newStatus)
 
-    case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
+    case PointInTimeQuery(pit, GetManifestsForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
 
-    case GetStateForDateRange(startMillis, endMillis) =>
+    case GetManifestsForDateRange(startMillis, endMillis) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), None)
 
     case GetState =>

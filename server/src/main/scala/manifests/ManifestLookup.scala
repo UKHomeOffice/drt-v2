@@ -5,7 +5,7 @@ import org.apache.pekko.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import slick.sql.SqlStreamingAction
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.models.{DocumentType, ManifestPassengerProfile, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
