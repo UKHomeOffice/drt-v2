@@ -1,7 +1,7 @@
 package actors.routing.minutes
 
 import actors.ManifestLookupsLike
-import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.staffing.GetFeedStatuses
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
