@@ -101,9 +101,10 @@ object DashboardTerminalSummary {
   }
 
   private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike, minuteRangeTime: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val rangeInMillis  = minuteRangeTime * 60 * 1000
+    val rangeInMillis  = minuteRangeTime * 20 *  1000
     cms.sortBy(_.minute).groupBy(cm => {
       val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / rangeInMillis).toInt
+      println(s"cm.minute: ${cm.minute}, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
       println(s" groupCrunchByMinutes :   intervalsSinceStart $intervalsSinceStart")
       startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
     }).toList.sortBy(_._1)
