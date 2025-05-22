@@ -152,7 +152,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestRouterActor = manifestRouterActorWithTestProbe(testProbe)
 
       val result = Await.result(manifestRouterActor.ask(
-        GetStateForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
+        ManifestRouterActor.GetManifestsForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
       ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]], 1.second)
 
       result.runWith(Sink.seq)
@@ -172,7 +172,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val result = Await.result(manifestRouterActor.ask(
         PointInTimeQuery(
           pit,
-          GetStateForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
+          ManifestRouterActor.GetManifestsForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
         )
 
       ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]], 1.second)
@@ -200,7 +200,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       )
 
       val resultSource: Future[Source[(UtcDate, VoyageManifests), NotUsed]] = manifestRouterActor.ask(
-        GetStateForDateRange(
+        ManifestRouterActor.GetManifestsForDateRange(
           SDate("2020-11-01T00:00Z").millisSinceEpoch,
           SDate("2020-11-02T23:59Z").millisSinceEpoch
         )
