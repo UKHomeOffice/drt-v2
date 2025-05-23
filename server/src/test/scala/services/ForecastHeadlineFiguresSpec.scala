@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.{ForecastHeadlineFigures, QueueHeadline}
 import drt.shared.PortState
 import org.specs2.mutable.Specification
 import services.exports.Forecast
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.time.SDate

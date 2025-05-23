@@ -28,7 +28,7 @@ class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
       staffNumber = 1,
       frequency = None,
       createdBy = None,
-      createdAt = 1l
+      createdAt = 1L
     )
     val json = shift.toJson
     json.convertTo[Shift] shouldBe shift

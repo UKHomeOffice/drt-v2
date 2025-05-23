@@ -8,14 +8,15 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import drt.shared._
+import drt.shared.api.{ForecastAccuracy, WalkTimes}
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}

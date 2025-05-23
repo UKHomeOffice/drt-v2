@@ -1,15 +1,14 @@
 package manifests.queues
 
 import controllers.ArrivalGenerator.live
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import passengersplits.parsing.VoyageManifestParser._
+import manifests.passengers.BestAvailableManifest
 import queueus._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
+import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, B5JPlusWithTransitTypeAllocator, CountryCodes, DocumentType, EeaFlag, InTransit, ManifestDateOfArrival, ManifestPassengerProfile, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.{NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._

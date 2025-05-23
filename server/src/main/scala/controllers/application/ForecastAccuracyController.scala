@@ -1,16 +1,16 @@
 package controllers.application
 
-import org.apache.pekko.NotUsed
-import org.apache.pekko.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import drt.shared.CodeShares
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.mvc._
 import services.accuracy.ForecastAccuracyCalculator
-import slickdb.ArrivalStatsRow
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.db.tables.ArrivalStatsRow
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.ModelAndFeatures

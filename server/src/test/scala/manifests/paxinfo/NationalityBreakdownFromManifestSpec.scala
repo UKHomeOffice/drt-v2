@@ -1,11 +1,9 @@
 package manifests.paxinfo
 
-import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder.{manifestForPassengers, manifestWithPassengerNationalities, passengerBuilderWithOptions}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
-
-import scala.collection.immutable.List
+import uk.gov.homeoffice.drt.models.PassengerInfo
 
 object NationalityBreakdownFromManifestSpec extends Specification {
   private val dateAfterEgateAgeEligibilityDateChange = "2023-07-26"

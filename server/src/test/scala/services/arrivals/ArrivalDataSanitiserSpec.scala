@@ -12,7 +12,6 @@ class ArrivalDataSanitiserSpec extends Specification {
   val scheduled: SDateLike = SDate(2019, 9, 30, 16, 0)
 
   def arrival(estimated: Option[Long] = None,
-              predTouchdown: Option[Prediction[Long]] = None,
               actual: Option[Long] = None,
               estChox: Option[Long] = None,
               actChox: Option[Long] = None,

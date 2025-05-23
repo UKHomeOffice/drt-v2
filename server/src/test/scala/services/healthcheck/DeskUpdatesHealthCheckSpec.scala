@@ -6,7 +6,7 @@ import controllers.ArrivalGenerator
 import org.specs2.matcher.MatchResult
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}

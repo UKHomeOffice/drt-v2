@@ -3,9 +3,9 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes, FeedArrival}
+import uk.gov.homeoffice.drt.models.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}

@@ -7,8 +7,8 @@ import manifests.ManifestLookupLike
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunchWholePax, TrySimulator}
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal

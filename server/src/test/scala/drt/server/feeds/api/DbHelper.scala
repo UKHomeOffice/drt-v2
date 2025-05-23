@@ -1,6 +1,7 @@
 package drt.server.feeds.api
 
-import slickdb.{ProcessedJsonRow, ProcessedZipRow, AggregatedDbTables, VoyageManifestPassengerInfoRow}
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
+import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.sql.Timestamp

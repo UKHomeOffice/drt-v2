@@ -4,8 +4,9 @@ import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.slf4j.LoggerFactory
+import slickdb.AkkaDbTables
 import slickdb.dao.AkkaDao
-import slickdb.{AggregatedDbTables, AkkaDbTables}
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, FlightDao, PassengersHourlyDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

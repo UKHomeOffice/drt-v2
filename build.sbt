@@ -9,7 +9,7 @@ import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 
 scalaVersion := Settings.versions.scala
 
-lazy val root = (project in file("."))
+lazy val drtv2 = (project in file("."))
   .aggregate(server, client, shared.jvm, shared.js)
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)

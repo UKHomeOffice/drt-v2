@@ -9,11 +9,11 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.LoggerFactory
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
+import uk.gov.homeoffice.drt.models.VoyageManifests
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}

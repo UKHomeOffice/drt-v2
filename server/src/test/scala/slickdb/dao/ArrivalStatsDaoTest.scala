@@ -3,9 +3,9 @@ package slickdb.dao
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import slickdb.ArrivalStatsRow
+import uk.gov.homeoffice.drt.db.AggregateDbH2
+import uk.gov.homeoffice.drt.db.tables.ArrivalStatsRow
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await

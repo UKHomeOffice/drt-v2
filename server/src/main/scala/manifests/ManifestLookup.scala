@@ -1,13 +1,13 @@
 package manifests
 
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.Materializer
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import slick.sql.SqlStreamingAction
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
+import uk.gov.homeoffice.drt.models.{DocumentType, ManifestPassengerProfile, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -31,23 +31,9 @@ trait ManifestLookupLike {
                                scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])]
 }
 
-case class UniqueArrivalKey(arrivalPort: PortCode,
-                            departurePort: PortCode,
-                            voyageNumber: VoyageNumber,
-                            scheduled: SDateLike) {
-  override def toString: String = s"$departurePort -> $arrivalPort: $voyageNumber @ ${scheduled.toISOString}"
-}
 
-object UniqueArrivalKey {
-  def apply(arrival: Arrival, port: PortCode): UniqueArrivalKey =
-    UniqueArrivalKey(port, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
 
-  def apply(portCode: PortCode, arrivalKey: UniqueArrival): UniqueArrivalKey =
-    UniqueArrivalKey(portCode, arrivalKey.origin, VoyageNumber(arrivalKey.number), SDate(arrivalKey.scheduled))
 
-  def apply(feedArrival: FeedArrival, port: PortCode): UniqueArrivalKey =
-    UniqueArrivalKey(port, PortCode(feedArrival.origin), VoyageNumber(feedArrival.voyageNumber), SDate(feedArrival.scheduled))
-}
 
 case class ManifestLookup(tables: AggregatedDbTables)
                          (implicit mat: Materializer) extends ManifestLookupLike {
@@ -71,7 +57,7 @@ case class ManifestLookup(tables: AggregatedDbTables)
 
   private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] =
     if (flightKeys.nonEmpty)
-      paxForArrivalQuery(flightKeys)
+      paxForArrivalsQuery(flightKeys)
     else
       Future(Vector.empty)
 
@@ -246,13 +232,13 @@ case class ManifestLookup(tables: AggregatedDbTables)
           """.as[(String, String, String, Timestamp)]
   }
 
-  private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {
+  private def paxForArrivalsQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {
     val q = tables.voyageManifestPassengerInfo
       .filter { vm =>
         vm.event_code === "DC" && flightKeys.map {
           case (destination, origin, voyageNumberString, scheduled) =>
             val voyageNumber = VoyageNumber(voyageNumberString)
-              vm.arrival_port_code === destination &&
+            vm.arrival_port_code === destination &&
               vm.departure_port_code === origin &&
               vm.voyage_number === voyageNumber.numeric &&
               vm.scheduled_date === scheduled

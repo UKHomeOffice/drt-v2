@@ -8,7 +8,7 @@ import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
-import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, MinuteLike, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}

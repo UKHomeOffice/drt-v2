@@ -1,7 +1,7 @@
 package queueus
 
-import manifests.passengers.ManifestLike
 import manifests.queues.FastTrackFromCSV
+import uk.gov.homeoffice.drt.models.ManifestLike
 import uk.gov.homeoffice.drt.ports.PaxTypes.{NonVisaNational, VisaNational}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

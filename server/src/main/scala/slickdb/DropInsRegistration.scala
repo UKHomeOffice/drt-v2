@@ -4,6 +4,7 @@ import drt.shared.DropInRegistration
 import org.joda.time.DateTime
 import slick.lifted.ProvenShape
 import slick.jdbc.PostgresProfile.api._
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}

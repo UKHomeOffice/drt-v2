@@ -13,32 +13,6 @@ object FeedSourceArrival {
   implicit val rw: ReadWriter[FeedSourceArrival] = macroRW
 }
 
-
-case class ManifestKey(origin: PortCode,
-                       voyageNumber: VoyageNumber,
-                       scheduled: Long) extends Ordered[ManifestKey] with WithTimeAccessor {
-  override def compare(that: ManifestKey): Int =
-    scheduled.compareTo(that.scheduled) match {
-      case 0 => origin.compare(that.origin) match {
-        case 0 => voyageNumber.compare(that.voyageNumber)
-        case c => c
-      }
-      case c => c
-    }
-
-  override def timeValue: MillisSinceEpoch = scheduled
-}
-
-object ManifestKey {
-
-  implicit val rw: ReadWriter[ManifestKey] = macroRW
-
-  def apply(arrival: Arrival): ManifestKey = ManifestKey(arrival.PreviousPort.getOrElse(arrival.Origin), arrival.VoyageNumber, arrival.Scheduled)
-
-  def atTime: MillisSinceEpoch => ManifestKey = (time: MillisSinceEpoch) => ManifestKey(PortCode(""), VoyageNumber(0), time)
-}
-
-
 case class CodeShareKeyOrderedByDupes[A](scheduled: Long,
                                          terminal: Terminal,
                                          origin: PortCode,

@@ -1,16 +1,15 @@
 package actors.daily
 
 import actors.serializers.ManifestMessageConversion
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.Props
 import org.apache.pekko.persistence.SaveSnapshotSuccess
-import drt.shared.ManifestKey
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.models.{ManifestKey, VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}

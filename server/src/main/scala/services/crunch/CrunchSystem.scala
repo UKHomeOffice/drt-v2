@@ -10,6 +10,7 @@ import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import uk.gov.homeoffice.drt.arrivals.FeedArrival
+import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, B5JPlusWithTransitTypeAllocator}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 

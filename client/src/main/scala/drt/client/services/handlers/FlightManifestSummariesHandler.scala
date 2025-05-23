@@ -3,9 +3,8 @@ package drt.client.services.handlers
 import diode._
 import drt.client.actions.Actions._
 import drt.client.services.DrtApi
-import drt.shared.ManifestKey
-import drt.shared.api.FlightManifestSummary
 import io.lemonlabs.uri.QueryString
+import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey}
 import upickle.default._
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
