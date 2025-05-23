@@ -64,12 +64,12 @@ object DashboardTerminalSummary {
 
   def minSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, minuteRangeTime:Int): Seq[DashboardSummary] = {
     val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start , minuteRangeTime).toMap
-    println(s"Grouped flights: ${groupedFlights.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
+//    println(s"Grouped flights: ${groupedFlights.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
     val groupedCrunchMinutes = groupCrunchByMinutes(cms, start, minuteRangeTime).toMap
 
-    println(s"Grouped crunch minutes: ${groupedCrunchMinutes.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
+//    println(s"Grouped crunch minutes: ${groupedCrunchMinutes.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
 
-    minuteRange(start, minuteRangeTime).map(s => print(s"minuteRange: $s $minuteRangeTime"))
+//    minuteRange(start, minuteRangeTime).map(s => print(s"minuteRange: $s $minuteRangeTime"))
     minuteRange(start, minuteRangeTime).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
@@ -90,9 +90,9 @@ object DashboardTerminalSummary {
       .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
       .groupBy { flight =>
         val pcpTime = flight.apiFlight.PcpTime.getOrElse(0L)
-        val intervalsSinceStart = ((pcpTime - startMin.millisSinceEpoch) / rangeInMillis).toInt
-        println(s"pcpTime: $pcpTime, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
-        println(s" groupFlightsByMinuteRange : intervalsSinceStart $intervalsSinceStart")
+        val intervalsSinceStart = ((pcpTime - (startMin.millisSinceEpoch)) / rangeInMillis).toInt
+//        println(s"pcpTime: $pcpTime, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
+//        println(s" groupFlightsByMinuteRange : intervalsSinceStart $intervalsSinceStart")
         startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
       }
       .view.mapValues(_.toSet)
@@ -101,7 +101,7 @@ object DashboardTerminalSummary {
   }
 
   private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike, minuteRangeTime: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val rangeInMillis  = minuteRangeTime * 20 *  1000
+    val rangeInMillis  = minuteRangeTime/3 * 60 *  1000
     cms.sortBy(_.minute).groupBy(cm => {
       val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / rangeInMillis).toInt
       println(s"cm.minute: ${cm.minute}, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
@@ -172,7 +172,7 @@ object DashboardTerminalSummary {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
-      val crunchMinuteTimeSlots = groupCrunchMinutesBy(groupSize = 15)(
+      val crunchMinuteTimeSlots = groupCrunchMinutesBy(groupSize = props.selectedTimeRange/3)(
         CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal),
         props.terminal,
         Queues.queueOrder).flatMap(_._2)
@@ -187,9 +187,13 @@ object DashboardTerminalSummary {
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
 //        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
-
-        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, props.flights)
-        val summary: Seq[DashboardSummary] = minSummary(props.flights, props.crunchMinutes, props.timeWindowStart , props.selectedTimeRange)
+        val filteredFlights = props.flights.filter(flight =>
+          flight.apiFlight.PcpTime.exists(pcpTime =>
+            pcpTime >= props.timeWindowStart.millisSinceEpoch && pcpTime <= props.timeWindowStart.addMinutes(2 * props.selectedTimeRange).millisSinceEpoch
+          )
+        )
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, filteredFlights)
+        val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart , props.selectedTimeRange)
         val queueTotals = totalsByQueue(summary)
 
         val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
