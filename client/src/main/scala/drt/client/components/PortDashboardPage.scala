@@ -154,22 +154,15 @@ object PortDashboardPage {
                       }.toTagMod
                     )
                   ))),
-
-
-              //              <.div(
-              //                MuiToggleButtonGroup(selected = true)(^.className := "btn-group no-gutters",
-              //                  periods.map {
-              //                    case (k, v) =>
-              //                      MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-              //                        s"${v.start.prettyTime}-${v.end.prettyTime}",
-              //                        ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""} muiFontSize",
-              //                        ^.target := "_blank",
-              //                        ^.onClick ==> switchDashboardPeriod)
-              //                  }.toTagMod)),
-
-              //                  <.div(s"selectedTerminals: $selectedTerminals"),
-              //                  <.div(s"terminals: $terminals"),
-
+              <.div(
+                <.h3(s"Arrivals"),
+                <.div(^.className := "port-dashboard-selection",
+                <.span(<.strong("Filters applied:")),
+                <.span(s"Time period : ${selectedTimeRange} minutes period (${displayPeriod.start.prettyTime} - ${displayPeriod.end.prettyTime})"),
+                <.span(^.className := "selection-separator"),
+                <.span(s"Terminals selected: ${selectedTerminals.filter(_.nonEmpty).mkString(", ")}"),
+                )
+              ),
 
               terminals.filter(t => selectedTerminals.map(Terminal(_)).contains(t)).map { terminalName =>
                 val terminal = terminalName
