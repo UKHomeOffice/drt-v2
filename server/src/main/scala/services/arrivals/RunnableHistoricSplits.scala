@@ -6,10 +6,9 @@ import org.apache.pekko.stream._
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
 import org.apache.pekko.util.Timeout
 import org.apache.pekko.{Done, NotUsed}
-import manifests.UniqueArrivalKey
-import manifests.passengers.ManifestLike
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.arrivals.{Splits, SplitsForArrivals, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.models.{ManifestLike, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

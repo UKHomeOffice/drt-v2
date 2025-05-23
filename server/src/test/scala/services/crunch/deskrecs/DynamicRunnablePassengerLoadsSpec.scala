@@ -16,7 +16,7 @@ import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.model.TQM
+import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}

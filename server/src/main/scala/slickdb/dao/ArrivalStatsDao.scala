@@ -1,6 +1,7 @@
 package slickdb.dao
 
-import slickdb.{AggregatedDbTables, ArrivalStatsRow}
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
+import uk.gov.homeoffice.drt.db.tables.ArrivalStatsRow
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDateLike
 

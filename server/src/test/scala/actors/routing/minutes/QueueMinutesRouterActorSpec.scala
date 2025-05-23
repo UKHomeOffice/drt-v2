@@ -8,7 +8,7 @@ import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}

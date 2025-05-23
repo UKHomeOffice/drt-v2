@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{DateLike, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,6 +26,7 @@ object RunnableMergedArrivals {
             mergeArrivalsQueue: SortedSet[TerminalUpdateRequest],
             setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+            today: () => LocalDate,
            )
            (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): (ActorRef, UniqueKillSwitch) = {
     val existingMergedArrivals: (Terminal, UtcDate) => Future[Set[UniqueArrival]] =
@@ -45,7 +46,7 @@ object RunnableMergedArrivals {
       mergeArrivalsForDate = merger,
       setPcpTimes = setPcpTimes,
       addArrivalPredictions = addArrivalPredictions,
-      () => SDate.now().toLocalDate
+      today = today,
     )
 
     val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =

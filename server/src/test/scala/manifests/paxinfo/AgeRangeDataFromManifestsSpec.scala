@@ -1,12 +1,9 @@
 package manifests.paxinfo
 
-import drt.shared.api.{AgeRange, UnknownAge}
-import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder.{manifestForPassengers, manifestWithPassengerAges, passengerBuilderWithOptions}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.models.{AgeRange, PassengerInfo, UnknownAge}
 import uk.gov.homeoffice.drt.ports.PaxAge
-
-import scala.collection.immutable.List
 
 object AgeRangeDataFromManifestsSpec extends Specification {
   private val dateAfterEgateAgeEligibilityDateChange = "2023-07-26"

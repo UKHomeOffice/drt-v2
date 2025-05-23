@@ -1,5 +1,7 @@
 package feeds.bhx
 
+import drt.server.feeds.bhx._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport._
@@ -8,12 +10,9 @@ import org.apache.pekko.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.testkit.TestProbe
-import drt.server.feeds.bhx._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable

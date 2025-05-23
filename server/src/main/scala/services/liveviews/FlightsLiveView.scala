@@ -2,8 +2,8 @@ package services.liveviews
 
 import org.slf4j.LoggerFactory
 import slick.dbio.DBIO
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.FlightDao
 import uk.gov.homeoffice.drt.ports.PortCode
 

@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
 import drt.shared.SimulationMinutes
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
-import uk.gov.homeoffice.drt.model.TQM
+import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

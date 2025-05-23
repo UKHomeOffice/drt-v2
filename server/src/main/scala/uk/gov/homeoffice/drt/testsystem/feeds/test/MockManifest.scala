@@ -1,11 +1,11 @@
 package uk.gov.homeoffice.drt.testsystem.feeds.test
 
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, EventType, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.models.{DocumentType, EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 object MockManifest {
 

@@ -13,7 +13,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
-import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiMenu, MuiMenuItem}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
@@ -30,7 +30,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.{CrunchMinute, FlightManifestSummary, ManifestKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
@@ -249,6 +249,7 @@ object TerminalContentComponent {
                       windowStaffSummaries = props.windowStaffSummaries,
                       addedStaffMovementMinutes = props.addedStaffMovementMinutes,
                       terminal = terminal,
+                      userPreferences = props.userPreferences,
                     )
                   )
                 }

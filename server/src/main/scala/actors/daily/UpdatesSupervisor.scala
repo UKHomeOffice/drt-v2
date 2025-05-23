@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 

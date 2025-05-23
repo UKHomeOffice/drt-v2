@@ -3,12 +3,11 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, ManifestPaxCount}
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
-import passengersplits.parsing.VoyageManifestParser._
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, ForecastArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.models.DocumentType.Passport
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.gbrNationalChildToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}

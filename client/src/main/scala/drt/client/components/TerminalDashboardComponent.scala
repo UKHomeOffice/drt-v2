@@ -7,7 +7,7 @@ import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
 import drt.shared._
-import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
@@ -16,7 +16,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, FlightManifestSummary, ManifestKey, TQM, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs

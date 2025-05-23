@@ -1,12 +1,12 @@
 package services.arrivals
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import manifests.UniqueArrivalKey
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.stream._
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
 import org.slf4j.LoggerFactory
+import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}

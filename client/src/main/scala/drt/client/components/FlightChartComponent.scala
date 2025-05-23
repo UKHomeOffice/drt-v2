@@ -3,7 +3,6 @@ package drt.client.components
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.api.FlightManifestSummary
 import io.kinoplan.scalajs.react.material.ui.core.MuiAlert
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Component
@@ -11,6 +10,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.models.FlightManifestSummary
 import uk.gov.homeoffice.drt.ports.PaxTypes
 
 import scala.scalajs.js

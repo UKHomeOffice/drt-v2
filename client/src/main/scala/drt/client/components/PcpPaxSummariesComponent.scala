@@ -11,7 +11,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.Div
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.SDateLike

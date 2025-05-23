@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.{MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.{FlightUpdatesAndRemovals, PortState, TM}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits}
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1

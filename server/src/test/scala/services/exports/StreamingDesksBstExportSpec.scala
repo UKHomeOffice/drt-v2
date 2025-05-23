@@ -7,7 +7,7 @@ import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.TM
 import services.crunch.CrunchTestLike
 import services.exports.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

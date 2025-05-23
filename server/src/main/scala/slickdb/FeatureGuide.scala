@@ -7,6 +7,7 @@ import uk.gov.homeoffice.drt.training.FeatureGuide
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}
 import FeatureGuide.serializeToJsonString
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
 
 case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String, published: Boolean)
 

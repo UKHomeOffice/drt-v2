@@ -1,8 +1,8 @@
 package drt.server.feeds
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.models.VoyageManifest
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 sealed trait FeedResponse {

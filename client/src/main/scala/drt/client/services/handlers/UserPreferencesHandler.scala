@@ -5,10 +5,10 @@ import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.UserPreferences
+import uk.gov.homeoffice.drt.models.UserPreferences
+
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import drt.shared.UserPreferences.rw
 
 case object GetUserPreferences extends Action
 

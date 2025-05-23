@@ -1,7 +1,7 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 

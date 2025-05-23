@@ -3,17 +3,17 @@ package actors
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.PartitionedPortStateTestActor.{UpdateStateCrunchMinutes, UpdateStateFlights, UpdateStateStaffMinutes}
 import actors.routing.FlightsRouterActor
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.FlightsApi.PaxForArrivals
+import drt.shared._
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.{StatusReply, ask}
 import org.apache.pekko.stream.scaladsl.Source
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.PaxForArrivals
-import drt.shared._
 import uk.gov.homeoffice.drt.actor.acking.Acking.AckingAsker
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamFailure
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

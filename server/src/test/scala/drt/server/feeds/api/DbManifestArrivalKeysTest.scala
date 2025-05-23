@@ -1,15 +1,15 @@
 package drt.server.feeds.api
 
 import drt.server.feeds.api.DbHelper.{addJsonRecord, addPaxRecord, addZipRecord}
-import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
 import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
-import slickdb.{ProcessedJsonRow, ProcessedZipRow}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.db.AggregateDbH2
+import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow}
+import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -75,7 +75,7 @@ class DbManifestArrivalKeysTest
     }
   }
 
-  private def createProcessedPassengerJsonZip(zipName: String, jsonName: String, arrivalPort: String, departurePort: String, scheduled: SDateLike, voyageNumber: Int, paxCount: Int, processedAt: Timestamp) = {
+  private def createProcessedPassengerJsonZip(zipName: String, jsonName: String, arrivalPort: String, departurePort: String, scheduled: SDateLike, voyageNumber: Int, paxCount: Int, processedAt: Timestamp): Unit = {
     addZipRecord(AggregateDbH2, ProcessedZipRow(zipName, true, processedAt, None))
     addJsonRecord(AggregateDbH2, ProcessedJsonRow(
       zip_file_name = zipName,

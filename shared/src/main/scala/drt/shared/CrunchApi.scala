@@ -2,7 +2,7 @@ package drt.shared
 
 import uk.gov.homeoffice.drt.DataUpdates.{Combinable, MinuteUpdates}
 import uk.gov.homeoffice.drt.arrivals.{WithLastUpdated, WithTimeAccessor}
-import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM, WithMinute}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, MinuteLike, TQM, WithMinute}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis

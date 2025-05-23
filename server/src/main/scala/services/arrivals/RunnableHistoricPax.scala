@@ -7,9 +7,9 @@ import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
 import org.apache.pekko.util.Timeout
 import org.apache.pekko.{Done, NotUsed}
 import drt.shared.FlightsApi.PaxForArrivals
-import manifests.UniqueArrivalKey
 import manifests.passengers.ManifestPaxCount
 import uk.gov.homeoffice.drt.arrivals.{Passengers, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.ports.{FeedSource, HistoricApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 

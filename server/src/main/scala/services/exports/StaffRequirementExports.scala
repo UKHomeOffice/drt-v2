@@ -5,7 +5,7 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.StaffMinute
 import services.LocalDateStream
-import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, MinuteLike}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone

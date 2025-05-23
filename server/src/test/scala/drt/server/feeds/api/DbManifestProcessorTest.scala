@@ -1,17 +1,18 @@
 package drt.server.feeds.api
 
-import org.apache.pekko.Done
-import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.api.DbHelper.addPaxRecord
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
-import manifests.UniqueArrivalKey
+import org.apache.pekko.Done
+import org.apache.pekko.testkit.TestProbe
 import org.specs2.specification.BeforeEach
 import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.db.AggregateDbH2
+import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
+import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
@@ -124,6 +125,6 @@ class DbManifestProcessorTest
         Future(Done)
       }
 
-    DbManifestProcessor(AggregateDbH2, PortCode("LHR"), handleManifestResponse)
+    DbManifestProcessor(ApiManifestProvider(AggregateDbH2), handleManifestResponse)
   }
 }

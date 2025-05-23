@@ -1,16 +1,16 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors.DrtParameters
-import org.apache.pekko.stream.scaladsl.Source
 import com.google.inject.Inject
-import drt.shared.{DropIn, Shift, UserPreferences}
+import drt.shared.{DropIn, Shift}
+import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
-import play.api.Configuration
+import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
-import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow}
+import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
+import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -38,7 +38,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None)))
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 

@@ -7,7 +7,7 @@ import org.apache.pekko.persistence.query.EventEnvelope
 import org.apache.pekko.persistence.{SnapshotMetadata, SnapshotOffer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

@@ -1,102 +1,20 @@
 package passengersplits.parsing
 
-import drt.shared._
-import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
-import org.joda.time.DateTime
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.time.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.InvalidEventType
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode, SplitRatiosNs}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.models._
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 
 import scala.util.{Success, Try}
+
 
 object VoyageManifestParser {
   def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
     import FlightPassengerInfoProtocol._
     import spray.json._
     Try(content.parseJson.convertTo[VoyageManifest])
-  }
-
-  case class InTransit(isInTransit: Boolean) {
-    override def toString: String = if (isInTransit) "Y" else "N"
-  }
-
-  object InTransit {
-    def apply(inTransitString: String): InTransit = InTransit(inTransitString == "Y")
-  }
-
-  case class EeaFlag(value: String)
-
-
-  case class PassengerInfoJson(DocumentType: Option[DocumentType],
-                               DocumentIssuingCountryCode: Nationality,
-                               EEAFlag: EeaFlag,
-                               Age: Option[PaxAge] = None,
-                               DisembarkationPortCode: Option[PortCode],
-                               InTransitFlag: InTransit = InTransit(false),
-                               DisembarkationPortCountryCode: Option[Nationality] = None,
-                               NationalityCountryCode: Option[Nationality] = None,
-                               PassengerIdentifier: Option[String]
-                              ) {
-    def isInTransit(portCode: PortCode): Boolean = InTransitFlag.isInTransit || DisembarkationPortCode.exists(_ != portCode)
-
-    def docTypeWithNationalityAssumption: Option[DocumentType] = NationalityCountryCode match {
-      case Some(Nationality(code)) if code == CountryCodes.UK => Option(Passport)
-      case _ => DocumentType
-    }
-  }
-
-  case class VoyageManifests(manifests: Iterable[VoyageManifest]) {
-
-    def toMap: Map[ManifestKey, VoyageManifest] = manifests.collect {
-      case vm if vm.maybeKey.isDefined =>
-        vm.maybeKey.get -> vm
-    }.toMap
-
-    def ++(other: VoyageManifests): VoyageManifests = VoyageManifests(manifests ++ other.manifests)
-  }
-
-  object VoyageManifests {
-    def empty: VoyageManifests = VoyageManifests(Set())
-  }
-
-  case class ManifestDateOfArrival(date: String) {
-    override def toString: String = date
-  }
-
-  case class ManifestTimeOfArrival(time: String) {
-    override def toString: String = time
-  }
-
-  case class VoyageManifest(EventCode: EventType,
-                            ArrivalPortCode: PortCode,
-                            DeparturePortCode: PortCode,
-                            VoyageNumber: VoyageNumberLike,
-                            CarrierCode: CarrierCode,
-                            ScheduledDateOfArrival: ManifestDateOfArrival,
-                            ScheduledTimeOfArrival: ManifestTimeOfArrival,
-                            PassengerList: List[PassengerInfoJson]) extends ManifestLike {
-    def flightCode: String = CarrierCode.code + VoyageNumber
-
-    def scheduleArrivalDateTime: Option[SDateLike] = Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
-
-    def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
-
-    override val source: SplitRatiosNs.SplitSource = ApiSplitsWithHistoricalEGateAndFTPercentages
-    override val scheduled: SDateLike = scheduleArrivalDateTime.getOrElse(SDate(0))
-    override val arrivalPortCode: PortCode = ArrivalPortCode
-    override val departurePortCode: PortCode = DeparturePortCode
-    override val voyageNumber: VoyageNumberLike = VoyageNumber
-    override val carrierCode: CarrierCode = CarrierCode
-    override val nonUniquePassengers: List[ManifestPassengerProfile] = PassengerList.map(ManifestPassengerProfile(_, arrivalPortCode))
-    override val maybeEventType: Option[EventType] = Option(EventCode)
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {

@@ -11,8 +11,8 @@ import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import manifests.queues.SplitsCalculator
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, typed}
 import org.apache.pekko.pattern.{StatusReply, ask}
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
@@ -38,8 +38,8 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slickdb.dao.ArrivalStatsDao
 import slickdb.{AggregatedDbTables, AkkaDbTables}
+import slickdb.dao.ArrivalStatsDao
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
@@ -50,7 +50,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.model.CrunchMinute
-import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueDesk}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
@@ -396,17 +396,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
     }
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
-
-  val queuesProvider: (LocalDate, Terminal) => Future[Seq[Queue]] =
-    (date, terminal) => {
-      val queues = airportConfig.portCode.iata match {
-        case "BHX" if date >= LocalDate(2025, 5, 14) =>
-          Seq(QueueDesk)
-        case _ =>
-          airportConfig.queuesByTerminal.getOrElse(terminal, Seq.empty)
-      }
-      Future.successful(queues)
-    }
 
   val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
     PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
