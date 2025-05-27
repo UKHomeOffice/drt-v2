@@ -11,7 +11,7 @@ import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import manifests.{ManifestLookupLike}
+import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, typed}
 import org.apache.pekko.pattern.{StatusReply, ask}
@@ -20,7 +20,6 @@ import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
 import org.apache.pekko.util.Timeout
 import org.apache.pekko.{Done, NotUsed}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser
 import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
@@ -38,7 +37,7 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slickdb.{AggregatedDbTables, AkkaDbTables}
+import slickdb.AkkaDbTables
 import slickdb.dao.ArrivalStatsDao
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
@@ -48,11 +47,12 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
+import uk.gov.homeoffice.drt.db.AggregatedDbTables
+import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.model.CrunchMinute
-import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey, VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue, QueueDesk}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeaturesV2, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
@@ -106,6 +106,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
     serialiser = ConfigSerialiser.slaConfigsSerialiser,
     deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
   )))
+
+  val queueConfig: Map[LocalDate, Map[Terminal, Seq[Queue]]] = airportConfig.portCode match {
+    case PortCode("BHX") => Map(
+      LocalDate(2014, 1, 1) -> Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk), T2 -> Seq(EeaDesk, NonEeaDesk)),
+      LocalDate(2025, 6, 2) -> Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk), T2 -> Seq(QueueDesk)),
+    )
+    case _ => Map(LocalDate(2024, 1, 1) -> airportConfig.queuesByTerminal)
+  }
 
   val queuesForDateAndTerminal: (LocalDate, Terminal) => Future[Seq[Queue]] =
     (date: LocalDate, terminal: Terminal) => {
@@ -164,8 +172,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
       Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
       name = "voyage-manifests-router-actor-read-only")
 
-  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
+  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
+
+  val manifestProvider: UniqueArrivalKey => Future[Option[VoyageManifest]] =
+    ApiManifestProvider(aggregatedDb)
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)
 
@@ -275,7 +286,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
       val manifestUpdatePersistence = ManifestPersistence.processManifestFeedResponse(None, actorService.flightsRouterActor, splitsCalculator.splitsForManifest)
-      val processManifestUpdates = DbManifestProcessor(aggregatedDb, airportConfig.portCode, manifestUpdatePersistence)
+      val processManifestUpdates = DbManifestProcessor(ApiManifestProvider(aggregatedDb), manifestUpdatePersistence)
       val dateToEventualArrivals = CrunchManagerActor.liveSplitsArrivalKeysForDate(flightsProvider.allTerminalsDateRangeScheduledOrPcp)
 
       val (liveSplitsQueueActor, liveSplitsKillSwitch) = RunnableLiveSplits(
@@ -304,6 +315,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         mergeArrivalsQueue = mergeArrivalsQueue,
         setPcpTimes = setPcpTimes,
         addArrivalPredictions = addArrivalPredictions,
+        today = () => now().toLocalDate,
       )
 
       val paxLoadsRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
@@ -496,7 +508,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
         val arrivalKeysProvider = DbManifestArrivalKeys(aggregatedDb, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(aggregatedDb, airportConfig.portCode, persistManifests)
+        val manifestProcessor = DbManifestProcessor(ApiManifestProvider(aggregatedDb), persistManifests)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
 
         system.scheduler.scheduleOnce(20.seconds) {

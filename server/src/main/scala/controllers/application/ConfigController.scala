@@ -23,4 +23,12 @@ class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
     }
   }
 
+  def getQueueConfig: Action[AnyContent] = auth {
+    Action { _ =>
+      import upickle.default._
+
+      Ok(write(ctrl.applicationService.queueConfig))
+    }
+  }
+
 }

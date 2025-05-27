@@ -23,9 +23,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.exports.{AdminExportImpl, FlightsWithSplitsExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExportImpl}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
-import java.sql.Timestamp
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
@@ -109,7 +107,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
     eventualFlightsByDate.map {
       flightsStream =>
-        export.csvStream(flightsStream.mapAsync(1) { case (d, flights) =>
+        export.csvStream(flightsStream.mapAsync(1) { case (_, flights) =>
           val sortedFlights = flights.toSeq.sortBy(_.apiFlight.PcpTime.getOrElse(0L))
           Source(sortedFlights)
             .mapAsync(1) { fws =>
