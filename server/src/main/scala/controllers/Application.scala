@@ -122,7 +122,9 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
           user.staff_planning_interval_minutes.getOrElse(60),
           user.hide_pax_data_source_description.getOrElse(false),
           user.show_staffing_shift_view.getOrElse(false),
-          user.desks_and_queues_interval_minutes.getOrElse(15)
+          user.desks_and_queues_interval_minutes.getOrElse(15),
+          user.port_dashboard_interval_minutes.getOrElse(60),
+          user.port_dashboard_terminals.getOrElse("").split(",").toSet
         )))
         case None => BadRequest("User not found")
       }

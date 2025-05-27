@@ -104,8 +104,8 @@ object DashboardTerminalSummary {
     val rangeInMillis  = minuteRangeTime/3 * 60 *  1000
     cms.sortBy(_.minute).groupBy(cm => {
       val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / rangeInMillis).toInt
-      println(s"cm.minute: ${cm.minute}, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
-      println(s" groupCrunchByMinutes :   intervalsSinceStart $intervalsSinceStart")
+//      println(s"cm.minute: ${cm.minute}, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
+//      println(s" groupCrunchByMinutes :   intervalsSinceStart $intervalsSinceStart")
       startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
     }).toList.sortBy(_._1)
   }
@@ -196,7 +196,7 @@ object DashboardTerminalSummary {
         val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart , props.selectedTimeRange)
         val queueTotals = totalsByQueue(summary)
 
-        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
+//        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
@@ -210,7 +210,7 @@ object DashboardTerminalSummary {
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20"),
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20" , "#00A99D", "#FF6F20", "#FFB300"),
               )
             )
           )
@@ -240,11 +240,11 @@ object DashboardTerminalSummary {
             ),
             estimates =
               summary.flatMap { s =>
-                println(s"""Summary:from = ${SDate(s.startTime).prettyTime},
-                  to = ${SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime},
-                  egate = ${s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int]},
-                  eea = ${s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int]},
-                  noneea = ${s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]}""")
+//                println(s"""Summary:from = ${SDate(s.startTime).prettyTime},
+//                  to = ${SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime},
+//                  egate = ${s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int]},
+//                  eea = ${s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int]},
+//                  noneea = ${s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]}""")
                 List(Estimate(
                   from = SDate(s.startTime).prettyTime,
                   to = SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime,
