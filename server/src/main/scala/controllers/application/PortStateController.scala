@@ -69,13 +69,15 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       )(new Timeout(30.seconds))
 
       val forecast = portStateFuture
-        .map {
+        .flatMap {
           case portState: PortState =>
-            log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
-            val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
-              airportConfig.queuesByTerminal(terminal).toList)
-            Option(ForecastPeriodWithHeadlines(fp, hf))
+            ctrl.applicationService.queuesForDateRangeAndTerminal(startOfForecast.toLocalDate, endOfForecast.toLocalDate, terminal).map {
+              queues =>
+                log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
+                val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
+                val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues.toList)
+                Option(ForecastPeriodWithHeadlines(fp, hf))
+            }
         }
         .recover {
           case t =>

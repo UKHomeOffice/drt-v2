@@ -40,22 +40,25 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     val slaHeader = "Queue SLAs"
     ctrl.applicationService.slasActor
       .ask(GetState).mapTo[SlaConfigs]
-      .map { sla =>
-        val terminalQueueOrder = Queues.queueOrder.filter(q => airportConfig.queuesByTerminal.get(thisTerminal).exists(_.contains(q)))
-        val slaHeaders = s"Effective from,${terminalQueueOrder.mkString(",")}"
-        val slaCsv = sla.configs.map {
-          case (date, queues) =>
-            val dateStr = SDate(date).prettyDateTime
-            val queueSlas = terminalQueueOrder
-              .map { queue =>
-                val maybeSla = queues.get(queue)
-                maybeSla.map(_.toString).getOrElse("")
-              }
-              .mkString(",")
+      .flatMap { sla =>
+        ctrl.applicationService.queuesForDateAndTerminal(SDate.now().toLocalDate, thisTerminal).map { queues =>
+          val terminalQueueOrder = Queues.queueOrder.filter(queues.contains)
 
-            s"$dateStr,$queueSlas"
-        }.mkString("\n")
-        Seq(slaHeader, slaHeaders, slaCsv).mkString("\n")
+          val slaHeaders = s"Effective from,${terminalQueueOrder.mkString(",")}"
+          val slaCsv = sla.configs.map {
+            case (date, queues) =>
+              val dateStr = SDate(date).prettyDateTime
+              val queueSlas = terminalQueueOrder
+                .map { queue =>
+                  val maybeSla = queues.get(queue)
+                  maybeSla.map(_.toString).getOrElse("")
+                }
+                .mkString(",")
+
+              s"$dateStr,$queueSlas"
+          }.mkString("\n")
+          Seq(slaHeader, slaHeaders, slaCsv).mkString("\n")
+        }
       }
   }
 

@@ -11,7 +11,7 @@ import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import manifests.{ManifestLookupLike}
 import manifests.queues.SplitsCalculator
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, typed}
 import org.apache.pekko.pattern.{StatusReply, ask}
@@ -50,6 +50,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -105,6 +106,24 @@ case class ApplicationService(journalType: StreamingJournalLike,
     serialiser = ConfigSerialiser.slaConfigsSerialiser,
     deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
   )))
+
+  val queuesForDateAndTerminal: (LocalDate, Terminal) => Future[Seq[Queue]] =
+    (date: LocalDate, terminal: Terminal) => {
+      val queues = airportConfig.queuesByTerminal.getOrElse(terminal, Seq.empty)
+      if (queues.isEmpty) {
+        log.warn(s"No queues found for terminal $terminal on date $date")
+      }
+      Future.successful(queues)
+    }
+
+  val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Future[Seq[Queue]] =
+    (start: LocalDate, end: LocalDate, terminal: Terminal) => {
+      val queues = airportConfig.queuesByTerminal.getOrElse(terminal, Seq.empty)
+      if (queues.isEmpty) {
+        log.warn(s"No queues found for terminal $terminal between $start and $end")
+      }
+      Future.successful(queues)
+    }
 
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
