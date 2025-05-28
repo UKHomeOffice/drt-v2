@@ -18,7 +18,25 @@ case class UpdateUserPreferences(userPreferences: UserPreferences) extends Actio
 
 class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) extends LoggingActionHandler(modelRW) {
   import upickle.default._
-  import UserPreferences._
+//  import UserPreferences._
+  implicit val rw: ReadWriter[UserPreferences] = macroRW
+  implicit val portDashboardIntervalMinutesRW: ReadWriter[Map[String, Int]] =
+    readwriter[String].bimap[Map[String, Int]](
+      _.map { case (port, value) => s"$port:$value" }.mkString(";"),
+      s => if (s.isEmpty) Map.empty[String, Int]
+      else s.split(";").map(_.split(":") match {
+        case Array(port, value) => port -> value.toInt
+      }).toMap
+    )
+
+  implicit val portDashboardTerminalsRW: ReadWriter[Map[String, Set[String]]] =
+    readwriter[String].bimap[Map[String, Set[String]]](
+      _.map { case (key, values) => s"$key:${values.mkString(",")}" }.mkString(";"),
+      s => if (s.isEmpty) Map.empty[String, Set[String]]
+      else s.split(";").map(_.split(":") match {
+        case Array(key, values) => key -> values.split(",").toSet
+      }).toMap
+    )
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
