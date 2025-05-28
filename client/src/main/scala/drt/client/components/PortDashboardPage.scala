@@ -4,15 +4,12 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
-import drt.client.components.TerminalDashboardComponent.defaultSlotSize
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography}
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.lab.MuiToggleButtonGroup
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -60,21 +57,19 @@ object PortDashboardPage {
         <.div(^.className := "terminal-summary-dashboard",
           MuiTypography(variant = "h1")(s"Dashboard ${p.dashboardPage.portCodeStr} (${p.dashboardPage.portConfig.portName})"),
           portDashboardModel.airportConfig.renderReady(portConfig => {
+            val portName = portConfig.portCode.iata.toLowerCase
             portDashboardModel.userPreferences.renderReady(userPreferences => {
+              val selectedTimeRange = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 60)).getOrElse(60)
 
-              val selectedTimeRange = userPreferences.portDashboardIntervalMinutes
-
-              val querySelectedTerminal: Set[Terminals.Terminal] = userPreferences.portDashboardTerminals
-                .filter(_.nonEmpty)
-                .map(Terminals.Terminal.apply)
+              val terminalExists: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
 
               val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queuesByTerminal, portConfig.terminalPaxSplits, portConfig.terminals)
 
-              val selectedTerminals: List[String] = if (querySelectedTerminal.isEmpty) {
+              val selectedTerminals: List[String] = if (!terminalExists) {
                 terminals.map(t => s"${t.toString}").toList
               } else {
-                terminals.map(t => if (querySelectedTerminal.contains(t)) s"${t.toString}" else s"")
-              }.toList
+                userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
+              }
 
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now(), selectedTimeRange)
               val periods = Map(1 -> DisplayPeriod(currentPeriodStart, selectedTimeRange),
@@ -93,7 +88,10 @@ object PortDashboardPage {
               def handleTimeRangeChange(event: ReactEventFromInput): Callback = {
                 val newRange = event.target.value.toInt // Assuming the value is a timestamp
                 GoogleEventTracker.sendEvent("dashboard", "Time Range", newRange.toString)
-                Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(portDashboardIntervalMinutes = newRange)))).runNow()
+                Callback(
+                  SPACircuit.dispatch(
+                    UpdateUserPreferences(
+                      userPreferences.copy(portDashboardIntervalMinutes = userPreferences.portDashboardIntervalMinutes + (portName -> newRange))))).runNow()
                 p.router.set(p.dashboardPage.copy(subMode = newRange))
               }
 
@@ -101,20 +99,24 @@ object PortDashboardPage {
                 val terminal = Terminals.Terminal(event.target.value)
                 val isChecked = event.target.checked
 
-                val updatedQueryParams: Set[String] = if (querySelectedTerminal.isEmpty) {
-                  if (isChecked)
-                    userPreferences.portDashboardTerminals ++ selectedTerminals
-                  else
+                val preferenceTerminals: Set[String] = Try(
+                  userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String])).getOrElse(Set.empty[String])
+                val updatedQueryParams: Set[String] = if (!terminalExists) {
+                  if (isChecked) {
+                    preferenceTerminals ++ selectedTerminals
+                  } else
                     selectedTerminals.filterNot(_ == terminal.toString).toSet
                 } else {
                   if (isChecked)
-                    userPreferences.portDashboardTerminals + terminal.toString
+                    preferenceTerminals + terminal.toString
                   else
-                    userPreferences.portDashboardTerminals.filterNot(_ == terminal.toString)
+                    preferenceTerminals.filterNot(_ == terminal.toString)
                 }
 
                 GoogleEventTracker.sendEvent("dashboard", "Terminals", updatedQueryParams.mkString(","))
-                Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(portDashboardTerminals = updatedQueryParams)))).runNow()
+                Callback(SPACircuit.dispatch(
+                  UpdateUserPreferences(
+                    userPreferences.copy(portDashboardTerminals = userPreferences.portDashboardTerminals + (portName -> updatedQueryParams))))).runNow()
                 p.router.set(p.dashboardPage)
               }
 

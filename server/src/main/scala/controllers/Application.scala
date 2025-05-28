@@ -10,7 +10,6 @@ import controllers.application._
 import spray.json.enrichAny
 import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
-import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
@@ -29,6 +28,7 @@ import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 
 object AirportConfigProvider {
@@ -115,17 +115,51 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def userPreferences: Action[AnyContent] = authByRole(BorderForceStaff) {
     import upickle.default._
+    import uk.gov.homeoffice.drt.models.UserPreferences._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
+      val portCode = config.get[String]("portcode")
+
       ctrl.userService.selectUser(userEmail.trim).map {
-        case Some(user) => Ok(write(UserPreferences(
-          user.staff_planning_interval_minutes.getOrElse(60),
-          user.hide_pax_data_source_description.getOrElse(false),
-          user.show_staffing_shift_view.getOrElse(false),
-          user.desks_and_queues_interval_minutes.getOrElse(15),
-          user.port_dashboard_interval_minutes.getOrElse(60),
-          user.port_dashboard_terminals.getOrElse("").split(",").toSet
-        )))
+        case Some(user) =>
+          val portDashboardIntervalMinutesString: Option[String] = user.port_dashboard_interval_minutes
+          val portDashboardIntervalMinutes: Map[String, Int] = portDashboardIntervalMinutesString match {
+            case Some(data) =>
+              val parsedResult = Try(read[Map[String, Int]](s"\"$data\"")(portDashboardIntervalMinutesRW))
+              parsedResult match {
+                case Success(b) =>
+                  println(s"Successfully parsed portDashboardIntervalMinutes: $b")
+                  b
+                case Failure(e) =>
+                  log.error(s"Failed to parse portDashboardIntervalMinutes: $data", e)
+                  Map.empty[String, Int]
+              }
+            case None => Map[String, Int](portCode -> 60)
+          }
+
+          val portDashboardTerminalsString: Option[String] = user.port_dashboard_terminals
+          val portDashboardTerminals: Map[String, Set[String]] = portDashboardTerminalsString match {
+            case Some(data) =>
+              val parsedResult = Try(read[Map[String, Set[String]]](s"\"$data\"")(UserPreferences.portDashboardTerminalsRW))
+              parsedResult match {
+                case Success(portInterval) =>
+                  log.info(s"Successfully parsed portDashboardIntervalMinutes: $portInterval")
+                  portInterval
+                case Failure(e) =>
+                  log.error(s"Failed to parse portDashboardIntervalMinutes: $data", e)
+                  Map.empty[String, Set[String]]
+              }
+            case None => Map.empty[String, Set[String]]
+          }
+
+          Ok(write(UserPreferences(
+            user.staff_planning_interval_minutes.getOrElse(60),
+            user.hide_pax_data_source_description.getOrElse(false),
+            user.show_staffing_shift_view.getOrElse(false),
+            user.desks_and_queues_interval_minutes.getOrElse(15),
+            portDashboardIntervalMinutes,
+            portDashboardTerminals
+          )))
         case None => BadRequest("User not found")
       }
     }

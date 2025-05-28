@@ -6,7 +6,6 @@ import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import uk.gov.homeoffice.drt.models.UserPreferences
-
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
@@ -17,7 +16,9 @@ case class SetUserPreferences(userPreferences: UserPreferences) extends Action
 case class UpdateUserPreferences(userPreferences: UserPreferences) extends Action
 
 class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) extends LoggingActionHandler(modelRW) {
-  import upickle.default.{read, write}
+  import upickle.default._
+
+  implicit val rw: ReadWriter[UserPreferences] = macroRW
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
