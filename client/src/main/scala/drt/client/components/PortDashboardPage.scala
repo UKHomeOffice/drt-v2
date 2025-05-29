@@ -45,8 +45,12 @@ object PortDashboardPage {
         <.div(^.className := "terminal-summary-dashboard",
           MuiTypography(variant = "h1")(s"Dashboard ${p.dashboardPage.portCodeStr} (${p.dashboardPage.portConfig.portName})"),
           portDashboardModel.airportConfig.renderReady(portConfig => {
+            def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
 
-            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queuesByTerminal, portConfig.terminalPaxSplits, portConfig.terminals)
+//            val (queues, paxTypeAndQueueOrder, terminals) = (, portConfig.terminalPaxSplits, portConfig.terminals)
+            val queues = portConfig.queuesByTerminal(displayPeriod.start.toLocalDate)
+            val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
+            val terminals = portConfig.terminals
 
             val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
             val periods = List(
@@ -54,8 +58,6 @@ object PortDashboardPage {
               DisplayPeriod(currentPeriodStart.addHours(3)),
               DisplayPeriod(currentPeriodStart.addHours(6))
             )
-
-            def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
 
             def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)
@@ -81,7 +83,7 @@ object PortDashboardPage {
                       val portStateForDashboard = portState.windowWithTerminalFilter(
                         displayPeriod.start,
                         displayPeriod.end,
-                        portConfig.queuesByTerminal.view.filterKeys(_ == terminalName).toMap,
+                        portConfig.queuesByTerminal(displayPeriod.start.toLocalDate).view.filterKeys(_ == terminalName).toMap,
                         portDashboardModel.paxFeedSourceOrder,
                       )
                       val scheduledFlightsInTerminal = portStateForDashboard

@@ -25,6 +25,7 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.models.UserPreferences
+import uk.gov.homeoffice.drt.ports.Queues.Transfer
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -158,8 +159,8 @@ object TerminalComponent {
                       val hoursToView = timeWindow.endInt - timeWindow.startInt
 
                       val terminal = props.terminalPageTab.terminal
-                      val queues = terminalModel.airportConfigPot.map(_.nonTransferQueues(terminal).toList)
-                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q).toMap))
+                      val queues = terminalModel.airportConfigPot.map(_.queuesByTerminal(viewStart.toLocalDate)(terminal).filterNot(_ == Transfer).toList)
+                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q)))
                       val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
 

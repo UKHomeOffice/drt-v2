@@ -51,8 +51,8 @@ import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey, VoyageManifest, VoyageManifests}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue, QueueDesk}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeaturesV2, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
@@ -107,31 +107,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
     deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
   )))
 
-  val queueConfig: Map[LocalDate, Map[Terminal, Seq[Queue]]] = airportConfig.portCode match {
-    case PortCode("BHX") => Map(
-      LocalDate(2014, 1, 1) -> Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk), T2 -> Seq(EeaDesk, NonEeaDesk)),
-      LocalDate(2025, 6, 2) -> Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk), T2 -> Seq(QueueDesk)),
-    )
-    case _ => Map(LocalDate(2024, 1, 1) -> airportConfig.queuesByTerminal)
-  }
-
-  val queuesForDateAndTerminal: (LocalDate, Terminal) => Future[Seq[Queue]] =
-    (date: LocalDate, terminal: Terminal) => {
-      val queues = airportConfig.queuesByTerminal.getOrElse(terminal, Seq.empty)
-      if (queues.isEmpty) {
-        log.warn(s"No queues found for terminal $terminal on date $date")
-      }
-      Future.successful(queues)
-    }
-
-  val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Future[Seq[Queue]] =
-    (start: LocalDate, end: LocalDate, terminal: Terminal) => {
-      val queues = airportConfig.queuesByTerminal.getOrElse(terminal, Seq.empty)
-      if (queues.isEmpty) {
-        log.warn(s"No queues found for terminal $terminal between $start and $end")
-      }
-      Future.successful(queues)
-    }
+  val queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue] =
+    QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
+  val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Set[Queue] =
+    QueueConfig.queuesForDateRangeAndTerminal(airportConfig.queuesByTerminal)
+  val validTerminalsForDate: LocalDate => Seq[Terminal] =
+    QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
 
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
@@ -324,11 +305,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.flightsRouterActor),
         deskRecsProvider = portDeskRecs,
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-        queueStatusProvider = DynamicQueueStatusProvider(airportConfig, egatesProvider),
+        queueStatusProvider = () => egatesProvider().map(ep => DynamicQueueStatusProvider(airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
         updateLivePaxView = updateLivePaxView,
         terminalSplits = splitsCalculator.terminalSplits,
         queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
-        queuesByTerminal = airportConfig.queuesByTerminal,
+        queuesByTerminal = queuesForDateAndTerminal,
+        validTerminals = validTerminalsForDate,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
         updateCapacity = updateAndPersistCapacity,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(

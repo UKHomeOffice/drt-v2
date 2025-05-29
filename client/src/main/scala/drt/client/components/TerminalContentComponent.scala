@@ -37,7 +37,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, Port
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import scala.collection.immutable.HashSet
+import scala.collection.immutable.{HashSet, SortedMap}
 import scala.scalajs.js.JSConverters.JSRichOption
 
 object TerminalContentComponent {
@@ -65,7 +65,7 @@ object TerminalContentComponent {
                    flightHighlight: FlightHighlight,
                    viewStart: SDateLike,
                    hoursToView: Int,
-                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
+                   windowCrunchSummaries: Pot[SortedMap[Long, Map[Queue, CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],

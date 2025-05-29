@@ -27,7 +27,7 @@ class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
     Action { _ =>
       import upickle.default._
 
-      Ok(write(ctrl.applicationService.queueConfig))
+      Ok(write(ctrl.airportConfig.queuesByTerminal))
     }
   }
 

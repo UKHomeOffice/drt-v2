@@ -7,6 +7,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.immutable.SortedMap
 
@@ -17,10 +18,10 @@ object Test2 extends AirportConfigLike {
   val config: AirportConfig = AirportConfig(
     portCode = PortCode("TEST2"),
     portName = "Test Airport 2",
-    queuesByTerminal = SortedMap(
+    queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       T2 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack)
-    ),
+    )),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45, FastTrack -> 25),
     crunchOffsetMinutes = 240,
     defaultWalkTimeMillis = Map(
