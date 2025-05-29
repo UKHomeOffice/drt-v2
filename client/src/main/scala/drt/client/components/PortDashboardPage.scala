@@ -32,7 +32,7 @@ object PortDashboardPage {
   }
 
   private object DisplayPeriod {
-    def apply(start: SDateLike, minutes: Int = 180): DisplayPeriod = DisplayPeriod(start, start.addMinutes(minutes))
+    def apply(start: SDateLike, minutes: Int): DisplayPeriod = DisplayPeriod(start, start.addMinutes(minutes))
   }
 
   private case class PortDashboardModel(airportConfig: Pot[AirportConfig],
@@ -86,7 +86,7 @@ object PortDashboardPage {
               }
 
               def handleTimeRangeChange(event: ReactEventFromInput): Callback = {
-                val newRange = event.target.value.toInt // Assuming the value is a timestamp
+                val newRange = event.target.value.toInt
                 GoogleEventTracker.sendEvent("dashboard", "Time Range", newRange.toString)
                 Callback(
                   SPACircuit.dispatch(

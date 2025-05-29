@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.client.components.ChartJSComponent.Chart
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
 import drt.shared._
@@ -16,6 +15,7 @@ import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
+
 object DashboardTerminalSummary {
 
   case class DashboardSummary(
@@ -64,12 +64,7 @@ object DashboardTerminalSummary {
 
   def minSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, minuteRangeTime: Int): Seq[DashboardSummary] = {
     val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start, minuteRangeTime).toMap
-    //    println(s"Grouped flights: ${groupedFlights.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
     val groupedCrunchMinutes = groupCrunchByMinutes(cms, start, minuteRangeTime).toMap
-
-    //    println(s"Grouped crunch minutes: ${groupedCrunchMinutes.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
-
-    //    minuteRange(start, minuteRangeTime).map(s => print(s"minuteRange: $s $minuteRangeTime"))
     minuteRange(start, minuteRangeTime).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
@@ -168,7 +163,7 @@ object DashboardTerminalSummary {
         )
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, filteredFlights)
         val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart, props.selectedTimeRange)
-        val queueTotals = totalsByQueue(summary)
+        //        val queueTotals = totalsByQueue(summary)
 
         //        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
@@ -184,13 +179,12 @@ object DashboardTerminalSummary {
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20", "#00A99D", "#FF6F20", "#FFB300"),
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20", "#00A99D", "#FF6F20", "#FFB300", "#CD5B82", "#547A00", "#334F96", "#0E2560"),
               )
             )
           )
         }
 
-        // Define a function to create the PaxTerminalOverviewComponent
         def renderPaxTerminalOverview(summary: Seq[DashboardSummary], splitsForPeriod: Map[PaxTypeAndQueue, Int]) = {
           PaxTerminalOverviewComponent(IPaxTerminalOverview(
             terminal = props.terminal.toString,
