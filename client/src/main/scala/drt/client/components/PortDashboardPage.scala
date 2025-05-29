@@ -181,7 +181,7 @@ object PortDashboardPage {
                       portDashboardModel.featureFlags.renderReady(_ => {
                         val portStateForDashboard = portState.windowWithTerminalFilter(
                           displayPeriod.start,
-                          displayPeriod.start.addMinutes(displayPeriod.duration * 3),
+                          displayPeriod.start.addMinutes(selectedTimeRange * 3),
                           portConfig.queuesByTerminal.view.filterKeys(_ == terminal).toMap,
                           portDashboardModel.paxFeedSourceOrder,
                         )
@@ -203,7 +203,7 @@ object PortDashboardPage {
                               paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
                               terminalQueuesInOrder,
                               displayPeriod.start,
-                              displayPeriod.end,
+                              displayPeriod.start.addMinutes(selectedTimeRange * 3),
                               portDashboardModel.paxFeedSourceOrder,
                               selectedTimeRange
                             )
