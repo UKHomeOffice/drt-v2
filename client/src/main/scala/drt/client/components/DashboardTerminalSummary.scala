@@ -203,7 +203,7 @@ object DashboardTerminalSummary {
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
           val labels = splitsForPeriod.keys.map(_.displayName).toJSArray
-          val data = splitsForPeriod.values.toJSArray
+          val data = splitsForPeriod.values.toJSArray.filter(_ > 0)
 
           ChartData(
             labels = labels,
