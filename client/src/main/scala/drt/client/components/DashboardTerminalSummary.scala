@@ -62,14 +62,14 @@ object DashboardTerminalSummary {
       case somePaxInQueue => Option(somePaxInQueue.max)
     }
 
-  def minSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, minuteRangeTime:Int): Seq[DashboardSummary] = {
-    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start , minuteRangeTime).toMap
-//    println(s"Grouped flights: ${groupedFlights.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
+  def minSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, minuteRangeTime: Int): Seq[DashboardSummary] = {
+    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start, minuteRangeTime).toMap
+    //    println(s"Grouped flights: ${groupedFlights.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
     val groupedCrunchMinutes = groupCrunchByMinutes(cms, start, minuteRangeTime).toMap
 
-//    println(s"Grouped crunch minutes: ${groupedCrunchMinutes.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
+    //    println(s"Grouped crunch minutes: ${groupedCrunchMinutes.map { case (k, v) => s"${SDate(k).prettyDateTime} -> ${v.size}" }}")
 
-//    minuteRange(start, minuteRangeTime).map(s => print(s"minuteRange: $s $minuteRangeTime"))
+    //    minuteRange(start, minuteRangeTime).map(s => print(s"minuteRange: $s $minuteRangeTime"))
     minuteRange(start, minuteRangeTime).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
@@ -91,9 +91,7 @@ object DashboardTerminalSummary {
       .groupBy { flight =>
         val pcpTime = flight.apiFlight.PcpTime.getOrElse(0L)
         val intervalsSinceStart = ((pcpTime - (startMin.millisSinceEpoch)) / rangeInMillis).toInt
-//        println(s"pcpTime: $pcpTime, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
-//        println(s" groupFlightsByMinuteRange : intervalsSinceStart $intervalsSinceStart")
-        startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
+        startMin.addMinutes((intervalsSinceStart * minuteRangeTime)).millisSinceEpoch
       }
       .view.mapValues(_.toSet)
       .toList
@@ -101,41 +99,17 @@ object DashboardTerminalSummary {
   }
 
   private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike, minuteRangeTime: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val rangeInMillis  = minuteRangeTime/3 * 60 *  1000
+    val rangeInMillis = minuteRangeTime * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
       val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / rangeInMillis).toInt
-//      println(s"cm.minute: ${cm.minute}, startMin: ${startMin.millisSinceEpoch}, rangeInMillis: $rangeInMillis")
-//      println(s" groupCrunchByMinutes :   intervalsSinceStart $intervalsSinceStart")
-      startMin.addMinutes((intervalsSinceStart) * minuteRangeTime).millisSinceEpoch
+      startMin.addMinutes((intervalsSinceStart * minuteRangeTime)).millisSinceEpoch
     }).toList.sortBy(_._1)
   }
-
-//  def groupFlightsByMinuteRange(flights: List[ApiFlightWithSplits], startMin: SDateLike, minuteRangeTime:Int): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
-//    val hourInMillis = minuteRangeTime * 60 * 1000
-//    flights
-//      .filter { f => f.apiFlight.PcpTime.isDefined }
-//      .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
-//      .groupBy(fws => {
-//        val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
-//        startMin.addHours(hoursSinceStart).millisSinceEpoch
-//      })
-//      .view.mapValues(_.toSet)
-//      .toList
-//      .sortBy(_._1)
-//  }
-//
-//  private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike,minuteRangeTime:Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-//    val hourInMillis =  minuteRangeTime * 60 * 1000
-//    cms.sortBy(_.minute).groupBy(cm => {
-//      val hoursSinceStart = ((cm.minute - startMin.millisSinceEpoch) / hourInMillis).toInt
-//      startMin.addHours(hoursSinceStart).millisSinceEpoch
-//    }).toList.sortBy(_._1)
-//  }
 
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
     f.apiFlight.PcpTime.exists(millis => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch)
 
-  def windowStart(time: SDateLike, selectedTimeRange : Int): SDateLike = {
+  def windowStart(time: SDateLike, selectedTimeRange: Int): SDateLike = {
 
     val minutes = (time.getMinutes / selectedTimeRange) * selectedTimeRange
 
@@ -172,7 +146,7 @@ object DashboardTerminalSummary {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
-      val crunchMinuteTimeSlots = groupCrunchMinutesBy(groupSize = props.selectedTimeRange/3)(
+      val crunchMinuteTimeSlots = groupCrunchMinutesBy(groupSize = props.selectedTimeRange / 3)(
         CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal),
         props.terminal,
         Queues.queueOrder).flatMap(_._2)
@@ -186,17 +160,17 @@ object DashboardTerminalSummary {
         def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
-//        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
+        //        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
         val filteredFlights = props.flights.filter(flight =>
           flight.apiFlight.PcpTime.exists(pcpTime =>
-            pcpTime >= props.timeWindowStart.millisSinceEpoch && pcpTime <= props.timeWindowStart.addMinutes(2 * props.selectedTimeRange).millisSinceEpoch
+            pcpTime >= props.timeWindowStart.millisSinceEpoch && pcpTime <= props.timeWindowStart.addMinutes(props.selectedTimeRange * 3).millisSinceEpoch
           )
         )
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, filteredFlights)
-        val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart , props.selectedTimeRange)
+        val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart, props.selectedTimeRange)
         val queueTotals = totalsByQueue(summary)
 
-//        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
+        //        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
@@ -210,7 +184,7 @@ object DashboardTerminalSummary {
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20" , "#00A99D", "#FF6F20", "#FFB300"),
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20", "#00A99D", "#FF6F20", "#FFB300"),
               )
             )
           )
@@ -240,11 +214,6 @@ object DashboardTerminalSummary {
             ),
             estimates =
               summary.flatMap { s =>
-//                println(s"""Summary:from = ${SDate(s.startTime).prettyTime},
-//                  to = ${SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime},
-//                  egate = ${s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int]},
-//                  eea = ${s.paxPerQueue.getOrElse(Queues.EeaDesk, 0).asInstanceOf[Int]},
-//                  noneea = ${s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]}""")
                 List(Estimate(
                   from = SDate(s.startTime).prettyTime,
                   to = SDate(s.startTime).addMinutes(props.selectedTimeRange).prettyTime,
@@ -261,62 +230,6 @@ object DashboardTerminalSummary {
 
         <.div(paxTerminalOverviewComponents)
 
-        //        <.div(^.className := "dashboard-summary container-fluid",
-        //          <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
-        //            <.span(^.className := "flights-total", f"${props.flights.size}%,d Flights"),
-        //            <.table(^.className := s"summary-box-count rag-desks",
-        //              <.tbody(
-        //                <.tr(
-        //                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime}")
-        //                ),
-        //                <.tr(
-        //                  <.td("Staff"), <.td("Desks")
-        //                ),
-        //                <.tr(
-        //                  <.td(s"$pressurePointAvailableStaff"),
-        //                  <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
-        //                )
-        //              )
-        //            )),
-        //          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)),
-        //          <.div(^.className := "summary-box-container col-sm-4 dashboard-summary__pax-summary",
-        //            <.table(^.className := "dashboard-summary__pax-summary-table",
-        //              <.tbody(
-        //                <.tr(^.className := "dashboard-summary__pax-summary-row",
-        //                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
-        //                  <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
-        //                    <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
-        //                summary.map {
-        //
-        //                  case DashboardSummary(start, _, paxPerQueue) =>
-        //
-        //                    val totalPax = paxPerQueue.values.map(Math.round).sum
-        //                    <.tr(^.className := "dashboard-summary__pax-summary-row",
-        //                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime} - ${SDate(MilliDate(start)).addHours(1).prettyTime}"),
-        //                      <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
-        //                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
-        //                    )
-        //                }.toTagMod,
-        //                <.tr(^.className := "dashboard-summary__pax-summary-row",
-        //                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell heading pax-summary-cell--left", "3 Hour Total"),
-        //                  <.th(totalPaxAcrossQueues, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
-        //                  props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
-        //                )
-        //              )
-        //            )
-        //          ),
-        //          <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
-        //            <.div(^.className := "pcp-pressure",
-        //              <.div(^.className := "title", "PCP Pressure"),
-        //              <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
-        //                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime}"
-        //              ),
-        //              <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
-        //                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime}"
-        //              )
-        //            )
-        //          )
-        //        )
       }
     }.build
 

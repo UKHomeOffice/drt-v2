@@ -181,7 +181,7 @@ object PortDashboardPage {
                       portDashboardModel.featureFlags.renderReady(_ => {
                         val portStateForDashboard = portState.windowWithTerminalFilter(
                           displayPeriod.start,
-                          displayPeriod.end,
+                          displayPeriod.start.addMinutes(displayPeriod.duration * 3),
                           portConfig.queuesByTerminal.view.filterKeys(_ == terminal).toMap,
                           portDashboardModel.paxFeedSourceOrder,
                         )
