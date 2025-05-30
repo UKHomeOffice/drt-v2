@@ -155,7 +155,6 @@ object DashboardTerminalSummary {
         def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
-        //        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
         val filteredFlights = props.flights.filter(flight =>
           flight.apiFlight.PcpTime.exists(pcpTime =>
             pcpTime >= props.timeWindowStart.millisSinceEpoch && pcpTime <= props.timeWindowStart.addMinutes(props.selectedTimeRange * 3).millisSinceEpoch
@@ -163,11 +162,8 @@ object DashboardTerminalSummary {
         )
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, filteredFlights)
         val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart, props.selectedTimeRange)
-        //        val queueTotals = totalsByQueue(summary)
 
-        //        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
-
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
