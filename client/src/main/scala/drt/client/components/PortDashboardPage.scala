@@ -92,7 +92,7 @@ object PortDashboardPage {
                   SPACircuit.dispatch(
                     UpdateUserPreferences(
                       userPreferences.copy(portDashboardIntervalMinutes = userPreferences.portDashboardIntervalMinutes + (portName -> newRange))))).runNow()
-                p.router.set(p.dashboardPage.copy(subMode = newRange))
+                p.router.set(p.dashboardPage)
               }
 
               def handleTerminalChange(event: ReactEventFromInput): Callback = {
