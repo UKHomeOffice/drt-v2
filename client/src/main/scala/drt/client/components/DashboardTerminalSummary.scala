@@ -175,7 +175,7 @@ object DashboardTerminalSummary {
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FFB300", "#FF6F20", "#00A99D", "#FF6F20", "#FFB300", "#CD5B82", "#547A00", "#334F96", "#0E2560"),
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FF6F20", "#00A99D", "#A6A6A6", "#A3C2D9", "#E3D4A5","#7A7A7A","#F2994A", "#6FCF97", "#BB6BD9", "#EB5757"),
               )
             )
           )
