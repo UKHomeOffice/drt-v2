@@ -162,13 +162,16 @@ object DashboardTerminalSummary {
         )
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, filteredFlights)
         val summary: Seq[DashboardSummary] = minSummary(filteredFlights, props.crunchMinutes, props.timeWindowStart, props.selectedTimeRange)
+        val queueTotals = totalsByQueue(summary)
 
+        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
-          val labels = splitsForPeriod.keys.map(_.displayName).toJSArray
-          val data = splitsForPeriod.values.toJSArray.filter(_ > 0)
+          val dataset: Map[String, Int] = BigSummaryBoxes.dataset(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)
+          val labels = dataset.keys.toJSArray
+          val data = dataset.values.toJSArray.filter(_ > 0)
 
           ChartData(
             labels = labels,
