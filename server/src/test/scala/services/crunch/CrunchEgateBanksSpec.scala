@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, 
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.Future
@@ -23,7 +23,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
   val threeMinutes: Double = 179d / 60
 
   val airportConfig: AirportConfig = defaultAirportConfig.copy(
-    queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+    queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate))),
     terminalPaxSplits = Map(T1 -> SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.5),

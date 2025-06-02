@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
@@ -25,7 +25,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
   val lhrAirportConfig: AirportConfig = defaultAirportConfig.copy(
     portCode = PortCode("LHR"),
     terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
-    queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)),
+    queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk))),
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
         GBRNational -> List(Queues.EeaDesk -> 1.0),

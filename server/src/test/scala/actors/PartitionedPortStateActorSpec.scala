@@ -28,7 +28,6 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
   val flightUpdatesActor: ActorRef = system.actorOf(Props(new DummyActor))
   val pointInTime = "2020-07-06T12:00"
   val myNow: () => SDateLike = () => SDate(pointInTime)
-  val queues: Map[Terminal, Seq[Queue]] = defaultAirportConfig.queuesByTerminal
   val journalType: StreamingJournalLike = InMemoryStreamingJournal
 
   "Given a PartitionedPortStateActor, a legacy data cutoff off of 2020-07-06T12:00" >> {
@@ -42,7 +41,6 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
           staffUpdatesActor,
           flightUpdatesActor,
           myNow,
-          queues,
           journalType
         )))
         val rangeStart = SDate("2020-10-10")
@@ -65,7 +63,6 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
           staffUpdatesActor,
           flightUpdatesActor,
           myNow,
-          queues,
           journalType
         )))
         val rangeStart = SDate("2020-07-06T00:00", utcTimeZone)

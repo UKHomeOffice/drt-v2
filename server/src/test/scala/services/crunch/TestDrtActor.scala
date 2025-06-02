@@ -45,7 +45,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
-import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
+import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService, QueueConfig}
 import uk.gov.homeoffice.drt.testsystem.TestActors.TestShiftsActor
 import uk.gov.homeoffice.drt.time._
 
@@ -219,16 +219,18 @@ class TestDrtActor extends Actor {
           ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
       }
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
+      val terminals: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
+
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, terminals, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
       val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
-      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal, update15MinuteQueueSlotsLiveView)
+      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, terminals, update15MinuteQueueSlotsLiveView)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
       val queuesActor = minuteLookups.queueMinutesRouterActor
       val staffActor = minuteLookups.staffMinutesRouterActor
-      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
-      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
-      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
-      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)), "partitioned-port-state-actor")
+      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, terminals, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
+      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, terminals, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
+      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, terminals, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, paxFeedSourceOrder)), "partitioned-port-state-actor")
       tc.initialPortState match {
         case Some(ps) =>
           val withPcpTimes = ps.flights.view.mapValues {
@@ -309,14 +311,15 @@ class TestDrtActor extends Actor {
           flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           deskRecsProvider = portDeskRecs,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-          queueStatusProvider = DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
+          queueStatusProvider = () => portEgatesProvider().map(ep => DynamicQueueStatusProvider(tc.airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
           updateLivePaxView = _ => Future.successful(StatusReply.Ack),
           terminalSplits = splitsCalculator.terminalSplits,
           queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
-          queuesByTerminal = tc.airportConfig.queuesByTerminal,
+          queuesByTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal),
           paxFeedSourceOrder = paxFeedSourceOrder,
           updateCapacity = _ => Future.successful(Done),
           setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+          validTerminals = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
         )
 
         val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(

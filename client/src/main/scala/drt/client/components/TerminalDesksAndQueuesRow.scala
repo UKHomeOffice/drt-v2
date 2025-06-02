@@ -49,13 +49,13 @@ object TerminalDesksAndQueuesRow {
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
                    slotMinutes: Int,
-                   showWaitColumn: Boolean
+                   showWaitColumn: Boolean,
+                   queues: Seq[Queue],
                   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
-      val x = QueueConfig
-      val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queuesByTerminal(props.terminal).contains(qm.queue)).map(
+      val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.queues.contains(qm.queue)).map(
         qm => Tuple2(qm.queue, qm)).toMap
 
       val queueTds = crunchMinutesByQueue.flatMap {

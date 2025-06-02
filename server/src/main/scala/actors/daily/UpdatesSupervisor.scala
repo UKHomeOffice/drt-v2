@@ -14,7 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -30,12 +30,12 @@ case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
 
 class QueueUpdatesSupervisor(now: () => SDateLike,
-                             terminals: List[Terminal],
+                             terminals: LocalDate => Seq[Terminal],
                              updatesActorFactory: (Terminal, SDateLike) => Props)
   extends UpdatesSupervisor[CrunchMinute, TQM](now, terminals, updatesActorFactory)
 
 class StaffUpdatesSupervisor(now: () => SDateLike,
-                             terminals: List[Terminal],
+                             terminals: LocalDate => Seq[Terminal],
                              updatesActorFactory: (Terminal, SDateLike) => Props)
   extends UpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
 
@@ -44,8 +44,8 @@ object UpdatesSupervisor {
 }
 
 abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
-                                                  terminals: List[Terminal],
-                                                  updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
+                                                           terminals: LocalDate => Seq[Terminal],
+                                                           updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import UpdatesSupervisor._
@@ -55,7 +55,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"updates-supervisor-kill-actor-${getClass.getTypeName}")
+//  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"updates-supervisor-kill-actor-${getClass.getTypeName}")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
@@ -111,10 +111,12 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       .map(m => SDate(m).getUtcLastMidnight.millisSinceEpoch)
       .distinct
 
-    for {
-      terminal <- terminals
+    val terminalDays = for {
       day <- daysMillis
+      terminal <- terminals(SDate(day).toLocalDate)
     } yield (terminal, day)
+
+    terminalDays.toList
   }
 
   def updatesActor(terminal: Terminal, day: MillisSinceEpoch): ActorRef =

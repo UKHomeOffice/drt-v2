@@ -8,11 +8,10 @@ import actors.persistent.staffing._
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
-import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Terminals}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
 
 
 @Singleton
@@ -23,7 +22,7 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
                                 flightLookups: FlightLookupsLike,
                                 minuteLookups: MinuteLookupsLike,
                                )
-                               (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext) extends ActorsServiceLike {
+                               (implicit system: ActorSystem, timeout: Timeout) extends ActorsServiceLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
   override val liveShiftAssignmentsReadActor: ActorRef = system.actorOf(LegacyShiftAssignmentsActor.streamingUpdatesProps(ShiftAssignmentsActor.persistenceId,
     journalType, now), name = "staff-assignments-read-actor")
@@ -48,21 +47,24 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
   override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesRouterActor
   override val staffRouterActor: ActorRef = minuteLookups.staffMinutesRouterActor
+
+  val terminals: LocalDate => Seq[Terminals.Terminal] = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
+
   override val queueUpdates: ActorRef =
     system.actorOf(Props(new QueueUpdatesSupervisor(
-      now,
-      airportConfig.queuesByTerminal.keys.toList,
-      queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
+      now = now,
+      terminals = terminals,
+      updatesActorFactory = queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef =
     system.actorOf(Props(new StaffUpdatesSupervisor(
-      now,
-      airportConfig.queuesByTerminal.keys.toList,
-      staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
+      now = now,
+      terminals = terminals,
+      updatesActorFactory = staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef =
     system.actorOf(Props(new FlightUpdatesSupervisor(
-      now,
-      airportConfig.queuesByTerminal.keys.toList,
-      flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
+      now = now,
+      terminals = terminals,
+      updatesActorFactory = flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
     flightsRouterActor = flightsRouterActor,
@@ -72,6 +74,6 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
     staffUpdatesActor = staffUpdates,
     flightUpdatesActor = flightUpdates,
     now = now,
-    queues = airportConfig.queuesByTerminal,
+//    queues = airportConfig.queuesByTerminal,
     journalType = journalType)))
 }

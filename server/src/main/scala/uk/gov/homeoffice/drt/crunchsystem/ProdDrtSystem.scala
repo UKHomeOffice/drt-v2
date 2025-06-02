@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.db.dao._
 import uk.gov.homeoffice.drt.db.tables.{UserTable, UserTableLike}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing.{ShiftsService, ShiftsServiceImpl}
-import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
+import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService, QueueConfig}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
@@ -30,20 +30,21 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   lazy override val akkaDb: AkkaDbTables = AkkaDb
 
   override val minuteLookups: MinuteLookupsLike = MinuteLookups(
-    now,
-    MilliTimes.oneDayMillis,
-    airportConfig.queuesByTerminal,
-    update15MinuteQueueSlotsLiveView
+    now = now,
+    expireAfterMillis = MilliTimes.oneDayMillis,
+//    queuesByTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
+    updateLiveView = update15MinuteQueueSlotsLiveView,
+    terminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
   )
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
-    system,
-    now,
-    airportConfig.queuesByTerminal,
-    params.maybeRemovalCutOffSeconds,
-    paxFeedSourceOrder,
-    splitsCalculator.terminalSplits,
-    updateFlightsLiveView,
+    system = system,
+    now = now,
+    terminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal),
+    removalMessageCutOff = params.maybeRemovalCutOffSeconds,
+    paxFeedSourceOrder = paxFeedSourceOrder,
+    terminalSplits = splitsCalculator.terminalSplits,
+    updateLiveView = updateFlightsLiveView,
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(aggregatedDb)

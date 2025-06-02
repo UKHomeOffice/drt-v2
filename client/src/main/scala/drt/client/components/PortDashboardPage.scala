@@ -45,10 +45,8 @@ object PortDashboardPage {
         <.div(^.className := "terminal-summary-dashboard",
           MuiTypography(variant = "h1")(s"Dashboard ${p.dashboardPage.portCodeStr} (${p.dashboardPage.portConfig.portName})"),
           portDashboardModel.airportConfig.renderReady(portConfig => {
-            def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
 
 //            val (queues, paxTypeAndQueueOrder, terminals) = (, portConfig.terminalPaxSplits, portConfig.terminals)
-            val queues = portConfig.queuesByTerminal(displayPeriod.start.toLocalDate)
             val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
             val terminals = portConfig.terminals
 
@@ -58,6 +56,8 @@ object PortDashboardPage {
               DisplayPeriod(currentPeriodStart.addHours(3)),
               DisplayPeriod(currentPeriodStart.addHours(6))
             )
+            def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
+            val queues = portConfig.queuesByTerminal(displayPeriod.start.toLocalDate)
 
             def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)

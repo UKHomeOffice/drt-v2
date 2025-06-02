@@ -33,7 +33,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
 
   "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the passenger minutes originally sent" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => Future.successful(()))
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, _ => Seq(terminal), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val result = lookups.queueLoadsMinutesActor
@@ -50,7 +50,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
 
   "When I send two sets of PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the combined set of minutes" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => Future.successful(()))
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, _ => Seq(terminal), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)
@@ -75,7 +75,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   "When I ask for CrunchMinutes" >> {
     "Given a lookups with no data" >> {
       "I should get None" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(_ => Seq(terminal), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 
@@ -85,7 +85,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
 
     "Given a lookup with some data" >> {
       "I should get the data from the source" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(_ => Seq(terminal), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 
@@ -106,7 +106,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
       val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
 
       "I should get the one minute back" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(Seq(T1), lookupWithData(minutesState), noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(_ => Seq(terminal), lookupWithData(minutesState), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 

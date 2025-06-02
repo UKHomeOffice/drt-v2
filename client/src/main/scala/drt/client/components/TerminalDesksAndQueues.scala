@@ -28,6 +28,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object TerminalDesksAndQueues {
@@ -109,9 +110,11 @@ object TerminalDesksAndQueues {
 
       val terminal = props.terminalPageTab.terminal
 
-      def queueNames: Seq[Queue] = {
-        props.airportConfig.nonTransferQueues(terminal)
-      }
+//      def queueNames: Seq[Queue] = {
+//        props.airportConfig.nonTransferQueues(terminal)
+//      }
+
+      val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.viewStart.toLocalDate, props.terminal)
 
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
@@ -155,7 +158,7 @@ object TerminalDesksAndQueues {
 
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
 
-      val queueHeadings: List[TagMod] = queueNames.map(queue => {
+      val queueHeadings: List[TagMod] = queues.map(queue => {
         val colsToSpan = (state.showWaitColumn, state.showActuals) match {
           case (true, true) => 5
           case (false, true) => 4
@@ -246,7 +249,7 @@ object TerminalDesksAndQueues {
           slaConfigs <- props.slaConfigs
         } yield {
           val slas = slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
-          val queues = props.airportConfig.nonTransferQueues(terminal).toList
+//          val queues = props.airportConfig.nonTransferQueues(terminal).toList
           val interval = if (state.timeInterval == Hourly) 60 else 15
           val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by interval * 60000
 
@@ -272,7 +275,7 @@ object TerminalDesksAndQueues {
               if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,
             ),
             if (state.displayType == ChartsView) {
-              props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
+              queues.map { queue =>
                 val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
                 QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), interval, state.deskType))
               }.toTagMod
@@ -283,7 +286,7 @@ object TerminalDesksAndQueues {
                   <.thead(
                     ^.className := "sticky-top",
                     <.tr(<.th(^.className := "solid-background", "") :: headings: _*),
-                    <.tr(<.th("Time", ^.className := "solid-background") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
+                    <.tr(<.th("Time", ^.className := "solid-background") :: subHeadingLevel2(queues, state.showWaitColumn): _*)),
                   <.tbody(
                     viewMinutes.map { millis =>
                       val rowProps = TerminalDesksAndQueuesRow.Props(
@@ -300,7 +303,8 @@ object TerminalDesksAndQueues {
                         viewMode = props.viewMode,
                         loggedInUser = props.loggedInUser,
                         slotMinutes = slotMinutes,
-                        showWaitColumn = state.showWaitColumn
+                        showWaitColumn = state.showWaitColumn,
+                        queues = queues,
                       )
                       TerminalDesksAndQueuesRow(rowProps)
                     }.toTagMod)

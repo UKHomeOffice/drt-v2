@@ -12,6 +12,7 @@ import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.LocalDate
 
 
@@ -33,8 +34,10 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
                    slaConfigs: SlaConfigs,
                    simulationResult: Pot[SimulationResult]) extends UseValueEq
 
-  class Backend() {
+  class Backend {
     def render(props: Props, state: State): VdomTagOf[Div] = {
+      val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.date, props.terminal)
+
       <.div(
         MuiTypography(variant = "h2")(s"Simulate a day at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
         MuiPaper()(
@@ -45,7 +48,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
             ),
             MuiGrid(item = true, xs = 10)(
               SimulationChartComponent(
-                SimulationChartComponent.Props(state.simulationParams, props.airportConfig, props.slaConfigs, props.terminal, props.simulationResult)
+                SimulationChartComponent.Props(state.simulationParams, props.airportConfig, props.slaConfigs, props.terminal, props.simulationResult, queues)
               )
             )
           )

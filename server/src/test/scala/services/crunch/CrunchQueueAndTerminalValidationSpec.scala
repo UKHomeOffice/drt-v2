@@ -8,7 +8,7 @@ import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -39,7 +39,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
                 SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
               )),
               terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
-              queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
+              queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk)))
             )))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -73,7 +73,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(
             terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
+            queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk)))
           )
         ))
 

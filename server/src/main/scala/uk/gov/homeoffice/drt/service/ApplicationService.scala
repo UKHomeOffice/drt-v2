@@ -109,7 +109,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue] =
     QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
-  val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Set[Queue] =
+  val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Seq[Queue] =
     QueueConfig.queuesForDateRangeAndTerminal(airportConfig.queuesByTerminal)
   val validTerminalsForDate: LocalDate => Seq[Terminal] =
     QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)

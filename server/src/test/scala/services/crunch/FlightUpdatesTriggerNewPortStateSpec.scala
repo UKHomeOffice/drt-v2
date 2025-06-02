@@ -7,7 +7,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -23,7 +23,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
       eeaMachineReadableToDesk -> 25d / 60,
       eeaMachineReadableToEGate -> 25d / 60
     )),
-    queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
+    queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate)))
   )
 
 

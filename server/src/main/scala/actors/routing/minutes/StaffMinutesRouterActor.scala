@@ -6,9 +6,9 @@ import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.TM
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
 
-class StaffMinutesRouterActor(terminals: Iterable[Terminal],
+class StaffMinutesRouterActor(terminals: LocalDate => Iterable[Terminal],
                               lookup: MinutesLookup[StaffMinute, TM],
                               updateMinutes: MinutesUpdate[StaffMinute, TM, TerminalUpdateRequest]
                        )

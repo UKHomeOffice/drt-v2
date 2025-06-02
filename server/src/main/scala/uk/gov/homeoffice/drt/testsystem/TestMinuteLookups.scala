@@ -2,21 +2,20 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.MinuteLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
-import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.models.CrunchMinute
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.testsystem.TestActors._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TestMinuteLookups(system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]],
+                             terminals: LocalDate => Seq[Terminal],
                              updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
                             )
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
@@ -35,11 +34,11 @@ case class TestMinuteLookups(system: ActorSystem,
   }
 
   override val queueLoadsMinutesActor: ActorRef =
-    system.actorOf(Props(new TestQueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
+    system.actorOf(Props(new TestQueueLoadsMinutesActor(terminals, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
 
   override val queueMinutesRouterActor: ActorRef =
-    system.actorOf(Props(new TestQueueMinutesRouterActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes(updateLiveView), resetQueuesData)))
+    system.actorOf(Props(new TestQueueMinutesRouterActor(terminals, queuesLookup, updateCrunchMinutes(updateLiveView), resetQueuesData)))
 
   override val staffMinutesRouterActor: ActorRef =
-    system.actorOf(Props(new TestStaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes, resetStaffData)))
+    system.actorOf(Props(new TestStaffMinutesRouterActor(terminals, staffLookup, updateStaffMinutes, resetStaffData)))
 }

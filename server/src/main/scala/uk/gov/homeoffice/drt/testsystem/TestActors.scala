@@ -9,20 +9,19 @@ import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
 import actors.routing.{FeedArrivalsRouterActor, FlightsRouterActor}
+import drt.shared.CrunchApi._
+import drt.shared._
 import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import org.apache.pekko.pattern.StatusReply.Ack
 import org.apache.pekko.pattern.{ask, pipe}
 import org.apache.pekko.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
-import drt.shared.CrunchApi._
-import drt.shared._
 import org.slf4j.Logger
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
 
@@ -176,11 +175,11 @@ object TestActors {
       ))
   }
 
-  class MockAggregatedArrivalsActor extends Actor {
-    override def receive: Receive = {
-      case _ => sender() ! Ack
-    }
-  }
+//  class MockAggregatedArrivalsActor extends Actor {
+//    override def receive: Receive = {
+//      case _ => sender() ! Ack
+//    }
+//  }
 
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B, TerminalUpdateRequest] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
@@ -236,7 +235,7 @@ object TestActors {
 
   }
 
-  class TestStaffMinutesRouterActor(terminals: Iterable[Terminal],
+  class TestStaffMinutesRouterActor(terminals: LocalDate => Seq[Terminal],
                                     lookup: MinutesLookup[StaffMinute, TM],
                                     updateMinutes: MinutesUpdate[StaffMinute, TM, TerminalUpdateRequest],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
@@ -244,7 +243,7 @@ object TestActors {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  class TestQueueMinutesRouterActor(terminals: Iterable[Terminal],
+  class TestQueueMinutesRouterActor(terminals: LocalDate => Seq[Terminal],
                                     lookup: MinutesLookup[CrunchMinute, TQM],
                                     updateMinutes: MinutesUpdate[CrunchMinute, TQM, TerminalUpdateRequest],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
@@ -252,7 +251,7 @@ object TestActors {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  class TestQueueLoadsMinutesActor(terminals: Iterable[Terminal],
+  class TestQueueLoadsMinutesActor(terminals: LocalDate => Seq[Terminal],
                                    lookup: MinutesLookup[PassengersMinute, TQM],
                                    updateMinutes: MinutesUpdate[PassengersMinute, TQM, TerminalUpdateRequest],
                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
@@ -266,7 +265,7 @@ object TestActors {
     }
   }
 
-  class TestFlightsRouterActor(terminals: Iterable[Terminal],
+  class TestFlightsRouterActor(terminals: LocalDate => Seq[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
                                resetData: (Terminal, UtcDate) => Future[Any],
@@ -346,7 +345,6 @@ object TestActors {
                                       staffUpdatesActor: ActorRef,
                                       flightUpdatesActor: ActorRef,
                                       now: () => SDateLike,
-                                      queues: Map[Terminal, Seq[Queue]],
                                       journalType: StreamingJournalLike)
     extends PartitionedPortStateActor(
       flightsActor,
@@ -356,7 +354,6 @@ object TestActors {
       staffUpdatesActor,
       flightUpdatesActor,
       now,
-      queues,
       journalType) {
 
     private val actorClearRequests = Map(
@@ -434,17 +431,17 @@ object TestActors {
   }
 
   class QueueTestUpdatesSupervisor(now: () => SDateLike,
-                                   terminals: List[Terminal],
+                                   terminals: LocalDate => Seq[Terminal],
                                    updatesActorFactory: (Terminal, SDateLike) => Props)
     extends TestUpdatesSupervisor[CrunchMinute, TQM](now, terminals, updatesActorFactory)
 
   class StaffTestUpdatesSupervisor(now: () => SDateLike,
-                                   terminals: List[Terminal],
+                                   terminals: LocalDate => Seq[Terminal],
                                    updatesActorFactory: (Terminal, SDateLike) => Props)
     extends TestUpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
 
   abstract class TestUpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
-                                                                 terminals: List[Terminal],
+                                                                 terminals: LocalDate => Seq[Terminal],
                                                                  updatesActorFactory: (Terminal, SDateLike) => Props)
     extends UpdatesSupervisor(now, terminals, updatesActorFactory) {
     def testReceive: Receive = {
@@ -461,7 +458,7 @@ object TestActors {
   }
 
   class TestFlightUpdatesSupervisor(now: () => SDateLike,
-                                    terminals: List[Terminal],
+                                    terminals: LocalDate => Seq[Terminal],
                                     updatesActorFactory: (Terminal, SDateLike) => Props)
     extends FlightUpdatesSupervisor(now, terminals, updatesActorFactory) {
 

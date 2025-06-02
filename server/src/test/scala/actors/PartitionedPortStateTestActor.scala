@@ -35,7 +35,6 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     staffUpdatesActor: ActorRef,
                                     flightUpdatesActor: ActorRef,
                                     now: () => SDateLike,
-                                    queues: Map[Terminal, Seq[Queue]],
                                     paxFeedSourceOrder: List[FeedSource],
                                    )
   extends PartitionedPortStateActor(
@@ -46,7 +45,6 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     staffUpdatesActor,
     flightUpdatesActor,
     now,
-    queues,
     InMemoryStreamingJournal) {
 
   var state: PortState = PortState.empty

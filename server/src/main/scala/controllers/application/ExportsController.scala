@@ -98,22 +98,22 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
         val start = SDate(startDay.toLong, europeLondonTimeZone)
         val end = start.addDays(sixMonthsDays)
-        ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal).flatMap { queuesForDateRange =>
-          val queueNames = Queues.inOrder(queuesForDateRange).map(Queues.displayName)
-          val rowHeaders = Seq("Date", "Total pax") ++ queueNames ++ Seq("Total workload")
-          val makeHeadlines = StaffRequirementExports.toPassengerHeadlines(queuesForDateRange)
+        val queuesForDateRange = ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal).toSeq
+        val queueNames = Queues.inOrder(queuesForDateRange).map(Queues.displayName)
+        val rowHeaders = Seq("Date", "Total pax") ++ queueNames ++ Seq("Total workload")
+        val makeHeadlines = StaffRequirementExports.toPassengerHeadlines(queuesForDateRange)
 
-          StaffRequirementExports
-            .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
-            .map {
-              case (date, minutes) => makeHeadlines(date, minutes)
-            }
-            .prepend(Source(List(rowHeaders))).runWith(Sink.seq).map(r => r.transpose.map(_.mkString(",")).mkString("\n"))
-            .map { csvData =>
-              val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
-              CsvFileStreaming.csvFileResult(fileName, csvData)
-            }
-        }
+        StaffRequirementExports
+          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
+          .map {
+            case (date, minutes) => makeHeadlines(date, minutes)
+          }
+          .prepend(Source(List(rowHeaders))).runWith(Sink.seq).map(r => r.transpose.map(_.mkString(",")).mkString("\n"))
+          .map { csvData =>
+            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+            CsvFileStreaming.csvFileResult(fileName, csvData)
+          }
+
       }
     }
   }

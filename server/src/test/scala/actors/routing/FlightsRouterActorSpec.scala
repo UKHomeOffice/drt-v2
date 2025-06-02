@@ -56,7 +56,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -82,7 +82,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get all the flights back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -108,7 +108,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should only get back flights within the requested range" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -137,7 +137,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -166,7 +166,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -195,7 +195,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -224,7 +224,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -252,7 +252,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          Seq(T1),
+          _ => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -269,7 +269,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   "Concerning persistence of flights" >> {
     "Given a router, I should see updates sent to it are persisted" >> {
-      val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)), None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
+      val lookups = FlightLookups(system, myNow, terminals = _ => Seq(T1), None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
       val router = lookups.flightsRouterActor
 
       val scheduled = "2021-06-01T00:00"

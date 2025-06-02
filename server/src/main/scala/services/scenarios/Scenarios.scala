@@ -23,6 +23,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.SortedSet
@@ -54,17 +55,20 @@ object Scenarios {
         sla,
       )
 
+    val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(simulationAirportConfig.queuesByTerminal)
+
     val paxLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = flightsProvider,
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       redListUpdatesProvider = redListUpdatesProvider,
-      dynamicQueueStatusProvider = DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),
-      queuesByTerminal = simulationAirportConfig.queuesByTerminal,
+      dynamicQueueStatusProvider = () => egateBanksProvider().map(ep => DynamicQueueStatusProvider(simulationAirportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
+      queuesByTerminal = queuesForDateAndTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalculator.terminalSplits,
       updateCapacity = _ => Future.successful(Done),
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+      validTerminals = QueueConfig.terminalsForDate(simulationAirportConfig.queuesByTerminal),
     )
 
     class DummyPersistentActor extends Actor {

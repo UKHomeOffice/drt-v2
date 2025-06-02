@@ -16,8 +16,9 @@ import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -31,20 +32,21 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, (_, _) => Future.successful(()))
+  val terminals: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
+  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, terminals, (_, _) => Future.successful(()))
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 
-  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
+  val flightLookups: FlightLookups = FlightLookups(system, myNow, terminals, None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
 
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000
   val flightsActor: ActorRef = flightLookups.flightsRouterActor
   val queuesActor: ActorRef = lookups.queueMinutesRouterActor
   val staffActor: ActorRef = lookups.staffMinutesRouterActor
-  val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
-  val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
-  val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")
+  val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, terminals, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
+  val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, terminals, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
+  val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, terminals, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")
 
   def portStateActorProvider: () => ActorRef = () => {
     system.actorOf(Props(new PartitionedPortStateActor(
@@ -55,7 +57,6 @@ class PortStateRequestsSpec extends CrunchTestLike {
       staffUpdates,
       flightUpdates,
       myNow,
-      airportConfig.queuesByTerminal,
       InMemoryStreamingJournal)))
   }
 

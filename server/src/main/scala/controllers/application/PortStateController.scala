@@ -1,13 +1,13 @@
 package controllers.application
 
-import actors.CrunchManagerActor.{LookupHistoricPaxNos, LookupHistoricSplits, RecalculateArrivals, RecalculateHistoricSplits, RecalculateLiveSplits, Recrunch}
+import actors.CrunchManagerActor._
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
-import org.apache.pekko.pattern.ask
-import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.crunch.CrunchManager.{queueDaysToReCrunchWithUpdatedSplits, queueDaysToReProcess}
 import services.exports.Forecast
@@ -69,15 +69,13 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       )(new Timeout(30.seconds))
 
       val forecast = portStateFuture
-        .flatMap {
+        .map {
           case portState: PortState =>
-            ctrl.applicationService.queuesForDateRangeAndTerminal(startOfForecast.toLocalDate, endOfForecast.toLocalDate, terminal).map {
-              queues =>
-                log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
-                val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
-                val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues.toList)
-                Option(ForecastPeriodWithHeadlines(fp, hf))
-            }
+            val queues = ctrl.applicationService.queuesForDateRangeAndTerminal(startOfForecast.toLocalDate, endOfForecast.toLocalDate, terminal)
+            log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
+            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
+            val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues.toList)
+            Option(ForecastPeriodWithHeadlines(fp, hf))
         }
         .recover {
           case t =>

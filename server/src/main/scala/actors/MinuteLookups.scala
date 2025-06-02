@@ -3,18 +3,17 @@ package actors
 import actors.daily._
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
+import drt.shared.CrunchApi._
+import drt.shared.TM
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
-import drt.shared.CrunchApi._
-import drt.shared.TM
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,7 +26,6 @@ trait MinuteLookupsLike {
 
   val now: () => SDateLike
   val expireAfterMillis: Int
-  val queuesByTerminal: Map[Terminal, Seq[Queue]]
   val requestAndTerminateActor: ActorRef
 
   val updatePassengerMinutes: ((Terminal, UtcDate), MinutesContainer[PassengersMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
@@ -80,15 +78,15 @@ trait MinuteLookupsLike {
 
 case class MinuteLookups(now: () => SDateLike,
                          expireAfterMillis: Int,
-                         queuesByTerminal: Map[Terminal, Seq[Queue]],
+                         terminals: LocalDate => Seq[Terminal],
                          updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
                         )
                         (implicit val ec: ExecutionContext, val system: ActorSystem) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")
 
-  override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes)))
+  override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(terminals, queuesLoadsLookup, updatePassengerMinutes)))
 
-  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes(updateLiveView))))
+  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(terminals, queuesLookup, updateCrunchMinutes(updateLiveView))))
 
-  override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new StaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
+  override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new StaffMinutesRouterActor(terminals, staffLookup, updateStaffMinutes)))
 }

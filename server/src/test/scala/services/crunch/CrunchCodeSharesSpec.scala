@@ -6,7 +6,7 @@ import drt.shared._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -36,7 +36,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
         )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(arrivals))
@@ -69,7 +69,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk)))
+          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk))))
         ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
