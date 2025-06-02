@@ -90,6 +90,22 @@ object BigSummaryBoxes {
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
 
+
+  def dataset(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]) = {
+    Try {
+      val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val maxSplit = orderedSplitCounts.map(_._2).max
+      orderedSplitCounts.map {
+            case (paxTypeAndQueue, paxCount) =>
+              val percentage = ((paxCount.toDouble / maxSplit) * 100).toInt
+              val label = paxTypeAndQueueString(paxTypeAndQueue)
+              (label, percentage)
+          }
+    }.getOrElse(
+      Iterable.empty[(String, Int)]
+    )
+  }.toMap
+
   def GraphComponent(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): TagOf[HTMLElement] = {
     val value = Try {
       val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))

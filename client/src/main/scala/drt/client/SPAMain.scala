@@ -235,7 +235,7 @@ object SPAMain {
   }
 
   case class PortDashboardLoc(period: Option[Int]) extends Loc {
-    override val url = s"${PortDashboardLoc.hashValue}/$period"
+    override val url = s"${PortDashboardLoc.hashValue}$period"
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
   }
@@ -385,7 +385,7 @@ object SPAMain {
 
     dynamicRouteCT((PortDashboardLoc.hashValue / int.option).caseClass[PortDashboardLoc]) ~>
       dynRenderR { case (page: PortDashboardLoc, router) =>
-        proxy(p => PortDashboardPage(router, page, p()))
+        proxy(_ => PortDashboardPage(router, page))
       }
   }
 
