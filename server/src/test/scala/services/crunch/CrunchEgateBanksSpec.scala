@@ -95,6 +95,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
+          println(s"got ${deskRecsFromPortState(ps, 15)}, expected $expected")
           deskRecsFromPortState(ps, 15) == expected
       }
 

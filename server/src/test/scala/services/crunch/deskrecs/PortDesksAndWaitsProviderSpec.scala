@@ -144,7 +144,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
 
 
   private def getProvider = {
-    val queues: (LocalDate, LocalDate, Terminal) => Set[Queue] = QueueConfig.queuesForDateRangeAndTerminal(
+    val queues: (LocalDate, LocalDate, Terminal) => Seq[Queue] = QueueConfig.queuesForDateRangeAndTerminal(
       SortedMap(LocalDate(2014, 1, 1) -> SortedMap[Terminal, Seq[Queue]](T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
     )
     val divertedQueues = Map[Queue, Queue]()
@@ -158,7 +158,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val minutesToCrunch = 3
     val offsetMinutes = 0
     val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax _
-    val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks(Map()), FlightFilter(List()), 45, paxFeedSourceOrder)
+    val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks((_, _) => Seq.empty), FlightFilter(List()), 45, paxFeedSourceOrder)
 
     PortDesksAndWaitsProvider(
       queues,

@@ -21,7 +21,7 @@ import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
-case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Terminal) => Set[Queue],
+case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Terminal) => Seq[Queue],
                                      divertedQueues: Map[Queue, Queue],
                                      desksByTerminal: Map[Terminal, Int],
                                      flexedQueuesPriority: List[Queue],
@@ -132,7 +132,7 @@ object PortDesksAndWaitsProvider {
 
     val calculator = DynamicWorkloadCalculator(
       terminalProcTimes = airportConfig.terminalProcessingTimes,
-      fallbacksProvider = QueueFallbacks(airportConfig.queuesByTerminal),
+      fallbacksProvider = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)),
       flightHasWorkload = flightFilter,
       fallbackProcessingTime = AirportConfigDefaults.fallbackProcessingTime,
       paxFeedSourceOrder = paxFeedSourceOrder

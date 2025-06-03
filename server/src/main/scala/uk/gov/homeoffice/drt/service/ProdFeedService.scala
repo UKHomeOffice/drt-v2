@@ -102,17 +102,13 @@ object ProdFeedService {
                            forecastMaxDays: Int,
                           ): PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]] = {
     case arrivals =>
-      println(s"Partitioning base arrivals for ${arrivals.arrivals.size} arrivals")
       val terminals = terminalsForDateRange(now().toLocalDate, now().addDays(forecastMaxDays).toLocalDate)
       val dates = DateRange(now().toUtcDate, now().addDays(forecastMaxDays).toUtcDate)
-
-      println(s"Terminals for ${now().toLocalDate} -> ${now().addDays(forecastMaxDays).toLocalDate}: ${terminals.mkString(", ")}, Dates: ${dates.mkString(", ")}")
 
       val partitions = for {
         terminal <- terminals
         day <- dates
       } yield {
-//        println(s"looking for arrivals for terminal: $terminal, day: $day")
         (terminal, day) -> FeedArrivals(arrivals.arrivals.filter(a => a.terminal == terminal && SDate(a.scheduled).toUtcDate == day))
       }
       partitions.toMap

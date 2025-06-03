@@ -19,26 +19,21 @@ object MergeArrivals {
            )
            (implicit ec: ExecutionContext): (Terminal, UtcDate) => Future[ArrivalsDiff] =
     (terminal, date) => {
-      println(s"Merge arrivals for terminal: $terminal, date: $date")
       for {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date, terminal)))
         existing <- existingMerged(terminal, date)
       } yield {
         val validatedArrivalSets = arrivalSets.map {
           case fas@FeedArrivalSet(_, _, arrivals) =>
-            println(s"Validating arrivals for terminal: $terminal, date: $date, arrivals: ${arrivals.size}")
             val filtered = arrivals.filterNot {
               case (_, arrival) =>
                 val isInvalidSuffix = arrival.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
                 val isDomestic = arrival.Origin.isDomestic
                 isInvalidSuffix || isDomestic
             }
-            println(s"Filtered arrivals for terminal: $terminal, date: $date, arrivals: ${filtered.size}")
             fas.copy(arrivals = filtered)
         }
-        val x = mergeSets(existing, validatedArrivalSets, adjustments)
-        println(s"Merged arrivals for terminal: $terminal, date: $date, merged: ${x.toUpdate.size}, removed: ${x.toRemove.size}")
-        x
+        mergeSets(existing, validatedArrivalSets, adjustments)
       }
     }
 
@@ -46,8 +41,6 @@ object MergeArrivals {
                 arrivalSets: Seq[FeedArrivalSet],
                 adjustments: Arrival => Arrival,
                ): ArrivalsDiff = {
-    println(s"Merge sets, existingMerged: $existingMerged")
-    println(s"Merge sets, arrivalSets: $arrivalSets")
     def existsInPrimary(uniqueArrival: UniqueArrival): Boolean = arrivalSets
       .filter {
         case FeedArrivalSet(isPrimary, _, _) => isPrimary
@@ -135,7 +128,6 @@ object MergeArrivals {
     Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>
-          println(s"Processing request for terminal: ${request.terminal}, date: ${request.date}")
           mergeArrivalsForDate(request.terminal, SDate(request.date).toUtcDate)
             .flatMap { arrivalsDiff =>
               if (request.date >= today()) addArrivalPredictions(arrivalsDiff)

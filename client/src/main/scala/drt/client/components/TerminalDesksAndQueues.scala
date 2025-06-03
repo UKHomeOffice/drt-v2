@@ -115,6 +115,7 @@ object TerminalDesksAndQueues {
 //      }
 
       val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.viewStart.toLocalDate, props.terminal)
+      val sortedQueues = Queues.queueOrder.filter(queues.contains)
 
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)

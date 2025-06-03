@@ -12,7 +12,6 @@ import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
-import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 

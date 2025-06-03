@@ -36,7 +36,6 @@ class AclForecastArrivalsActor(val now: () => SDateLike,
   override def processIncoming(incomingArrivals: Iterable[Arrival],
                                createdAt: SDateLike,
                               ): (ArrivalsDiff, FeedStatusSuccess, ArrivalsState) = {
-    println(s"$persistenceId: Processing incoming arrivals at ${createdAt.toISOString} with ${incomingArrivals.size} arrivals")
     val incomingArrivalsWithKeys = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals.map(a => (a.unique, a)).toMap
     val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
