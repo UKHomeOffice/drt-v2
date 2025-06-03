@@ -87,6 +87,7 @@ object RunnableCrunch {
           forecastBaseBroadcast
             .map {
               case ArrivalsFeedSuccess(as, _) =>
+                println(s"Got some base forecast arrivals: ${as.size}")
                 val maxScheduledMillis = forecastMaxMillis()
                 FeedArrivals(as.filter(_.scheduled < maxScheduledMillis))
               case _ =>
@@ -94,7 +95,11 @@ object RunnableCrunch {
             }
             .mapAsync(1) {
               case FeedArrivals(as) =>
-                applyPaxDeltas(as.toList).map(FeedArrivals(_))
+                println(s"Applying pax deltas to base forecast arrivals: ${as.size}")
+                applyPaxDeltas(as.toList).map{ a =>
+                  println(s"Applied pax deltas to base forecast arrivals: ${a.size}")
+                  FeedArrivals(a)
+                }
             } ~> baseArrivalsSink
 
           forecastArrivalsSourceSync ~> forecastBroadcast

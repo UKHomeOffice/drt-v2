@@ -293,6 +293,7 @@ class CrunchTestLike
   def expectFeedSources(sourcesToExpect: Set[FeedSource])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
     crunch.portStateTestProbe.fishForMessage(1.seconds, s"Expected $sourcesToExpect") {
       case ps: PortState =>
+        println(s"Expecting feed sources: ${ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet} to be $sourcesToExpect")
         ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet == sourcesToExpect
     }
 

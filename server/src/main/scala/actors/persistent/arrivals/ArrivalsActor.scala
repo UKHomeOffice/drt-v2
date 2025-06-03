@@ -84,6 +84,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override def receiveCommand: Receive = {
     case ArrivalsFeedSuccess(incomingArrivals, createdAt) =>
+      println(s"$persistenceId: Got arrivals feed success with ${incomingArrivals.size} arrivals at ${createdAt.toISOString}")
       handleFeedSuccess(incomingArrivals.size, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) =>

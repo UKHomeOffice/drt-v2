@@ -21,7 +21,7 @@ import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
-case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Terminal) => Seq[Queue],
+case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Terminal) => Set[Queue],
                                      divertedQueues: Map[Queue, Queue],
                                      desksByTerminal: Map[Terminal, Int],
                                      flexedQueuesPriority: List[Queue],

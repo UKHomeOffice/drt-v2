@@ -172,6 +172,7 @@ class FlightsRouterActor(terminals: LocalDate => Iterable[Terminal],
         }
 
     case container: ArrivalsDiff =>
+      println(s"got some flights: ${container.toUpdate}")
       val updates: Map[(Terminal, UtcDate), Iterable[Arrival]] = container.toUpdate.values
         .groupBy(arrivals => (arrivals.Terminal, SDate(arrivals.Scheduled).toUtcDate))
       val removals: Map[(Terminal, UtcDate), Iterable[UniqueArrival]] = container.toRemove

@@ -7,12 +7,12 @@ import drt.shared._
 import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
-import scala.collection.immutable.{List, SortedMap}
+import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 
@@ -47,6 +47,10 @@ class CrunchTimezoneSpec extends CrunchTestLike {
               T1 -> Map(
                 Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20)),
                 Queues.NonEeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))
+              ),
+              T2 -> Map(
+                Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20)),
+                Queues.NonEeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))
               )
             )
 
@@ -64,7 +68,6 @@ class CrunchTimezoneSpec extends CrunchTestLike {
               airportConfig = defaultAirportConfig.copy(
                 minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
                 terminalProcessingTimes = procTimes,
-                queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
                 minutesToCrunch = 120
               )))
 

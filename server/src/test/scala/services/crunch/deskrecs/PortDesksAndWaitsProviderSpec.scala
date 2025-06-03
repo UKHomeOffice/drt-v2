@@ -144,7 +144,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
 
 
   private def getProvider = {
-    val queues: (LocalDate, LocalDate, Terminal) => Seq[Queue] = QueueConfig.queuesForDateRangeAndTerminal(
+    val queues: (LocalDate, LocalDate, Terminal) => Set[Queue] = QueueConfig.queuesForDateRangeAndTerminal(
       SortedMap(LocalDate(2014, 1, 1) -> SortedMap[Terminal, Seq[Queue]](T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
     )
     val divertedQueues = Map[Queue, Queue]()

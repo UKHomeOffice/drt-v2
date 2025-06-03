@@ -1,7 +1,7 @@
 package services.graphstages
 
 import controllers.ArrivalGenerator
-import controllers.ArrivalGenerator.{forecast, live}
+import controllers.ArrivalGenerator.live
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared._
 import services.PcpArrival.pcpFrom
@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.models.{ManifestDateOfArrival, ManifestTimeOfArriva
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
-import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliDate, SDate, SDateLike}
 
@@ -80,8 +80,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has ACLFeed and ForecastFeed" >> {
       val forecastScheduled = "2017-01-01T10:25Z"
-      val aclFlight = forecast(iata = "BA0002", schDt = forecastScheduled, totalPax = Option(10))
-      val forecastArrival = forecast(schDt = forecastScheduled, iata = "BA0002", terminal = T1, totalPax = Option(21))
+      val aclFlight = ArrivalGenerator.forecast(iata = "BA0002", schDt = forecastScheduled, totalPax = Option(10))
+      val forecastArrival = ArrivalGenerator.forecast(schDt = forecastScheduled, iata = "BA0002", terminal = T1, totalPax = Option(21))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(aclFlight)))
       offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(List(forecastArrival)))
@@ -182,100 +182,100 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         }
       }
 
-//      "When they have matching number, schedule, terminal but different origins" >> {
-//        "I should see the live arrival without the cirium arrival's status merged" >> {
-//          val liveArrival = ArrivalGenerator.live("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), totalPax = None)
-//          val ciriumArrival = ArrivalGenerator.live("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), totalPax = None, estDt = scheduled)
-//          val updatedArrival = liveArrival.copy(actualChox = Option(SDate(scheduled).millisSinceEpoch), totalPax = None)
-//
-//          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(liveArrival)))
-//          expectUniqueArrival(liveArrival.unique)
-//
-//          offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(List(ciriumArrival)))
-//          expectArrivals(Iterable(withPcpTime(liveArrival.toArrival(LiveFeedSource))))
-//
-//          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(updatedArrival)))
-//          expectArrivals(Iterable(withPcpTime(updatedArrival.toArrival(LiveFeedSource))))
-//
-//          success
-//        }
-//      }
+      "When they have matching number, schedule, terminal but different origins" >> {
+        "I should see the live arrival without the cirium arrival's status merged" >> {
+          val liveArrival = ArrivalGenerator.live("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), totalPax = None)
+          val ciriumArrival = ArrivalGenerator.live("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), totalPax = None, estDt = scheduled)
+          val updatedArrival = liveArrival.copy(actualChox = Option(SDate(scheduled).millisSinceEpoch), totalPax = None)
+
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(liveArrival)))
+          expectUniqueArrival(liveArrival.unique)
+
+          offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(List(ciriumArrival)))
+          expectArrivals(Iterable(withPcpTime(liveArrival.toArrival(LiveFeedSource))))
+
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(updatedArrival)))
+          expectArrivals(Iterable(withPcpTime(updatedArrival.toArrival(LiveFeedSource))))
+
+          success
+        }
+      }
     }
   }
 
-//  "Given an ACL arrival and a cirium arrival scheduled within 5 minutes of each other" >> {
-//    "When they have matching number, terminal & origin and are scheduled within the next 24 hours" >> {
-//      "I should see cirium arrival's data merged" >> {
-//        val now = "2021-06-01T12:00"
-//        val aclScheduled = "2021-06-02T11:00"
-//        val ciriumScheduled = "2021-06-02T11:05"
-//        val aclArrival = ArrivalGenerator.forecast("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"))
-//        val ciriumArrival = ArrivalGenerator.live("AA0001", schDt = ciriumScheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled)
-//
-//        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(now)))
-//
-//        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival)))
-//
-//        crunch.portStateTestProbe.fishForMessage(1.second) {
-//          case PortState(flights, _, _) => flights.nonEmpty
-//        }
-//
-//        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(List(ciriumArrival)))
-//
-//        crunch.portStateTestProbe.fishForMessage(1.second) {
-//          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
-//        }
-//
-//        success
-//      }
-//    }
-//  }
-//
-//  "Given an ACL flight into T1, when it changes to T2 we should no longer see it in T1" >> {
-//    val scheduled = "2021-06-01T12:40"
-//    val aclArrival = ArrivalGenerator.forecast("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
-//
-//    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
-//
-//    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival)))
-//
-//    crunch.portStateTestProbe.fishForMessage(1.second) {
-//      case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
-//    }
-//
-//    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival.copy(terminal = T2))))
-//
-//    crunch.portStateTestProbe.fishForMessage(1.second) {
-//      case PortState(flights, _, _) =>
-//        val terminals = flights.values.map(a => a.apiFlight.Terminal)
-//        terminals == Iterable(T2)
-//    }
-//
-//    success
-//  }
-//
-//  "Max pax from ACL" should {
-//    "Remain after receiving a live feed without max pax" in {
-//      val aclFlight = ArrivalGenerator.forecast("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), totalPax = Option(80), maxPax = Option(100))
-//      val liveFlight = ArrivalGenerator.live("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), totalPax = Option(95), maxPax = None)
-//
-//      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate("2021-05-01T12:50")))
-//
-//      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclFlight)))
-//
-//      crunch.portStateTestProbe.fishForMessage(1.second) {
-//        case PortState(flights, _, _) =>
-//          flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(AclFeedSource)) == Option(80))
-//      }
-//
-//      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(liveFlight)))
-//
-//      crunch.portStateTestProbe.fishForMessage(1.second) {
-//        case PortState(flights, _, _) =>
-//          flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(LiveFeedSource)) == Option(95) && a.apiFlight.MaxPax == Option(100))
-//      }
-//
-//      success
-//    }
-//  }
+  "Given an ACL arrival and a cirium arrival scheduled within 5 minutes of each other" >> {
+    "When they have matching number, terminal & origin and are scheduled within the next 24 hours" >> {
+      "I should see cirium arrival's data merged" >> {
+        val now = "2021-06-01T12:00"
+        val aclScheduled = "2021-06-02T11:00"
+        val ciriumScheduled = "2021-06-02T11:05"
+        val aclArrival = ArrivalGenerator.forecast("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"))
+        val ciriumArrival = ArrivalGenerator.live("AA0001", schDt = ciriumScheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled)
+
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(now)))
+
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival)))
+
+        crunch.portStateTestProbe.fishForMessage(1.second) {
+          case PortState(flights, _, _) => flights.nonEmpty
+        }
+
+        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(List(ciriumArrival)))
+
+        crunch.portStateTestProbe.fishForMessage(1.second) {
+          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
+        }
+
+        success
+      }
+    }
+  }
+
+  "Given an ACL flight into T1, when it changes to T2 we should no longer see it in T1" >> {
+    val scheduled = "2021-06-01T12:40"
+    val aclArrival = ArrivalGenerator.forecast("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+
+    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
+
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival)))
+
+    crunch.portStateTestProbe.fishForMessage(1.second) {
+      case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
+    }
+
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival.copy(terminal = T2))))
+
+    crunch.portStateTestProbe.fishForMessage(1.second) {
+      case PortState(flights, _, _) =>
+        val terminals = flights.values.map(a => a.apiFlight.Terminal)
+        terminals == Iterable(T2)
+    }
+
+    success
+  }
+
+  "Max pax from ACL" should {
+    "Remain after receiving a live feed without max pax" in {
+      val aclFlight = ArrivalGenerator.forecast("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), totalPax = Option(80), maxPax = Option(100))
+      val liveFlight = ArrivalGenerator.live("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), totalPax = Option(95), maxPax = None)
+
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate("2021-05-01T12:50")))
+
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclFlight)))
+
+      crunch.portStateTestProbe.fishForMessage(1.second) {
+        case PortState(flights, _, _) =>
+          flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(AclFeedSource)) == Option(80))
+      }
+
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(liveFlight)))
+
+      crunch.portStateTestProbe.fishForMessage(1.second) {
+        case PortState(flights, _, _) =>
+          flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(LiveFeedSource)) == Option(95) && a.apiFlight.MaxPax == Option(100))
+      }
+
+      success
+    }
+  }
 }

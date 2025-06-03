@@ -137,8 +137,8 @@ class TestDrtActor extends Actor {
       val portStateProbe = testProbe("portstate")
       val nowMillis = () => tc.now().millisSinceEpoch
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
-      val terminals = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
-
+      val terminals: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
+      println(s"\n\nterminals: ${terminals}\n\n")
       def feedArrivalsRouter(source: FeedSource,
                              partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              name: String): ActorRef =
