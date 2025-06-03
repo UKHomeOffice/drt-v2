@@ -93,9 +93,17 @@ object BigSummaryBoxes {
 
   def generatePaxSplitData(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]) = {
     Try {
-      val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-      val sumSplits = orderedSplitCounts.map(_._2).sum
-      orderedSplitCounts.map {
+      queuePax.foreach{ qp =>
+        println(s"Queue Pax: ${qp._1.queueType} -> ${qp._2} pax for ${paxTypeAndQueueString(qp._1)}")
+      }
+
+      paxQueueOrder.foreach{
+        ptq =>
+          println(s"Pax Queue Order: ${ptq.queueType} -> ${paxTypeAndQueueString(ptq)}")
+      }
+//      val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val sumSplits = queuePax.values.sum
+      queuePax.map {
             case (paxTypeAndQueue, paxCount) =>
               val percentage = ((paxCount.toDouble / sumSplits) * 100).toInt
               val label = paxTypeAndQueueString(paxTypeAndQueue)
