@@ -169,16 +169,16 @@ object DashboardTerminalSummary {
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
-          val dataset: Map[String, Int] = BigSummaryBoxes.dataset(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)
-          val labels = dataset.keys.toJSArray
-          val data = dataset.values.toJSArray.filter(_ > 0)
+          val paxSplitDataset: Map[String, Int] = BigSummaryBoxes.generatePaxSplitData(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)
+          val labels = paxSplitDataset.keys.toJSArray
+          val data = paxSplitDataset.values.toJSArray.filter(_ > 0)
 
           ChartData(
             labels = labels,
             datasets = js.Array(
               Dataset(
                 data = data,
-                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FF6F20", "#00A99D", "#A6A6A6", "#A3C2D9", "#E3D4A5","#7A7A7A","#F2994A", "#6FCF97", "#BB6BD9", "#EB5757"),
+                backgroundColor = js.Array("#0E2560", "#334F96", "#547A00", "#CD5B82", "#FF6F20", "#00A99D", "#A6A6A6"),
               )
             )
           )
