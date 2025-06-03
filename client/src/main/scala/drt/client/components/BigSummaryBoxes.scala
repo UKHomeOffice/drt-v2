@@ -91,16 +91,8 @@ object BigSummaryBoxes {
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
 
 
-  def generatePaxSplitData(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]) = {
+  def generatePaxSplitData(queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): Map[String, Int] = {
     Try {
-      queuePax.foreach{ qp =>
-        println(s"Queue Pax: ${qp._1.queueType} -> ${qp._2} pax for ${paxTypeAndQueueString(qp._1)}")
-      }
-
-      paxQueueOrder.foreach{
-        ptq =>
-          println(s"Pax Queue Order: ${ptq.queueType} -> ${paxTypeAndQueueString(ptq)}")
-      }
       val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0)).filter(_._2 > 0)
       val sumSplits = orderedSplitCounts.map(_._2).sum
       orderedSplitCounts.map {

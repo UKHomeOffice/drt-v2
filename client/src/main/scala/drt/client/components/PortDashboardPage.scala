@@ -167,9 +167,9 @@ object PortDashboardPage {
                   <.h3(s"Arrivals"),
                   <.div(^.className := "port-dashboard-selection",
                     <.span(<.strong("Filters applied:")),
-                    <.span(s"Time period : ${selectedTimeRange} minutes period (${displayPeriod.start.prettyTime} - ${displayPeriod.end.prettyTime})"),
+                    <.span(s"Time period : ${selectedTimeRange} minutes period (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
                     <.span(^.className := "selection-separator"),
-                    <.span(s"Terminals selected: ${selectedTerminals.filter(_.nonEmpty).mkString(", ")}"),
+                    <.span(s"Terminals selected: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}"),
                   )
                 ),
 
