@@ -16,7 +16,7 @@ import play.api.Configuration
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.service.FeedService
+import uk.gov.homeoffice.drt.service.{FeedService, QueueConfig}
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestFeedArrivalsRouterActor}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
@@ -47,11 +47,13 @@ case class TestFeedService(journalType: StreamingJournalLike,
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
+  val terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
+
   private def feedArrivalsRouter(source: FeedSource,
                                  partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                                  name: String): ActorRef =
     system.actorOf(Props(new TestFeedArrivalsRouterActor(
-      airportConfig.terminals,
+      terminalsForDateRange,
       getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
       updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
       partitionUpdates,
@@ -59,7 +61,7 @@ case class TestFeedService(journalType: StreamingJournalLike,
     )), name = name)
 
   override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
-    partitionUpdatesBase(airportConfig.terminals, now, forecastMaxDays),
+    partitionUpdatesBase(terminalsForDateRange, now, forecastMaxDays),
     "forecast-base-arrivals-actor")
   override val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
   override val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")

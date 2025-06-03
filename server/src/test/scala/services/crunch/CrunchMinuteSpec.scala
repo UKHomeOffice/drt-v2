@@ -2,9 +2,13 @@ package services.crunch
 
 import drt.shared._
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 
 class CrunchMinuteSpec extends CrunchTestLike {
+  val dateMillis = 1525222800000L
+  val date: LocalDate = SDate(dateMillis).toLocalDate
+
   "Unique keys " >> {
     "Given a range of terminals, queues and minutes " +
       "When grouping by their unique key " +
@@ -14,9 +18,9 @@ class CrunchMinuteSpec extends CrunchTestLike {
       val daysInMinutes = 60 * 60 * 24 * days
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tqms = for {
-        terminal <- airportConfig.terminals
+        terminal <- airportConfig.terminals(date)
         queue <- airportConfig.queuesByTerminal.head._2.getOrElse(terminal, Seq())
-        minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
+        minute <- (dateMillis to (dateMillis + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, queue, minute)
 
       val dupes = tqms
@@ -36,8 +40,8 @@ class CrunchMinuteSpec extends CrunchTestLike {
       val daysInMinutes = 60 * 60 * 24 * days
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tms = for {
-        terminal <- airportConfig.terminals
-        minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
+        terminal <- airportConfig.terminals(date)
+        minute <- (dateMillis to (dateMillis + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, minute)
 
       val dupes = tms

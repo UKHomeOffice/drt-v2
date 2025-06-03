@@ -67,35 +67,35 @@ object TestActors {
     }
   }
 
-  class TestMergeArrivalsQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+  class TestMergeArrivalsQueueActor(now: () => SDateLike, terminals: LocalDate => Iterable[Terminal])
     extends CrunchQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+  class TestCrunchQueueActor(now: () => SDateLike, terminals: LocalDate => Iterable[Terminal])
     extends CrunchQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeskRecsQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+  class TestDeskRecsQueueActor(now: () => SDateLike, terminals: LocalDate => Iterable[Terminal])
     extends DeskRecsQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeploymentQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+  class TestDeploymentQueueActor(now: () => SDateLike, terminals: LocalDate => Iterable[Terminal])
     extends DeploymentQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffingUpdateQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, terminals: LocalDate => Iterable[Terminal])
     extends StaffingUpdateQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
@@ -301,7 +301,7 @@ object TestActors {
     }
   }
 
-  class TestFeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
+  class TestFeedArrivalsRouterActor(allTerminals: (LocalDate, LocalDate) => Iterable[Terminal],
                                     arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                                     updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
                                     partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],

@@ -6,11 +6,11 @@ import org.apache.pekko.actor.ActorRef
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.models.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class MockManifestsLookup(probe: ActorRef, terminals: Iterable[Terminal]) {
+case class MockManifestsLookup(probe: ActorRef, terminals: LocalDate => Iterable[Terminal]) {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   def lookup(mockData: VoyageManifests = VoyageManifests.empty): ManifestLookup = {
@@ -24,6 +24,6 @@ case class MockManifestsLookup(probe: ActorRef, terminals: Iterable[Terminal]) {
 
   def update: ManifestsUpdate = (date: UtcDate, manifests: VoyageManifests) => {
     probe ! (date, manifests)
-    Future(manifests.manifests.map(_.scheduled.toLocalDate).flatMap(d => terminals.map(TerminalUpdateRequest(_, d))).toSet)
+    Future(manifests.manifests.map(_.scheduled.toLocalDate).flatMap(d => terminals(SDate(date).toLocalDate).map(TerminalUpdateRequest(_, d))).toSet)
   }
 }

@@ -166,7 +166,7 @@ object TerminalDesksAndQueuesRow {
 
   def adjustmentState(props: Props, action: String): StaffAdjustmentDialogueState =
     StaffAdjustmentDialogueState(
-      props.airportConfig.terminals,
+      props.airportConfig.terminals(props.viewMode.localDate),
       Option(props.terminal),
       "Additional info",
       SDate(props.minuteMillis),

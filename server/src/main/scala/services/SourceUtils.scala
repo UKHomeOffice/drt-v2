@@ -8,8 +8,5 @@ object SourceUtils {
     (eventualForIterable: I => Future[T]) =>
       Future
         .sequence(iterable.map(eventualForIterable))
-        .map { x =>
-          println(s"Reducing iterable of size ${x.size}")
-          reducer(x)
-        }
+        .map(reducer)
 }

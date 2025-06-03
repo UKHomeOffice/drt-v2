@@ -123,9 +123,10 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
-      val arrivalsExportForPort = TerminalExportComponent.componentFactory(props.airportConfig.terminals, "Arrivals")
-      val recommendationExportForPort = TerminalExportComponent.componentFactory(props.airportConfig.terminals, "Recommendations")
-      val deploymentsExportForPort = TerminalExportComponent.componentFactory(props.airportConfig.terminals, "Deployments")
+      val terminals = props.airportConfig.terminals(SDate.now().toLocalDate)
+      val arrivalsExportForPort = TerminalExportComponent.componentFactory(terminals, "Arrivals")
+      val recommendationExportForPort = TerminalExportComponent.componentFactory(terminals, "Recommendations")
+      val deploymentsExportForPort = TerminalExportComponent.componentFactory(terminals, "Deployments")
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
@@ -221,7 +222,7 @@ object TerminalContentComponent {
                     MultiDayExportComponent(
                       portCode = props.airportConfig.portCode,
                       terminal = terminal,
-                      terminals = props.airportConfig.terminals,
+                      terminals = terminals,
                       viewMode = props.viewMode,
                       selectedDate = props.terminalPageTab.dateFromUrlOrNow,
                       loggedInUser = props.loggedInUser

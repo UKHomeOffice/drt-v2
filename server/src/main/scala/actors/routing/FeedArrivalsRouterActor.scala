@@ -17,7 +17,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{DateRange, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -88,7 +88,7 @@ object FeedArrivalsRouterActor {
   }
 }
 
-class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
+class FeedArrivalsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
                               arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                               updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
                               override val partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
@@ -96,13 +96,15 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
 
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
-      sender() ! flightsLookupService(start, end, allTerminals, Option(pit))
+      val terminals = terminalsForDateRange(SDate(start).toLocalDate, SDate(end).toLocalDate)
+      sender() ! flightsLookupService(start, end, terminals, Option(pit))
 
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(start, end, terminal)) =>
       sender() ! flightsLookupService(start, end, Seq(terminal), Option(pit))
 
     case FeedArrivalsRouterActor.GetStateForDateRange(start, end) =>
-      sender() ! flightsLookupService(start, end, allTerminals, None)
+      val terminals = terminalsForDateRange(SDate(start).toLocalDate, SDate(end).toLocalDate)
+      sender() ! flightsLookupService(start, end, terminals, None)
 
     case FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(start, end, terminal) =>
       sender() ! flightsLookupService(start, end, Seq(terminal), None)

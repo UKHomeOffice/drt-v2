@@ -56,21 +56,16 @@ object FlightsRouterActor {
                                      (implicit ec: ExecutionContext): Source[(UtcDate, FlightsWithSplits), NotUsed] = {
     val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
 
-    val reduceAndSort: (Terminal => Future[FlightsWithSplits]) => Future[FlightsWithSplits] = SourceUtils.reduceFutureIterables(terminals, reduceAndSortFlightsWithSplits)
-    val flightsLookupByDay: UtcDate => Terminal => Future[FlightsWithSplits] =
-      date => terminal => {
-        flightsLookupByDayAndTerminal(maybePit)(date)(terminal).map {fs =>
-          println(s"Flights for $terminal on $date: ${fs.flights.size} flights")
-          fs
-        }
-      }
+    val reduceAndSort: (Terminal => Future[FlightsWithSplits]) => Future[FlightsWithSplits] =
+      SourceUtils.reduceFutureIterables(terminals, reduceAndSortFlightsWithSplits)
+    val flightsLookupByDay: UtcDate => Terminal => Future[FlightsWithSplits] = flightsLookupByDayAndTerminal(maybePit)
 
     Source(dates.toList)
       .mapAsync(1)(d => reduceAndSort(flightsLookupByDay(d)).map(f => (d, f)))
       .map { case (d, flights) => (d, flights.scheduledOrPcpWindow(start, end, paxFeedSourceOrder)) }
       .recover {
         case e: Throwable =>
-          log.error(s"Error in multiTerminalFlightsByDaySource: ${e.getMessage}")
+          log.error(s"Error in multiTerminalFlightsByDaySource: ${e.getMessage}", e)
           (dates.toList.head, FlightsWithSplits.empty)
       }
       .filter { case (_, flights) => flights.nonEmpty }

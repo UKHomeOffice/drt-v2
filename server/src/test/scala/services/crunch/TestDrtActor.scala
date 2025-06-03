@@ -137,19 +137,20 @@ class TestDrtActor extends Actor {
       val portStateProbe = testProbe("portstate")
       val nowMillis = () => tc.now().millisSinceEpoch
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
+      val terminals = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
 
       def feedArrivalsRouter(source: FeedSource,
                              partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              name: String): ActorRef =
         system.actorOf(Props(new FeedArrivalsRouterActor(
-          tc.airportConfig.terminals,
+          terminals,
           getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
           updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
           partitionUpdates,
         )), name = name)
 
       val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
-        partitionUpdatesBase(tc.airportConfig.terminals, tc.now, tc.forecastMaxDays),
+        partitionUpdatesBase(terminals, tc.now, tc.forecastMaxDays),
         "forecast-base-arrivals-actor")
       val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
       val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
@@ -219,17 +220,17 @@ class TestDrtActor extends Actor {
           ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
       }
 
-      val terminals: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
+      val terminalsForDateRange: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, terminals, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, terminalsForDateRange, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
       val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
-      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, terminals, update15MinuteQueueSlotsLiveView)
+      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, terminalsForDateRange, update15MinuteQueueSlotsLiveView)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
       val queuesActor = minuteLookups.queueMinutesRouterActor
       val staffActor = minuteLookups.staffMinutesRouterActor
-      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, terminals, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
-      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, terminals, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
-      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, terminals, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, terminalsForDateRange, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
+      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, terminalsForDateRange, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
+      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, terminalsForDateRange, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
       val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, paxFeedSourceOrder)), "partitioned-port-state-actor")
       tc.initialPortState match {
         case Some(ps) =>

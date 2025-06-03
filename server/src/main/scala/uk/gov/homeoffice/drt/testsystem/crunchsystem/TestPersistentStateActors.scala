@@ -5,14 +5,14 @@ import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.testsystem.TestActors._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 case class TestPersistentStateActors(system: ActorSystem,
                                      now: () => SDateLike,
                                      minutesToCrunch: Int,
                                      offsetMinutes: Int,
                                      manifestLookups: ManifestLookupsLike,
-                                     terminals: Iterable[Terminal],
+                                     terminals: LocalDate => Iterable[Terminal],
                            ) extends PersistentStateActors {
   override val manifestsRouterActor: ActorRef =
     system.actorOf(Props(new TestVoyageManifestsActor(

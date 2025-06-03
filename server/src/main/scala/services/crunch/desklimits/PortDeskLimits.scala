@@ -6,6 +6,7 @@ import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.EGate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -15,7 +16,7 @@ object PortDeskLimits {
            (implicit ec: ExecutionContext): Map[Terminal, FixedTerminalDeskLimits] =
     (
       for {
-        terminal <- airportConfig.terminals
+        terminal <- airportConfig.terminals(SDate.now().toLocalDate)
         minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
       } yield {

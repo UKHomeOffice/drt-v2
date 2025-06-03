@@ -3,14 +3,13 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.{WalkTime, WalkTimes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit
@@ -72,7 +71,7 @@ object PortConfigDetails {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigDetails")
     .render_P { props =>
       <.div(
-        props.airportConfig.terminals.map(tn => {
+        props.airportConfig.terminals(SDate.now().toLocalDate).map(tn => {
           val maybeUpdate = props.updatesByTerminal.get(tn).flatMap(_.updatesForDate(SDate.now().millisSinceEpoch))
           <.div(
             <.h2(tn.toString),

@@ -46,9 +46,8 @@ object PortDashboardPage {
           MuiTypography(variant = "h1")(s"Dashboard ${p.dashboardPage.portCodeStr} (${p.dashboardPage.portConfig.portName})"),
           portDashboardModel.airportConfig.renderReady(portConfig => {
 
-//            val (queues, paxTypeAndQueueOrder, terminals) = (, portConfig.terminalPaxSplits, portConfig.terminals)
             val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
-            val terminals = portConfig.terminals
+            val terminals = portConfig.terminals(SDate.now().toLocalDate)
 
             val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
             val periods = List(

@@ -97,7 +97,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
-    (date: LocalDate) => airportConfig.terminals.map(TerminalUpdateRequest(_, date))
+    (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))
 
   val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestsProvider, maxDaysToConsider)(
     emptyProvider = new EmptyConfig[Map[Queue, Int], SlaConfigs] {
@@ -443,7 +443,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val daysInYear = 365
   private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
   val retentionHandler: DataRetentionHandler = DataRetentionHandler(
-    retentionPeriod, params.forecastMaxDays, airportConfig.terminals, now, akkaDb, aggregatedDb)
+    retentionPeriod, params.forecastMaxDays, QueueConfig.allTerminalsIncludingHistoric(airportConfig.queuesByTerminal), now, akkaDb, aggregatedDb)
   val dateIsSafeToPurge: UtcDate => Boolean = DataRetentionHandler.dateIsSafeToPurge(retentionPeriod, now)
   val latestDateToPurge: () => UtcDate = DataRetentionHandler.latestDateToPurge(retentionPeriod, now)
 
