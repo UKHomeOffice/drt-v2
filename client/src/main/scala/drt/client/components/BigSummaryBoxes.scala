@@ -91,12 +91,13 @@ object BigSummaryBoxes {
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
 
 
-  def generatePaxSplitData(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): Map[String, Int] = {
+  def generatePaxSplitData(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]) = {
     Try {
       val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+      val sumSplits = orderedSplitCounts.map(_._2).sum
       orderedSplitCounts.map {
             case (paxTypeAndQueue, paxCount) =>
-              val percentage = ((paxCount.toDouble / splitTotal) * 100).toInt
+              val percentage = ((paxCount.toDouble / sumSplits) * 100).toInt
               val label = paxTypeAndQueueString(paxTypeAndQueue)
               (label, percentage)
           }
@@ -105,4 +106,14 @@ object BigSummaryBoxes {
     )
   }.toMap
 
+//  def GraphComponent(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): TagOf[HTMLElement] = {
+//    val value = Try {
+//      val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
+//      SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts))
+//    }
+//    val g: Try[TagOf[HTMLElement]] = value recoverWith {
+//      case f => Try(<.div(f.toString()))
+//    }
+//    g.get
+//  }
 }
