@@ -29,4 +29,6 @@ addSbtPlugin("com.github.sbt" % "sbt-js-engine" % "1.3.9")
 
 addSbtPlugin("io.github.cquiroz" % "sbt-tzdb" % "4.2.0")
 
+//addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "3.1.1")
+
 addDependencyTreePlugin
