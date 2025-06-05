@@ -218,7 +218,7 @@ steps:
 #        - master
     depends_on:
       - Dependency check
-      - Scapegoat
+#      - Scapegoat
 
   - name: End to end test
     pull: if-not-exists
