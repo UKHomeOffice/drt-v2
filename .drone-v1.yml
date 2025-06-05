@@ -182,7 +182,7 @@ steps:
       PROJECT_NAME: "${DRONE_REPO_NAME}-${DRONE_COMMIT_BRANCH}-${DRONE_BUILD_NUMBER}"
     commands:
       - echo PROJECT_NAME = $PROJECT_NAME
-      - dependency-check --project "$PROJECT_NAME" --scan /drone/src/server/target/scala-2.13/lib_managed --format ALL --disableNodeAudit --out /drone/src/odc-reports
+      - dependency-check --project "$PROJECT_NAME" --scan /drone/src/server/target/scala-2.13 --format ALL --disableNodeAudit --out /drone/src/odc-reports
       - cat /drone/src/odc-reports/dependency-check-report.json
 #  - name: Dependency check
 #    pull: if-not-exists
