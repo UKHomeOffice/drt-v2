@@ -31,7 +31,9 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt --error compile playCompileEverything
-      - ls -ltr /drone/src/server/target/
+      - ls -ltr /drone/src/server/target/scala-2.13/
+      - sbt compile package
+      - ls -ltr /drone/src/server/target/scala-2.13/
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -182,8 +184,8 @@ steps:
     environment:
       PROJECT_NAME: "${DRONE_REPO_NAME}-${DRONE_COMMIT_BRANCH}-${DRONE_BUILD_NUMBER}"
     commands:
-      - ls -ltr /drone/src/server/target/
-      - dependency-check --project "$PROJECT_NAME" --scan /drone/src/server/target -format ALL --exclude "**/zinc/inc_compile_2.13.zip" --disableNodeAudit --enableExperimental --failOnCVSS 7 --out /drone/src/odc-reports
+      - ls -ltr /drone/src/server/target/scala-2.13/
+      - dependency-check --project "$PROJECT_NAME" --scan /drone/src/server/target/scala-2.13 -format ALL --exclude "**/zinc/inc_compile_2.13.zip" --disableNodeAudit --enableExperimental --failOnCVSS 7 --out /drone/src/odc-reports
     depends_on:
       - Build scala app
 
