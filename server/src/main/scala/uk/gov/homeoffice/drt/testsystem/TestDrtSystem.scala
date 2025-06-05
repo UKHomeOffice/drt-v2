@@ -64,16 +64,17 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     system = system,
     now = now,
     expireAfterMillis = MilliTimes.oneDayMillis,
-    terminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal),
+    terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal),
+    queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
     updateLiveView = update15MinuteQueueSlotsLiveView,
   )
 
-  val terminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
+  val terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
 
   override val flightLookups: FlightLookupsLike = TestFlightLookups(
     system,
     now,
-    terminals,
+    terminalsForDateRange,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
     updateFlightsLiveView,

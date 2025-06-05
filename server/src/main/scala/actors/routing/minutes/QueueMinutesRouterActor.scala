@@ -18,9 +18,9 @@ object QueueMinutesRouterActor {
   def sendIfDeskRec(request: MinutesContainer[CrunchMinute, TQM]): Boolean = request.minutes.exists(_.isInstanceOf[DeskRecMinute])
 }
 
-class QueueMinutesRouterActor(terminals: LocalDate => Iterable[Terminal],
+class QueueMinutesRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM, TerminalUpdateRequest])
-  extends MinutesActorLike2(terminals, lookup, updateMinutes, QueueMinutesRouterActor.splitByResource, QueueMinutesRouterActor.sendIfDeskRec)
+  extends MinutesActorLike2(terminalsForDateRange, lookup, updateMinutes, QueueMinutesRouterActor.splitByResource, QueueMinutesRouterActor.sendIfDeskRec)
     with RouterActorLikeWithSubscriber2[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate), TerminalUpdateRequest] {
 }

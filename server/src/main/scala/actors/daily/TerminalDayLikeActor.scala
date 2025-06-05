@@ -69,7 +69,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case m => log.error(s"Got unexpected message: $m")
   }
 
-  private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
+  protected def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
   private def diffFromMinutes(state: mutable.Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {

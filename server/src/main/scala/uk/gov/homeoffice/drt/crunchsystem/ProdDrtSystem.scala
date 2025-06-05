@@ -32,15 +32,15 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   override val minuteLookups: MinuteLookupsLike = MinuteLookups(
     now = now,
     expireAfterMillis = MilliTimes.oneDayMillis,
-//    queuesByTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
+    queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
     updateLiveView = update15MinuteQueueSlotsLiveView,
-    terminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
+    terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
   )
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system = system,
     now = now,
-    terminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal),
+    terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal),
     removalMessageCutOff = params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder = paxFeedSourceOrder,
     terminalSplits = splitsCalculator.terminalSplits,

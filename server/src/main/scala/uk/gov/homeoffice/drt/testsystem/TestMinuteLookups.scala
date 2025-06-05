@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import uk.gov.homeoffice.drt.models.CrunchMinute
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
@@ -15,7 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TestMinuteLookups(system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             terminals: LocalDate => Seq[Terminal],
+                             terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
+                             queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                              updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
                             )
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
@@ -23,7 +25,7 @@ case class TestMinuteLookups(system: ActorSystem,
 
   private val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear, date.getMonth, date.getDate, terminal, now, Option(updateLiveView))))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.toUtcDate, terminal, queuesForDateAndTerminal, now, Option(updateLiveView))))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
@@ -34,11 +36,11 @@ case class TestMinuteLookups(system: ActorSystem,
   }
 
   override val queueLoadsMinutesActor: ActorRef =
-    system.actorOf(Props(new TestQueueLoadsMinutesActor(terminals, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
+    system.actorOf(Props(new TestQueueLoadsMinutesActor(terminalsForDateRange, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
 
   override val queueMinutesRouterActor: ActorRef =
-    system.actorOf(Props(new TestQueueMinutesRouterActor(terminals, queuesLookup, updateCrunchMinutes(updateLiveView), resetQueuesData)))
+    system.actorOf(Props(new TestQueueMinutesRouterActor(terminalsForDateRange, queuesLookup(queuesForDateAndTerminal), updateCrunchMinutes(updateLiveView, queuesForDateAndTerminal), resetQueuesData)))
 
   override val staffMinutesRouterActor: ActorRef =
-    system.actorOf(Props(new TestStaffMinutesRouterActor(terminals, staffLookup, updateStaffMinutes, resetStaffData)))
+    system.actorOf(Props(new TestStaffMinutesRouterActor(terminalsForDateRange, staffLookup, updateStaffMinutes, resetStaffData)))
 }

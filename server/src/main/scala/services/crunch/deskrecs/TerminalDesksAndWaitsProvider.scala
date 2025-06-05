@@ -8,7 +8,7 @@ import services.{OptimiserConfig, OptimizerCrunchResult}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{Map, NumericRange}

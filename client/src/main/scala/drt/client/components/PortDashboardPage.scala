@@ -3,6 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
+import drt.client.SPAMain.StatusLoc.portConfig
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -17,6 +18,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.document
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object PortDashboardPage {
@@ -56,7 +58,7 @@ object PortDashboardPage {
               DisplayPeriod(currentPeriodStart.addHours(6))
             )
             def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
-            val queues = portConfig.queuesByTerminal(displayPeriod.start.toLocalDate)
+            val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)
 
             def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)
@@ -74,15 +76,16 @@ object PortDashboardPage {
                         ^.target := "_blank",
                         ^.onClick ==> switchDashboardPeriod(index))
                   }.toTagMod)),
-              terminals.map { terminalName =>
+              terminals.map { terminal =>
                 <.div(
-                  <.h3(s"Terminal $terminalName"),
+                  <.h3(s"Terminal $terminal"),
                   portDashboardModel.portState.render(portState => {
                     portDashboardModel.featureFlags.render(_ => {
                       val portStateForDashboard = portState.windowWithTerminalFilter(
                         displayPeriod.start,
                         displayPeriod.end,
-                        portConfig.queuesByTerminal(displayPeriod.start.toLocalDate).view.filterKeys(_ == terminalName).toMap,
+                        QueueConfig.terminalsForDateRange(portConfig.queuesByTerminal),
+                        QueueConfig.queuesForDateRangeAndTerminal(portConfig.queuesByTerminal),
                         portDashboardModel.paxFeedSourceOrder,
                       )
                       val scheduledFlightsInTerminal = portStateForDashboard
@@ -92,7 +95,7 @@ object PortDashboardPage {
                         .toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
-                      val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
+                      val terminalQueuesInOrder = queuesForDateAndTerminal(displayPeriod.start.toLocalDate, terminal)
 
                       portDashboardModel.featureFlags.renderReady { _ =>
                         DashboardTerminalSummary(
@@ -100,8 +103,8 @@ object PortDashboardPage {
                             scheduledFlightsInTerminal,
                             terminalCrunchMinutes,
                             terminalStaffMinutes,
-                            terminalName,
-                            paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
+                            terminal,
+                            paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
                             terminalQueuesInOrder,
                             displayPeriod.start,
                             displayPeriod.end,

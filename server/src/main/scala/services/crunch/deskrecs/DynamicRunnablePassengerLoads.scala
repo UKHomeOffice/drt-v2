@@ -147,7 +147,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             }
 
             log.info(s"Passenger load calculation finished: (${request.start.toISOString} to ${request.end.toISOString})")
-            Option((request, MinutesContainer(paxMinutesForCrunchPeriod.toSeq)))
+            Option((request, MinutesContainer(paxMinutesForCrunchPeriod)))
           }
           eventualDeskRecs.recover {
             case t =>

@@ -53,12 +53,12 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
   override val queueUpdates: ActorRef =
     system.actorOf(Props(new QueueUpdatesSupervisor(
       now = now,
-      terminals = terminals,
+      terminalsForDate = terminals,
       updatesActorFactory = queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef =
     system.actorOf(Props(new StaffUpdatesSupervisor(
       now = now,
-      terminals = terminals,
+      terminalsForDate = terminals,
       updatesActorFactory = staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef =
     system.actorOf(Props(new FlightUpdatesSupervisor(

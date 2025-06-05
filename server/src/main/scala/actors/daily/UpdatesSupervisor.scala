@@ -30,21 +30,21 @@ case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
 
 class QueueUpdatesSupervisor(now: () => SDateLike,
-                             terminals: LocalDate => Seq[Terminal],
+                             terminalsForDate: LocalDate => Seq[Terminal],
                              updatesActorFactory: (Terminal, SDateLike) => Props)
-  extends UpdatesSupervisor[CrunchMinute, TQM](now, terminals, updatesActorFactory)
+  extends UpdatesSupervisor[CrunchMinute, TQM](now, terminalsForDate, updatesActorFactory)
 
 class StaffUpdatesSupervisor(now: () => SDateLike,
-                             terminals: LocalDate => Seq[Terminal],
+                             terminalsForDate: LocalDate => Seq[Terminal],
                              updatesActorFactory: (Terminal, SDateLike) => Props)
-  extends UpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
+  extends UpdatesSupervisor[StaffMinute, TM](now, terminalsForDate, updatesActorFactory)
 
 object UpdatesSupervisor {
   case class UpdateLastRequest(terminal: Terminal, day: MillisSinceEpoch, lastRequestMillis: MillisSinceEpoch)
 }
 
 abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
-                                                           terminals: LocalDate => Seq[Terminal],
+                                                           terminalsForDate: LocalDate => Seq[Terminal],
                                                            updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -55,8 +55,6 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
-//  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"updates-supervisor-kill-actor-${getClass.getTypeName}")
-
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
 
@@ -113,7 +111,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
 
     val terminalDays = for {
       day <- daysMillis
-      terminal <- terminals(SDate(day).toLocalDate)
+      terminal <- terminalsForDate(SDate(day).toLocalDate)
     } yield (terminal, day)
 
     terminalDays.toList

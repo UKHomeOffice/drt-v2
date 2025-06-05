@@ -11,6 +11,7 @@ import services.exports.Exports.streamExport
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
@@ -160,6 +161,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   private def periodMinutes(request: Request[AnyContent]): Int =
     request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
 
+  private val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(ctrl.airportConfig.queuesByTerminal)
+
   private def deskDepsExportStreamForTerminals(pointInTime: Option[MillisSinceEpoch],
                                                start: SDateLike,
                                                end: SDateLike,
@@ -169,8 +172,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       start,
       end,
       terminals,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      Queues.inOrder(terminals.flatMap(t => ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, t))),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,
@@ -186,8 +189,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       start,
       end,
       terminals,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      Queues.inOrder(terminals.flatMap(t => ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, t))),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,
@@ -203,8 +206,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       start,
       end,
       terminal,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,
@@ -219,8 +222,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       start,
       end,
       terminal,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,

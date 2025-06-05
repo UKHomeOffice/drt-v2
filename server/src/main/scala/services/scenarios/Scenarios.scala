@@ -61,7 +61,9 @@ object Scenarios {
       arrivalsProvider = flightsProvider,
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       redListUpdatesProvider = redListUpdatesProvider,
-      dynamicQueueStatusProvider = () => egateBanksProvider().map(ep => DynamicQueueStatusProvider(simulationAirportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
+      dynamicQueueStatusProvider = () => egateBanksProvider().map { ep =>
+        DynamicQueueStatusProvider(queuesForDateAndTerminal, simulationAirportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+      },
       queuesByTerminal = queuesForDateAndTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,

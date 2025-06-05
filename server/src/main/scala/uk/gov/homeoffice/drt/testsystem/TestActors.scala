@@ -19,6 +19,7 @@ import org.slf4j.Logger
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
@@ -235,27 +236,27 @@ object TestActors {
 
   }
 
-  class TestStaffMinutesRouterActor(terminals: LocalDate => Seq[Terminal],
+  class TestStaffMinutesRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                                     lookup: MinutesLookup[StaffMinute, TM],
                                     updateMinutes: MinutesUpdate[StaffMinute, TM, TerminalUpdateRequest],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends StaffMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
+    extends StaffMinutesRouterActor(terminalsForDateRange, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  class TestQueueMinutesRouterActor(terminals: LocalDate => Seq[Terminal],
+  class TestQueueMinutesRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                                     lookup: MinutesLookup[CrunchMinute, TQM],
                                     updateMinutes: MinutesUpdate[CrunchMinute, TQM, TerminalUpdateRequest],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
+    extends QueueMinutesRouterActor(terminalsForDateRange, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  class TestQueueLoadsMinutesActor(terminals: LocalDate => Seq[Terminal],
+  class TestQueueLoadsMinutesActor(terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                                    lookup: MinutesLookup[PassengersMinute, TQM],
                                    updateMinutes: MinutesUpdate[PassengersMinute, TQM, TerminalUpdateRequest],
                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueLoadsMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[PassengersMinute, TQM] {
+    extends QueueLoadsMinutesActor(terminalsForDateRange, lookup, updateMinutes) with TestMinuteActorLike2[PassengersMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
@@ -265,12 +266,12 @@ object TestActors {
     }
   }
 
-  class TestFlightsRouterActor(terminals: LocalDate => Seq[Terminal],
+  class TestFlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
                                resetData: (Terminal, UtcDate) => Future[Any],
                                paxFeedSourceOrder: List[FeedSource])
-    extends FlightsRouterActor(terminals, byDayLookup, updateMinutes, paxFeedSourceOrder) {
+    extends FlightsRouterActor(terminalsForDateRange, byDayLookup, updateMinutes, paxFeedSourceOrder) {
     override def receive: Receive = resetReceive orElse super.receive
 
     private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
@@ -378,13 +379,12 @@ object TestActors {
     override def receive: Receive = myReceive orElse super.receive
   }
 
-  class TestTerminalDayQueuesActor(year: Int,
-                                   month: Int,
-                                   day: Int,
+  class TestTerminalDayQueuesActor(date: UtcDate,
                                    terminal: Terminal,
+                                   queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                                    now: () => SDateLike,
                                    onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
-                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None, onUpdate) with Resettable {
+                                  ) extends TerminalDayQueuesActor(date, terminal, queuesForDateAndTerminal, now, None, onUpdate) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

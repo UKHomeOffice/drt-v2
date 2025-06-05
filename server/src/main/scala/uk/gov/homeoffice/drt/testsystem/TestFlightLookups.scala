@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 case class TestFlightLookups(system: ActorSystem,
                              now: () => SDateLike,
-                             terminals: LocalDate => Seq[Terminal],
+                             terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                              paxFeedSourceOrder: List[FeedSource],
                              terminalSplits: Terminal => Option[Splits],
                              updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit],
@@ -30,7 +30,7 @@ case class TestFlightLookups(system: ActorSystem,
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(
       new TestFlightsRouterActor(
-        terminals,
+        terminalsForDateRange,
         flightsByDayLookup(None),
         updateFlights(None, updateLiveView),
         resetFlightsData,

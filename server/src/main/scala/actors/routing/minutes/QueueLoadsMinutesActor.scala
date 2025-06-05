@@ -18,11 +18,11 @@ object QueueLoadsMinutesActor {
   def alwaysSend(request: MinutesContainer[PassengersMinute, TQM]): Boolean = true
 }
 
-class QueueLoadsMinutesActor(terminals: LocalDate => Seq[Terminal],
+class QueueLoadsMinutesActor(terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                              lookup: MinutesLookup[PassengersMinute, TQM],
                              updateMinutes: MinutesUpdate[PassengersMinute, TQM, TerminalUpdateRequest])
   extends MinutesActorLike2(
-    terminals = terminals,
+    terminalsForDateRange = terminalsForDateRange,
     lookup = lookup,
     updateMinutes = updateMinutes,
     splitByResource = QueueLoadsMinutesActor.splitByResource,

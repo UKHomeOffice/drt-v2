@@ -4,15 +4,20 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
-case class DynamicQueueStatusProvider(maxDesks: Map[Terminal, Map[Queue, IndexedSeq[Int]]], egateUpdates: PortEgateBanksUpdates) {
+case class DynamicQueueStatusProvider(queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
+                                      maxDesks: Map[Terminal, Map[Queue, IndexedSeq[Int]]],
+                                      egateUpdates: PortEgateBanksUpdates
+                                     ) {
   def queueStatus: Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
     terminal => (queue, millis) => {
-      if (queue == EGate)
-        egateStatus(millis, egateUpdates, terminal)
-      else
-        deskStatus(maxDesks, millis, terminal, queue)
+      if (queuesForDateAndTerminal(SDate(millis).toLocalDate, terminal).contains(queue)) {
+        if (queue == EGate)
+          egateStatus(millis, egateUpdates, terminal)
+        else
+          deskStatus(maxDesks, millis, terminal, queue)
+      } else Closed
     }
 
   private def egateStatus(time: MillisSinceEpoch,

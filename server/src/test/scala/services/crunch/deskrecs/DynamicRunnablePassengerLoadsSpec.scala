@@ -55,7 +55,10 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
       arrivalsProvider = mockFlightsProvider(List(flight)),
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      dynamicQueueStatusProvider = () => MockEgatesProvider.portProvider(airportConfig)().map(ep => DynamicQueueStatusProvider(airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
+      dynamicQueueStatusProvider = () => MockEgatesProvider.portProvider(airportConfig)().map { ep =>
+        val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
+        DynamicQueueStatusProvider(queuesForDateAndTerminal, airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+      },
       queuesByTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
       updateLiveView = _ => {
         updatesProbe.ref ! "Live view updated"

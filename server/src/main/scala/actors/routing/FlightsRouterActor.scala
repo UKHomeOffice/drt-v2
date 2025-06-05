@@ -98,7 +98,7 @@ object FlightsRouterActor {
 
 }
 
-class FlightsRouterActor(terminals: LocalDate => Iterable[Terminal],
+class FlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
                          paxFeedSourceOrder: List[FeedSource],
@@ -114,7 +114,8 @@ class FlightsRouterActor(terminals: LocalDate => Iterable[Terminal],
       historicPaxRequestActor = Option(actor)
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
-      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals(SDate(startMillis).toLocalDate), Option(pit), paxFeedSourceOrder)
+      val terminals = terminalsForDateRange(SDate(startMillis).toLocalDate, SDate(endMillis).toLocalDate)
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, Option(pit), paxFeedSourceOrder)
 
     case PointInTimeQuery(pit, GetFlightsForTerminals(startMillis, endMillis, terminals)) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, Option(pit), paxFeedSourceOrder)
@@ -129,7 +130,8 @@ class FlightsRouterActor(terminals: LocalDate => Iterable[Terminal],
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None, paxFeedSourceOrder)
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals(SDate(startMillis).toLocalDate), None, paxFeedSourceOrder)
+      val terminals = terminalsForDateRange(SDate(startMillis).toLocalDate, SDate(endMillis).toLocalDate)
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None, paxFeedSourceOrder)
 
     case GetFlights(startMillis, endMillis) =>
       self.forward(GetStateForDateRange(startMillis, endMillis))
@@ -150,7 +152,7 @@ class FlightsRouterActor(terminals: LocalDate => Iterable[Terminal],
         .flatMap {
           case (sch, counts) =>
             val date = SDate(sch).toLocalDate
-            terminals(date).map(t => ((t, sch), RedListCounts(counts)))
+            terminalsForDateRange(date, date).map(t => ((t, sch), RedListCounts(counts)))
         }
 
     case container: SplitsForArrivals =>
@@ -190,7 +192,7 @@ class FlightsRouterActor(terminals: LocalDate => Iterable[Terminal],
       val dates = (startMillis to endMillis by MilliTimes.oneHourMillis)
         .map(millis => SDate(millis).toUtcDate)
         .toSet
-      terminals(SDate(startMillis).toLocalDate).flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
+      terminalsForDateRange(SDate(startMillis).toLocalDate, SDate(endMillis).toLocalDate).flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
   }
 
   override def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[TerminalUpdateRequest]] =

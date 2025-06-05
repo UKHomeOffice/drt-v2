@@ -61,7 +61,7 @@ trait FlightLookupsLike {
 
 case class FlightLookups(system: ActorSystem,
                          now: () => SDateLike,
-                         terminals: LocalDate => Seq[Terminal],
+                         terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                          removalMessageCutOff: Option[FiniteDuration],
                          paxFeedSourceOrder: List[FeedSource],
                          terminalSplits: Terminal => Option[Splits],
@@ -71,7 +71,7 @@ case class FlightLookups(system: ActorSystem,
 
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(
-      terminals = terminals,
+      terminalsForDateRange = terminalsForDateRange,
       flightsByDayLookup = flightsByDayLookup(removalMessageCutOff),
       updateFlights = updateFlights(removalMessageCutOff, updateLiveView),
       paxFeedSourceOrder = paxFeedSourceOrder

@@ -118,7 +118,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(mockPortStateActor),
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      dynamicQueueStatusProvider = () => MockEgatesProvider.portProvider(airportConfig)().map(ep => DynamicQueueStatusProvider(airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
+      dynamicQueueStatusProvider = () => MockEgatesProvider.portProvider(airportConfig)().map { ep =>
+        val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
+        DynamicQueueStatusProvider(queuesForDateAndTerminal, airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+      },
       queuesByTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,

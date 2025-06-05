@@ -7,14 +7,14 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.QueueConfig
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,
                       numberOfDays: Int,
                       terminal: Terminal,
                       portState: PortState,
-                      queues: List[Queue]): ForecastHeadlineFigures = {
+                      queues: (LocalDate, LocalDate, Terminal) => Seq[Queue]): ForecastHeadlineFigures = {
     val crunchSummaryDaily = portState.dailyCrunchSummary(startOfForecast, numberOfDays, terminal, queues)
 
     val figures = for {

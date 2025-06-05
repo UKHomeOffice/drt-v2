@@ -250,6 +250,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
       24.hours,
     ).addPredictions
 
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
+
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
+    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
+  else
+    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
+
   val startUpdateGraphs: (
     PersistentStateActors,
       SortedSet[TerminalUpdateRequest],
@@ -305,7 +312,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.flightsRouterActor),
         deskRecsProvider = portDeskRecs,
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-        queueStatusProvider = () => egatesProvider().map(ep => DynamicQueueStatusProvider(airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)),
+        queueStatusProvider = () => egatesProvider().map { ep =>
+          DynamicQueueStatusProvider(queuesForDateAndTerminal, airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+        },
         updateLivePaxView = updateLivePaxView,
         terminalSplits = splitsCalculator.terminalSplits,
         queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
@@ -407,13 +416,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       (mergeArrivalsRequestQueueActor, paxLoadsRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, killSwitches)
     }
-
-  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
-
-  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
-    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
-  else
-    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
   def startCrunchSystem(startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] =

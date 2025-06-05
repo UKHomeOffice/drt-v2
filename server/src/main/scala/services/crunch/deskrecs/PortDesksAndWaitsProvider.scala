@@ -66,7 +66,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Te
                              (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] = workloadCalculator
     .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder, terminalSplits).minutes
     .groupBy {
-      case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
+      case (TQM(t, q, m), _) =>
+        val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)
     }
     .map {

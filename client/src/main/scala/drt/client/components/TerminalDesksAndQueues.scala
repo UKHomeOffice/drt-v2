@@ -110,12 +110,9 @@ object TerminalDesksAndQueues {
 
       val terminal = props.terminalPageTab.terminal
 
-//      def queueNames: Seq[Queue] = {
-//        props.airportConfig.nonTransferQueues(terminal)
-//      }
-
-      val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.viewStart.toLocalDate, props.terminal)
-      val sortedQueues = Queues.queueOrder.filter(queues.contains)
+      val startDate = props.viewStart.toLocalDate
+      val endDate = props.viewStart.addHours(props.hoursToView).toLocalDate
+      val queues = QueueConfig.queuesForDateRangeAndTerminal(props.airportConfig.queuesByTerminal)(startDate, endDate, props.terminal)
 
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
@@ -198,7 +195,7 @@ object TerminalDesksAndQueues {
       }
 
       def requestForecastRecrunch(): Callback = Callback {
-        SPACircuit.dispatch(RequestDateRecrunch(props.viewStart.toLocalDate))
+        SPACircuit.dispatch(RequestDateRecrunch(startDate))
       }
 
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
