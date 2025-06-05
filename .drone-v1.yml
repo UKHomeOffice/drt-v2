@@ -175,7 +175,7 @@ steps:
     depends_on:
       - Code coverage report
 
-  - name: dependency-check
+  - name: Dependency check
     pull: if-not-exists
     image: nbaars/owasp-dependency-check-as-one
     environment:
