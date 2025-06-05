@@ -183,7 +183,8 @@ steps:
     commands:
       - echo PROJECT_NAME = $PROJECT_NAME
       - dependency-check --project "$PROJECT_NAME" --scan /drone/src --format ALL --disableNodeAudit --out /drone/src/odc-reports
-
+      - cat /drone/src/odc-reports/dependency-check-report.html
+      - cat /drone/src/odc-reports/dependency-check-report.json
 #  - name: Dependency check
 #    pull: if-not-exists
 #    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
