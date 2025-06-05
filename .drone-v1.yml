@@ -181,9 +181,16 @@ steps:
     environment:
       PROJECT_NAME: "${DRONE_REPO_NAME}-${DRONE_COMMIT_BRANCH}-${DRONE_BUILD_NUMBER}"
     commands:
-      - echo PROJECT_NAME = $PROJECT_NAME
-      - dependency-check --project "$PROJECT_NAME" --scan /drone/src/server/target/scala-2.13 --format ALL --disableNodeAudit --out /drone/src/odc-reports
-      - cat /drone/src/odc-reports/dependency-check-report.json
+      - dependency-check \
+        --project "$PROJECT_NAME" \
+        --scan /drone/src/server/target/ \
+        --exclude "**/zinc/inc_compile_2.13.zip" \
+        --format ALL \
+        --disableNodeAudit \
+        --enableExperimental \
+        --failOnCVSS 7 \
+        --out /drone/src/odc-reports
+
 #  - name: Dependency check
 #    pull: if-not-exists
 #    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
