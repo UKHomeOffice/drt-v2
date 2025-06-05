@@ -183,9 +183,6 @@ steps:
     commands:
       - echo PROJECT_NAME = $PROJECT_NAME
       - dependency-check --project "$PROJECT_NAME" --scan /drone/src --format ALL --disableNodeAudit --out /drone/src/odc-reports
-      - mkdir -p server/target/scala-2.13
-      - cp /drone/src/odc-reports/dependency-check-report.xml server/target/scala-2.13/
-      - cp /drone/src/odc-reports/dependency-check-report.html server/target/scala-2.13/
 
 #  - name: Dependency check
 #    pull: if-not-exists
@@ -217,10 +214,10 @@ steps:
     when:
       event:
         - push
-      branch:
-        - master
+#      branch:
+#        - master
     depends_on:
-#      - Dependency check
+      - Dependency check
       - Scapegoat
 
   - name: End to end test
