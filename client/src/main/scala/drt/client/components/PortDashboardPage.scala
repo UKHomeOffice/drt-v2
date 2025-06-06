@@ -131,7 +131,7 @@ object PortDashboardPage {
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
-                      <.label(^.htmlFor := "period-select", <.strong("Select Period:")),
+                      <.label(^.htmlFor := "period-select", <.strong("Time:")),
                       <.div(^.className := "port-dashboard-select",
                         <.select(
                           ^.className := "form-control dynamic-width",
@@ -155,7 +155,7 @@ object PortDashboardPage {
                     <.span(^.className := "separator"),
                     <.div(
                       <.label(^.htmlFor := "time-range-select", <.strong("Terminals:")),
-                      <.div(^.className := "port-dashboard-select",
+                      <.div(^.className := "port-dashboard-terminal",
                         terminals.map { terminal =>
                           <.label(^.className := "terminal-checkbox-label",
                             <.input(
