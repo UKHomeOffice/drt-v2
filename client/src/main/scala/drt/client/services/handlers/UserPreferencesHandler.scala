@@ -18,7 +18,6 @@ case class UpdateUserPreferences(userPreferences: UserPreferences) extends Actio
 
 class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) extends LoggingActionHandler(modelRW) {
   import upickle.default._
-//  import UserPreferences._
   implicit val rw: ReadWriter[UserPreferences] = macroRW
   implicit val portDashboardIntervalMinutesRW: ReadWriter[Map[String, Int]] =
     readwriter[String].bimap[Map[String, Int]](
