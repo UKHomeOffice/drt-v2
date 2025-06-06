@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues, Terminals}
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.mutable.LinkedHashMap
 import scala.util.Try
 
 object PortDashboardPage {
@@ -29,7 +30,7 @@ object PortDashboardPage {
   case class DisplayPeriod(start: SDateLike, end: SDateLike) {
     def duration: Int = ((end.millisSinceEpoch - start.millisSinceEpoch) / 1000).toInt
 
-    def displayPeriodString = s"${start.prettyTime} - ${end.prettyTime}"
+    def displayPeriodString = s"${start.prettyTime} to ${end.prettyTime}"
   }
 
   private object DisplayPeriod {
@@ -49,7 +50,12 @@ object PortDashboardPage {
         p.dashboardPage.period.getOrElse(1)
       }.getOrElse(1)
 
-      val rangeOptions = List(15, 30, 60, 120, 180)
+      val rangeOptions = LinkedHashMap(
+        15 -> "15 minutes",
+        30 -> "30 minutes",
+        60 -> "1 hour",
+        120 -> "2 hours",
+        180 -> "3 hours")
 
       val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder, rm.userPreferences))
 
@@ -121,7 +127,7 @@ object PortDashboardPage {
                 p.router.set(p.dashboardPage)
               }
 
-              <.div(
+              <.div(<.h3(s"Filter upcoming arrivals"),
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
@@ -132,8 +138,8 @@ object PortDashboardPage {
                           ^.value := selectedTimeRange,
                           ^.onChange ==> handleTimeRangeChange,
                         )(
-                          rangeOptions.map { range =>
-                            <.option(^.value := range, s"$range minutes")
+                          rangeOptions.map { case (range, display) =>
+                            <.option(^.value := range, display)
                           }.toTagMod
                         ),
                         <.select(
@@ -170,7 +176,7 @@ object PortDashboardPage {
                     <.span(<.strong("Filters applied:")),
                     <.span(s"Time period : ${selectedTimeRange} minutes period (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
                     <.span(^.className := "selection-separator"),
-                    <.span(s"Terminals selected: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}"),
+                    <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}"),
                   )
                 ),
 

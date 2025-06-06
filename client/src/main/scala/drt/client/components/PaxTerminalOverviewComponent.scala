@@ -16,6 +16,7 @@ trait IPaxTerminalOverview extends js.Object {
   var desks: Int
   var staff: Int
   var flights: js.Array[Integer]
+  var ragStatus: String
   var chartData: ChartData
   var pressure: js.Array[Pressure]
   var estimates: js.Array[Estimate]
@@ -29,6 +30,7 @@ object IPaxTerminalOverview {
              desks: Int,
              staff: Int,
              flights: js.Array[Integer],
+             ragStatus: String,
              chartData: ChartData,
              pressure: js.Array[Pressure],
              estimates: js.Array[Estimate]
@@ -40,6 +42,7 @@ object IPaxTerminalOverview {
     p.desks = desks
     p.staff = staff
     p.flights = flights
+    p.ragStatus = ragStatus
     p.chartData = chartData
     p.pressure = pressure
     p.estimates = estimates

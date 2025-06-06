@@ -156,6 +156,9 @@ object DashboardTerminalSummary {
         def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
+
+        val ragClass: String = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
+
         val filteredFlights = props.flights.filter(flight =>
           flight.apiFlight.PcpTime.exists(pcpTime =>
             pcpTime >= props.timeWindowStart.millisSinceEpoch && pcpTime <= props.timeWindowStart.addMinutes(props.selectedTimeRange * 3).millisSinceEpoch
@@ -194,6 +197,7 @@ object DashboardTerminalSummary {
             desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
             staff = pressurePointAvailableStaff,
             flights = new js.Array(props.flights.size),
+            ragStatus = ragClass,
             chartData = createChartData(splitsForPeriod),
             pressure = js.Array(
               Pressure(
