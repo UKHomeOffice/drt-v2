@@ -137,6 +137,7 @@ object DashboardTerminalSummary {
                    timeWindowEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
                    selectedTimeRange: Int,
+                   isPortTerminalHasEGates: Boolean,
                   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
@@ -167,7 +168,10 @@ object DashboardTerminalSummary {
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
-          val paxSplitDataset: Map[String, Int] = BigSummaryBoxes.generatePaxSplitData(splitsForPeriod, props.paxTypeAndQueues)
+          val paxSplitDataset: Map[String, Int] = if (props.isPortTerminalHasEGates)
+            BigSummaryBoxes.generatePaxSplitDataForChart(splitsForPeriod)
+          else
+            BigSummaryBoxes.generatePaxSplitDataNonEGatesForChart(splitsForPeriod)
           val labels = paxSplitDataset.keys.toJSArray
           val data = paxSplitDataset.values.toJSArray.filter(_ > 0)
 

@@ -6,11 +6,9 @@ import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
-import japgolly.scalajs.react.vdom.TagOf
-import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import org.scalajs.dom.HTMLElement
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -84,23 +82,64 @@ object BigSummaryBoxes {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumActPax(flights: Seq[ApiFlightWithSplits], sourceOrderPreference: Seq[FeedSource]): Int = flights.map(_.apiFlight.bestPcpPaxEstimate(sourceOrderPreference).getOrElse(0)).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits],
+                sourceOrderPreference: Seq[FeedSource]): Int = flights.map(_.apiFlight.bestPcpPaxEstimate(sourceOrderPreference).getOrElse(0)).sum
 
   def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
 
-  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
+  case class Props(flightCount: Int,
+                   actPaxCount: Int,
+                   bestPaxCount: Int,
+                   aggSplits: Map[PaxTypeAndQueue, Int],
+                   paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
 
+  private val splitPassengerQueueMapping = Map(
+    "to eGates" -> Seq(gbrNationalToEgate, eeaMachineReadableToEGate, b5jsskToEGate),
+    "B5J+ to EEA" -> Seq(b5jsskToDesk, b5jsskChildToDesk),
+    "EEA to EEA" -> Seq(eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, eeaChildToDesk),
+    "GBR to EEA" -> Seq(gbrNationalToDesk, gbrNationalChildToDesk),
+    "Non-Visa to Non-EEA" -> Seq(nonVisaNationalToDesk),
+    "Visa to Non-EEA" -> Seq(visaNationalToDesk),
+  )
+
+  private val splitPassengerQueueOtherPorts = Map(
+    "to eGates" -> Seq(gbrNationalToEgate, eeaMachineReadableToEGate, b5jsskToEGate),
+    "to Desk" -> Seq(
+      b5jsskToDesk, b5jsskChildToDesk,
+      eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, eeaChildToDesk,
+      gbrNationalToDesk, gbrNationalChildToDesk,
+      nonVisaNationalToDesk, visaNationalToDesk
+    )
+  )
+
+  private def generatePaxSplitData(queuePax: Map[PaxTypeAndQueue, Int], mapping: Map[String, Seq[PaxTypeAndQueue]]): Map[String, Int] = {
+    val totalPaxCount = queuePax.values.sum
+    mapping.map {
+      case (label, paxTypeAndQueues) =>
+        val queuePaxCount = paxTypeAndQueues.map(ptq => queuePax.getOrElse(ptq, 0)).sum.toDouble
+        val paxCountPercentage = ((queuePaxCount / totalPaxCount) * 100).toInt
+        (label, paxCountPercentage)
+    }
+  }
+
+  def generatePaxSplitDataNonEGatesForChart(queuePax: Map[PaxTypeAndQueue, Int]): Map[String, Int] = {
+    generatePaxSplitData(queuePax, splitPassengerQueueOtherPorts)
+  }
+
+  def generatePaxSplitDataForChart(queuePax: Map[PaxTypeAndQueue, Int]): Map[String, Int] = {
+    generatePaxSplitData(queuePax, splitPassengerQueueMapping)
+  }
 
   def generatePaxSplitData(queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): Map[String, Int] = {
     Try {
       val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0)).filter(_._2 > 0)
       val sumSplits = orderedSplitCounts.map(_._2).sum
       orderedSplitCounts.map {
-            case (paxTypeAndQueue, paxCount) =>
-              val percentage = ((paxCount.toDouble / sumSplits) * 100).toInt
-              val label = paxTypeAndQueueString(paxTypeAndQueue)
-              (label, percentage)
-          }
+        case (paxTypeAndQueue, paxCount) =>
+          val percentage = ((paxCount.toDouble / sumSplits) * 100).toInt
+          val label = paxTypeAndQueueString(paxTypeAndQueue)
+          (label, percentage)
+      }
     }.getOrElse(
       Iterable.empty[(String, Int)]
     )
