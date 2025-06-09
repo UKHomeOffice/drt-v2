@@ -143,10 +143,13 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     Action { request: Request[AnyContent] =>
       request.body.asText match {
         case Some("true") =>
-          queueDaysToReCrunchWithUpdatedSplits(ctrl.actorService.flightsRouterActor,
+          queueDaysToReCrunchWithUpdatedSplits(
+            ctrl.actorService.flightsRouterActor,
             crunchManagerActor,
             offsetMinutes,
-            forecastLengthDays, now)
+            forecastLengthDays,
+            now
+          )
           Ok("Re-crunching with updated splits")
         case _ =>
           queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => Recrunch(m))

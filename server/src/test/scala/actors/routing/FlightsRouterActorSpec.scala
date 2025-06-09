@@ -1,14 +1,15 @@
 package actors.routing
 
 import actors.FlightLookups
-import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange}
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.persistent.nebo.NeboArrivalActor
 import actors.routing.FlightsRouterActor.runAndCombine
+import actors.routing.minutes.MockFlightsLookup
 import controllers.ArrivalGenerator
 import controllers.model.RedListCounts
 import drt.shared._
 import org.apache.pekko.NotUsed
-import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.actor.{ActorRef, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.testkit.TestProbe
@@ -57,7 +58,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -83,7 +84,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get all the flights back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -109,7 +110,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should only get back flights within the requested range" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -138,7 +139,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -167,7 +168,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -196,7 +197,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -225,7 +226,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,
@@ -253,7 +254,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          _ => Seq(T1),
+          (_, _) => Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates,
           paxFeedSourceOrder,

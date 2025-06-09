@@ -390,12 +390,10 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestTerminalDayStaffActor(year: Int,
-                                  month: Int,
-                                  day: Int,
+  class TestTerminalDayStaffActor(utcDate: UtcDate,
                                   terminal: Terminal,
                                   now: () => SDateLike,
-                                 ) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
+                                 ) extends TerminalDayStaffActor(utcDate, terminal, now, None) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

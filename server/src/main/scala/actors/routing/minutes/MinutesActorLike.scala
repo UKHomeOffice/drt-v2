@@ -249,7 +249,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminalsForDateRa
       .view.mapValues(MinutesContainer(_)).toMap
   }
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[Set[U]] =
-    updateMinutes(partition, updates)
+//  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[Set[U]] =
+//    updateMinutes(partition, updates)
 
 }

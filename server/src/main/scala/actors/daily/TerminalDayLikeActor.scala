@@ -1,7 +1,7 @@
 package actors.daily
 
-import org.apache.pekko.persistence.SaveSnapshotSuccess
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import org.apache.pekko.persistence.SaveSnapshotSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -10,16 +10,13 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.models.MinuteLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
-abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](year: Int,
-                                                                                                                     month: Int,
-                                                                                                                     day: Int,
+abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](utcDate: UtcDate,
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
                                                                                                                      override val maybePointInTime: Option[MillisSinceEpoch],
@@ -30,7 +27,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
   }
-  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
+  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-${utcDate.year}%04d-${utcDate.month}%02d-${utcDate.day}%02d$loggerSuffix")
 
   val persistenceIdType: String
 
@@ -38,12 +35,12 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   val onUpdate: Option[(UtcDate, Iterable[VAL]) => Future[Unit]] = None
 
-  override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d"
 
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
-  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, utcTimeZone)
+  val firstMinute: SDateLike = SDate(utcDate)
   private val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   private val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
@@ -51,7 +48,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     super.postRecoveryComplete()
     val lastMinuteOfDay = SDate(lastMinuteMillis)
     if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
-      log.info(f"Creating final snapshot for $terminal for historic day $year-$month%02d-$day%02d")
+      log.info(f"Creating final snapshot for $terminal for historic day ${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d")
       saveSnapshot(stateToMessage)
     }
   }
@@ -92,7 +89,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       case noDifferences if noDifferences.isEmpty => sender() ! Set.empty[Long]
       case differences =>
         updateStateFromDiff(differences)
-        onUpdate.foreach(_(UtcDate(year, month, day), state.values))
+        onUpdate.foreach(_(utcDate, state.values))
         val messageToPersist = containerToMessage(differences)
         val updateRequests = if (shouldSendEffectsToSubscriber(container))
           differences

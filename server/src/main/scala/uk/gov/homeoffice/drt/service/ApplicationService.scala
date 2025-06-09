@@ -283,10 +283,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
       )
 
       val (historicSplitsQueueActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
-        airportConfig.portCode,
-        actorService.flightsRouterActor,
-        splitsCalculator.splitsForManifest,
-        manifestLookupService.maybeBestAvailableManifest,
+        portCode = airportConfig.portCode,
+        flightsRouterActor = actorService.flightsRouterActor,
+        splitsFromManifest = splitsCalculator.splitsForManifest,
+        maybeBestAvailableManifest = manifestLookupService.maybeBestAvailableManifest,
       )
 
       val (historicPaxQueueActor, historicPaxKillSwitch) = RunnableHistoricPax(

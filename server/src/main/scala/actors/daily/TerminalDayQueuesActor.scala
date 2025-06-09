@@ -38,7 +38,7 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
                              maybePointInTime: Option[MillisSinceEpoch],
                              override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
                             ) extends
-  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](utcDate.year, utcDate.month, utcDate.day, terminal, now, maybePointInTime) {
+  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](utcDate, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 
   private val localDates = Set(SDate(utcDate).toLocalDate, SDate(utcDate).addDays(1).addMinutes(-1).toLocalDate)

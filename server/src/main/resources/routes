@@ -32,10 +32,10 @@ GET           /version                                                          
 
 GET           /crunch                                                                 controllers.application.PortStateController.getCrunch
 POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunchFullForecast
+POST          /control/crunch/recalculate/:startLocalDate/:endLocalDate               controllers.application.PortStateController.reCrunch(startLocalDate: String, endLocalDate: String)
 POST          /control/splits/recalculate                                             controllers.application.PortStateController.recalculateSplits
 POST          /control/historic-splits/lookup-missing                                 controllers.application.PortStateController.lookupMissingHistoricSplits
 POST          /control/pax-nos/lookup-missing                                         controllers.application.PortStateController.lookupMissingPaxNos
-POST          /control/crunch/recalculate/:startLocalDate/:endLocalDate               controllers.application.PortStateController.reCrunch(startLocalDate: String, endLocalDate: String)
 
 + nocsrf
 POST          /control/data-retention/purge/:startUtcDate                             controllers.application.DataRetentionController.purge(startUtcDate: String)

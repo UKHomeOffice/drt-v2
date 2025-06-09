@@ -24,19 +24,17 @@ case class TestMinuteLookups(system: ActorSystem,
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
   private val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
-    val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.toUtcDate, terminal, queuesForDateAndTerminal, now, Option(updateLiveView))))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(SDate(millis).toUtcDate, terminal, queuesForDateAndTerminal, now, Option(updateLiveView))))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
   private val resetStaffData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
-    val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayStaffActor(date.getFullYear, date.getMonth, date.getDate, terminal, now)))
+    val actor = system.actorOf(Props(new TestTerminalDayStaffActor(SDate(millis).toUtcDate, terminal, now)))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
   override val queueLoadsMinutesActor: ActorRef =
-    system.actorOf(Props(new TestQueueLoadsMinutesActor(terminalsForDateRange, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
+    system.actorOf(Props(new TestQueueLoadsMinutesActor(terminalsForDateRange, queuesLoadsLookup(queuesForDateAndTerminal), updatePassengerMinutes(queuesForDateAndTerminal), resetQueuesData)))
 
   override val queueMinutesRouterActor: ActorRef =
     system.actorOf(Props(new TestQueueMinutesRouterActor(terminalsForDateRange, queuesLookup(queuesForDateAndTerminal), updateCrunchMinutes(updateLiveView, queuesForDateAndTerminal), resetQueuesData)))

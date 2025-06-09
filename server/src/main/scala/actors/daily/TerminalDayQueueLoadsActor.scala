@@ -1,34 +1,39 @@
 package actors.daily
 
 import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
-import org.apache.pekko.actor.Props
 import drt.shared.CrunchApi
-import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
+import org.apache.pekko.actor.Props
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.models.TQM
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 object TerminalDayQueueLoadsActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, None))
+  def props(queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue])
+           (terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayQueueLoadsActor(date, terminal, queuesForDateAndTerminal, now, None))
 
-  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+  def propsPointInTime(queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue])
+                      (terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayQueueLoadsActor(date, terminal, queuesForDateAndTerminal, now, Option(pointInTime)))
 }
 
-class TerminalDayQueueLoadsActor(year: Int,
-                                 month: Int,
-                                 day: Int,
+class TerminalDayQueueLoadsActor(utcDate: UtcDate,
                                  terminal: Terminal,
+                                 queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                                  val now: () => SDateLike,
                                  maybePointInTime: Option[MillisSinceEpoch],
-                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](utcDate, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"
+
+  private val localDates = Set(SDate(utcDate).toLocalDate, SDate(utcDate).addDays(1).addMinutes(-1).toLocalDate)
+  private val queuesByDate: Map[LocalDate, Seq[Queue]] = localDates.map(d => d -> queuesForDateAndTerminal(d, terminal)).toMap
 
   override val maybeSnapshotInterval: Option[Int] = Option(100)
 
@@ -58,4 +63,17 @@ class TerminalDayQueueLoadsActor(year: Int,
   override val msgLastUpdated: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
+
+  override protected def stateResponse: Option[MinutesContainer[PassengersMinute, TQM]] =
+    if (state.nonEmpty) {
+      val filter: TQM => Boolean = if (localDates.size == 1)
+        (qm: TQM) => queuesByDate.head._2.contains(qm.queue)
+      else
+        (qm: TQM) => queuesByDate(SDate(qm.minute).toLocalDate).contains(qm.queue)
+
+      val minutes = state.filter {
+        case (tqm, _) => filter(tqm)
+      }.values.toSeq
+      Option(MinutesContainer(minutes))
+    } else None
 }

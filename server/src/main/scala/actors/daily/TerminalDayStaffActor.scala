@@ -11,20 +11,18 @@ import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 object TerminalDayStaffActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, None))
+    Props(new TerminalDayStaffActor(date, terminal, now, None))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayStaffActor(date, terminal, now, Option(pointInTime)))
 }
 
-class TerminalDayStaffActor(year: Int,
-                            month: Int,
-                            day: Int,
+class TerminalDayStaffActor(utcDate: UtcDate,
                             terminal: Terminal,
                             val now: () => SDateLike,
                             maybePointInTime: Option[MillisSinceEpoch],
                            )
-  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](utcDate, terminal, now, maybePointInTime) {
 
   override val persistenceIdType: String = "staff"
 
