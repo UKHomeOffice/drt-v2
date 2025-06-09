@@ -67,22 +67,22 @@ object PortDashboardPage {
           portDashboardModel.airportConfig.renderReady(portConfig => {
             val portName = portConfig.portCode.iata.toLowerCase
             portDashboardModel.userPreferences.renderReady(userPreferences => {
-              val selectedTimeRange = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 60)).getOrElse(60)
+              val selectedPeriodLengthMinutes = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 60)).getOrElse(60)
 
-              val terminalExists: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
+              val userHasTerminalPreference: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
 
               val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queuesByTerminal, portConfig.terminalPaxSplits, portConfig.terminals)
 
-              val selectedTerminals: List[String] = if (!terminalExists) {
+              val selectedTerminals: List[String] = if (!userHasTerminalPreference) {
                 terminals.map(t => s"${t.toString}").toList
               } else {
                 userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
               }
 
-              val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now(), selectedTimeRange)
-              val periods = Map(1 -> DisplayPeriod(currentPeriodStart, selectedTimeRange),
-                2 -> DisplayPeriod(currentPeriodStart.addMinutes(selectedTimeRange), selectedTimeRange),
-                3 -> DisplayPeriod(currentPeriodStart.addMinutes(2 * selectedTimeRange), selectedTimeRange),
+              val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now(), selectedPeriodLengthMinutes)
+              val periods = Map(1 -> DisplayPeriod(currentPeriodStart, selectedPeriodLengthMinutes),
+                2 -> DisplayPeriod(currentPeriodStart.addMinutes(selectedPeriodLengthMinutes), selectedPeriodLengthMinutes),
+                3 -> DisplayPeriod(currentPeriodStart.addMinutes(2 * selectedPeriodLengthMinutes), selectedPeriodLengthMinutes),
               )
 
               def displayPeriod = periods(p.dashboardPage.period.getOrElse(1))
@@ -109,7 +109,7 @@ object PortDashboardPage {
 
                 val preferenceTerminals: Set[String] = Try(
                   userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String])).getOrElse(Set.empty[String])
-                val updatedQueryParams: Set[String] = if (!terminalExists) {
+                val updatedQueryParams: Set[String] = if (!userHasTerminalPreference) {
                   if (isChecked) {
                     preferenceTerminals ++ selectedTerminals
                   } else
@@ -136,7 +136,7 @@ object PortDashboardPage {
                       <.div(^.className := "port-dashboard-select",
                         <.select(
                           ^.className := "form-control dynamic-width",
-                          ^.value := selectedTimeRange,
+                          ^.value := selectedPeriodLengthMinutes,
                           ^.onChange ==> handleTimeRangeChange,
                         )(
                           rangeOptions.map { case (range, display) =>
@@ -175,7 +175,7 @@ object PortDashboardPage {
                   <.h3(s"Arrivals"),
                   <.div(^.className := "port-dashboard-selection",
                     <.span(<.strong("Filters applied:")),
-                    <.span(s"Time period : ${selectedTimeRange} minutes period (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
+                    <.span(s"Time period : ${selectedPeriodLengthMinutes} minutes period (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
                     <.span(^.className := "selection-separator"),
                     <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}"),
                   )
@@ -195,7 +195,7 @@ object PortDashboardPage {
                       portDashboardModel.featureFlags.renderReady(_ => {
                         val portStateForDashboard = portState.windowWithTerminalFilter(
                           displayPeriod.start,
-                          displayPeriod.start.addMinutes(selectedTimeRange * 3),
+                          displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
                           portConfig.queuesByTerminal.view.filterKeys(_ == terminal).toMap,
                           portDashboardModel.paxFeedSourceOrder,
                         )
@@ -217,9 +217,9 @@ object PortDashboardPage {
                               paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
                               terminalQueuesInOrder,
                               displayPeriod.start,
-                              displayPeriod.start.addMinutes(selectedTimeRange * 3),
+                              displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
                               portDashboardModel.paxFeedSourceOrder,
-                              selectedTimeRange,
+                              selectedPeriodLengthMinutes,
                               portConfig.queuesByTerminal.get(terminalName).exists(_.contains(EGate))
                             )
                           )

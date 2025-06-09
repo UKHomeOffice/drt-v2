@@ -110,7 +110,7 @@ object BigSummaryBoxes {
     DisplayPaxTypesAndQueues("Visa to Desk" , Seq(visaNationalToDesk)),
   )
 
-  private def generatePaxSplitData(queuePax: Map[PaxTypeAndQueue, Int], mapping: Seq[DisplayPaxTypesAndQueues]): Seq[(String, Int)] = {
+  private def paxSplitPercentages(queuePax: Map[PaxTypeAndQueue, Int], mapping: Seq[DisplayPaxTypesAndQueues]): Seq[(String, Int)] = {
     val totalPaxCount = queuePax.values.sum
     mapping.map {
       displayPaxTypesAndQueues =>
@@ -120,12 +120,12 @@ object BigSummaryBoxes {
     }
   }
 
-  def generatePaxSplitDataNonEGatesForChart(queuePax: Map[PaxTypeAndQueue, Int]): Seq[(String, Int)] = {
-    generatePaxSplitData(queuePax, splitPassengerQueueOtherPorts)
+  def paxSplitPercentagesWithSingleDeskQueue(queuePax: Map[PaxTypeAndQueue, Int]): Seq[(String, Int)] = {
+    paxSplitPercentages(queuePax, splitPassengerQueueOtherPorts)
   }
 
-  def generatePaxSplitDataForChart(queuePax: Map[PaxTypeAndQueue, Int]): Seq[(String, Int)] = {
-    generatePaxSplitData(queuePax, splitPassengerQueueMapping)
+  def paxSplitPercentagesWithSplitDeskQueues(queuePax: Map[PaxTypeAndQueue, Int]): Seq[(String, Int)] = {
+    paxSplitPercentages(queuePax, splitPassengerQueueMapping)
   }
 
 }
