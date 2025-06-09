@@ -171,12 +171,12 @@ object DashboardTerminalSummary {
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
-          val paxSplitDataset: Map[String, Int] = if (props.isPortTerminalHasEGates)
+          val paxSplitDataset: Seq[(String, Int)] = if (props.isPortTerminalHasEGates)
             BigSummaryBoxes.generatePaxSplitDataForChart(splitsForPeriod)
           else
             BigSummaryBoxes.generatePaxSplitDataNonEGatesForChart(splitsForPeriod)
-          val labels = paxSplitDataset.keys.toJSArray
-          val data = paxSplitDataset.values.toJSArray.filter(_ > 0)
+          val labels = paxSplitDataset.map(_._1).toJSArray
+          val data = paxSplitDataset.map(_._2).toJSArray.filter(_ > 0)
 
           ChartData(
             labels = labels,

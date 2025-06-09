@@ -17,6 +17,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaCom
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Queues.EGate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal.numberString
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues, Terminals}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -165,7 +166,7 @@ object PortDashboardPage {
                               ^.checked := selectedTerminals.contains(s"${terminal.toString}"),
                               ^.onChange ==> handleTerminalChange
                             ),
-                            s"Terminal $terminal"
+                            s"Terminal ${numberString(terminal)}"
                           )
                         }.toTagMod
                       )
@@ -183,7 +184,13 @@ object PortDashboardPage {
                 terminals.filter(t => selectedTerminals.map(Terminal(_)).contains(t)).map { terminalName =>
                   val terminal: Terminal = terminalName
                   <.div(
-                    <.h3(s"Terminal $terminal"),
+                    <.h3(
+                      <.a(
+                        ^.href := s"/#terminal/${terminal.toString}/current/arrivals/",
+                        ^.className := "terminal-link",
+                        s"Terminal ${Terminal.numberString(terminal)}"
+                      )
+                    ),
                     portDashboardModel.portState.renderReady(portState => {
                       portDashboardModel.featureFlags.renderReady(_ => {
                         val portStateForDashboard = portState.windowWithTerminalFilter(
