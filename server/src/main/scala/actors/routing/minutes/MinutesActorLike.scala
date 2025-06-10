@@ -248,8 +248,4 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminalsForDateRa
       .groupBy(minuteLike => (minuteLike.terminal, SDate(minuteLike.minute).toUtcDate))
       .view.mapValues(MinutesContainer(_)).toMap
   }
-
-//  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[Set[U]] =
-//    updateMinutes(partition, updates)
-
 }

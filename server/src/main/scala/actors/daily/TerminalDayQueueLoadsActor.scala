@@ -9,7 +9,7 @@ import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinuteRemovalMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 object TerminalDayQueueLoadsActor {
@@ -27,7 +27,7 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
                                  queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                                  val now: () => SDateLike,
                                  maybePointInTime: Option[MillisSinceEpoch],
-                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](utcDate, terminal, now, maybePointInTime) {
+                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage, PassengersMinuteRemovalMessage](utcDate, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"
@@ -39,24 +39,32 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = true
 
-  override def containerToMessage(container: Iterable[PassengersMinute]): GeneratedMessage =
+  override def containerToMessage(container: Iterable[PassengersMinute], removals: Iterable[TQM]): GeneratedMessage =
     PassengersMinutesMessage(
       container.map(pm => PassengersMinuteMessage(
         queueName = Option(pm.queue.toString),
         minute = Option(pm.minute),
         passengers = pm.passengers.toSeq,
+      )).toSeq,
+      removals.map(r => PassengersMinuteRemovalMessage(
+        queueName = Option(r.queue.toString),
+        minute = Option(r.minute),
       )).toSeq
     )
 
   override val valFromMessage: PassengersMinuteMessage => PassengersMinute =
     (pm: PassengersMinuteMessage) => passengersMinuteFromMessage(terminal, pm)
 
+  override val indexFromMessage: PassengersMinuteRemovalMessage => TQM =
+    (pm: PassengersMinuteRemovalMessage) => TQM(terminal, Queue(pm.queueName.getOrElse("n/a")), pm.getMinute)
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
+    case PassengersMinutesMessage(minuteMessages, removals) =>
+      applyMessages(minuteMessages, removals)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
+    case PassengersMinutesMessage(minuteMessages, removals) => applyMessages(minuteMessages, removals)
   }
 
   override val msgMinute: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getMinute
@@ -64,7 +72,7 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
 
-  override protected def stateResponse: Option[MinutesContainer[PassengersMinute, TQM]] =
+  override protected def stateResponse: Option[MinutesContainer[PassengersMinute, TQM]] = {
     if (state.nonEmpty) {
       val filter: TQM => Boolean = if (localDates.size == 1)
         (qm: TQM) => queuesByDate.head._2.contains(qm.queue)
@@ -76,4 +84,5 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
       }.values.toSeq
       Option(MinutesContainer(minutes))
     } else None
+  }
 }

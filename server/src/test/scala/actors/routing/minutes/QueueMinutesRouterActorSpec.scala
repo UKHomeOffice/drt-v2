@@ -3,9 +3,9 @@ package actors.routing.minutes
 import actors.MinuteLookups
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import org.apache.pekko.actor.{ActorRef, Props}
 import org.apache.pekko.pattern.ask
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
@@ -23,7 +23,8 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   val date: SDateLike = SDate("2020-01-01T00:00")
   val myNow: () => SDateLike = () => date
 
-  def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: (Terminal, UtcDate), _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
+  def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] =
+    (_: (Terminal, UtcDate), _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
 
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
   val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Seq(crunchMinute))
@@ -32,8 +33,8 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
     (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(Set())
 
   "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
-    "I should see the passenger minutes originally sent" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq.empty, (_, _) => Future.successful(()))
+    "I should see only the latest the passenger minutes sent" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val result = lookups.queueLoadsMinutesActor
@@ -49,8 +50,8 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   }
 
   "When I send two sets of PassengerMinutes to a QueueMinutesActor and query it" >> {
-    "I should see the combined set of minutes" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq.empty, (_, _) => Future.successful(()))
+    "I should see only the latest set of minutes" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)
@@ -68,7 +69,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
             }
         }
 
-      Await.result(result, 1.second).minutes.toSet === Set(passengers1, newPassengers2, passengers3)
+      Await.result(result, 1.second).minutes.toSet === Set(newPassengers2, passengers3)
     }
   }
 

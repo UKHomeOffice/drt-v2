@@ -8,8 +8,9 @@ import org.apache.pekko.persistence.{SnapshotMetadata, SnapshotOffer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinuteRemovalMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 
@@ -25,23 +26,29 @@ class TerminalDayQueuesUpdatesActor(year: Int,
   override def receiveCommand: Receive = myReceiveCommand orElse streamingUpdatesReceiveCommand
 
   def myReceiveCommand: Receive = {
-    case EventEnvelope(_, _, _, CrunchMinutesMessage(minuteMessages)) =>
-      updateState(minuteMessages)
+    case EventEnvelope(_, _, _, CrunchMinutesMessage(minuteMessages, removalMessages)) =>
+      updateState(minuteMessages, removalMessages)
       sender() ! StatusReply.Ack
   }
 
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
 
   def myReceiveRecover: Receive = {
-    case SnapshotOffer(SnapshotMetadata(_, _, ts), CrunchMinutesMessage(minuteMessages)) =>
+    case SnapshotOffer(SnapshotMetadata(_, _, ts), CrunchMinutesMessage(minuteMessages, removalMessages)) =>
       log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString}")
-      updateState(minuteMessages)
+      updateState(minuteMessages, removalMessages)
 
-    case CrunchMinutesMessage(minuteMessages) =>
-      updateState(minuteMessages)
+    case CrunchMinutesMessage(minuteMessages, removalMessages) =>
+      updateState(minuteMessages, removalMessages)
   }
 
   def updatesFromMessages(minuteMessages: Seq[GeneratedMessage]): Seq[CrunchMinute] = minuteMessages.map {
     case msg: CrunchMinuteMessage => PortStateMessageConversion.crunchMinuteFromMessage(msg)
   }
+
+  override def removalsFromMessages(removalMessages: Seq[GeneratedMessage]): Seq[TQM] =
+    removalMessages.map {
+      case msg: CrunchMinuteRemovalMessage => TQM(terminal, Queue(msg.getQueueName), SDate(msg.getMinute).millisSinceEpoch)
+      case _ => throw new IllegalArgumentException("Unexpected message type for removal")
+    }
 }

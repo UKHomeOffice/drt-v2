@@ -7,7 +7,7 @@ import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinuteRemovalMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
@@ -38,7 +38,7 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
                              maybePointInTime: Option[MillisSinceEpoch],
                              override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
                             ) extends
-  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](utcDate, terminal, now, maybePointInTime) {
+  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage, CrunchMinuteRemovalMessage](utcDate, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 
   private val localDates = Set(SDate(utcDate).toLocalDate, SDate(utcDate).addDays(1).addMinutes(-1).toLocalDate)
@@ -47,11 +47,11 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
   import actors.serializers.PortStateMessageConversion._
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
+    case CrunchMinutesMessage(minuteMessages, removals) => applyMessages(minuteMessages, removals)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
+    case CrunchMinutesMessage(minuteMessages, removals) => applyMessages(minuteMessages, removals)
   }
 
   override val msgMinute: CrunchMinuteMessage => MillisSinceEpoch = (msg: CrunchMinuteMessage) => msg.getMinute
@@ -59,13 +59,19 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
-  override def containerToMessage(differences: Iterable[CrunchMinute]): GeneratedMessage =
-    CrunchMinutesMessage(differences.map(m => crunchMinuteToMessage(m.toMinute)).toSeq)
+  override def containerToMessage(differences: Iterable[CrunchMinute], removals: Iterable[TQM]): GeneratedMessage =
+    CrunchMinutesMessage(
+      differences.map(m => crunchMinuteToMessage(m.toMinute)).toSeq,
+      removals.map(r => CrunchMinuteRemovalMessage(Option(r.queue.toString), Option(r.minute)) ).toSeq
+    )
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[CrunchMinute, TQM]): Boolean =
     container.contains(classOf[DeskRecMinute])
 
   override val valFromMessage: CrunchMinuteMessage => CrunchMinute = crunchMinuteFromMessage
+
+  override val indexFromMessage: CrunchMinuteRemovalMessage => TQM = (msg: CrunchMinuteRemovalMessage) =>
+    TQM(terminal, Queue(msg.getQueueName), msg.getMinute)
 
   override protected def stateResponse: Option[MinutesContainer[CrunchMinute, TQM]] = {
     if (state.nonEmpty) {

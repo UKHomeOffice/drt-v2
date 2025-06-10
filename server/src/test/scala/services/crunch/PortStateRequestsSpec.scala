@@ -13,12 +13,12 @@ import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.Source
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits}
 import uk.gov.homeoffice.drt.models.CrunchMinute
-import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -34,7 +34,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
   val terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
   val terminalsForDate: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
-  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, terminalsForDateRange, (_, _) => Seq.empty, (_, _) => Future.successful(()))
+  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, terminalsForDateRange, (_, _) => Seq(EeaDesk, EGate, NonEeaDesk), (_, _) => Future.successful(()))
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 
@@ -154,11 +154,9 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1)).asContainer).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2)).asContainer))
 
-      "Then I should find a matching crunch minute" >> {
+      "Then I should find only the last set" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
-        val expectedCms = Seq(
-          CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None),
-          CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None))
+        val expectedCms = Seq(CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None))
 
         result === PortState(Seq(), setUpdatedCms(expectedCms, myNow().millisSinceEpoch), Seq())
       }
@@ -182,10 +180,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       val eventualAck = ps.ask(StaffMinutes(Seq(sm1)).asContainer).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2)).asContainer))
 
-      "Then I should find a matching staff minute" >> {
+      "Then I should find only the last minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
 
-        result === PortState(Seq(), Seq(), setUpdatedSms(Seq(sm1, sm2), myNow().millisSinceEpoch))
+        result === PortState(Seq(), Seq(), setUpdatedSms(Seq(sm2), myNow().millisSinceEpoch))
       }
     }
 

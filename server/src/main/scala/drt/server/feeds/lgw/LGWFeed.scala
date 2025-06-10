@@ -1,12 +1,12 @@
 package drt.server.feeds.lgw
 
-import org.apache.pekko.actor.{ActorSystem, typed}
-import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
 import bluebus.configuration.SBusConfig
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import org.apache.pekko.actor.{ActorSystem, typed}
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.stream.{ActorAttributes, Supervision}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.LiveArrival
 
@@ -33,9 +33,9 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   def requestArrivals(): Future[Seq[LiveArrival]] = lGWAzureClient.receive.map(xmlString => {
-    if (xmlString.trim().nonEmpty)
+    if (xmlString.trim().nonEmpty) {
       ResponseToArrivals(xmlString).getArrivals
-    else
+    } else
       List()
   })
 

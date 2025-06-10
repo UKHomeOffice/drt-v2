@@ -35,16 +35,14 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
     system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear, day.getMonth, day.getDate, terminal, () => day, journal, probe.ref)))
     val minute2 = day.addMinutes(1).millisSinceEpoch
 
-    "When I send it a crunch minute" >> {
+    "When I send it two crunch minutes consecutively" >> {
       val eventualAcks = Future.sequence(Seq(
         queuesActor.ask(MinutesContainer(Seq(crunchMinute))),
         queuesActor.ask(MinutesContainer(Seq(crunchMinute.copy(minute = minute2))))))
       Await.ready(eventualAcks, 5.second)
 
-      "I should see it received as an update" >> {
-        val expected = List(
-          crunchMinute.copy(lastUpdated = Option(day.millisSinceEpoch)),
-          crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch)))
+      "I should only see the second" >> {
+        val expected = List(crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch)))
           .map(cm => (cm.key, cm)).toMap
 
         probe.fishForMessage(5.seconds) {
@@ -64,8 +62,8 @@ class TestTerminalDayQueuesUpdatesActor[T <: ReadJournalWithEvents](year: Int,
                                                                     now: () => SDateLike,
                                                                     journalType: StreamingJournalLike,
                                                                     probe: ActorRef) extends TerminalDayQueuesUpdatesActor(year, month, day, terminal, now, journalType) {
-  override def updateState(minuteMessages: Seq[GeneratedMessage]): Unit = {
-    super.updateState(minuteMessages)
+  override def updateState(minuteMessages: Seq[GeneratedMessage], removalMessages: Seq[GeneratedMessage]): Unit = {
+    super.updateState(minuteMessages, removalMessages)
     probe ! updates
   }
 }
