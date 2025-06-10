@@ -175,8 +175,10 @@ object DashboardTerminalSummary {
             BigSummaryBoxes.paxSplitPercentagesWithSplitDeskQueues(splitsForPeriod)
           else
             BigSummaryBoxes.paxSplitPercentagesWithSingleDeskQueue(splitsForPeriod)
-          val labels = paxSplitDataset.map(_._1).toJSArray
-          val data = paxSplitDataset.map(_._2).toJSArray.filter(_ > 0)
+
+          val paxSplitDatasetNonZero = paxSplitDataset.filter(_._2 > 0)
+          val labels = paxSplitDatasetNonZero.map(_._1).toJSArray
+          val data = paxSplitDatasetNonZero.map(_._2).toJSArray.filter(_ > 0)
 
           ChartData(
             labels = labels,

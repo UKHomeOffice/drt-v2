@@ -109,12 +109,9 @@ object PortDashboardPage {
 
                 val preferenceTerminals: Set[String] = Try(
                   userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String])).getOrElse(Set.empty[String])
-                val updatedQueryParams: Set[String] = if (!userHasTerminalPreference) {
-                  if (isChecked) {
-                    preferenceTerminals ++ selectedTerminals
-                  } else
-                    selectedTerminals.filterNot(_ == terminal.toString).toSet
-                } else {
+                val updatedQueryParams: Set[String] = if (!userHasTerminalPreference)
+                  selectedTerminals.filterNot(_ == terminal.toString).toSet
+                else {
                   if (isChecked)
                     preferenceTerminals + terminal.toString
                   else
