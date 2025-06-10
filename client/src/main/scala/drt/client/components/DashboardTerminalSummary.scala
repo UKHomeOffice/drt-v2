@@ -192,7 +192,7 @@ object DashboardTerminalSummary {
         def renderPaxTerminalOverview(summary: Seq[DashboardSummary], splitsForPeriod: Map[PaxTypeAndQueue, Int]) = {
           PaxTerminalOverviewComponent(IPaxTerminalOverview(
             terminal = props.terminal.toString,
-            timeRange = props.periodLengthMinutes,
+            periodLengthMinutes = props.periodLengthMinutes,
             currentTime = SDate.now().prettyTime,
             desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
             staff = pressurePointAvailableStaff,
@@ -213,7 +213,7 @@ object DashboardTerminalSummary {
             ),
             estimates =
               summary.flatMap { s =>
-                List(Estimate(
+                List(PeriodQueuePaxCounts(
                   from = SDate(s.startTime).prettyTime,
                   to = SDate(s.startTime).addMinutes(props.periodLengthMinutes).prettyTime,
                   egate = s.paxPerQueue.getOrElse(Queues.EGate, 0).asInstanceOf[Int],

@@ -11,7 +11,7 @@ import scala.scalajs.js.annotation.JSImport
 @js.native
 trait IPaxTerminalOverview extends js.Object {
   var terminal: String
-  var timeRange: Int
+  var periodLengthMinutes: Int
   var currentTime: String
   var desks: Int
   var staff: Int
@@ -19,13 +19,13 @@ trait IPaxTerminalOverview extends js.Object {
   var ragStatus: String
   var chartData: ChartData
   var pressure: js.Array[Pressure]
-  var estimates: js.Array[Estimate]
+  var periodQueuePaxCounts: js.Array[PeriodQueuePaxCounts]
 }
 
 object IPaxTerminalOverview {
   def apply(
              terminal: String,
-             timeRange: Int,
+             periodLengthMinutes: Int,
              currentTime: String,
              desks: Int,
              staff: Int,
@@ -33,11 +33,11 @@ object IPaxTerminalOverview {
              ragStatus: String,
              chartData: ChartData,
              pressure: js.Array[Pressure],
-             estimates: js.Array[Estimate]
+             estimates: js.Array[PeriodQueuePaxCounts]
            ): IPaxTerminalOverview = {
     val p = (new js.Object).asInstanceOf[IPaxTerminalOverview]
     p.terminal = terminal
-    p.timeRange = timeRange
+    p.periodLengthMinutes = periodLengthMinutes
     p.currentTime = currentTime
     p.desks = desks
     p.staff = staff
@@ -45,7 +45,7 @@ object IPaxTerminalOverview {
     p.ragStatus = ragStatus
     p.chartData = chartData
     p.pressure = pressure
-    p.estimates = estimates
+    p.periodQueuePaxCounts = estimates
     p
   }
 }
@@ -98,7 +98,7 @@ object Pressure {
 }
 
 @js.native
-trait Estimate extends js.Object {
+trait PeriodQueuePaxCounts extends js.Object {
   var from: String
   var to: String
   var egate: Int
@@ -106,9 +106,9 @@ trait Estimate extends js.Object {
   var noneea: Int
 }
 
-object Estimate {
-  def apply(from: String, to: String, egate: Int, eea: Int, noneea: Int): Estimate = {
-    val e = (new js.Object).asInstanceOf[Estimate]
+object PeriodQueuePaxCounts {
+  def apply(from: String, to: String, egate: Int, eea: Int, noneea: Int): PeriodQueuePaxCounts = {
+    val e = (new js.Object).asInstanceOf[PeriodQueuePaxCounts]
     e.from = from
     e.to = to
     e.egate = egate
