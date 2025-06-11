@@ -77,10 +77,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         case Some(existingCm) => cm.maybeUpdated(existingCm, nowMillis)
       })
       .collect { case Some(update) => update }
-    val removals = state
-      .collect {
-        case (key, _) if !updates.exists(_.key == key) => key
-      }
+    val incomingTimes = incoming.map(_.minute).toSet
+    val removals = state.keys
+      .filterNot(k => incomingTimes.contains(k.timeValue))
+    
     (updates, removals)
   }
 
