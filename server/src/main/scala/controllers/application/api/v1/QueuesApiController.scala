@@ -9,6 +9,8 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.time.{DateRange, UtcDate}
 
+import scala.concurrent.Future
+
 
 class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
   def populateQueues(start: String, end: String): Action[AnyContent] =
@@ -26,8 +28,12 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                 .map(_._2)
                 .runWith(Sink.fold(Seq.empty[CrunchMinute])(_ ++ _))
                 .flatMap { cms =>
-                  ctrl.update15MinuteQueueSlotsLiveView(date, cms)
-                    .map(_ => log.info(s"Updated queue slots for $date"))
+                  Future.sequence(cms.groupBy(_.terminal)
+                    .map {
+                      case (terminal, minutes) =>
+                        ctrl.update15MinuteQueueSlotsLiveView(terminal)(date, minutes, Seq.empty)
+                          .map(_ => log.info(s"Updated queue slots for $date"))
+                    })
                 }
           }
           .runWith(Sink.ignore)

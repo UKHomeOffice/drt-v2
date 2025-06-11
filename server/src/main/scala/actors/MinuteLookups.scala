@@ -36,12 +36,14 @@ trait MinuteLookupsLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[TerminalUpdateRequest]]
     }
 
-  def updateCrunchMinutes(updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
+  def updateCrunchMinutes(updateLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit],
                           queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                          ): ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[CrunchMinute, TQM]) => {
       val (terminal, date) = terminalDate
-      val actor = system.actorOf(TerminalDayQueuesActor.props(Option(updateLiveView), queuesForDateAndTerminal)(terminal, date, now))
+      val onUpdate: (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit] =
+        (date, updates, removals) => updateLiveView(terminal)(date, updates, removals)
+      val actor = system.actorOf(TerminalDayQueuesActor.props(Option(onUpdate), queuesForDateAndTerminal)(terminal, date, now))
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[TerminalUpdateRequest]]
     }
 
@@ -87,7 +89,7 @@ case class MinuteLookups(now: () => SDateLike,
                          expireAfterMillis: Int,
                          terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                          queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
-                         updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
+                         updateLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit],
                         )
                         (implicit val ec: ExecutionContext, val system: ActorSystem) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")

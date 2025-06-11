@@ -8,6 +8,8 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinuteRemovalMessage, StaffMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
+import scala.collection.mutable
+
 
 object TerminalDayStaffActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
@@ -53,4 +55,7 @@ class TerminalDayStaffActor(utcDate: UtcDate,
   override val valFromMessage: StaffMinuteMessage => StaffMinute = staffMinuteFromMessage
 
   override val indexFromMessage: StaffMinuteRemovalMessage => TM = (pm: StaffMinuteRemovalMessage) => TM(terminal, pm.getMinute)
+
+  override def removalsMinutes(state: mutable.Map[TM, StaffMinute]): Iterable[TM] = Seq.empty
+
 }

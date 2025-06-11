@@ -33,7 +33,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   val state: mutable.Map[INDEX, VAL] = mutable.Map[INDEX, VAL]()
 
-  val onUpdate: Option[(UtcDate, Iterable[VAL]) => Future[Unit]] = None
+  val onUpdate: Option[(UtcDate, Iterable[VAL], Iterable[INDEX]) => Future[Unit]] = None
 
   override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d"
 
@@ -41,8 +41,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
   val firstMinute: SDateLike = SDate(utcDate)
-  private val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
-  private val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
+  protected val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
+  protected val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
   override def postRecoveryComplete(): Unit = {
     super.postRecoveryComplete()
@@ -69,36 +69,32 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   protected def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
-  private def diffFromMinutes(state: mutable.Map[INDEX, VAL], incoming: Iterable[MinuteLike[VAL, INDEX]]): (Iterable[VAL], Iterable[INDEX]) = {
+  protected def removalsMinutes(state: mutable.Map[INDEX, VAL]): Iterable[INDEX]
+
+  protected def diffFromMinutes(state: mutable.Map[INDEX, VAL], incoming: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
-    val updates = incoming
+    incoming
       .map(cm => state.get(cm.key) match {
         case None => Option(cm.toUpdatedMinute(nowMillis))
         case Some(existingCm) => cm.maybeUpdated(existingCm, nowMillis)
       })
       .collect { case Some(update) => update }
-    val incomingTimes = incoming.map(_.minute).toSet
-    val removals = state.keys
-      .filterNot(k => incomingTimes.contains(k.timeValue))
-    
-    (updates, removals)
   }
 
-  private def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]], removals: Iterable[INDEX]): Unit = {
-    removals.foreach { key =>
-      if (state.contains(key)) state -= key
-    }
+  protected def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]], removals: Iterable[INDEX]): Unit = {
+    removals.foreach(state -= _)
     diff.foreach { cm =>
-      if (firstMinuteMillis <= cm.minute && cm.minute <= lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
+      if (firstMinuteMillis <= cm.minute && cm.minute <= lastMinuteMillis)
+        state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
     }
   }
 
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
-    diffFromMinutes(state, container.minutes) match {
+    (diffFromMinutes(state, container.minutes), removalsMinutes(state)) match {
       case (noDifferences, noRemovals) if noDifferences.isEmpty && noRemovals.isEmpty => sender() ! Set.empty[Long]
       case (updates, removals) =>
         updateStateFromDiff(updates, removals)
-        onUpdate.foreach(_(utcDate, state.values))
+        onUpdate.foreach(_(utcDate, updates, removals))
         val messageToPersist = containerToMessage(updates, removals)
         val updateRequests = if (shouldSendEffectsToSubscriber(container))
           updates

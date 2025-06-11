@@ -10,11 +10,12 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinuteRemovalMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
+import scala.collection.mutable
 import scala.concurrent.Future
 
 
 object TerminalDayQueuesActor {
-  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
+  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit]],
             queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
            )
            (terminal: Terminal,
@@ -36,7 +37,7 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
                              queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                              val now: () => SDateLike,
                              maybePointInTime: Option[MillisSinceEpoch],
-                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
+                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit]],
                             ) extends
   TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage, CrunchMinuteRemovalMessage](utcDate, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
@@ -85,6 +86,17 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
       }.values.toSeq
       Option(MinutesContainer(minutes))
     } else None
+  }
+
+  override def removalsMinutes(state: mutable.Map[TQM, CrunchMinute]): Iterable[TQM] = {
+    val filterOutRedundantQueues: TQM => Boolean = if (localDates.size == 1)
+      (qm: TQM) => !queuesByDate.head._2.contains(qm.queue)
+    else
+      (qm: TQM) => !queuesByDate(SDate(qm.minute).toLocalDate).contains(qm.queue)
+
+    val removals = state.keys.filter(filterOutRedundantQueues)
+
+    removals
   }
 
 }

@@ -39,7 +39,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -208,15 +208,15 @@ class TestDrtActor extends Actor {
               doUpdate(updates, removals)
           }
 
-          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
+          val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit] = {
             val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
-            (date, updates) => {
-              doUpdate(date, updates).map(_ => ())
+            terminal => (date, updates, removals) => {
+              doUpdate(terminal)(date, updates, removals).map(_ => ())
             }
           }
           (updateFlightsLiveView, update15MinuteQueueSlotsLiveView)
         case None =>
-          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
+          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: Terminal) => (_: UtcDate, _: Iterable[CrunchMinute], _: Iterable[TQM]) => Future.successful(()))
       }
 
       val terminalsForDateRange = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)

@@ -12,6 +12,8 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinuteRemovalMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
+import scala.collection.mutable
+
 object TerminalDayQueueLoadsActor {
   def props(queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue])
            (terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
@@ -72,7 +74,7 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
 
-  override protected def stateResponse: Option[MinutesContainer[PassengersMinute, TQM]] = {
+  override def stateResponse: Option[MinutesContainer[PassengersMinute, TQM]] = {
     if (state.nonEmpty) {
       val filter: TQM => Boolean = if (localDates.size == 1)
         (qm: TQM) => queuesByDate.head._2.contains(qm.queue)
@@ -84,5 +86,16 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
       }.values.toSeq
       Option(MinutesContainer(minutes))
     } else None
+  }
+
+  override def removalsMinutes(state: mutable.Map[TQM, PassengersMinute]): Iterable[TQM] = {
+    val filterOutRedundantQueues: TQM => Boolean = if (localDates.size == 1)
+      (qm: TQM) => !queuesByDate.head._2.contains(qm.queue)
+    else
+      (qm: TQM) => !queuesByDate(SDate(qm.minute).toLocalDate).contains(qm.queue)
+
+    val removals = state.keys.filter(filterOutRedundantQueues)
+
+    removals
   }
 }
