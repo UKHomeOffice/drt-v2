@@ -15,7 +15,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.models.UserPreferences
-import uk.gov.homeoffice.drt.ports.Queues.EGate
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, QueueDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal.numberString
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues, Terminals}
@@ -217,7 +217,7 @@ object PortDashboardPage {
                               displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
                               portDashboardModel.paxFeedSourceOrder,
                               selectedPeriodLengthMinutes,
-                              portConfig.queuesByTerminal.get(terminalName).exists(_.contains(EGate))
+                              portConfig.queuesByTerminal.get(terminalName).exists(_.contains(QueueDesk))
                             )
                           )
                         }

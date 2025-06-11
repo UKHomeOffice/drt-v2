@@ -172,10 +172,9 @@ object DashboardTerminalSummary {
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
           val paxSplitDataset: Seq[(String, Int)] = if (props.terminalHasBothEeaAndNonEeaQueues)
-            BigSummaryBoxes.paxSplitPercentagesWithSplitDeskQueues(splitsForPeriod)
-          else
             BigSummaryBoxes.paxSplitPercentagesWithSingleDeskQueue(splitsForPeriod)
-
+          else
+            BigSummaryBoxes.paxSplitPercentagesWithSplitDeskQueues(splitsForPeriod)
           val paxSplitDatasetNonZero = paxSplitDataset.filter(_._2 > 0)
           val labels = paxSplitDatasetNonZero.map(_._1).toJSArray
           val data = paxSplitDatasetNonZero.map(_._2).toJSArray.filter(_ > 0)

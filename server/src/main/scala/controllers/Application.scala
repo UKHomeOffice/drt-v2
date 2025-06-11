@@ -7,7 +7,7 @@ import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import spray.json.enrichAny
+import spray.json.{JsValue, enrichAny}
 import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
@@ -17,8 +17,8 @@ import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.db.serialisers.UserPreferencesSerialisation
 import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
-import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -28,7 +28,6 @@ import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
 
 
 object AirportConfigProvider {
@@ -114,64 +113,24 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
   def userPreferences: Action[AnyContent] = authByRole(BorderForceStaff) {
-    import upickle.default._
-    import uk.gov.homeoffice.drt.models.UserPreferences._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-      val portCode = config.get[String]("portcode")
 
       ctrl.userService.selectUser(userEmail.trim).map {
         case Some(user) =>
-          val portDashboardIntervalMinutesString: Option[String] = user.port_dashboard_interval_minutes
-          val portDashboardIntervalMinutes: Map[String, Int] = portDashboardIntervalMinutesString match {
-            case Some(data) =>
-              val parsedResult = Try(read[Map[String, Int]](s"\"$data\"")(portDashboardIntervalMinutesRW))
-              parsedResult match {
-                case Success(b) =>
-                  println(s"Successfully parsed portDashboardIntervalMinutes: $b")
-                  b
-                case Failure(e) =>
-                  log.error(s"Failed to parse portDashboardIntervalMinutes: $data", e)
-                  Map.empty[String, Int]
-              }
-            case None => Map[String, Int](portCode -> 60)
-          }
-
-          val portDashboardTerminalsString: Option[String] = user.port_dashboard_terminals
-          val portDashboardTerminals: Map[String, Set[String]] = portDashboardTerminalsString match {
-            case Some(data) =>
-              val parsedResult = Try(read[Map[String, Set[String]]](s"\"$data\"")(UserPreferences.portDashboardTerminalsRW))
-              parsedResult match {
-                case Success(portInterval) =>
-                  log.info(s"Successfully parsed portDashboardIntervalMinutes: $portInterval")
-                  portInterval
-                case Failure(e) =>
-                  log.error(s"Failed to parse portDashboardIntervalMinutes: $data", e)
-                  Map.empty[String, Set[String]]
-              }
-            case None => Map.empty[String, Set[String]]
-          }
-
-          Ok(write(UserPreferences(
-            user.staff_planning_interval_minutes.getOrElse(60),
-            user.hide_pax_data_source_description.getOrElse(false),
-            user.show_staffing_shift_view.getOrElse(false),
-            user.desks_and_queues_interval_minutes.getOrElse(15),
-            portDashboardIntervalMinutes,
-            portDashboardTerminals
-          )))
+          val userPreferences: JsValue = UserPreferencesSerialisation.userRowToJson(user)
+          Ok(userPreferences.toString())
         case None => BadRequest("User not found")
       }
     }
   }
 
   def setUserPreferences(): Action[AnyContent] = authByRole(BorderForceStaff) {
-    import upickle.default._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       request.body.asText match {
         case Some(json) =>
-          val userPreferences = read[UserPreferences](json)
+          val userPreferences = UserPreferencesSerialisation.fromJson(json)
           ctrl.userService.updateUserPreferences(userEmail, userPreferences)
             .map(_ => Ok("Updated preferences"))
         case None =>
