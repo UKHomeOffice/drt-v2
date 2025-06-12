@@ -85,26 +85,27 @@ object DashboardTerminalSummary {
       .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
       .groupBy { flight =>
         val pcpTime = flight.apiFlight.PcpTime.getOrElse(0L)
-        val intervalsSinceStart = ((pcpTime - startMin.millisSinceEpoch) / periodLengthMillis).toInt
-        startMin.addMinutes(intervalsSinceStart * periodLengthMinutes).millisSinceEpoch
+        val periodsSinceStart = ((pcpTime - startMin.millisSinceEpoch) / periodLengthMillis).toInt
+        startMin.addMinutes(periodsSinceStart * periodLengthMinutes).millisSinceEpoch
       }
       .view.mapValues(_.toSet)
       .toList
       .sortBy(_._1)
   }
 
-  private def groupCrunchMinutesByPeriod(cms: List[CrunchMinute], startMin: SDateLike, periodLengthMinutes: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+  private def groupCrunchMinutesByPeriod(cms: List[CrunchMinute],
+                                         startMin: SDateLike,
+                                         periodLengthMinutes: Int,
+                                        ): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
     val periodLengthMillis = periodLengthMinutes * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
-      val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / periodLengthMillis).toInt
-      startMin.addMinutes((intervalsSinceStart * periodLengthMinutes)).millisSinceEpoch
+      val periodsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / periodLengthMillis).toInt
+      startMin.addMinutes(periodsSinceStart * periodLengthMinutes).millisSinceEpoch
     }).toList.sortBy(_._1)
   }
 
   def windowStart(time: SDateLike, periodLengthMinutes: Int): SDateLike = {
-
     val minutes = (time.getMinutes / periodLengthMinutes) * periodLengthMinutes
-
     SDate(f"${time.getFullYear}-${time.getMonth}%02d-${time.getDate}%02d ${time.getHours}%02d:$minutes%02d")
   }
 
@@ -147,7 +148,6 @@ object DashboardTerminalSummary {
       if (crunchMinuteTimeSlots.isEmpty) {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")
       } else {
-
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
 
         def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
