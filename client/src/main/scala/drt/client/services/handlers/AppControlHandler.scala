@@ -7,6 +7,10 @@ import upickle.default.write
 
 class AppControlHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case RequestFullForecastRecrunch =>
+      DrtApi.post(s"control/crunch/recalculate", "")
+      noChange
+
     case RequestDateRecrunch(date) =>
       DrtApi.post(s"control/crunch/recalculate/${date.toISOString}/${date.toISOString}", "")
       noChange
