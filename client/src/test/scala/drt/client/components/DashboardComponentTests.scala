@@ -129,7 +129,7 @@ object DashboardComponentTests extends TestSuite {
       val flights = List(flight1, flight2, flight3, flight4, flight5, flight6)
 
       val start = SDate("2017-11-01T09:45:00")
-      val result = DashboardTerminalSummary.groupFlightsByMinuteRange(flights, start, 60)
+      val result = DashboardTerminalSummary.groupFlightsByPeriod(flights, start, 60)
 
 
       val expected = List(

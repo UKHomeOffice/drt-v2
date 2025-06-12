@@ -63,8 +63,8 @@ object DashboardTerminalSummary {
     }
 
   def periodSummaries(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, periodLengthMinutes: Int): Seq[DashboardSummary] = {
-    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByMinuteRange(flights, start, periodLengthMinutes).toMap
-    val groupedCrunchMinutes = groupCrunchByMinutes(cms, start, periodLengthMinutes).toMap
+    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByPeriod(flights, start, periodLengthMinutes).toMap
+    val groupedCrunchMinutes = groupCrunchMinutesByPeriod(cms, start, periodLengthMinutes).toMap
     periodStartTimes(start, periodLengthMinutes).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
@@ -74,11 +74,11 @@ object DashboardTerminalSummary {
     ))
   }
 
-  def groupFlightsByMinuteRange(
-                                 flights: List[ApiFlightWithSplits],
-                                 startMin: SDateLike,
-                                 periodLengthMinutes: Int
-                               ): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
+  def groupFlightsByPeriod(
+                            flights: List[ApiFlightWithSplits],
+                            startMin: SDateLike,
+                            periodLengthMinutes: Int
+                          ): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
     val periodLengthMillis = periodLengthMinutes * 60 * 1000
     flights
       .filter(_.apiFlight.PcpTime.isDefined)
@@ -93,16 +93,13 @@ object DashboardTerminalSummary {
       .sortBy(_._1)
   }
 
-  private def groupCrunchByMinutes(cms: List[CrunchMinute], startMin: SDateLike, minuteRangeTime: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val periodLengthMillis = minuteRangeTime * 60 * 1000
+  private def groupCrunchMinutesByPeriod(cms: List[CrunchMinute], startMin: SDateLike, periodLengthMinutes: Int): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+    val periodLengthMillis = periodLengthMinutes * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
       val intervalsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / periodLengthMillis).toInt
-      startMin.addMinutes((intervalsSinceStart * minuteRangeTime)).millisSinceEpoch
+      startMin.addMinutes((intervalsSinceStart * periodLengthMinutes)).millisSinceEpoch
     }).toList.sortBy(_._1)
   }
-
-  def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
-    f.apiFlight.PcpTime.exists(millis => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch)
 
   def windowStart(time: SDateLike, periodLengthMinutes: Int): SDateLike = {
 
