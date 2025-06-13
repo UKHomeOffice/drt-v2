@@ -33,6 +33,7 @@ steps:
       - sbt --error compile playCompileEverything
       - ls -ltr /drone/src/server/target/scala-2.13/
       - sbt compile package
+      - sbt assembly
       - ls -ltr /drone/src/server/target/scala-2.13/
     environment:
       ARTIFACTORY_PASSWORD:

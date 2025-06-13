@@ -30,5 +30,6 @@ addSbtPlugin("com.github.sbt" % "sbt-js-engine" % "1.3.9")
 addSbtPlugin("io.github.cquiroz" % "sbt-tzdb" % "4.2.0")
 
 //addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "3.1.1")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "1.2.0")
 
 addDependencyTreePlugin
