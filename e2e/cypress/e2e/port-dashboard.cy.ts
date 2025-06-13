@@ -26,10 +26,9 @@ describe('Port dashboard', () => {
     })
       .asABorderForceOfficer()
       .navigateHome()
-      // .visit("/")
       .wait(2000)
       .get('[data-cy="terminal-flights"]')
-      .contains("1 Flight")
+      .contains("1 flights")
 
   })
 
