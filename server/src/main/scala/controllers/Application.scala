@@ -7,10 +7,9 @@ import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import spray.json.enrichAny
+import spray.json.{JsValue, enrichAny}
 import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
-import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
@@ -18,12 +17,17 @@ import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.db.serialisers.UserRowSerialisation
+import uk.gov.homeoffice.drt.jsonformats.UserPreferencesJsonFormat
 import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+
+import spray.json._
+import UserPreferencesJsonFormat._
 
 import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
@@ -114,28 +118,25 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
   def userPreferences: Action[AnyContent] = authByRole(BorderForceStaff) {
-    import upickle.default._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
+
       ctrl.userService.selectUser(userEmail.trim).map {
-        case Some(user) => Ok(write(UserPreferences(
-          user.staff_planning_interval_minutes.getOrElse(60),
-          user.hide_pax_data_source_description.getOrElse(false),
-          user.show_staffing_shift_view.getOrElse(false),
-          user.desks_and_queues_interval_minutes.getOrElse(15)
-        )))
+        case Some(user) =>
+          val preferences = UserRowSerialisation.toUserPreferences(user)
+          val userPreferencesJsonString = preferences.toJson.compactPrint
+          Ok(userPreferencesJsonString)
         case None => BadRequest("User not found")
       }
     }
   }
 
   def setUserPreferences(): Action[AnyContent] = authByRole(BorderForceStaff) {
-    import upickle.default._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       request.body.asText match {
         case Some(json) =>
-          val userPreferences = read[UserPreferences](json)
+          val userPreferences = json.parseJson.convertTo[UserPreferences]
           ctrl.userService.updateUserPreferences(userEmail, userPreferences)
             .map(_ => Ok("Updated preferences"))
         case None =>
@@ -143,7 +144,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       }
     }
   }
-
 
   def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")

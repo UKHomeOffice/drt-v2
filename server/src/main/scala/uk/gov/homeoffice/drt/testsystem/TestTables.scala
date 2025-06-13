@@ -38,7 +38,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None)))
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None , None , None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
