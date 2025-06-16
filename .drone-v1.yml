@@ -31,7 +31,6 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt --error compile playCompileEverything
-      - sbt dependencyCheck
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -181,21 +180,22 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - echo NVD_API_KEY=${NVD_API_KEY}
       - sbt dependencyCheck
     environment:
-      NVD_BASE_URL: http://nvdmirror:8008
+#      NVD_BASE_URL: http://nvdmirror:8008
       NVD_API_KEY:
         from_secret: nvd_api_key
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt_ci
       ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
     when:
       event:
         - push
-    depends_on:
-      - Build scala app
+#    depends_on:
+#      - Build scala app
 #      branch:
 #        - master
 
