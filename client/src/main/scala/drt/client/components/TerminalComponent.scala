@@ -160,12 +160,13 @@ object TerminalComponent {
                       val hoursToView = timeWindow.endInt - timeWindow.startInt
 
                       val terminal = props.terminalPageTab.terminal
+                      val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
                       val queues = terminalModel.airportConfigPot.map { ac =>
                         QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal).filterNot(_ == Transfer).toList
                       }
-                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q)))
-                      val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
-                      val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
+                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, q)))
+                      val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, q)))
+                      val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, viewInterval, terminal).toMap)
 
                       val hasStaff = windowStaffSummaries.exists(_.values.exists(_.available > 0))
                       val defaultDesksAndQueuesViewType = props.terminalPageTab.queryParams.get("viewType") match {

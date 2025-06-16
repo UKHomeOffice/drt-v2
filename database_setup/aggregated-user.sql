@@ -13,6 +13,8 @@ CREATE TABLE public.user
     hide_pax_data_source_description boolean,
     show_staffing_shift_view         boolean,
     desks_and_queues_interval_minutes integer,
+    port_dashboard_interval_minutes  text,
+    port_dashboard_terminals         text,
     PRIMARY KEY (id)
 );
 
