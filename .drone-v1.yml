@@ -192,6 +192,8 @@ steps:
     when:
       event:
         - push
+    depends_on:
+      - Build scala app
 #      branch:
 #        - master
 
