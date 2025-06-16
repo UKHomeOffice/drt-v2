@@ -184,7 +184,8 @@ steps:
       - sbt dependencyCheck
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
-      NVD_API_KEY: "10dbca30-1fdc-4e7b-915c-fdfac0e9b1d1"
+      NVD_API_KEY:
+        from_secret: nvd_api_key
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt_ci
