@@ -57,5 +57,4 @@ class TerminalDayStaffActor(utcDate: UtcDate,
   override val indexFromMessage: StaffMinuteRemovalMessage => TM = (pm: StaffMinuteRemovalMessage) => TM(terminal, pm.getMinute)
 
   override def removalsMinutes(state: mutable.Map[TM, StaffMinute]): Iterable[TM] = Seq.empty
-
 }

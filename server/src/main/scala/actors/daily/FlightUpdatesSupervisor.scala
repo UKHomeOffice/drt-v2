@@ -27,7 +27,7 @@ object FlightUpdatesSupervisor {
 }
 
 class FlightUpdatesSupervisor(now: () => SDateLike,
-                              terminals: LocalDate => Seq[Terminal],
+                              terminalsForDate: LocalDate => Seq[Terminal],
                               updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -38,7 +38,6 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
-//  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"flight-updates-supervisor-kill-actor-flight")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
@@ -96,7 +95,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
 
     val terminalDays = for {
       day <- daysMillis
-      terminal <- terminals(SDate(day).toLocalDate)
+      terminal <- terminalsForDate(SDate(day).toLocalDate)
     } yield (terminal, day)
 
     terminalDays.toList

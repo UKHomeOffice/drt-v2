@@ -176,12 +176,6 @@ object TestActors {
       ))
   }
 
-//  class MockAggregatedArrivalsActor extends Actor {
-//    override def receive: Receive = {
-//      case _ => sender() ! Ack
-//    }
-//  }
-
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B, TerminalUpdateRequest] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()

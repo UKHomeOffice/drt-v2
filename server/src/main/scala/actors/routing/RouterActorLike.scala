@@ -139,8 +139,6 @@ trait RouterActorLike2[U <: Updates, P, A] extends Actor with ActorLogging {
 
   def partitionUpdates: PartialFunction[U, Map[P, U]]
 
-//  def updatePartition(partition: P, updates: U): Future[Set[A]]
-
   def receiveQueries: Receive
 
   def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Any] =

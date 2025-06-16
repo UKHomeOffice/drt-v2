@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 case class DynamicQueueStatusProvider(queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
@@ -40,11 +41,9 @@ case class DynamicQueueStatusProvider(queuesForDateAndTerminal: (LocalDate, Term
         queuesMaxByHour.get(queue) match {
           case None => Closed
           case Some(maxByHour) =>
-            // If the maxByHour is empty, we assume the queue is closed
             if (maxByHour.isEmpty) Closed
             else {
-              // Get the hour from the time and check the max for that hour
-              val hour = SDate(time).getHours
+              val hour = SDate(time, europeLondonTimeZone).getHours
               maxByHour.lift(hour) match {
                 case None => Closed
                 case Some(0) => Closed

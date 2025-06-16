@@ -1,7 +1,7 @@
 package actors.daily
 
 import drt.shared.CrunchApi
-import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.apache.pekko.actor.Props
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
@@ -74,20 +74,6 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
   override val indexFromMessage: CrunchMinuteRemovalMessage => TQM = (msg: CrunchMinuteRemovalMessage) =>
     TQM(terminal, Queue(msg.getQueueName), msg.getMinute)
 
-  override protected def stateResponse: Option[MinutesContainer[CrunchMinute, TQM]] = {
-    if (state.nonEmpty) {
-      val filter: TQM => Boolean = if (localDates.size == 1)
-        (qm: TQM) => queuesByDate.head._2.contains(qm.queue)
-      else
-        (qm: TQM) => queuesByDate(SDate(qm.minute).toLocalDate).contains(qm.queue)
-
-      val minutes = state.filter {
-        case (tqm, _) => filter(tqm)
-      }.values.toSeq
-      Option(MinutesContainer(minutes))
-    } else None
-  }
-
   override def removalsMinutes(state: mutable.Map[TQM, CrunchMinute]): Iterable[TQM] = {
     val filterOutRedundantQueues: TQM => Boolean = if (localDates.size == 1)
       (qm: TQM) => !queuesByDate.head._2.contains(qm.queue)
@@ -98,5 +84,4 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
 
     removals
   }
-
 }

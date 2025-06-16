@@ -247,7 +247,6 @@ object TerminalDesksAndQueues {
           slaConfigs <- props.slaConfigs
         } yield {
           val slas = slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
-//          val queues = props.airportConfig.nonTransferQueues(terminal).toList
           val interval = if (state.timeInterval == Hourly) 60 else 15
           val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by interval * 60000
 

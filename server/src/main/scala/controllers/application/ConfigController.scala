@@ -22,13 +22,4 @@ class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
       Ok(write(ctrl.feedService.paxFeedSourceOrder))
     }
   }
-
-  def getQueueConfig: Action[AnyContent] = auth {
-    Action { _ =>
-      import upickle.default._
-
-      Ok(write(ctrl.airportConfig.queuesByTerminal))
-    }
-  }
-
 }

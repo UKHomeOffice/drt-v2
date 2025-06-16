@@ -66,12 +66,12 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case m => log.error(s"Got unexpected message: $m")
   }
 
-  protected def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
+  private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
-  protected def removalsMinutes(state: mutable.Map[INDEX, VAL]): Iterable[INDEX]
+  def removalsMinutes(state: mutable.Map[INDEX, VAL]): Iterable[INDEX]
 
-  protected def diffFromMinutes(state: mutable.Map[INDEX, VAL], incoming: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
+  private def diffFromMinutes(state: mutable.Map[INDEX, VAL], incoming: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
     incoming
       .map(cm => state.get(cm.key) match {
@@ -81,7 +81,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       .collect { case Some(update) => update }
   }
 
-  protected def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]], removals: Iterable[INDEX]): Unit = {
+  private def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]], removals: Iterable[INDEX]): Unit = {
     removals.foreach(state -= _)
     diff.foreach { cm =>
       if (firstMinuteMillis <= cm.minute && cm.minute <= lastMinuteMillis)

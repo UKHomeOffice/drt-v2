@@ -2,7 +2,7 @@ package actors.daily
 
 import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
 import drt.shared.CrunchApi
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import org.apache.pekko.actor.Props
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -73,20 +73,6 @@ class TerminalDayQueueLoadsActor(utcDate: UtcDate,
   override val msgLastUpdated: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
-
-  override def stateResponse: Option[MinutesContainer[PassengersMinute, TQM]] = {
-    if (state.nonEmpty) {
-      val filter: TQM => Boolean = if (localDates.size == 1)
-        (qm: TQM) => queuesByDate.head._2.contains(qm.queue)
-      else
-        (qm: TQM) => queuesByDate(SDate(qm.minute).toLocalDate).contains(qm.queue)
-
-      val minutes = state.filter {
-        case (tqm, _) => filter(tqm)
-      }.values.toSeq
-      Option(MinutesContainer(minutes))
-    } else None
-  }
 
   override def removalsMinutes(state: mutable.Map[TQM, PassengersMinute]): Iterable[TQM] = {
     val filterOutRedundantQueues: TQM => Boolean = if (localDates.size == 1)
