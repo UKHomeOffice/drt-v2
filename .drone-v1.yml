@@ -180,10 +180,12 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - echo NVD_API_KEY=${NVD_API_KEY}
+      - echo NVD_API_KEY=${NVD_API_KEY} NVD_BASE_URL=${NVD_BASE_URL} Testing = ${Testing}
       - sbt dependencyCheck
     environment:
-#      NVD_BASE_URL: http://nvdmirror:8008
+      NVD_BASE_URL: http://nvdmirror:8008
+      TEST_KEY:
+        from_secret: Testing
       NVD_API_KEY:
         from_secret: NVD_API_KEY_SECRET
       ARTIFACTORY_PASSWORD:

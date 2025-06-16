@@ -138,7 +138,7 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
-val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
+val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "-")
 Global / cancelable := true
 
 // code generation task
