@@ -31,6 +31,7 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt --error compile playCompileEverything
+      - sbt dependencyCheck
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
