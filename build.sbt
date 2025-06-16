@@ -1,6 +1,7 @@
 
 import Settings.versions.scalajsReact
 import com.typesafe.config.ConfigFactory
+import net.nmoncho.sbt.dependencycheck.settings.NvdApiSettings
 import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
 import sbt.Keys.credentials
@@ -137,6 +138,7 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
+val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
 Global / cancelable := true
 
 // code generation task
@@ -153,3 +155,5 @@ Global / onLoad := (Command.process("project server", _: State)) compose (Global
 enablePlugins(DockerPlugin)
 // enabled for Alpine JVM docker image compatibility
 enablePlugins(AshScriptPlugin)
+
+dependencyCheckNvdApi := NvdApiSettings(nvdAPIKey)
