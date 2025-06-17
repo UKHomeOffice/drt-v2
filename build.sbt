@@ -156,4 +156,4 @@ enablePlugins(DockerPlugin)
 // enabled for Alpine JVM docker image compatibility
 enablePlugins(AshScriptPlugin)
 
-dependencyCheckNvdApi := NvdApiSettings(nvdAPIKey)
+dependencyCheckNvdApi := NvdApiSettings("10dbca30-1fdc-4e7b-915c-fdfac0e9b1d1")
