@@ -180,11 +180,11 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - sbt clean compile
+      - echo NVD_API_KEY ${NVD_API_KEY}
       - sbt -Dlog4j2.level=info dependencyCheck
     environment:
       NVD_API_KEY:
-        from_secret: nvd_api_key
+        from_secret: NVD_API_KEY_SECRET
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt_ci
