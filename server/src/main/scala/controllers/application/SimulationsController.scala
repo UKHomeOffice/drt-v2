@@ -2,17 +2,16 @@ package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import actors.routing.FlightsRouterActor
-import org.apache.pekko.NotUsed
-import org.apache.pekko.actor.Props
-import org.apache.pekko.pattern.ask
-import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import drt.shared.CrunchApi._
 import drt.shared._
-import manifests.queues.SplitsCalculator
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.Props
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.Timeout
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.OptimisationProviders
@@ -97,7 +96,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         simulationParams = simulationParams,
         simulationAirportConfig = simulationConfig,
         sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-        splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
+        splitsCalculator = ctrl.splitsCalculator,
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         portStateActor = portStateActor,
         redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],

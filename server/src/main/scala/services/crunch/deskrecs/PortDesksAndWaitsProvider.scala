@@ -62,17 +62,18 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                               terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
                               terminalSplits: Terminal => Option[Splits],
                              )
-                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] = workloadCalculator
-    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder, terminalSplits).minutes
-    .groupBy {
-      case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
-        TQM(t, finalQueueName, m)
-    }
-    .map {
-      case (tqm, minutes) =>
-        val loads = minutes.values
-        (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None))
-    }
+                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] =
+    workloadCalculator
+      .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder, terminalSplits).minutes
+      .groupBy {
+        case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
+          TQM(t, finalQueueName, m)
+      }
+      .map {
+        case (tqm, minutes) =>
+          val loads = minutes.values
+          (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None))
+      }
 
   private def terminalWorkLoadsByQueue(terminal: Terminal,
                                        minuteMillis: NumericRange[MillisSinceEpoch],

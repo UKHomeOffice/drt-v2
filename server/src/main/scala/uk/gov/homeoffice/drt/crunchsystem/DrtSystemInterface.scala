@@ -13,6 +13,7 @@ import org.apache.pekko.util.Timeout
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
+import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import slickdb.AkkaDbTables
 import uk.gov.homeoffice.drt.AppEnvironment
@@ -108,9 +109,13 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
-  lazy val queueAdjustments: QueueAdjustments =
-    if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
-  lazy val splitsCalculator: SplitsCalculator = SplitsCalculator(airportConfig, queueAdjustments)
+  lazy val splitsCalculator: SplitsCalculator = {
+    val queueAdjustments: QueueAdjustments =
+      if (params.adjustEGateUseByUnderAge) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
+      else AdjustmentsNoop
+
+    SplitsCalculator(paxTypeQueueAllocator(airportConfig), airportConfig.terminalPaxSplits, queueAdjustments)
+  }
 
   lazy val applicationService: ApplicationService = ApplicationService(
     journalType = journalType,
@@ -126,7 +131,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     actorService = actorService,
     persistentStateActors = persistentActors,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
-    splitsCalculator,
+    splitsCalculator = splitsCalculator,
   )
 
   def run(): Unit
