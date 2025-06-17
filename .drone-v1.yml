@@ -195,7 +195,7 @@ steps:
       event:
         - push
     depends_on:
-      - Build scala app
+      - Build docker image
 #      branch:
 #        - master
 
