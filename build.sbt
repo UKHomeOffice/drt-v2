@@ -141,7 +141,6 @@ val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
 val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
 Global / cancelable := true
 
-// code generation task
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
 
 lazy val slick = TaskKey[Seq[File]]("gen-tables")
