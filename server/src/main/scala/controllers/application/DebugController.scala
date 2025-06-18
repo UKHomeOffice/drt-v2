@@ -34,7 +34,7 @@ class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
         "Port Live" -> PortLiveArrivalsActor.persistenceId,
         "Crunch State" -> "crunch-state",
         "Flight State" -> "flight-state",
-      ) ++ airportConfig.terminals.map(t => {
+      ) ++ airportConfig.terminals(SDate.now().toLocalDate).map(t => {
         "Terminal Day Flight (for snapshot day)" -> f"terminal-flights-${t.toString.toLowerCase}-${pit.getFullYear}-${pit.getMonth}%02d-${pit.getDate}%02d"
       })
 

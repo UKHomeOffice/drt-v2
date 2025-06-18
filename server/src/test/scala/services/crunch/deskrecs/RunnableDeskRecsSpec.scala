@@ -32,6 +32,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
@@ -117,13 +118,17 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(mockPortStateActor),
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
-      queuesByTerminal = airportConfig.queuesByTerminal,
+      dynamicQueueStatusProvider = () => MockEgatesProvider.portProvider(airportConfig)().map { ep =>
+        val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
+        DynamicQueueStatusProvider(queuesForDateAndTerminal, airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+      },
+      queuesByTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalc.terminalSplits,
       updateCapacity = _ => Future.successful(Done),
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+      validTerminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
     )
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, SortedSet.empty[TerminalUpdateRequest], "desk-recs")
 
@@ -359,7 +364,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk))),
         minutesToCrunch = 60
       ),
       now = () => SDate(noon),
@@ -395,7 +400,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk))),
         minutesToCrunch = 60
       ),
       now = () => SDate(noon),
@@ -444,7 +449,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = defaultAirportConfig.copy(
       terminalProcessingTimes = procTimes,
-      queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+      queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
     )
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = testAirportConfig,
@@ -500,7 +505,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     daysQueueSource ! TerminalUpdateRequest(T1, SDate(scheduled).toLocalDate)
 
     portStateProbe.fishForMessage(2.seconds) {
-      case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.size === defaultAirportConfig.queuesByTerminal(T1).size * minsInADay
+      case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.size === defaultAirportConfig.queuesByTerminal.head._2(T1).size * minsInADay
       case _ => false
     }
 

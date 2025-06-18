@@ -25,7 +25,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
@@ -36,10 +36,10 @@ object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     portName = "Stansted",
-    queuesByTerminal = SortedMap(
+    queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(
       T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk),
       T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)
-    ),
+    )),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
     minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
@@ -107,9 +107,9 @@ object TestDefaults {
   val airportConfigWithEgates: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     portName = "Stansted",
-    queuesByTerminal = SortedMap(
+    queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(
       T1 -> Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
-    ),
+    )),
     slaByQueue = Map(Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
     minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
@@ -170,9 +170,9 @@ object TestDefaults {
     AirportConfig(
       portCode = PortCode("STN"),
       portName = "Stansted",
-      queuesByTerminal = SortedMap(
+      queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(
         T1 -> queues
-      ),
+      )),
       slaByQueue = slas,
       minutesToCrunch = 30,
       defaultWalkTimeMillis = Map(),

@@ -135,7 +135,7 @@ object DashboardTerminalSummary {
                    timeWindowEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
                    periodLengthMinutes: Int,
-                   terminalHasBothEeaAndNonEeaQueues: Boolean,
+                   terminalHasSingleDeskQueue: Boolean,
                   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
@@ -168,7 +168,7 @@ object DashboardTerminalSummary {
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         def createChartData(splitsForPeriod: Map[PaxTypeAndQueue, Int]): ChartData = {
-          val paxSplitDataset: Seq[(String, Int)] = if (props.terminalHasBothEeaAndNonEeaQueues)
+          val paxSplitDataset: Seq[(String, Int)] = if (props.terminalHasSingleDeskQueue)
             BigSummaryBoxes.paxSplitPercentagesWithSingleDeskQueue(splitsForPeriod)
           else
             BigSummaryBoxes.paxSplitPercentagesWithSplitDeskQueues(splitsForPeriod)
@@ -187,7 +187,7 @@ object DashboardTerminalSummary {
           )
         }
 
-        def renderPaxTerminalOverview(summary: Seq[DashboardSummary], splitsForPeriod: Map[PaxTypeAndQueue, Int]) = {
+        <.div(
           PaxTerminalOverviewComponent(IPaxTerminalOverview(
             terminal = props.terminal.toString,
             periodLengthMinutes = props.periodLengthMinutes,
@@ -219,13 +219,8 @@ object DashboardTerminalSummary {
                   noneea = s.paxPerQueue.getOrElse(Queues.NonEeaDesk, 0).asInstanceOf[Int]
                 )).toJSArray
               }.toJSArray
-
           ))
-        }
-
-        val paxTerminalOverviewComponents = renderPaxTerminalOverview(summary, splitsForPeriod)
-
-        <.div(paxTerminalOverviewComponents)
+        )
 
       }
     }.build

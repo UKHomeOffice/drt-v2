@@ -112,7 +112,7 @@ object TerminalPlanningComponent {
 
             <.div(
               MuiTypography(variant = "h2")(s"Planning at ${props.page.portCodeStr} (${props.airportConfig.portName}), ${props.page.terminalName}"),
-              MuiTypography(variant = "h3")( "Headline Figures"),
+              MuiTypography(variant = "h3")("Headline Figures"),
               <.div(^.className := "terminal-content-header",
                 <.div(^.className := "staffing-controls-wrapper",
                   <.div(^.className := "staffing-controls-row",
@@ -147,10 +147,16 @@ object TerminalPlanningComponent {
                       day => <.th(s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}")
                     ).toTagMod
                   ), {
-                    val groupedByQ = forecastPeriod.headlines.queueDayHeadlines.groupBy(_.queue)
-                    Queues.queueOrder.flatMap(q => groupedByQ.get(q).map(qhls => <.tr(
-                      <.th(^.className := "queue-heading", s"${Queues.displayName(q)}"), qhls.toList.sortBy(_.day).map(qhl => <.td(qhl.paxNos)).toTagMod
-                    ))).toTagMod
+                    Queues.inOrder(forecastPeriod.headlines.queueDayHeadlines.map(_.queue).distinct).map { queue =>
+                      <.tr(
+                        <.th(^.className := "queue-heading", s"${Queues.displayName(queue)}"),
+                        forecastPeriod.headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map { day =>
+                          val paxForQueueOnDay = forecastPeriod.headlines.queueDayHeadlines
+                            .find(r => r.queue == queue && r.day == day).map(_.paxNos).getOrElse(0)
+                          <.td(paxForQueueOnDay.toString)
+                        }.toTagMod
+                      )
+                    }.toTagMod
                   }, {
                     val byDay = forecastPeriod.headlines.queueDayHeadlines.groupBy(_.day).toList
                     List(
@@ -162,7 +168,7 @@ object TerminalPlanningComponent {
                   }
                 )
               ),
-              MuiTypography(variant="h3")("Available and recommended staff"),
+              MuiTypography(variant = "h3")("Available and recommended staff"),
               MuiFormControl()(
                 <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center"),
                   MuiFormLabel(sx = SxProps(Map("size" -> "16px",

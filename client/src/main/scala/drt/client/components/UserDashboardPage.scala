@@ -2,12 +2,11 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, PortOperatorStaff}
 
 object UserDashboardPage {
@@ -18,7 +17,7 @@ object UserDashboardPage {
     .render_P(p => {
       val loggedInUserRCP = SPACircuit.connect(m => (m.loggedInUserPot))
       loggedInUserRCP { loggedInUserMP =>
-        val (loggedInUser) = loggedInUserMP()
+        val loggedInUser = loggedInUserMP()
 
         <.div(loggedInUser.renderReady(user => {
           if (user.hasRole(PortOperatorStaff))

@@ -1,12 +1,11 @@
 package drt.client.components
 
 import diode.UseValueEq
-import uk.gov.homeoffice.drt.auth.LoggedInUser
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewLive}
+import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 object PortExportDashboardPage {
 
@@ -18,10 +17,11 @@ object PortExportDashboardPage {
 
       airportConfigRCP(airportConfigMP => {
         <.div(^.className := "terminal-export-dashboard", airportConfigMP().renderReady(config => {
-          <.div(config.terminals.map(tn => {
+          val terminals = config.terminals(SDate.now().toLocalDate)
+          <.div(terminals.map(tn => {
             <.div(
               <.h3(s"Terminal $tn"),
-              MultiDayExportComponent(config.portCode, tn, config.terminals, ViewLive, SDate.now(), p.loggedInUser)
+              MultiDayExportComponent(config.portCode, tn, terminals, ViewLive, SDate.now(), p.loggedInUser)
             )
           }).toTagMod)
         }))

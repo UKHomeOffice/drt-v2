@@ -89,7 +89,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
-      contentAsString(result) must ===(s"Heathrow,LHR,$capacity,$portPaxPerDay,0,0,$terminalPaxPerDay,$terminalPaxPerDay,0\n")
+      contentAsString(result) must ===(s"Heathrow,LHR,$capacity,$portPaxPerDay,0,$terminalPaxPerDay,0,$terminalPaxPerDay,0\n")
     }
     "generate a daily breakdown csv with the correct headers for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
@@ -99,7 +99,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(
-        s"""2024-06-01,Heathrow,LHR,$capacity,$portPaxPerDay,0,0,$terminalPaxPerDay,$terminalPaxPerDay,0
+        s"""2024-06-01,Heathrow,LHR,$capacity,$portPaxPerDay,0,$terminalPaxPerDay,0,$terminalPaxPerDay,0
            |2024-06-02,Heathrow,LHR,0,0,0,0,0,0,0
            |""".stripMargin)
     }
@@ -113,7 +113,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(
         (0 to 23).map { hour =>
           val capacity = if (hour == 13) 100 else 0
-          f"2024-06-01T$hour%02d:00:00+01:00,Heathrow,LHR,$capacity,${portPaxPerDay / 24},0,0,${terminalPaxPerDay / 24},${terminalPaxPerDay / 24},0\n"
+          f"2024-06-01T$hour%02d:00:00+01:00,Heathrow,LHR,$capacity,${portPaxPerDay / 24},0,${terminalPaxPerDay / 24},0,${terminalPaxPerDay / 24},0\n"
         }.mkString
       )
     }
@@ -124,7 +124,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
-      contentAsString(result) must ===(s"Heathrow,LHR,T3,0,${queuePaxPerDay * queues.size},0,0,$queuePaxPerDay,$queuePaxPerDay,0\n")
+      contentAsString(result) must ===(s"Heathrow,LHR,T3,0,${queuePaxPerDay * queues.size},0,$queuePaxPerDay,0,$queuePaxPerDay,0\n")
     }
     "generate a daily breakdown csv with the correct headers for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
@@ -134,7 +134,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(
-        s"""2024-06-01,Heathrow,LHR,T3,0,${queuePaxPerDay * queues.size},0,0,$queuePaxPerDay,$queuePaxPerDay,0
+        s"""2024-06-01,Heathrow,LHR,T3,0,${queuePaxPerDay * queues.size},0,$queuePaxPerDay,0,$queuePaxPerDay,0
            |2024-06-02,Heathrow,LHR,T3,0,0,0,0,0,0,0
            |""".stripMargin)
     }
@@ -147,7 +147,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(
         (0 to 23).map { hour =>
-          f"2024-06-01T$hour%02d:00:00+01:00,Heathrow,LHR,T3,0,${queuePaxPerHour * queues.size},0,0,$queuePaxPerHour,$queuePaxPerHour,0\n"
+          f"2024-06-01T$hour%02d:00:00+01:00,Heathrow,LHR,T3,0,${queuePaxPerHour * queues.size},0,$queuePaxPerHour,0,$queuePaxPerHour,0\n"
         }.mkString
       )
     }

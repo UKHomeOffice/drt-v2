@@ -20,18 +20,19 @@ import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.services.exports.{AdminExportImpl, FlightsWithSplitsExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExportImpl}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
-import java.sql.Timestamp
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def exportFlightsWithSplitsTerminalsForDayAtPointInTimeCSV(localDateString: String,
-                                                    pointInTime: MillisSinceEpoch): Action[AnyContent] =
-    doExportForPointInTime(localDateString, pointInTime, ctrl.airportConfig.terminals.toSeq, exportForUser)
+                                                    pointInTime: MillisSinceEpoch): Action[AnyContent] = {
+    val terminals = ctrl.airportConfig.terminals(LocalDate.parse(localDateString).getOrElse(throw new Exception(s"Could not parse local date '$localDateString''")))
+    doExportForPointInTime(localDateString, pointInTime, terminals.toSeq, exportForUser)
+  }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String,
                                                     pointInTime: MillisSinceEpoch,
@@ -70,7 +71,10 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   def exportFlightsWithSplitsForDateRangeCSV(startLocalDateString: String,
                                              endLocalDateString: String,
                                             ): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    doExportForDateRange(startLocalDateString, endLocalDateString, ctrl.airportConfig.terminals.toSeq, exportForUser)
+    val start = LocalDate.parse(startLocalDateString).getOrElse(throw new Exception(s"Could not parse local date '$startLocalDateString''"))
+    val end = LocalDate.parse(endLocalDateString).getOrElse(throw new Exception(s"Could not parse local date '$endLocalDateString''"))
+    val terminals = QueueConfig.terminalsForDateRange(ctrl.airportConfig.queuesByTerminal)(start, end)
+    doExportForDateRange(startLocalDateString, endLocalDateString, terminals, exportForUser)
   }
 
   private def doExportForDateRange(startLocalDateString: String,
@@ -109,7 +113,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
     eventualFlightsByDate.map {
       flightsStream =>
-        export.csvStream(flightsStream.mapAsync(1) { case (d, flights) =>
+        export.csvStream(flightsStream.mapAsync(1) { case (_, flights) =>
           val sortedFlights = flights.toSeq.sortBy(_.apiFlight.PcpTime.getOrElse(0L))
           Source(sortedFlights)
             .mapAsync(1) { fws =>

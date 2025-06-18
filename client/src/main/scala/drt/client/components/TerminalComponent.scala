@@ -25,9 +25,11 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.models.UserPreferences
+import uk.gov.homeoffice.drt.ports.Queues.Transfer
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.HashSet
@@ -159,8 +161,10 @@ object TerminalComponent {
 
                       val terminal = props.terminalPageTab.terminal
                       val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
-                      val queues = terminalModel.airportConfigPot.map(_.nonTransferQueues(terminal).toList)
-                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, q).toMap))
+                      val queues = terminalModel.airportConfigPot.map { ac =>
+                        QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal).filterNot(_ == Transfer).toList
+                      }
+                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, q)))
                       val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, q)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, viewInterval, terminal).toMap)
 

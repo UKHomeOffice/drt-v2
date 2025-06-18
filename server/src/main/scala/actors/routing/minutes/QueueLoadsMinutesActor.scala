@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 object QueueLoadsMinutesActor {
   def splitByResource(request: MinutesContainer[PassengersMinute, TQM]): Map[(Terminal, UtcDate), MinutesContainer[PassengersMinute, TQM]] = {
@@ -18,13 +18,13 @@ object QueueLoadsMinutesActor {
   def alwaysSend(request: MinutesContainer[PassengersMinute, TQM]): Boolean = true
 }
 
-class QueueLoadsMinutesActor(terminals: Iterable[Terminal],
+class QueueLoadsMinutesActor(terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                              lookup: MinutesLookup[PassengersMinute, TQM],
                              updateMinutes: MinutesUpdate[PassengersMinute, TQM, TerminalUpdateRequest])
   extends MinutesActorLike2(
-    terminals,
-    lookup,
-    updateMinutes,
-    QueueLoadsMinutesActor.splitByResource,
-    QueueLoadsMinutesActor.alwaysSend,
+    terminalsForDateRange = terminalsForDateRange,
+    lookup = lookup,
+    updateMinutes = updateMinutes,
+    splitByResource = QueueLoadsMinutesActor.splitByResource,
+    shouldSendEffects = QueueLoadsMinutesActor.alwaysSend,
   ) with RouterActorLikeWithSubscriber2[MinutesContainer[PassengersMinute, TQM], (Terminal, UtcDate), TerminalUpdateRequest]

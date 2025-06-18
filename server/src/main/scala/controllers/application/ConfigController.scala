@@ -22,5 +22,4 @@ class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
       Ok(write(ctrl.feedService.paxFeedSourceOrder))
     }
   }
-
 }

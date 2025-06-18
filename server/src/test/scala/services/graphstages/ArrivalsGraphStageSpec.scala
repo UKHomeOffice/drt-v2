@@ -1,7 +1,7 @@
 package services.graphstages
 
 import controllers.ArrivalGenerator
-import controllers.ArrivalGenerator.{forecast, live}
+import controllers.ArrivalGenerator.live
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared._
 import services.PcpArrival.pcpFrom
@@ -17,7 +17,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliDate, SDate, SDateLike}
 
-import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -33,10 +32,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
   val terminalSplits: Splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage)
 
-  val airportConfig: AirportConfig = defaultAirportConfig.copy(
-    queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
-    useTimePredictions = true,
-  )
+  val airportConfig: AirportConfig = defaultAirportConfig.copy(useTimePredictions = true)
+
   val defaultWalkTime = 300000L
   val pcpCalc: Arrival => MilliDate = pcpFrom(airportConfig.firstPaxOffMillis, _ => defaultWalkTime)
 
@@ -83,8 +80,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has ACLFeed and ForecastFeed" >> {
       val forecastScheduled = "2017-01-01T10:25Z"
-      val aclFlight = forecast(iata = "BA0002", schDt = forecastScheduled, totalPax = Option(10))
-      val forecastArrival = forecast(schDt = forecastScheduled, iata = "BA0002", terminal = T1, totalPax = Option(21))
+      val aclFlight = ArrivalGenerator.forecast(iata = "BA0002", schDt = forecastScheduled, totalPax = Option(10))
+      val forecastArrival = ArrivalGenerator.forecast(schDt = forecastScheduled, iata = "BA0002", terminal = T1, totalPax = Option(21))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(aclFlight)))
       offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(List(forecastArrival)))

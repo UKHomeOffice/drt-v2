@@ -23,8 +23,8 @@ class ExportPortConfigControllerSpec extends PlaySpec {
            |T1
            |
            |Queue SLAs
-           |Effective from,EGate,EeaDesk,NonEeaDesk
-           |01-09-2014 00:00,5,25,45
+           |Effective from,EeaDesk,EGate,NonEeaDesk
+           |01-09-2014 00:00,25,5,45
            |
            |Desks and Egates
            |22 desks

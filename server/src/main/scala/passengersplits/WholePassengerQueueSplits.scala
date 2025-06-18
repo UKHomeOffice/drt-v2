@@ -15,30 +15,18 @@ import scala.collection.immutable.NumericRange
 object WholePassengerQueueSplits {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def splits(minuteMillis: NumericRange[MillisSinceEpoch],
-             flights: Iterable[ApiFlightWithSplits],
-             processingTime: Terminal => (PaxType, Queue) => Double,
-             queueStatus: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
-             queueFallbacks: QueueFallbacks,
-             paxFeedSourceOrder: List[FeedSource],
-             terminalSplits: Terminal => Option[Splits],
-            ): Map[TQM, LoadMinute] =
+  def queueWorkloads(workloadForFlight: ApiFlightWithSplits => Map[Queue, Map[MillisSinceEpoch, List[Double]]],
+                     flights: Iterable[ApiFlightWithSplits],
+                    ): Map[TQM, LoadMinute] = {
     flights
-      .groupBy(_.apiFlight.Terminal)
-      .toList
-      .flatMap {
-        case (terminal, flights) =>
-          val procTimes = processingTime(terminal)
-          flights
-            .flatMap { flight =>
-              flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks, paxFeedSourceOrder, terminalSplits)
-                .flatMap { case (queue, byMinute) =>
-                  byMinute.map {
-                    case (minute, passengers) =>
-                      (TQM(terminal, queue, minute), passengers)
-                  }
-                }
+      .flatMap { flight =>
+        workloadForFlight(flight)
+          .flatMap { case (queue, byMinute) =>
+            byMinute.map {
+              case (minute, passengers) =>
+                (TQM(flight.apiFlight.Terminal, queue, minute), passengers)
             }
+          }
       }
       .groupBy { case (tqm, _) => tqm }
       .map {
@@ -47,47 +35,43 @@ object WholePassengerQueueSplits {
           val totalLoad = loadsByPassenger.sum
           (tqm, LoadMinute(tqm.terminal, tqm.queue, loadsByPassenger, totalLoad, tqm.minute))
       }
+  }
 
-  private def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
-                           flight: ApiFlightWithSplits,
-                           processingTime: (PaxType, Queue) => Double,
-                           queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                           queueFallbacks: QueueFallbacks,
-                           paxFeedSourceOrder: List[FeedSource],
-                           terminalSplits: Terminal => Option[Splits],
-                          ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
-    flight.bestSplits.orElse(terminalSplits(flight.apiFlight.Terminal)) match {
-      case Some(splitsToUse) =>
-        val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
-        val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)
-        val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt).toList
-        val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
-        wholePaxLoadsPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)
-      case None =>
-        log.error(s"No splits found for ${flight.apiFlight.flightCode}")
-        Map.empty
-    }
+  def paxWorkloadsByQueue(distributePaxOverQueuesAndMinutes: (Int, Seq[ApiPaxTypeAndQueueCount], (Queue, PaxType) => List[Queue], SDateLike) => Map[Queue, Map[MillisSinceEpoch, List[Double]]],
+                          queueFallbacks: QueueFallbacks,
+                          paxFeedSourceOrder: List[FeedSource],
+                          terminalSplits: Terminal => Option[Splits],
+                         ): ApiFlightWithSplits => Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+    flight =>
+      flight.bestSplits.orElse(terminalSplits(flight.apiFlight.Terminal)) match {
+        case Some(splitsToUse) =>
+          val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
+          val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)
+          val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt, startMinute.toLocalDate).toList
+          val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
+          distributePaxOverQueuesAndMinutes(pcpPax, wholePaxSplits, terminalQueueFallbacks, startMinute)
+        case None =>
+          log.error(s"No splits found for ${flight.apiFlight.flightCode}")
+          Map.empty
+      }
 
   def wholePaxLoadsPerQueuePerMinute(processingWindow: NumericRange[MillisSinceEpoch],
-                                     totalPax: Int,
-                                     wholeSplits: Seq[ApiPaxTypeAndQueueCount],
                                      processingTime: (PaxType, Queue) => Double,
                                      queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                                     queueFallbacks: (Queue, PaxType) => List[Queue],
-                                     startMinute: SDateLike,
-                                    ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] = {
-    val windowStart = processingWindow.min
-    val windowEnd = processingWindow.max
-    val paxDistribution = distributePaxOverSplitsAndMinutes(
-      passengerCount = totalPax,
-      passengersPerMinute = 20,
-      paxSplits = wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap,
-      firstMinute = startMinute.millisSinceEpoch,
-    )
-    val relevantPaxDistribution = paxDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd).toMap
-    val workloadDistribution = paxDistributionToWorkloads(relevantPaxDistribution, processingTime, queueStatus, queueFallbacks)
-    transposeMaps(workloadDistribution)
-  }
+                                    ): (Int, Seq[ApiPaxTypeAndQueueCount], (Queue, PaxType) => List[Queue], SDateLike) => Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+    (totalPax, wholeSplits, queueFallbacks, startMinute) => {
+      val windowStart = processingWindow.min
+      val windowEnd = processingWindow.max
+      val paxDistribution = distributePaxOverSplitsAndMinutes(
+        passengerCount = totalPax,
+        passengersPerMinute = 20,
+        paxSplits = wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap,
+        firstMinute = startMinute.millisSinceEpoch,
+      )
+      val relevantPaxDistribution = paxDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd).toMap
+      val workloadDistribution = paxDistributionToWorkloads(relevantPaxDistribution, processingTime, queueStatus, queueFallbacks)
+      transposeMaps(workloadDistribution)
+    }
 
   def distributePaxOverSplitsAndMinutes(passengerCount: Int,
                                         passengersPerMinute: Int,

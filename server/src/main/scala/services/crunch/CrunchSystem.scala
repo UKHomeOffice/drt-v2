@@ -115,12 +115,9 @@ object CrunchSystem {
     )
   }
 
-  def paxTypeQueueAllocator(config: AirportConfig): PaxTypeQueueAllocation = if (config.hasTransfer)
-    PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator,
-      TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
-  else
-    PaxTypeQueueAllocation(
-      B5JPlusTypeAllocator,
-      TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
+  def paxTypeQueueAllocator(hasTransfer: Boolean, queueAllocator: QueueAllocator): PaxTypeQueueAllocation =
+    if (hasTransfer)
+      PaxTypeQueueAllocation(B5JPlusWithTransitTypeAllocator, queueAllocator)
+    else
+      PaxTypeQueueAllocation(B5JPlusTypeAllocator, queueAllocator)
 }

@@ -6,16 +6,15 @@ import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestFlightsRouterActor, TestTerminalDayFlightActor}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
 
 case class TestFlightLookups(system: ActorSystem,
                              now: () => SDateLike,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]],
+                             terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                              paxFeedSourceOrder: List[FeedSource],
                              terminalSplits: Terminal => Option[Splits],
                              updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit],
@@ -31,7 +30,7 @@ case class TestFlightLookups(system: ActorSystem,
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(
       new TestFlightsRouterActor(
-        queuesByTerminal.keys,
+        terminalsForDateRange,
         flightsByDayLookup(None),
         updateFlights(None, updateLiveView),
         resetFlightsData,

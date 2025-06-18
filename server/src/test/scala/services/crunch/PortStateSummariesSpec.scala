@@ -108,7 +108,7 @@ class PortStateSummariesSpec extends Specification {
 
   "PortState " should {
     "correctly calculate UTC time days when creating a summary spanning a clock change" in {
-      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", utcTimeZone), 7, T1, List(EeaDesk))
+      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", utcTimeZone), 7, T1, (_, _, _) => Seq(EeaDesk))
       val days = summaries.keys.toList.sorted.map(SDate(_))
 
       val expected = List(
@@ -125,7 +125,7 @@ class PortStateSummariesSpec extends Specification {
     }
 
     "correctly calculate local time days when creating a summary spanning a clock change" in {
-      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", europeLondonTimeZone), 7, T1, List(EeaDesk))
+      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", europeLondonTimeZone), 7, T1, (_, _, _) => Seq(EeaDesk))
       val days = summaries.keys.toList.sorted.map(SDate(_))
 
       val expected = List(

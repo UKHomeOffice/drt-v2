@@ -7,8 +7,6 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.config.Lhr
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-
 class StaffMinutesCheckerSpec extends Specification {
   "Given a StaffMinutesChecker with LHR's config and max-forecast-days of 2" >> {
     "I should see TerminalUpdateRequests for every terminal for the last 2 days of the max forecast period" >> {
@@ -21,10 +19,10 @@ class StaffMinutesCheckerSpec extends Specification {
       checker.calculateForecastStaffMinutes()
 
       val expected = for {
-        day <- Seq(LocalDate(2023, 1, 9), LocalDate(2023, 1, 10))
-        terminal <- Lhr.config.terminals
+        date <- Seq(LocalDate(2023, 1, 9), LocalDate(2023, 1, 10))
+        terminal <- Lhr.config.terminals(date)
       } yield {
-        TerminalUpdateRequest(terminal, day)
+        TerminalUpdateRequest(terminal, date)
       }
 
       testProbe.receiveN(8).toSet === expected.toSet

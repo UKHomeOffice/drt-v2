@@ -1,25 +1,24 @@
 package services.crunch.deskrecs
 
+import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
+import drt.shared._
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.StatusReply
 import org.apache.pekko.stream.scaladsl.{Flow, Source}
 import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
 import org.apache.pekko.{Done, NotUsed}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.FeedSource
-import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.collection.SortedSet
-import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -31,11 +30,12 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             flightsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
             deskRecsProvider: PortDesksAndWaitsProviderLike,
             redListUpdatesProvider: () => Future[RedListUpdates],
-            queueStatusProvider: DynamicQueueStatusProvider,
+            queueStatusProvider: () => Future[DynamicQueueStatusProvider],
             updateLivePaxView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
             terminalSplits: Terminal => Option[Splits],
             queueLoadsSinkActor: ActorRef,
-            queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
+            queuesByTerminal: (LocalDate, Terminal) => Seq[Queue],
+            validTerminals: LocalDate => Seq[Terminal],
             paxFeedSourceOrder: List[FeedSource],
             updateCapacity: UtcDate => Future[Done],
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
@@ -46,8 +46,9 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         arrivalsProvider = flightsProvider,
         portDesksAndWaitsProvider = deskRecsProvider,
         redListUpdatesProvider = redListUpdatesProvider,
-        queueStatusProvider,
-        queuesByTerminal,
+        dynamicQueueStatusProvider = queueStatusProvider,
+        queuesByTerminal = queuesByTerminal,
+        validTerminals = validTerminals,
         updateLiveView = updateLivePaxView,
         paxFeedSourceOrder = paxFeedSourceOrder,
         terminalSplits = terminalSplits,
@@ -69,8 +70,9 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
   def crunchRequestsToQueueMinutes(arrivalsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                    redListUpdatesProvider: () => Future[RedListUpdates],
-                                   dynamicQueueStatusProvider: DynamicQueueStatusProvider,
-                                   queuesByTerminal: Map[Terminal, Iterable[Queue]],
+                                   dynamicQueueStatusProvider: () => Future[DynamicQueueStatusProvider],
+                                   queuesByTerminal: (LocalDate, Terminal) => Seq[Queue],
+                                   validTerminals: LocalDate => Seq[Terminal],
                                    updateLiveView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
                                    paxFeedSourceOrder: List[FeedSource],
                                    terminalSplits: Terminal => Option[Splits],
@@ -81,9 +83,8 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                    ec: ExecutionContext,
                                    mat: Materializer,
                                   ): Flow[TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] = {
-    val validTerminals = queuesByTerminal.keys.toSet
     Flow[TerminalUpdateRequest]
-      .filter(cr => validTerminals.contains(cr.terminal))
+      .filter(cr => validTerminals(cr.date).contains(cr.terminal))
       .wireTap(cr => log.info(s"$cr crunch request - started"))
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
@@ -119,8 +120,8 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
 
   private def toPassengerLoads(portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                redListUpdatesProvider: () => Future[RedListUpdates],
-                               dynamicQueueStatusProvider: DynamicQueueStatusProvider,
-                               queuesByTerminal: Map[Terminal, Iterable[Queue]],
+                               dynamicQueueStatusProvider: () => Future[DynamicQueueStatusProvider],
+                               queuesByTerminalForDate: (LocalDate, Terminal) => Seq[Queue],
                                terminalSplits: Terminal => Option[Splits],
                               )
                               (implicit
@@ -131,21 +132,22 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
       .mapAsync(1) {
         case (request, flights) =>
           log.info(s"Passenger load calculation starting: ${request.date.toISOString}, ${request.terminal}, ${flights.size} flights")
+          val queues = queuesByTerminalForDate(request.date, request.terminal)
+
           val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
-            statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(request.minutesInMillis)
-            queueStatusProvider = queueStatusesProvider(statuses)
+            statusProvider <- dynamicQueueStatusProvider()
           } yield {
-            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(request.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider, terminalSplits)
+            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(request.minutesInMillis, FlightsWithSplits(flights), redListUpdates, statusProvider.queueStatus, terminalSplits)
             val paxMinutesForCrunchPeriod = for {
-              queue <- queuesByTerminal(request.terminal)
+              queue <- queues
               minute <- request.minutesInMillis
             } yield {
               flightsPax.getOrElse(TQM(request.terminal, queue, minute), PassengersMinute(request.terminal, queue, minute, Seq(), Option(SDate.now().millisSinceEpoch)))
             }
 
             log.info(s"Passenger load calculation finished: (${request.start.toISOString} to ${request.end.toISOString})")
-            Option((request, MinutesContainer(paxMinutesForCrunchPeriod.toSeq)))
+            Option((request, MinutesContainer(paxMinutesForCrunchPeriod)))
           }
           eventualDeskRecs.recover {
             case t =>
@@ -160,23 +162,6 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         case Some((procRequest, minutes)) => (procRequest, minutes)
       }
   }
-
-  private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]],
-                                   ): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
-    (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => {
-      val terminalStatuses = statuses.getOrElse(terminal, {
-        log.error(s"terminal $terminal not found")
-        Map[Queue, Map[MillisSinceEpoch, QueueStatus]]()
-      })
-      val queueStatuses = terminalStatuses.getOrElse(queue, {
-        log.error(s"queue $queue not found")
-        Map[MillisSinceEpoch, QueueStatus]()
-      })
-      queueStatuses.getOrElse(time, {
-        log.error(s"time $time not found in ${queueStatuses.keys.min} to ${queueStatuses.keys.max}")
-        Closed
-      })
-    }
 
   private def addArrivals(flightsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
                          (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, (TerminalUpdateRequest, List[ApiFlightWithSplits]), NotUsed] =

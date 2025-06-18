@@ -7,7 +7,7 @@ import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -35,7 +35,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk))),
         minutesToCrunch = 120
       )))
 
@@ -76,7 +76,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk))),
         minutesToCrunch = 120
       )
     ))

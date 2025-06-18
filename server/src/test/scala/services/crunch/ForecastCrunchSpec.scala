@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.Future
@@ -87,7 +87,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         crunchOffsetMinutes = 240,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk))),
         minutesToCrunch = 1440
       ),
       now = () => SDate(scheduled),

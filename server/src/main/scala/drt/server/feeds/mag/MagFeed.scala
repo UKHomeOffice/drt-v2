@@ -1,5 +1,8 @@
 package drt.server.feeds.mag
 
+import drt.server.feeds.Feed.FeedTick
+import drt.server.feeds.mag.MagFeed.MagArrival
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.apache.pekko.actor.{ActorSystem, typed}
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -8,9 +11,6 @@ import org.apache.pekko.http.scaladsl.model.headers.RawHeader
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
-import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.mag.MagFeed.MagArrival
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}

@@ -1,5 +1,6 @@
 package drt.server.feeds
 
+import drt.server.feeds.Feed.FeedTick
 import org.apache.pekko.actor.typed.ActorRef
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import org.apache.pekko.http.scaladsl.model.headers.RawHeader
@@ -7,7 +8,6 @@ import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import drt.server.feeds.Feed.FeedTick
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival, VoyageNumber}

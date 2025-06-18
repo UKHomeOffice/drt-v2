@@ -4,20 +4,21 @@ import actors.PartitionedPortStateActor._
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.routing.FlightsRouterActor
+import controllers.ArrivalGenerator
+import drt.shared.CrunchApi._
+import drt.shared._
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.{ActorRef, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.Source
-import controllers.ArrivalGenerator
-import drt.shared.CrunchApi._
-import drt.shared._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits}
 import uk.gov.homeoffice.drt.models.CrunchMinute
-import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -31,20 +32,22 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, (_, _) => Future.successful(()))
+  val terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
+  val terminalsForDate: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
+  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, terminalsForDateRange, (_, _) => Seq(EeaDesk, EGate, NonEeaDesk), _ => (_, _, _) => Future.successful(()))
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 
-  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
+  val flightLookups: FlightLookups = FlightLookups(system, myNow, terminalsForDateRange, None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
 
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000
   val flightsActor: ActorRef = flightLookups.flightsRouterActor
   val queuesActor: ActorRef = lookups.queueMinutesRouterActor
   val staffActor: ActorRef = lookups.staffMinutesRouterActor
-  val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
-  val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
-  val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")
+  val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, terminalsForDate, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
+  val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, terminalsForDate, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
+  val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, terminalsForDate, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")
 
   def portStateActorProvider: () => ActorRef = () => {
     system.actorOf(Props(new PartitionedPortStateActor(
@@ -55,12 +58,11 @@ class PortStateRequestsSpec extends CrunchTestLike {
       staffUpdates,
       flightUpdates,
       myNow,
-      airportConfig.queuesByTerminal,
       InMemoryStreamingJournal)))
   }
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => SDate.now(), None)))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.toUtcDate, terminal, (_, _) => Seq.empty, () => SDate.now(), None)))
     Await.ready(actor.ask(ResetData), 1.second)
   }
 
@@ -152,11 +154,12 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1)).asContainer).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2)).asContainer))
 
-      "Then I should find a matching crunch minute" >> {
+      "Then I should find crunch minutes representing both desk rec minutes" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
         val expectedCms = Seq(
           CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None),
-          CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None))
+          CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None),
+        )
 
         result === PortState(Seq(), setUpdatedCms(expectedCms, myNow().millisSinceEpoch), Seq())
       }
@@ -180,7 +183,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       val eventualAck = ps.ask(StaffMinutes(Seq(sm1)).asContainer).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2)).asContainer))
 
-      "Then I should find a matching staff minute" >> {
+      "Then I should find both minutes" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
 
         result === PortState(Seq(), Seq(), setUpdatedSms(Seq(sm1, sm2), myNow().millisSinceEpoch))

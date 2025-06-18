@@ -74,8 +74,11 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
 
   def updatesFromMessages(minuteMessages: Seq[GeneratedMessage]): Seq[A]
 
-  def updateState(minuteMessages: Seq[GeneratedMessage]): Unit = {
-    updates = updates ++ updatesFromMessages(minuteMessages).map(cm => (cm.key, cm))
+  def removalsFromMessages(removalMessages: Seq[GeneratedMessage]): Seq[B]
+
+  def updateState(minuteMessages: Seq[GeneratedMessage], removalMessages: Seq[GeneratedMessage]): Unit = {
+    updates = (updates -- removalsFromMessages(removalMessages)) ++
+      updatesFromMessages(minuteMessages).map(cm => (cm.key, cm))
     purgeOldUpdates()
   }
 

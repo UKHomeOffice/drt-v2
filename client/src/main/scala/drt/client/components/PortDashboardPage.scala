@@ -15,10 +15,11 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.models.UserPreferences
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, QueueDesk}
+import uk.gov.homeoffice.drt.ports.Queues.QueueDesk
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal.numberString
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues, Terminals}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Terminals}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.mutable.LinkedHashMap
@@ -71,7 +72,8 @@ object PortDashboardPage {
 
               val userHasTerminalPreference: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
 
-              val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queuesByTerminal, portConfig.terminalPaxSplits, portConfig.terminals)
+              val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
+              val terminals = portConfig.terminals(SDate.now().toLocalDate)
 
               val selectedTerminals: List[String] = if (!userHasTerminalPreference) {
                 terminals.map(t => s"${t.toString}").toList
@@ -86,6 +88,8 @@ object PortDashboardPage {
               )
 
               def displayPeriod = periods(p.dashboardPage.period.getOrElse(1))
+
+              val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)
 
               def switchDashboardPeriod(event: ReactEventFromInput) = {
                 val period = event.target.value.toInt
@@ -192,8 +196,9 @@ object PortDashboardPage {
                       portDashboardModel.featureFlags.renderReady(_ => {
                         val portStateForDashboard = portState.windowWithTerminalFilter(
                           displayPeriod.start,
-                          displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
-                          portConfig.queuesByTerminal.view.filterKeys(_ == terminal).toMap,
+                          displayPeriod.end,
+                          QueueConfig.terminalsForDateRange(portConfig.queuesByTerminal),
+                          QueueConfig.queuesForDateRangeAndTerminal(portConfig.queuesByTerminal),
                           portDashboardModel.paxFeedSourceOrder,
                         )
                         val scheduledFlightsInTerminal = portStateForDashboard
@@ -203,21 +208,22 @@ object PortDashboardPage {
                           .toList
                         val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                         val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
-                        val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminal, Seq()))
+                        val terminalQueuesInOrder = queuesForDateAndTerminal(displayPeriod.start.toLocalDate, terminal)
                         portDashboardModel.featureFlags.renderReady { _ =>
+                          val queues = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)(displayPeriod.start.toLocalDate, terminalName)
                           DashboardTerminalSummary(
                             DashboardTerminalSummary.Props(
-                              scheduledFlightsInTerminal,
-                              terminalCrunchMinutes,
-                              terminalStaffMinutes,
-                              terminal,
-                              paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
-                              terminalQueuesInOrder,
-                              displayPeriod.start,
-                              displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
-                              portDashboardModel.paxFeedSourceOrder,
-                              selectedPeriodLengthMinutes,
-                              portConfig.queuesByTerminal.get(terminalName).exists(_.contains(QueueDesk))
+                              flights = scheduledFlightsInTerminal,
+                              crunchMinutes = terminalCrunchMinutes,
+                              staffMinutes = terminalStaffMinutes,
+                              terminal = terminal,
+                              paxTypeAndQueues = paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
+                              queues = terminalQueuesInOrder,
+                              timeWindowStart = displayPeriod.start,
+                              timeWindowEnd = displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
+                              paxFeedSourceOrder = portDashboardModel.paxFeedSourceOrder,
+                              periodLengthMinutes = selectedPeriodLengthMinutes,
+                              terminalHasSingleDeskQueue = queues.contains(QueueDesk),
                             )
                           )
                         }

@@ -12,7 +12,7 @@ import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments, TerminalQueueAllocator}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import slickdb.AkkaDbTables
@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
-import uk.gov.homeoffice.drt.models.CrunchMinute
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
@@ -81,10 +81,10 @@ trait DrtSystemInterface extends UserRoleProviderLike
       doUpdate(updates, removals)
   }
 
-  lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
+  lazy val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit] = {
     val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
-    (date, updates) =>
-      doUpdate(date, updates).map(_ => ())
+    terminal => (date, updates, removals) =>
+      doUpdate(terminal)(date, updates, removals).map(_ => ())
   }
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
@@ -114,7 +114,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
       if (params.adjustEGateUseByUnderAge) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
       else AdjustmentsNoop
 
-    SplitsCalculator(paxTypeQueueAllocator(airportConfig), airportConfig.terminalPaxSplits, queueAdjustments)
+    val paxQueueAllocator = paxTypeQueueAllocator(airportConfig.hasTransfer, TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
+    SplitsCalculator(paxQueueAllocator, airportConfig.terminalPaxSplits, queueAdjustments)
   }
 
   lazy val applicationService: ApplicationService = ApplicationService(
