@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate, UtcDate}
 
-import scala.:+
 import scala.concurrent.{ExecutionContext, Future}
 
 object EgateUptakeSimulation {
