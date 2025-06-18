@@ -1,8 +1,8 @@
 package controllers.application
 
-import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import drt.shared.api.{WalkTime, WalkTimes}
+import org.apache.pekko.pattern.ask
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -41,7 +41,10 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     ctrl.applicationService.slasActor
       .ask(GetState).mapTo[SlaConfigs]
       .map { sla =>
-        val terminalQueueOrder = Queues.queueOrder.filter(q => airportConfig.queuesByTerminal.get(thisTerminal).exists(_.contains(q)))
+        val queues = ctrl.applicationService.queuesForDateAndTerminal(SDate.now().toLocalDate, thisTerminal)
+
+        val terminalQueueOrder = Queues.queueOrder.filter(queues.contains)
+
         val slaHeaders = s"Effective from,${terminalQueueOrder.mkString(",")}"
         val slaCsv = sla.configs.map {
           case (date, queues) =>
@@ -157,7 +160,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
   def exportConfig: Action[AnyContent] = Action.async { _ =>
     val aConfigAndDeskByTerminal = Future.sequence {
-      airportConfig.terminals.map { tn =>
+      airportConfig.terminals(SDate.now().toLocalDate).map { tn =>
         val terminal = tn.toString
         val slaConfig: Future[String] = getSlaConfig(tn)
         val airportConfigString = getAirportConfig(tn)

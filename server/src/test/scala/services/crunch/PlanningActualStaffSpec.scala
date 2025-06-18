@@ -6,7 +6,8 @@ import services.exports.Forecast
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.service.QueueConfig
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
   sequential
@@ -27,11 +28,12 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
         val crunchMinutesT1: Set[CrunchMinute] = (0 to 59)
           .map(index => CrunchMinute(terminal = T1, queue = Queues.EeaDesk, minute = index * 60000,
-                                     lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0, maybePaxInQueue = None)).toSet
+            lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0, maybePaxInQueue = None)).toSet
         val crunchMinutesT2 = crunchMinutesT1.map(_.copy(terminal = T2, deskRec = 2))
 
+        val queues = QueueConfig.queuesForDateAndTerminal(defaultAirportConfig.queuesByTerminal)(LocalDate(2025, 1, 1), T1)
         val ps = PortState(List(), (crunchMinutesT1 ++ crunchMinutesT2).toList, (staffMinutesT1 ++ staffMinutesT2).toList)
-        val cs = ps.crunchSummary(SDate(0L), 4, 15, T1, defaultAirportConfig.queuesByTerminal(T1).toList)
+        val cs = ps.crunchSummary(SDate(0L), 4, 15, T1, queues.toList)
         val ss = ps.staffSummary(SDate(0L), 4, 15, T1)
 
         val result = Forecast.rollUpForWeek(cs, ss).values.head.toSet
@@ -41,7 +43,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
           ForecastTimeSlot(15 * 60000, 20, 3),
           ForecastTimeSlot(30 * 60000, 20, 3),
           ForecastTimeSlot(45 * 60000, 20, 3)
-          )
+        )
 
         result === expected
       }

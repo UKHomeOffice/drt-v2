@@ -29,9 +29,9 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
                    slaConfigs: SlaConfigs,
                    terminal: Terminal,
                    simulationResult: Pot[SimulationResult],
+                   queues: Seq[Queue],
                   ) extends UseValueEq {
-    def queueOrder(terminal: Terminal): List[Queue] =
-      airportConfig.desksExportQueueOrder.filter(q => airportConfig.queuesByTerminal(terminal).contains(q))
+    def queueOrder: List[Queue] = airportConfig.desksExportQueueOrder.filter(q => queues.contains(q))
   }
 
   case class State(activeTab: String) {
@@ -60,7 +60,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
           <.div(
             DefaultFormFieldsStyle.simulationCharts,
             <.ul(^.className := "nav nav-tabs",
-              props.queueOrder(props.terminal).map(q => {
+              props.queueOrder.map(q => {
                 val tabClass = if (state.isSelected(q.toString)) " active" else ""
                 <.li(
                   ^.className := s"$tabClass",
@@ -72,7 +72,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
                 )
               }).toVdomArray
             ),
-            props.queueOrder(props.terminal).map { q =>
+            props.queueOrder.map { q =>
               <.div(
                 <.div(qToChart(q)).when(state.isSelected(q.toString))
               )

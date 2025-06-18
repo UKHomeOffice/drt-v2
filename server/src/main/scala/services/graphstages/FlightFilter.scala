@@ -6,6 +6,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.AirportInfoService
+import uk.gov.homeoffice.drt.time.SDate
 
 case class FlightFilter(filters: List[(ApiFlightWithSplits, RedListUpdates) => Boolean]) {
   def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
@@ -36,8 +37,11 @@ object FlightFilter {
   def regular(validTerminals: Iterable[Terminal]): FlightFilter =
     validTerminalFilter(validTerminals.toList) + notDivertedFilter + notCancelledFilter + outsideCtaFilter
 
-  def forPortConfig(config: AirportConfig): FlightFilter = config.portCode match {
-    case PortCode("LHR") => regular(config.terminals) + lhrRedListFilter
-    case _ => regular(config.terminals)
+  def forPortConfig(config: AirportConfig): FlightFilter = {
+    val terminals = regular(config.terminals(SDate.now().toLocalDate))
+    config.portCode match {
+      case PortCode("LHR") => terminals + lhrRedListFilter
+      case _ => terminals
+    }
   }
 }

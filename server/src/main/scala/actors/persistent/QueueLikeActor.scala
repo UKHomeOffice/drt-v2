@@ -21,7 +21,7 @@ object QueueLikeActor {
   case object Tick
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike, terminals: Iterable[Terminal]) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike, terminals: LocalDate => Iterable[Terminal]) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)

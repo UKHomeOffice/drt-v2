@@ -21,7 +21,7 @@ class SimulationParamsSpec extends Specification {
     date = LocalDate(2020, 3, 27),
     passengerWeighting = 1.0,
     processingTimes = testConfig.terminalProcessingTimes(terminal).view.mapValues(_ => 60).toMap,
-    minDesksByQueue = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
+    minDesksByQueue = testConfig.queuesByTerminal.head._2(terminal).map(q => q -> 0).toMap,
     maxDesks = 20,
     eGateBankSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,

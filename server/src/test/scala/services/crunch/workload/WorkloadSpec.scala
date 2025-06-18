@@ -28,7 +28,7 @@ class WorkloadSpec extends CrunchTestLike {
   private def workloadCalculator(procTimes: Map[PaxTypeAndQueue, Double], filter: FlightFilter) =
     DynamicWorkloadCalculator(
       Map(T1 -> procTimes, T2 -> procTimes, T3 -> procTimes, T4 -> procTimes, T5 -> procTimes),
-      QueueFallbacks(Map()),
+      QueueFallbacks((_, _) => Seq.empty),
       filter,
       AirportConfigDefaults.fallbackProcessingTime,
       paxFeedSourceOrder,

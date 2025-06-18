@@ -11,7 +11,9 @@ import services.exports.Exports.streamExport
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
@@ -114,7 +116,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         val start = viewDay
         val end = viewDay.getLocalNextMidnight.addMinutes(-1)
         val stream = exportStreamFn(Option(pit.millisSinceEpoch), start, end, periodMinutes(request))
-        val terminals = ctrl.airportConfig.terminals.toSeq
+        val terminals = ctrl.airportConfig.terminals(ld).toSeq
         streamExport(ctrl.airportConfig.portCode, terminals, ld, ld, stream, s"desks-and-queues-$exportName-at-${pit.toISOString}-for")
       case _ =>
         BadRequest(write(ErrorResponse("Invalid date format")))
@@ -149,7 +151,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         val start = SDate(startLD)
         val end = SDate(endLD).getLocalNextMidnight.addMinutes(-1)
         val stream = exportStreamFn(None, start, end, periodMinutes(request))
-        val terminals = ctrl.airportConfig.terminals.toSeq
+        val terminals = QueueConfig.terminalsForDateRange(ctrl.airportConfig.queuesByTerminal)(startLD, endLD)
         streamExport(ctrl.airportConfig.portCode, terminals, startLD, endLD, stream, s"desks-and-queues-$exportName")
       case _ =>
         BadRequest(write(ErrorResponse("Invalid date format")))
@@ -159,17 +161,19 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   private def periodMinutes(request: Request[AnyContent]): Int =
     request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
 
+  private val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(ctrl.airportConfig.queuesByTerminal)
+
   private def deskDepsExportStreamForTerminals(pointInTime: Option[MillisSinceEpoch],
                                                start: SDateLike,
                                                end: SDateLike,
                                                periodMinutes: Int): Source[String, NotUsed] = {
-    val terminals = ctrl.airportConfig.terminals.toSeq
+    val terminals = QueueConfig.terminalsForDateRange(ctrl.airportConfig.queuesByTerminal)(start.toLocalDate, end.toLocalDate)
     StreamingDesksExport.deskDepsTerminalsToCSVStreamWithHeaders(
       start,
       end,
       terminals,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      Queues.inOrder(terminals.flatMap(t => ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, t))),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,
@@ -180,13 +184,13 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
                                                start: SDateLike,
                                                end: SDateLike,
                                                periodMinutes: Int): Source[String, NotUsed] = {
-    val terminals = ctrl.airportConfig.terminals.toSeq
+    val terminals = QueueConfig.terminalsForDateRange(ctrl.airportConfig.queuesByTerminal)(start.toLocalDate, end.toLocalDate)
     StreamingDesksExport.deskRecsTerminalsToCSVStreamWithHeaders(
       start,
       end,
       terminals,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      Queues.inOrder(terminals.flatMap(t => ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, t))),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,
@@ -202,8 +206,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       start,
       end,
       terminal,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,
@@ -218,8 +222,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       start,
       end,
       terminal,
-      ctrl.airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
+      ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal),
+      ctrl.minuteLookups.queuesLookup(queuesForDateAndTerminal),
       ctrl.minuteLookups.staffLookup,
       pointInTime,
       periodMinutes,

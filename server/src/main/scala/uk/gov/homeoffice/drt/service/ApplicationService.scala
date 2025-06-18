@@ -97,7 +97,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
-    (date: LocalDate) => airportConfig.terminals.map(TerminalUpdateRequest(_, date))
+    (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))
 
   val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestsProvider, maxDaysToConsider)(
     emptyProvider = new EmptyConfig[Map[Queue, Int], SlaConfigs] {
@@ -106,6 +106,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
     serialiser = ConfigSerialiser.slaConfigsSerialiser,
     deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
   )))
+
+  val queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue] =
+    QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
+  val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Seq[Queue] =
+    QueueConfig.queuesForDateRangeAndTerminal(airportConfig.queuesByTerminal)
+  val validTerminalsForDate: LocalDate => Seq[Terminal] =
+    QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
 
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
@@ -243,6 +250,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
       24.hours,
     ).addPredictions
 
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
+
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
+    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
+  else
+    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
+
   val startUpdateGraphs: (
     PersistentStateActors,
       SortedSet[TerminalUpdateRequest],
@@ -269,10 +283,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
       )
 
       val (historicSplitsQueueActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
-        airportConfig.portCode,
-        actorService.flightsRouterActor,
-        splitsCalculator.splitsForManifest,
-        manifestLookupService.maybeBestAvailableManifest,
+        portCode = airportConfig.portCode,
+        flightsRouterActor = actorService.flightsRouterActor,
+        splitsFromManifest = splitsCalculator.splitsForManifest,
+        maybeBestAvailableManifest = manifestLookupService.maybeBestAvailableManifest,
       )
 
       val (historicPaxQueueActor, historicPaxKillSwitch) = RunnableHistoricPax(
@@ -298,11 +312,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.flightsRouterActor),
         deskRecsProvider = portDeskRecs,
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-        queueStatusProvider = DynamicQueueStatusProvider(airportConfig, egatesProvider),
+        queueStatusProvider = () => egatesProvider().map { ep =>
+          DynamicQueueStatusProvider(queuesForDateAndTerminal, airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+        },
         updateLivePaxView = updateLivePaxView,
         terminalSplits = splitsCalculator.terminalSplits,
         queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
-        queuesByTerminal = airportConfig.queuesByTerminal,
+        queuesByTerminal = queuesForDateAndTerminal,
+        validTerminals = validTerminalsForDate,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
         updateCapacity = updateAndPersistCapacity,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
@@ -400,13 +417,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       (mergeArrivalsRequestQueueActor, paxLoadsRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, killSwitches)
     }
 
-  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
-
-  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
-    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
-  else
-    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
-
   def startCrunchSystem(startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] =
     CrunchSystem(CrunchProps(
@@ -435,7 +445,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val daysInYear = 365
   private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
   val retentionHandler: DataRetentionHandler = DataRetentionHandler(
-    retentionPeriod, params.forecastMaxDays, airportConfig.terminals, now, akkaDb, aggregatedDb)
+    retentionPeriod, params.forecastMaxDays, QueueConfig.allTerminalsIncludingHistoric(airportConfig.queuesByTerminal), now, akkaDb, aggregatedDb)
   val dateIsSafeToPurge: UtcDate => Boolean = DataRetentionHandler.dateIsSafeToPurge(retentionPeriod, now)
   val latestDateToPurge: () => UtcDate = DataRetentionHandler.latestDateToPurge(retentionPeriod, now)
 

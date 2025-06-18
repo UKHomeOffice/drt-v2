@@ -1,13 +1,13 @@
 package controllers.application
 
-import actors.CrunchManagerActor.{LookupHistoricPaxNos, LookupHistoricSplits, RecalculateArrivals, RecalculateHistoricSplits, RecalculateLiveSplits, Recrunch}
+import actors.CrunchManagerActor._
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
-import org.apache.pekko.pattern.ask
-import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
-import drt.shared.PortState
+import drt.shared.{CrunchApi, PortState}
 import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.crunch.CrunchManager.{queueDaysToReCrunchWithUpdatedSplits, queueDaysToReProcess}
 import services.exports.Forecast
@@ -71,10 +71,10 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val forecast = portStateFuture
         .map {
           case portState: PortState =>
+            val queues = ctrl.applicationService.queuesForDateRangeAndTerminal
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
-            val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
-              airportConfig.queuesByTerminal(terminal).toList)
+            val hf: CrunchApi.ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues)
             Option(ForecastPeriodWithHeadlines(fp, hf))
         }
         .recover {
@@ -143,10 +143,13 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     Action { request: Request[AnyContent] =>
       request.body.asText match {
         case Some("true") =>
-          queueDaysToReCrunchWithUpdatedSplits(ctrl.actorService.flightsRouterActor,
+          queueDaysToReCrunchWithUpdatedSplits(
+            ctrl.actorService.flightsRouterActor,
             crunchManagerActor,
             offsetMinutes,
-            forecastLengthDays, now)
+            forecastLengthDays,
+            now
+          )
           Ok("Re-crunching with updated splits")
         case _ =>
           queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => Recrunch(m))

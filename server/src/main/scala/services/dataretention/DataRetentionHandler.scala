@@ -141,7 +141,7 @@ object DataRetentionHandler {
     val deleteAggregatedData = deleteAggregatedDataBeforeRetentionPeriod(
       Map(
         "flights" -> ((date: UtcDate) => aggregatedDb.run(FlightDao().removeAllBefore(date))),
-        "queue-slots" -> ((date: UtcDate) => aggregatedDb.run(QueueSlotDao().removeAllBefore(date))),
+        "queue-slots" -> ((date: UtcDate) => aggregatedDb.run(QueueSlotDao().removeAllBefore()(date))),
         "passengers-hourly" -> ((date: UtcDate) => aggregatedDb.run(PassengersHourlyDao.removeAllBefore(date))),
         "capacity-hourly" -> ((date: UtcDate) => aggregatedDb.run(CapacityHourlyDao.removeAllBefore(date))),
       ),

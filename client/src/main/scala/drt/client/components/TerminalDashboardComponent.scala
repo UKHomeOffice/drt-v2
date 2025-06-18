@@ -16,12 +16,13 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.models.{CrunchMinute, FlightManifestSummary, ManifestKey, TQM, UserPreferences}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.models._
+import uk.gov.homeoffice.drt.ports.Queues.{FastTrack, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.SortedMap
@@ -131,7 +132,7 @@ object TerminalDashboardComponent {
             <.div(^.className := "terminal-dashboard-queues",
               <.div(^.className := "pax-bar", s"$terminalPax passengers presenting at the PCP"),
               <.div(^.className := "queue-boxes",
-                props.airportConfig.nonTransferQueues(terminal).filterNot(_ == Queues.FastTrack).map(q => {
+                QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(startPoint.toLocalDate, terminal).filterNot(q => q == FastTrack || q == Transfer).map(q => {
                   val qCMs = cmsForTerminalAndQueue(currentSlotPs, q, terminal)
                   val prevSlotCMs = cmsForTerminalAndQueue(prevSlotPs, q, terminal)
                   val qPax = qCMs.map(_.paxLoad).sum.round

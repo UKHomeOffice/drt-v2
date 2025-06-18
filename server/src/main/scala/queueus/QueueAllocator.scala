@@ -11,9 +11,10 @@ import uk.gov.homeoffice.drt.ports.{PaxType, Queues}
 trait QueueAllocator {
   def queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]
 
-  def queueRatio(terminal: Terminal, paxType: PaxType): Seq[(Queue, Double)] = queueRatios.getOrElse(terminal, Map()).getOrElse(paxType, Seq())
-
   def forTerminalAndManifest(terminal: Terminal, manifest: ManifestLike)(paxType: PaxType): Seq[(Queue, Double)]
+
+  def queueRatio(terminal: Terminal, paxType: PaxType): Seq[(Queue, Double)] =
+    queueRatios.getOrElse(terminal, Map()).getOrElse(paxType, Seq())
 }
 
 case class TerminalQueueAllocator(queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]) extends QueueAllocator {

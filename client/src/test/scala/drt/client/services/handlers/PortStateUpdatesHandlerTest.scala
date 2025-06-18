@@ -52,7 +52,6 @@ object PortStateUpdatesHandlerTest extends TestSuite {
         val splitsForArrivals = SplitsForArrivals(Map(flight.unique -> Set(splits)))
         val arrivalKeys = splitsToManifestKeys(Iterable(splitsForArrivals), Map.empty, Set.empty)
 
-        println(s"$arrivalKeys != Set(${ManifestKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)})")
         assert(arrivalKeys == Set(ManifestKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)))
       }
     }

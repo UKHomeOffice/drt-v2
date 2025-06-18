@@ -10,7 +10,7 @@ import drt.shared.TM
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinuteRemovalMessage, StaffMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 
@@ -26,23 +26,29 @@ class TerminalDayStaffUpdatesActor(year: Int,
   override def receiveCommand: Receive = myReceiveCommand orElse streamingUpdatesReceiveCommand
 
   def myReceiveCommand: Receive = {
-    case EventEnvelope(_, _, _, StaffMinutesMessage(minuteMessages)) =>
-      updateState(minuteMessages)
+    case EventEnvelope(_, _, _, StaffMinutesMessage(minuteMessages, removalMessages)) =>
+      updateState(minuteMessages, removalMessages)
       sender() ! Ack
   }
 
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
 
   def myReceiveRecover: Receive = {
-    case SnapshotOffer(SnapshotMetadata(_, _, ts), StaffMinutesMessage(minuteMessages)) =>
+    case SnapshotOffer(SnapshotMetadata(_, _, ts), StaffMinutesMessage(minuteMessages, removalMessages)) =>
       log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString}")
-      updateState(minuteMessages)
+      updateState(minuteMessages, removalMessages)
 
-    case StaffMinutesMessage(minuteMessages) =>
-      updateState(minuteMessages)
+    case StaffMinutesMessage(minuteMessages, removalMessages) =>
+      updateState(minuteMessages, removalMessages)
   }
 
   def updatesFromMessages(minuteMessages: Seq[GeneratedMessage]): Seq[StaffMinute] = minuteMessages.map {
     case msg: StaffMinuteMessage => PortStateMessageConversion.staffMinuteFromMessage(msg)
   }
+
+  def removalsFromMessages(removalMessages: Seq[GeneratedMessage]): Seq[TM] =
+    removalMessages.map {
+      case msg: StaffMinuteRemovalMessage => TM(terminal, SDate(msg.getMinute).millisSinceEpoch)
+      case _ => throw new IllegalArgumentException("Unexpected message type for removal")
+    }
 }

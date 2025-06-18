@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, 
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -36,7 +36,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
           val airportConfigWithEgates = defaultAirportConfig.copy(
             slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25),
-            queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+            queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate))),
             terminalPaxSplits = Map(T1 -> SplitRatios(
               SplitSources.TerminalAverage,
               SplitRatio(eeaMachineReadableToDesk, edSplit),
@@ -111,7 +111,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             now = () => SDate(scheduled),
             airportConfig = defaultAirportConfig.copy(
               slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
-              queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
+              queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate))),
               terminalProcessingTimes = Map(T1 -> Map(
                 eeaMachineReadableToDesk -> 0.35,
                 eeaMachineReadableToEGate -> 0.35,
@@ -205,7 +205,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               now = () => SDate(scheduled),
               airportConfig = defaultAirportConfig.copy(
                 slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25),
-                queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+                queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate))),
                 terminalPaxTypeQueueAllocation = defaultAirportConfig.terminalPaxTypeQueueAllocation.updated(
                   T1, defaultAirportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
                   )

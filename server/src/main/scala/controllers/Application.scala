@@ -1,14 +1,14 @@
 package controllers
 
-import org.apache.pekko.event.Logging
-import org.apache.pekko.http.scaladsl.Http
-import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
 import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import spray.json.{JsValue, enrichAny}
 import drt.shared.DrtPortConfigs
+import org.apache.pekko.event.Logging
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -19,7 +19,7 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.serialisers.UserRowSerialisation
 import uk.gov.homeoffice.drt.jsonformats.UserPreferencesJsonFormat
-import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
+import uk.gov.homeoffice.drt.keycloak._
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService

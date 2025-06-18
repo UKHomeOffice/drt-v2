@@ -271,18 +271,8 @@ class TerminalDayFlightActor(year: Int,
           val incomingArrivals = updates.map(flightMessageToApiFlight).map(a => (a.unique, a)).toMap
           val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeExistingFws, incoming) => {
             val updated = maybeExistingFws
-              .map { existingFws =>
-                if (persistenceId == "terminal-flights-t5-2025-04-19" && existingFws.apiFlight == incoming) {
-                  log.info(s"Got an update for the same flight ${existingFws.apiFlight.flightCodeString} - ignoring")
-                  existingFws
-                } else {
-
-                  existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming))
-                }
-              }
+              .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
               .getOrElse {
-                if (persistenceId == "terminal-flights-t5-2025-04-19")
-                  println(s"Got a new flight ${incoming.flightCodeString} ${SDate(incoming.Scheduled).toISOString} - ignoring")
                 ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt))
               }
               .copy(lastUpdated = Option(createdAt))

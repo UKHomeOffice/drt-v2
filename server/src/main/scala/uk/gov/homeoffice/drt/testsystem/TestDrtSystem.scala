@@ -17,7 +17,7 @@ import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.tables.UserTableLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.FeedService
+import uk.gov.homeoffice.drt.service.{FeedService, QueueConfig}
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
@@ -61,17 +61,20 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val shiftsService: ShiftsService = MockStaffShiftsService()
 
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(
-    system,
-    now,
-    MilliTimes.oneDayMillis,
-    airportConfig.queuesByTerminal,
-    update15MinuteQueueSlotsLiveView,
+    system = system,
+    now = now,
+    expireAfterMillis = MilliTimes.oneDayMillis,
+    terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal),
+    queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
+    updateLiveView = update15MinuteQueueSlotsLiveView,
   )
+
+  val terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
 
   override val flightLookups: FlightLookupsLike = TestFlightLookups(
     system,
     now,
-    airportConfig.queuesByTerminal,
+    terminalsForDateRange,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
     updateFlightsLiveView,

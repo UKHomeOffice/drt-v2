@@ -4,14 +4,14 @@ import actors.ManifestLookups
 import actors.persistent._
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 
 object ProdPersistentStateActors {
   def apply(system: ActorSystem,
             now: () => SDateLike,
             manifestLookups: ManifestLookups,
-            terminals: Iterable[Terminal],
+            terminals: LocalDate => Iterable[Terminal],
            ): PersistentStateActors = new PersistentStateActors {
     override val manifestsRouterActor: ActorRef =
       system.actorOf(
