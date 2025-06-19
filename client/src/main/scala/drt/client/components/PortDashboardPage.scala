@@ -154,31 +154,36 @@ object PortDashboardPage {
                           }.toTagMod
                         )
                       )),
-                    <.span(^.className := "separator"),
-                    <.div(
-                      <.label(^.htmlFor := "time-range-select", <.strong("Terminals:")),
-                      <.div(^.className := "port-dashboard-terminal",
-                        terminals.map { terminal =>
-                          <.label(^.className := "terminal-checkbox-label",
-                            <.input(
-                              ^.`type` := "checkbox",
-                              ^.name := "terminal",
-                              ^.value := terminal.toString,
-                              ^.checked := selectedTerminals.contains(s"${terminal.toString}"),
-                              ^.onChange ==> handleTerminalChange
-                            ),
-                            s"Terminal ${numberString(terminal)}"
-                          )
-                        }.toTagMod
+                    if (terminals.size > 1) {
+                      <.span(^.className := "separator")
+                      <.div(
+                        <.label(^.htmlFor := "time-range-select", <.strong("Terminals:")),
+                        <.div(^.className := "port-dashboard-terminal",
+                          terminals.map { terminal =>
+                            <.label(^.className := "terminal-checkbox-label",
+                              <.input(
+                                ^.`type` := "checkbox",
+                                ^.name := "terminal",
+                                ^.value := terminal.toString,
+                                ^.checked := selectedTerminals.contains(s"${terminal.toString}"),
+                                ^.onChange ==> handleTerminalChange
+                              ),
+                              s"Terminal ${numberString(terminal)}"
+                            )
+                          }.toTagMod
+                        )
                       )
-                    ))),
+                    } else ""
+                  )),
                 <.div(
                   <.h3(s"Arrivals"),
                   <.div(^.className := "port-dashboard-selection",
                     <.span(<.strong("Filters applied:")),
                     <.span(s"Time period : ${selectedPeriodLengthMinutes} minutes period (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
-                    <.span(^.className := "selection-separator"),
-                    <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}"),
+                    if (terminals.size > 1) {
+                      <.span(^.className := "selection-separator")
+                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}")
+                    } else ""
                   )
                 ),
 
