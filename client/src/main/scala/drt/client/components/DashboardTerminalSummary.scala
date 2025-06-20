@@ -64,7 +64,7 @@ object DashboardTerminalSummary {
 
   def periodSummaries(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, periodLengthMinutes: Int): Seq[DashboardSummary] = {
     val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByPeriod(flights, start, periodLengthMinutes).toMap
-    val groupedCrunchMinutes = groupCrunchMinutesByPeriod(cms, start, periodLengthMinutes).toMap
+    val groupedCrunchMinutes: Map[MillisSinceEpoch, List[CrunchMinute]] = groupCrunchMinutesByPeriod(cms, start, periodLengthMinutes).toMap
     periodStartTimes(start, periodLengthMinutes).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
@@ -97,7 +97,7 @@ object DashboardTerminalSummary {
                                          startMin: SDateLike,
                                          periodLengthMinutes: Int,
                                         ): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val periodLengthMillis = periodLengthMinutes * 60 * 1000
+    val periodLengthMillis = periodLengthMinutes/3 * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
       val periodsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / periodLengthMillis).toInt
       startMin.addMinutes(periodsSinceStart * periodLengthMinutes).millisSinceEpoch
@@ -132,7 +132,6 @@ object DashboardTerminalSummary {
                    paxTypeAndQueues: Iterable[PaxTypeAndQueue],
                    queues: Seq[Queue],
                    timeWindowStart: SDateLike,
-                   timeWindowEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
                    periodLengthMinutes: Int,
                    terminalHasSingleDeskQueue: Boolean,

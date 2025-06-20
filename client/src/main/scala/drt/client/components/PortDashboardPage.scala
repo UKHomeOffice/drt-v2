@@ -208,11 +208,13 @@ object PortDashboardPage {
                         )
                         val scheduledFlightsInTerminal = portStateForDashboard
                           .flights
+                          .filter(_._2.apiFlight.Terminal == terminal)
                           .values
                           .filterNot(_.apiFlight.isCancelled)
                           .toList
-                        val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
-                        val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
+
+                        val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.filter(_._1.terminal == terminal).values.toList
+                        val terminalStaffMinutes = portStateForDashboard.staffMinutes.filter(_._1.terminal == terminal).values.toList
                         val terminalQueuesInOrder = queuesForDateAndTerminal(displayPeriod.start.toLocalDate, terminal)
                         portDashboardModel.featureFlags.renderReady { _ =>
                           val queues = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)(displayPeriod.start.toLocalDate, terminalName)
@@ -225,7 +227,6 @@ object PortDashboardPage {
                               paxTypeAndQueues = paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
                               queues = terminalQueuesInOrder,
                               timeWindowStart = displayPeriod.start,
-                              timeWindowEnd = displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
                               paxFeedSourceOrder = portDashboardModel.paxFeedSourceOrder,
                               periodLengthMinutes = selectedPeriodLengthMinutes,
                               terminalHasSingleDeskQueue = queues.contains(QueueDesk),
