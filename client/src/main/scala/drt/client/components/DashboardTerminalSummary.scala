@@ -97,7 +97,7 @@ object DashboardTerminalSummary {
                                          startMin: SDateLike,
                                          periodLengthMinutes: Int,
                                         ): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
-    val periodLengthMillis = periodLengthMinutes * 60 * 1000
+    val periodLengthMillis = periodLengthMinutes/3 * 60 * 1000
     cms.sortBy(_.minute).groupBy(cm => {
       val periodsSinceStart = ((cm.minute - startMin.millisSinceEpoch) / periodLengthMillis).toInt
       startMin.addMinutes(periodsSinceStart * periodLengthMinutes).millisSinceEpoch
