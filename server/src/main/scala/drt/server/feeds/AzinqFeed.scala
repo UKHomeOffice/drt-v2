@@ -9,7 +9,7 @@ import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.slf4j.{Logger, LoggerFactory}
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import spray.json.{DefaultJsonProtocol, JsArray, RootJsonFormat}
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
@@ -51,8 +51,19 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
 
     () =>
       httpRequest(request)
-        .flatMap(Unmarshal[HttpResponse](_).to[List[A]])
-        .map(_.filter(_.isValid).map(_.toArrival))
+        .flatMap(Unmarshal[HttpResponse](_).to[JsArray])
+        .map { jsonArray =>
+          jsonArray.elements.flatMap { jsValue =>
+            try {
+              val arrival = jsValue.convertTo[A]
+              if (arrival.isValid) Some(arrival.toArrival) else None
+            } catch {
+              case ex: Exception =>
+                log.warn(s"Failed to parse JSON object: ${jsValue.prettyPrint}, error: ${ex.getMessage}")
+                None
+            }
+          }
+        }
   }
 }
 
