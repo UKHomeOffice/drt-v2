@@ -140,12 +140,11 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
           val c = dates.flatten
             .groupBy(_._2).map {
               case (terminal, figures) =>
-                //average bx & drt percentages for the terminal
                 val bxAverage = figures.map(_._3).sum / figures.size
                 val drtAverage = figures.map(_._4).sum / figures.size
                 (terminal, bxAverage, drtAverage)
             }
-          log.info(s"Calculated egate uptake for ${c.size} terminals over ${c.map(_._2).sum} days")
+          log.info(s"Calculated egate uptake for ${c.size} terminals ${c.mkString(", ")}")
           Ok(c.mkString("\n"))
         }
 
