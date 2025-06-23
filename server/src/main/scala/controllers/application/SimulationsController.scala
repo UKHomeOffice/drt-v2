@@ -127,7 +127,9 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
           Source(airportConfig.terminals(SDate(date).toLocalDate).toSeq)
             .mapAsync(1) { terminal =>
               bxAndDrtEgatePercentageForDate(date, terminal).map {
-                case (bxPercentage, drtPercentage) => (date, terminal, bxPercentage, drtPercentage)
+                case (bxPercentage, drtPercentage) =>
+                  log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
+                  (date, terminal, bxPercentage, drtPercentage)
               }
             }
             .runWith(Sink.seq)
