@@ -74,7 +74,7 @@ object EgateUptakeSimulation {
           var liveCount = 0
           var historicCount = 0
           var terminalCount = 0
-          Source(flights)
+          Source(flights.filterNot(a => a.Origin.isDomesticOrCta || a.isCancelled))
             .mapAsync(1) { flight =>
               val uniqueArrivalKey = UniqueArrivalKey(flight, portCode)
               liveManifest(uniqueArrivalKey).flatMap {

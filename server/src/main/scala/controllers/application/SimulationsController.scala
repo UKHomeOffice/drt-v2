@@ -143,7 +143,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
                 val drtAverage = figures.map(_._4).sum / figures.size
                 (terminal, bxAverage, drtAverage)
             }
-
+          log.info(s"Calculated egate uptake for ${c.size} terminals over ${c.map(_._2).sum} days")
           Ok(c.mkString("\n"))
         }
 
