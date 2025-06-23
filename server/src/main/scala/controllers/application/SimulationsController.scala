@@ -7,10 +7,11 @@ import controllers.application.exports.CsvFileStreaming
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import drt.shared.CrunchApi._
 import drt.shared._
+import manifests.passengers.BestAvailableManifest
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.Props
 import org.apache.pekko.pattern.ask
-import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.util.Timeout
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
@@ -19,16 +20,18 @@ import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
-import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.db.dao.BorderCrossingDao
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, UtcDate}
+import uk.gov.homeoffice.drt.service.EgateUptakeSimulation
+import uk.gov.homeoffice.drt.time._
 import upickle.default.write
 
 import scala.collection.immutable.SortedMap
@@ -73,6 +76,78 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             log.error(s"Invalid Simulation attempt: ${e.getMessage}")
             Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
+    }
+  }
+
+  def egateUptakeSimulation(startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
+    Action.async {
+      val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
+      val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation)
+      val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc)
+      val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] = (ua: UniqueArrivalKey) => ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
+      val flightsWithPcpStartDuringDate: (UtcDate, Terminal) => Future[Seq[Arrival]] =
+        (d: UtcDate, t: Terminal) => {
+          val start = SDate(d)
+          val end = start.addDays(1).addMinutes(-1)
+          ctrl
+            .flightsForPcpDateRange(d, d, Seq(t))
+            .map { case (_, flights) =>
+              flights.collect {
+                case fws if fws.apiFlight.hasPcpDuring(start, end, ctrl.feedService.paxFeedSourceOrder) => fws.unique -> fws.apiFlight
+              }.toMap.values
+            }
+            .runWith(Sink.seq)
+            .map(_.flatten)
+        }
+      val arrivalsWithManifests = EgateUptakeSimulation.arrivalsWithManifestsForDateAndTerminal(
+        portCode = airportConfig.portCode,
+        liveManifest = ctrl.applicationService.manifestProvider,
+        historicManifest = historicManifest,
+        flightsForDateAndTerminal = flightsWithPcpStartDuringDate,
+      )
+      val drtEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateUptakeSimulation.drtEgatePercentageForDateAndTerminal(
+        flightsWithManifestsForDateAndTerminal = arrivalsWithManifests,
+        egateAndDeskPaxForFlight = egateAndDeskPaxForFlight,
+      )
+      val bxDao = BorderCrossingDao
+      val bxQueueTotals: (UtcDate, Terminal) => Future[Map[Queue, Int]] =
+        (date, terminal) => {
+          val function = bxDao.queueTotalsForPortAndDate(airportConfig.portCode.iata, Some(terminal.toString))
+          ctrl.aggregatedDb.run(function(date))
+        }
+      val bxEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateUptakeSimulation.bxEgatePercentageForDateAndTerminal(bxQueueTotals)
+
+      val bxAndDrtEgatePercentageForDate = EgateUptakeSimulation.bxAndDrtEgatePercentageForDate(bxEgatePercentage, drtEgatePercentage)
+
+      val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
+      val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
+
+      val lines: Source[Seq[(UtcDate, Terminal, Double, Double)], NotUsed] = Source(DateRange(start, end))
+        .mapAsync(1) { date =>
+          Source(airportConfig.terminals(SDate(date).toLocalDate).toSeq)
+            .mapAsync(1) { terminal =>
+              bxAndDrtEgatePercentageForDate(date, terminal).map {
+                case (bxPercentage, drtPercentage) => (date, terminal, bxPercentage, drtPercentage)
+              }
+            }
+            .runWith(Sink.seq)
+        }
+      val content = lines
+        .runWith(Sink.seq)
+        .map { dates =>
+          val c = dates.flatten
+            .groupBy(_._2).map {
+              case (terminal, figures) =>
+                //average bx & drt percentages for the terminal
+                val bxAverage = figures.map(_._3).sum / figures.size
+                val drtAverage = figures.map(_._4).sum / figures.size
+                (terminal, bxAverage, drtAverage)
+            }
+
+          Ok(c.mkString("\n"))
+        }
+
+      content
     }
   }
 
