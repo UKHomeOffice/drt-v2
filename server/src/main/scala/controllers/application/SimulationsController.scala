@@ -80,7 +80,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   }
 
   def egateUptakeSimulation(startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
-    Action {
+    Action { request =>
+      val maybeTerminal = request.queryString.get("terminal").flatMap(_.headOption).map(Terminal.apply)
       val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
       val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation)
       val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc)
@@ -122,21 +123,26 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
       val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
 
+      val terminals = maybeTerminal match {
+        case Some(t) => Seq(t)
+        case None => airportConfig.terminals(SDate(start).toLocalDate).toSeq
+      }
+
       val stream: Source[String, NotUsed] = Source(DateRange(start, end))
         .mapAsync(1) { date =>
-          Source(airportConfig.terminals(SDate(date).toLocalDate).toSeq)
+          Source(terminals)
             .mapAsync(1) { terminal =>
               bxAndDrtEgatePercentageForDate(date, terminal).map {
                 case (bxPercentage, drtPercentage) =>
                   log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
-                  (date, terminal, bxPercentage, drtPercentage)
-                  f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f\n"
+                  f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}\n"
               }
             }
             .runWith(Sink.fold("") { case (acc, line) => acc + line })
         }
+        .prepend(Source(List("Date,Terminal,BX EGate Uptake (%),DRT EGate Uptake (%),Difference\n")))
 
-      sourceToCsvResponse(stream, s"forecast-accuracy-${airportConfig.portCode.iata}.csv")
+      sourceToCsvResponse(stream, s"egate-uptake-simulation-${airportConfig.portCode.iata}.csv")
     }
   }
 
