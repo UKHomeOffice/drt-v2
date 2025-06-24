@@ -26,11 +26,11 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.BorderCrossingDao
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.service.EgateUptakeSimulation
+import uk.gov.homeoffice.drt.service.{EgateUptakeSimulation, QueueConfig}
 import uk.gov.homeoffice.drt.time._
 import upickle.default.write
 
@@ -84,7 +84,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       val maybeTerminal = request.queryString.get("terminal").flatMap(_.headOption).map(Terminal.apply)
       val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
       val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation)
-      val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc)
+      val fallbacks = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal))
+      val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc, fallbacks)
       val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] = (ua: UniqueArrivalKey) => ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
       val flightsWithPcpStartDuringDate: (UtcDate, Terminal) => Future[Seq[Arrival]] =
         (d: UtcDate, t: Terminal) => {
@@ -104,7 +105,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         portCode = airportConfig.portCode,
         liveManifest = ctrl.applicationService.manifestProvider,
         historicManifest = historicManifest,
-        flightsForDateAndTerminal = flightsWithPcpStartDuringDate,
+        arrivalsForDateAndTerminal = flightsWithPcpStartDuringDate,
       )
       val drtEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateUptakeSimulation.drtEgatePercentageForDateAndTerminal(
         flightsWithManifestsForDateAndTerminal = arrivalsWithManifests,
@@ -135,7 +136,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               bxAndDrtEgatePercentageForDate(date, terminal).map {
                 case (bxPercentage, drtPercentage) =>
                   log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
-                  f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}\n"
+                  f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}%.2f\n"
               }
             }
             .runWith(Sink.fold("") { case (acc, line) => acc + line })

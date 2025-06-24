@@ -4,12 +4,13 @@ import manifests.queues.SplitsCalculator
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
+import passengersplits.WholePassengerQueueSplits
 import queueus.TerminalQueueAllocator
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Ratio
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits}
 import uk.gov.homeoffice.drt.models.{ManifestLike, UniqueArrivalKey}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Open, Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -19,6 +20,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object EgateUptakeSimulation {
   private val log = LoggerFactory.getLogger(getClass)
+
+  private val feedSourceOrder: List[FeedSource] = List(LiveFeedSource, ApiFeedSource, ForecastFeedSource, HistoricApiFeedSource, AclFeedSource)
 
   def bxAndDrtEgatePercentageForDate(bxEgatePercentageForDateAndTerminal: (UtcDate, Terminal) => Future[Double],
                                      drtEgatePercentageForDateAndTerminal: (UtcDate, Terminal) => Future[Double],
@@ -65,22 +68,22 @@ object EgateUptakeSimulation {
   def arrivalsWithManifestsForDateAndTerminal(portCode: PortCode,
                                               liveManifest: UniqueArrivalKey => Future[Option[ManifestLike]],
                                               historicManifest: UniqueArrivalKey => Future[Option[ManifestLike]],
-                                              flightsForDateAndTerminal: (UtcDate, Terminal) => Future[Seq[Arrival]],
+                                              arrivalsForDateAndTerminal: (UtcDate, Terminal) => Future[Seq[Arrival]],
                                              )
                                              (implicit ec: ExecutionContext, mat: Materializer): (UtcDate, Terminal) => Future[Seq[(Arrival, Option[ManifestLike])]] =
     (date, terminal) => {
-      flightsForDateAndTerminal(date, terminal)
+      arrivalsForDateAndTerminal(date, terminal)
         .flatMap { flights =>
           var liveCount = 0
           var historicCount = 0
           var terminalCount = 0
           Source(flights.filterNot(a => a.Origin.isDomesticOrCta || a.isCancelled))
-            .mapAsync(1) { flight =>
-              val uniqueArrivalKey = UniqueArrivalKey(flight, portCode)
+            .mapAsync(1) { arrival =>
+              val uniqueArrivalKey = UniqueArrivalKey(arrival, portCode)
               liveManifest(uniqueArrivalKey).flatMap {
-                case Some(manifest) =>
+                case Some(manifest) if Math.abs(manifest.uniquePassengers.size.toDouble / arrival.bestPcpPaxEstimate(feedSourceOrder).getOrElse(0)) < 0.05  =>
                   liveCount = liveCount + 1
-                  Future.successful((flight, Some(manifest)))
+                  Future.successful((arrival, Some(manifest)))
                 case None =>
                   historicManifest(uniqueArrivalKey).map { historicManifest =>
                     if (historicManifest.isDefined) {
@@ -88,7 +91,7 @@ object EgateUptakeSimulation {
                     } else {
                       terminalCount = terminalCount + 1
                     }
-                    (flight, historicManifest)
+                    (arrival, historicManifest)
                   }
               }
             }
@@ -100,17 +103,32 @@ object EgateUptakeSimulation {
         }
     }
 
-  def egateAndDeskPaxForFlight(splitsCalculator: SplitsCalculator): (Arrival, Option[ManifestLike]) => (Int, Int) = {
-    (flight, manifestOpt) => {
+
+  def egateAndDeskPaxForFlight(splitsCalculator: SplitsCalculator, fallbacks: QueueFallbacks): (Arrival, Option[ManifestLike]) => (Int, Int) = {
+    (arrival, manifestOpt) => {
       val splits = manifestOpt
-        .map(m => splitsCalculator.splitsForManifest(m, flight.Terminal))
-        .getOrElse(splitsCalculator.terminalSplits(flight.Terminal).getOrElse(Splits(Set(), TerminalAverage, None, Ratio)))
+        .map(m => splitsCalculator.splitsForManifest(m, arrival.Terminal))
+        .getOrElse(splitsCalculator.terminalSplits(arrival.Terminal).getOrElse(Splits(Set(), TerminalAverage, None, Ratio)))
 
-      val totalPax = flight.bestPaxEstimate(Seq(LiveFeedSource, ApiFeedSource, ForecastFeedSource, AclFeedSource)).getPcpPax.getOrElse(0)
-      val egatePax = splits.splits.filter(_.queueType == EGate).map(_.paxCount).sum
-      val deskPax = (totalPax - egatePax).toInt
+      val totalPaxFromFeed = arrival.bestPaxEstimate(feedSourceOrder).getPcpPax.getOrElse(0)
 
-      (egatePax.round.toInt, deskPax)
+      if (totalPaxFromFeed > 0) {
+        val pcpRange = arrival.pcpRange(feedSourceOrder)
+        val distributePaxOverQueuesAndMinutes = WholePassengerQueueSplits.wholePaxLoadsPerQueuePerMinute(pcpRange, (_, _) => 1d, (_, _) => Open)
+        val workloadForFlight = WholePassengerQueueSplits.paxWorkloadsByQueue(distributePaxOverQueuesAndMinutes, fallbacks, feedSourceOrder, splitsCalculator.terminalSplits)
+        val loads = workloadForFlight(ApiFlightWithSplits(arrival, Set(splits), None))
+
+        val totalPax = loads.flatMap(_._2.map(_._2.size)).sum
+        val egatePax = loads.getOrElse(EGate, Map.empty).values.map(_.size).sum
+        val deskPax = totalPax - egatePax
+
+        if (totalPax != totalPaxFromFeed) {
+          log.warn(s"Total pax from splits $totalPax does not match total pax from flight $totalPaxFromFeed for flight ${arrival.unique}. Splits type is ${splits.splitStyle} ${splits.maybeEventType}: ${loads}")
+        }
+
+        (egatePax, deskPax)
+      }
+      else (0, 0)
     }
   }
 

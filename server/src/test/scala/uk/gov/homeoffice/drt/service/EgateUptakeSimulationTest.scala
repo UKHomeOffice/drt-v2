@@ -11,7 +11,7 @@ import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.models.ManifestLike
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxType, PaxTypeAndQueue, PortCode}
@@ -26,6 +26,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
   val egateUptake = 0.8
   val paxTypeAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]] = Map(T1 -> Map(
     EeaMachineReadable -> Seq((EGate, egateUptake), (EeaDesk, 1 - egateUptake)),
+    VisaNational -> Seq((NonEeaDesk, 1.0))
   ))
   val paxQueueAllocator = paxTypeQueueAllocator(hasTransfer = false, TerminalQueueAllocator(paxTypeAllocation))
 
@@ -45,12 +46,15 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
   }
 
   "egateAndDeskPaxForFlight" should {
+    val fallbacks = QueueFallbacks((_, _) => Seq.empty)
+
     "give total egate and desk pax that match the egate uptake in the splits calculator and all manifest pax are egate eligible" in {
       val splitsCalculator = SplitsCalculator(paxQueueAllocator, Map.empty[Terminal, SplitRatios])
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
       val manifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
 
-      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator)(arrival, Option(manifest))
+      val fallbacks = QueueFallbacks((_, _) => Seq.empty)
+      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
 
       assert(egatePax == 80)
       assert(deskPax == 20)
@@ -61,7 +65,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
       val manifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(visa))
 
-      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator)(arrival, Option(manifest))
+      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
 
       assert(egatePax == 0)
       assert(deskPax == 100)
@@ -75,7 +79,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val splitsCalculator = SplitsCalculator(paxQueueAllocator, terminalSplits)
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
 
-      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator)(arrival, None)
+      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, None)
 
       assert(egatePax == 80)
       assert(deskPax == 20)
