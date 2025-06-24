@@ -80,7 +80,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   }
 
   def egateUptakeSimulation(startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async {
+    Action {
       val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
       val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation)
       val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc)
@@ -122,7 +122,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
       val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
 
-      val lines: Source[Seq[(UtcDate, Terminal, Double, Double)], NotUsed] = Source(DateRange(start, end))
+      val stream: Source[String, NotUsed] = Source(DateRange(start, end))
         .mapAsync(1) { date =>
           Source(airportConfig.terminals(SDate(date).toLocalDate).toSeq)
             .mapAsync(1) { terminal =>
@@ -130,25 +130,13 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
                 case (bxPercentage, drtPercentage) =>
                   log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
                   (date, terminal, bxPercentage, drtPercentage)
+                  f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f\n"
               }
             }
-            .runWith(Sink.seq)
-        }
-      val content = lines
-        .runWith(Sink.seq)
-        .map { dates =>
-          val c = dates.flatten
-            .groupBy(_._2).map {
-              case (terminal, figures) =>
-                val bxAverage = figures.map(_._3).sum / figures.size
-                val drtAverage = figures.map(_._4).sum / figures.size
-                (terminal, bxAverage, drtAverage)
-            }
-          log.info(s"Calculated egate uptake for ${c.size} terminals ${c.mkString(", ")}")
-          Ok(c.mkString("\n"))
+            .runWith(Sink.fold("") { case (acc, line) => acc + line })
         }
 
-      content
+      sourceToCsvResponse(stream, s"forecast-accuracy-${airportConfig.portCode.iata}.csv")
     }
   }
 
