@@ -84,7 +84,7 @@ object EgateUptakeSimulation {
                 case Some(manifest) if Math.abs(manifest.uniquePassengers.size.toDouble / arrival.bestPcpPaxEstimate(feedSourceOrder).getOrElse(0)) < 0.05  =>
                   liveCount = liveCount + 1
                   Future.successful((arrival, Some(manifest)))
-                case None =>
+                case _ =>
                   historicManifest(uniqueArrivalKey).map { historicManifest =>
                     if (historicManifest.isDefined) {
                       historicCount = historicCount + 1
