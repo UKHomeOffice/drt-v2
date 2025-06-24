@@ -164,7 +164,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
+      case ArrivalsFeedSuccess(arrivals, _) => arrivals.head === expected
       case _ => false
     }
 
@@ -202,7 +202,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
+      case ArrivalsFeedSuccess(arrivals, _) => arrivals.head === expected
       case _ => false
     }
 
@@ -218,7 +218,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(arrival :: Nil, _) => (arrival.totalPax, arrival.maxPax) === ((Some(0), Some(0)))
+      case ArrivalsFeedSuccess(arrivals, _) => (arrivals.head.totalPax, arrivals.head.maxPax) === ((Some(0), Some(0)))
       case _ => false
     }
 
@@ -256,7 +256,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
+      case ArrivalsFeedSuccess(arrivals, _) => arrivals.head === expected
       case _ => false
     }
 
@@ -271,8 +271,8 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(arrival :: Nil, _) =>
-        arrival.voyageNumber === 244 && arrival.flightCodeSuffix === Some("F")
+      case ArrivalsFeedSuccess(arrivals, _) =>
+        arrivals.head.voyageNumber === 244 && arrivals.head.flightCodeSuffix === Some("F")
       case _ => false
     }
 
