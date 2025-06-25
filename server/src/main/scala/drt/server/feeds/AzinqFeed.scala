@@ -62,7 +62,7 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
                 log.warn(s"Failed to parse JSON object: ${jsValue.prettyPrint}, error: ${ex.getMessage}")
                 None
             }
-          }
+          }.toList
         }
   }
 }
