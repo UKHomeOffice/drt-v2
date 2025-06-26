@@ -95,6 +95,7 @@ GET           /export/staff-movements/:date/:terminal                           
 GET           /export/port-config                                                     controllers.application.ExportPortConfigController.exportConfig
 GET           /export/desk-rec-simulation                                             controllers.application.SimulationsController.simulationExport
 GET           /desk-rec-simulation                                                    controllers.application.SimulationsController.simulation
++ nocsrf
 PUT           /egate-uptake-simulation/:terminalName/:startDate/:endDate/:uptakePercentage  controllers.application.SimulationsController.doEgateSimulation(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double)
 GET           /egate-uptake-simulation/:uuid                                          controllers.application.SimulationsController.getEgateSimulation(uuid: String)
 
