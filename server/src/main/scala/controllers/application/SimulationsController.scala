@@ -23,7 +23,8 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.dao.BorderCrossingDao
+import uk.gov.homeoffice.drt.db.dao.{BorderCrossingDao, EgateSimulationDao}
+import uk.gov.homeoffice.drt.db.serialisers.{EgateSimulation, EgateSimulationRequest}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks}
@@ -37,7 +38,7 @@ import upickle.default.write
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.language.postfixOps
+import scala.language.{existentials, postfixOps}
 import scala.util.{Failure, Success, Try}
 
 class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
@@ -79,14 +80,17 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     }
   }
 
-  def egateUptakeSimulation(startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
-    Action { request =>
-      val maybeTerminal = request.queryString.get("terminal").flatMap(_.headOption).map(Terminal.apply)
+  def doEgateSimulation(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
+    Action.async { request =>
+      val maybeChildParentRatio = request.queryString.get("childParentRatio").flatMap(_.headOption).map(_.toDouble)
+      val terminal = Terminal(terminalName)
       val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
       val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation)
       val fallbacks = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal))
       val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc, fallbacks)
-      val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] = (ua: UniqueArrivalKey) => ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
+      val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] =
+        (ua: UniqueArrivalKey) =>
+          ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
       val flightsWithPcpStartDuringDate: (UtcDate, Terminal) => Future[Seq[Arrival]] =
         (d: UtcDate, t: Terminal) => {
           val start = SDate(d)
@@ -124,26 +128,59 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
       val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
 
-      val terminals = maybeTerminal match {
-        case Some(t) => Seq(t)
-        case None => airportConfig.terminals(SDate(start).toLocalDate).toSeq
-      }
+      val egateSimulationRequest = EgateSimulationRequest(start, end, terminal, uptakePercentage, maybeChildParentRatio.getOrElse(1d))
+      val dao = EgateSimulationDao()
 
-      val stream: Source[String, NotUsed] = Source(DateRange(start, end))
-        .mapAsync(1) { date =>
-          Source(terminals)
-            .mapAsync(1) { terminal =>
-              bxAndDrtEgatePercentageForDate(date, terminal).map {
-                case (bxPercentage, drtPercentage) =>
-                  log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
-                  f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}%.2f\n"
+      ctrl.aggregatedDb.run(dao.get(egateSimulationRequest)).flatMap {
+        case Some(existingSimulation) =>
+          log.info(s"Egate uptake simulation already exists for request: $egateSimulationRequest with UUID: ${existingSimulation.uuid}")
+          Future.successful(Ok(existingSimulation.uuid))
+        case None =>
+          val egateSimulation = EgateSimulation(
+            uuid = UUID.randomUUID().toString(),
+            request = egateSimulationRequest,
+            status = "processing",
+            content = None,
+            createdAt = SDate.now(),
+          )
+          ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation)).map { _ =>
+            log.info(s"Starting egate uptake simulation for terminal $terminal from $start to $end with uptake percentage $uptakePercentage%")
+
+            val stream: Source[String, NotUsed] = Source(DateRange(start, end))
+              .mapAsync(1) { date =>
+                bxAndDrtEgatePercentageForDate(date, terminal).map {
+                  case (bxPercentage, drtPercentage) =>
+                    log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
+                    f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}%.2f\n"
+                }
               }
-            }
-            .runWith(Sink.fold("") { case (acc, line) => acc + line })
-        }
-        .prepend(Source(List("Date,Terminal,BX EGate Uptake (%),DRT EGate Uptake (%),Difference\n")))
+              .prepend(Source(List("Date,Terminal,BX EGate Uptake (%),DRT EGate Uptake (%),Difference\n")))
 
-      sourceToCsvResponse(stream, s"egate-uptake-simulation-${airportConfig.portCode.iata}.csv")
+            stream.runFold("")(_ + _)
+              .map(csvContent => ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation.copy(status = "completed", content = Some(csvContent)))))
+              .recover {
+                case e: Exception =>
+                  log.error(s"Error during egate uptake simulation: ${e.getMessage}")
+                  ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation.copy(status = "failed", content = Some(e.getMessage))))
+              }
+
+            Ok(egateSimulation.uuid)
+          }
+      }
+    }
+  }
+
+  def getEgateSimulation(uuid: String): Action[AnyContent] = authByRole(SuperAdmin) {
+    Action.async {
+      val dao = EgateSimulationDao()
+      ctrl.aggregatedDb.run(dao.get(uuid)).map {
+        case Some(simulation) =>
+          (simulation.status, simulation.content) match {
+            case ("completed", Some(content)) => Ok(content).as("text/csv")
+            case _ => NotFound(s"No content found for egate simulation with UUID: $uuid")
+          }
+        case None => NotFound(s"Egate simulation with UUID: $uuid not found")
+      }
     }
   }
 
