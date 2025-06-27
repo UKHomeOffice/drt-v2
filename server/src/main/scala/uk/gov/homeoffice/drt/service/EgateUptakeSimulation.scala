@@ -5,7 +5,7 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
 import passengersplits.WholePassengerQueueSplits
-import queueus.TerminalQueueAllocator
+import queueus.{ChildEGateAdjustments, TerminalQueueAllocator}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Ratio
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits}
@@ -81,7 +81,7 @@ object EgateUptakeSimulation {
             .mapAsync(1) { arrival =>
               val uniqueArrivalKey = UniqueArrivalKey(arrival, portCode)
               liveManifest(uniqueArrivalKey).flatMap {
-                case Some(manifest) if Math.abs(manifest.uniquePassengers.size.toDouble / arrival.bestPcpPaxEstimate(feedSourceOrder).getOrElse(0)) < 0.05  =>
+                case Some(manifest) if manifestOk(manifest, arrival)  =>
                   liveCount = liveCount + 1
                   Future.successful((arrival, Some(manifest)))
                 case _ =>
@@ -103,6 +103,23 @@ object EgateUptakeSimulation {
         }
     }
 
+  def manifestOk(manifest: ManifestLike, arrival: Arrival): Boolean = {
+    val uniquePax = manifest.uniquePassengers.size
+    val feedPax = arrival.bestPaxEstimate(feedSourceOrder).passengers.actual.getOrElse(0)
+    if (uniquePax > 0 && feedPax > 0) {
+      val ratio = uniquePax.toDouble / feedPax
+      if (ratio < 1.05 && ratio > 0.95) {
+        true
+      } else {
+        if (ratio >= 1.05)
+          log.warn(s"Manifest for flight ${arrival.unique} has $uniquePax unique pax, but flight has $feedPax live feed pax, ratio is $ratio. ${manifest.uniquePassengers.count(_.age.exists(a => Set(0, 1).contains(a.years)))} babies")
+        false
+      }
+    } else {
+//      log.warn(s"Manifest for flight ${arrival.unique} has $uniquePax unique pax, but flight has $feedPax pcp pax")
+      false
+    }
+  }
 
   def egateAndDeskPaxForFlight(splitsCalculator: SplitsCalculator, fallbacks: QueueFallbacks): (Arrival, Option[ManifestLike]) => (Int, Int) = {
     (arrival, manifestOpt) => {
@@ -134,9 +151,10 @@ object EgateUptakeSimulation {
 
   def splitsCalculatorForPaxAllocation(airportConfig: AirportConfig,
                                        paxTypeAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],
+                                       childParentRatio: Double,
                                     ): SplitsCalculator = {
     val paxQueueAllocator = paxTypeQueueAllocator(airportConfig.hasTransfer, TerminalQueueAllocator(paxTypeAllocation))
-    SplitsCalculator(paxQueueAllocator, airportConfig.terminalPaxSplits)
+    SplitsCalculator(paxQueueAllocator, airportConfig.terminalPaxSplits, ChildEGateAdjustments(childParentRatio))
   }
 
   def queueAllocationForEgateUptake(terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],

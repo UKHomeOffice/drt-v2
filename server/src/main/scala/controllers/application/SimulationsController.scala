@@ -85,7 +85,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       val maybeChildParentRatio = request.queryString.get("childParentRatio").flatMap(_.headOption).map(_.toDouble)
       val terminal = Terminal(terminalName)
       val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
-      val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation)
+      val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation, maybeChildParentRatio.getOrElse(1d))
       val fallbacks = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal))
       val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc, fallbacks)
       val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] =
