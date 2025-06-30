@@ -24,14 +24,14 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{BorderCrossingDao, EgateSimulationDao}
-import uk.gov.homeoffice.drt.db.serialisers.{EgateSimulation, EgateSimulationRequest}
+import uk.gov.homeoffice.drt.db.serialisers.{EgateSimulation, EgateSimulationRequest, EgateSimulationResponse}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.service.{EgateUptakeSimulation, QueueConfig}
+import uk.gov.homeoffice.drt.service.{EgateSimulations, QueueConfig}
 import uk.gov.homeoffice.drt.time._
 import upickle.default.write
 
@@ -84,10 +84,10 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     Action.async { request =>
       val maybeChildParentRatio = request.queryString.get("childParentRatio").flatMap(_.headOption).map(_.toDouble)
       val terminal = Terminal(terminalName)
-      val queueAllocation = EgateUptakeSimulation.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
-      val splitsCalc = EgateUptakeSimulation.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation, maybeChildParentRatio.getOrElse(1d))
+      val queueAllocation = EgateSimulations.queueAllocationForEgateUptake(airportConfig.terminalPaxTypeQueueAllocation, uptakePercentage)
+      val splitsCalc = EgateSimulations.splitsCalculatorForPaxAllocation(airportConfig, queueAllocation, maybeChildParentRatio.getOrElse(1d))
       val fallbacks = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal))
-      val egateAndDeskPaxForFlight = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalc, fallbacks)
+      val egateAndDeskPaxForFlight = EgateSimulations.egateAndDeskPaxForFlight(splitsCalc, fallbacks)
       val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] =
         (ua: UniqueArrivalKey) =>
           ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
@@ -105,13 +105,13 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             .runWith(Sink.seq)
             .map(_.flatten)
         }
-      val arrivalsWithManifests = EgateUptakeSimulation.arrivalsWithManifestsForDateAndTerminal(
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
         portCode = airportConfig.portCode,
         liveManifest = ctrl.applicationService.manifestProvider,
         historicManifest = historicManifest,
         arrivalsForDateAndTerminal = flightsWithPcpStartDuringDate,
       )
-      val drtEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateUptakeSimulation.drtEgatePercentageForDateAndTerminal(
+      val drtEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateSimulations.drtEgatePercentageForDateAndTerminal(
         flightsWithManifestsForDateAndTerminal = arrivalsWithManifests,
         egateAndDeskPaxForFlight = egateAndDeskPaxForFlight,
       )
@@ -121,14 +121,14 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
           val function = bxDao.queueTotalsForPortAndDate(airportConfig.portCode.iata, Some(terminal.toString))
           ctrl.aggregatedDb.run(function(date))
         }
-      val bxEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateUptakeSimulation.bxEgatePercentageForDateAndTerminal(bxQueueTotals)
+      val bxEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateSimulations.bxEgatePercentageForDateAndTerminal(bxQueueTotals)
 
-      val bxAndDrtEgatePercentageForDate = EgateUptakeSimulation.bxAndDrtEgatePercentageForDate(bxEgatePercentage, drtEgatePercentage)
+      val bxAndDrtEgatePercentageForDate = EgateSimulations.bxAndDrtEgatePercentageForDate(bxEgatePercentage, drtEgatePercentage)
 
       val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
       val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
 
-      val egateSimulationRequest = EgateSimulationRequest(start, end, terminal, uptakePercentage, maybeChildParentRatio.getOrElse(1d))
+      val egateSimulationRequest = EgateSimulationRequest(ctrl.airportConfig.portCode, terminal, start, end, uptakePercentage, maybeChildParentRatio.getOrElse(1d))
       val dao = EgateSimulationDao()
 
       ctrl.aggregatedDb.run(dao.get(egateSimulationRequest)).flatMap {
@@ -140,28 +140,36 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             uuid = UUID.randomUUID().toString(),
             request = egateSimulationRequest,
             status = "processing",
-            content = None,
+            response = None,
             createdAt = SDate.now(),
           )
           ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation)).map { _ =>
             log.info(s"Starting egate uptake simulation for terminal $terminal from $start to $end with uptake percentage $uptakePercentage%")
 
-            val stream: Source[String, NotUsed] = Source(DateRange(start, end))
-              .mapAsync(1) { date =>
+            val dates = DateRange(start, end).zipWithIndex
+            val totalDates = dates.size
+            val stream: Source[(UtcDate, Terminal, Double, Double), NotUsed] = Source(dates)
+              .mapAsync(1) { case (date, idx) =>
                 bxAndDrtEgatePercentageForDate(date, terminal).map {
                   case (bxPercentage, drtPercentage) =>
-                    log.info(s"Calculated egate uptake for $terminal on $date: bx=$bxPercentage%, drt=$drtPercentage%")
-                    f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}%.2f\n"
+                    val progressPercentage = ((idx + 1).toDouble / totalDates) * 100
+                    ctrl.aggregatedDb.run(
+                      dao.insertOrUpdate(egateSimulation.copy(status = s"processing - ${progressPercentage.toInt}% complete"))
+                    )
+                    (date, terminal, bxPercentage, drtPercentage)
                 }
               }
-              .prepend(Source(List("Date,Terminal,BX EGate Uptake (%),DRT EGate Uptake (%),Difference\n")))
 
-            stream.runFold("")(_ + _)
-              .map(csvContent => ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation.copy(status = "completed", content = Some(csvContent)))))
+            stream
+              .runWith(Sink.seq)
+              .map { rows =>
+                val response: EgateSimulationResponse = createResponse(rows)
+                ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation.copy(status = "completed", response = Some(response))))
+              }
               .recover {
                 case e: Exception =>
                   log.error(s"Error during egate uptake simulation: ${e.getMessage}")
-                  ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation.copy(status = "failed", content = Some(e.getMessage))))
+                  ctrl.aggregatedDb.run(dao.insertOrUpdate(egateSimulation.copy(status = "failed", response = None)))
               }
 
             Ok(egateSimulation.uuid)
@@ -170,13 +178,68 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     }
   }
 
+  private def createResponse(rows: Seq[(UtcDate, Terminal, Double, Double)]) = {
+    val headerRow = "Date,Terminal,BX EGate Uptake (%),DRT EGate Uptake (%),Difference\n"
+
+    val csvContent = headerRow + rows
+      .map { case (date, terminal, bxPercentage, drtPercentage) =>
+        f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$drtPercentage%.2f,${drtPercentage - bxPercentage}%.2f\n"
+      }
+      .mkString
+
+    val actuals = rows.map { case (_, _, bx, _) => bx }
+    val estimates = rows.map { case (_, _, _, drt) => drt }
+
+    val n = estimates.length
+
+    val errors = estimates.zip(actuals).map { case (e, a) => e - a }
+    val bias = errors.sum / n
+
+    val mape = estimates.zip(actuals).collect {
+      case (e, a) if a != 0 =>
+        math.abs((e - a) / a)
+    }.sum / actuals.count(_ != 0) * 100
+
+    val stdDev = {
+      val meanError = bias
+      math.sqrt(errors.map(e => math.pow(e - meanError, 2)).sum / n)
+    }
+
+    val estimateMean = estimates.sum / n
+    val actualMean = actuals.sum / n
+
+    val covariance = estimates.zip(actuals).map { case (e, a) =>
+      (e - estimateMean) * (a - actualMean)
+    }.sum / n
+
+    val estimateVariance = estimates.map(e => math.pow(e - estimateMean, 2)).sum / n
+    val actualVariance = actuals.map(a => math.pow(a - actualMean, 2)).sum / n
+
+    val correlation = covariance / math.sqrt(estimateVariance * actualVariance)
+
+    val ssRes = estimates.zip(actuals).map { case (e, a) => math.pow(a - e, 2) }.sum
+    val ssTot = actuals.map(a => math.pow(a - actualMean, 2)).sum
+    val rSquared = 1 - (ssRes / ssTot)
+
+
+    val response = EgateSimulationResponse(
+      csvContent = csvContent,
+      meanAbsolutePercentageError = mape,
+      standardDeviation = stdDev,
+      bias = bias,
+      correlationCoefficient = correlation,
+      rSquaredError = rSquared,
+    )
+    response
+  }
+
   def getEgateSimulation(uuid: String): Action[AnyContent] = authByRole(SuperAdmin) {
     Action.async {
       val dao = EgateSimulationDao()
       ctrl.aggregatedDb.run(dao.get(uuid)).map {
         case Some(simulation) =>
-          (simulation.status, simulation.content) match {
-            case ("completed", Some(content)) => Ok(content).as("text/csv")
+          (simulation.status, simulation.response) match {
+            case ("completed", Some(response)) => Ok(response.csvContent).as("text/csv")
             case _ => NotFound(s"No content found for egate simulation with UUID: $uuid")
           }
         case None => NotFound(s"Egate simulation with UUID: $uuid not found")

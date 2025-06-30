@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
-class EgateUptakeSimulationTest extends AnyWordSpec {
+class EgateSimulationsTest extends AnyWordSpec {
   val egateUptake = 0.8
   val paxTypeAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]] = Map(T1 -> Map(
     EeaMachineReadable -> Seq((EGate, egateUptake), (EeaDesk, 1 - egateUptake)),
@@ -37,7 +37,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
         VisaNational -> Seq((NonEeaDesk, 1))),
       )
       val updatedUptake = 0.8
-      val updated = EgateUptakeSimulation.queueAllocationForEgateUptake(allocation, updatedUptake)
+      val updated = EgateSimulations.queueAllocationForEgateUptake(allocation, updatedUptake)
       assert(updated == Map(T1 -> Map(
         EeaMachineReadable -> Seq((EGate, updatedUptake), (EeaDesk, 1 - updatedUptake)),
         VisaNational -> Seq((NonEeaDesk, 1))
@@ -54,7 +54,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val manifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
 
       val fallbacks = QueueFallbacks((_, _) => Seq.empty)
-      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
+      val (egatePax, deskPax) = EgateSimulations.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
 
       assert(egatePax == 80)
       assert(deskPax == 20)
@@ -65,7 +65,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
       val manifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(visa))
 
-      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
+      val (egatePax, deskPax) = EgateSimulations.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
 
       assert(egatePax == 0)
       assert(deskPax == 100)
@@ -79,7 +79,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val splitsCalculator = SplitsCalculator(paxQueueAllocator, terminalSplits)
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
 
-      val (egatePax, deskPax) = EgateUptakeSimulation.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, None)
+      val (egatePax, deskPax) = EgateSimulations.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, None)
 
       assert(egatePax == 80)
       assert(deskPax == 20)
@@ -97,7 +97,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val liveManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(visa))
       val historicManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
 
-      val arrivalsWithManifests = EgateUptakeSimulation.arrivalsWithManifestsForDateAndTerminal(
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
         portCode,
         _ => Future.successful(Some(liveManifest)),
         _ => Future.successful(Some(historicManifest)),
@@ -115,7 +115,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
       val historicManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
 
-      val arrivalsWithManifests = EgateUptakeSimulation.arrivalsWithManifestsForDateAndTerminal(
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
         portCode,
         _ => Future.successful(None),
         _ => Future.successful(Some(historicManifest)),
@@ -131,7 +131,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val terminal = T1
       val portCode = PortCode("STN")
 
-      val arrivalsWithManifests = EgateUptakeSimulation.arrivalsWithManifestsForDateAndTerminal(
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
         portCode,
         _ => Future.successful(None),
         _ => Future.successful(None),
@@ -148,7 +148,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val portCode = PortCode("STN")
       val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
 
-      val arrivalsWithManifests = EgateUptakeSimulation.arrivalsWithManifestsForDateAndTerminal(
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
         portCode,
         _ => Future.successful(None),
         _ => Future.successful(None),
@@ -180,7 +180,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
         r
       }
 
-      val function = EgateUptakeSimulation.drtEgatePercentageForDateAndTerminal(flightsWithManifests, egateAndDeskPaxForFlight)
+      val function = EgateSimulations.drtEgatePercentageForDateAndTerminal(flightsWithManifests, egateAndDeskPaxForFlight)
       val result = Await.result(function(date, terminal), 1.second)
 
       assert(result == 70.0)
@@ -197,7 +197,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
         NonEeaDesk -> 0
       ))
 
-      val function = EgateUptakeSimulation.bxEgatePercentageForDateAndTerminal(bxQueueTotalsForPortAndDate)
+      val function = EgateSimulations.bxEgatePercentageForDateAndTerminal(bxQueueTotalsForPortAndDate)
       val result = Await.result(function(date, terminal), 1.second)
 
       assert(result == 80.0)
@@ -208,7 +208,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val date = UtcDate(2025, 6, 19)
       val bxQueueTotalsForPortAndDate: (UtcDate, Terminal) => Future[Map[Queue, Int]] = (_, _) => Future.successful(Map.empty)
 
-      val function = EgateUptakeSimulation.bxEgatePercentageForDateAndTerminal(bxQueueTotalsForPortAndDate)
+      val function = EgateSimulations.bxEgatePercentageForDateAndTerminal(bxQueueTotalsForPortAndDate)
       val result = Await.result(function(date, terminal), 1.second)
 
       assert(result == 0.0)
@@ -223,7 +223,7 @@ class EgateUptakeSimulationTest extends AnyWordSpec {
       val bxEgatePercentageForDateAndTerminal = (_: UtcDate, _: Terminal) => Future.successful(90.0)
       val drtEgatePercentageForDateAndTerminal = (_: UtcDate, _: Terminal) => Future.successful(70.0)
 
-      val function = EgateUptakeSimulation.bxAndDrtEgatePercentageForDate(bxEgatePercentageForDateAndTerminal, drtEgatePercentageForDateAndTerminal)
+      val function = EgateSimulations.bxAndDrtEgatePercentageForDate(bxEgatePercentageForDateAndTerminal, drtEgatePercentageForDateAndTerminal)
       val result = Await.result(function(date, terminal), 1.second)
 
       assert(result == (90.0, 70.0))

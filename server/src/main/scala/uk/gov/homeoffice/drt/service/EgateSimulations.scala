@@ -18,7 +18,7 @@ import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object EgateUptakeSimulation {
+object EgateSimulations {
   private val log = LoggerFactory.getLogger(getClass)
 
   private val feedSourceOrder: List[FeedSource] = List(LiveFeedSource, ApiFeedSource, ForecastFeedSource, HistoricApiFeedSource, AclFeedSource)
