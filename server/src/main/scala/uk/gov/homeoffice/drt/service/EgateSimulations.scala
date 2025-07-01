@@ -103,22 +103,14 @@ object EgateSimulations {
         }
     }
 
-  def manifestOk(manifest: ManifestLike, arrival: Arrival): Boolean = {
+  private def manifestOk(manifest: ManifestLike, arrival: Arrival): Boolean = {
     val uniquePax = manifest.uniquePassengers.size
     val feedPax = arrival.bestPaxEstimate(feedSourceOrder).passengers.actual.getOrElse(0)
     if (uniquePax > 0 && feedPax > 0) {
       val ratio = uniquePax.toDouble / feedPax
-      if (ratio < 1.05 && ratio > 0.95) {
-        true
-      } else {
-        if (ratio >= 1.05)
-          log.warn(s"Manifest for flight ${arrival.unique} has $uniquePax unique pax, but flight has $feedPax live feed pax, ratio is $ratio. ${manifest.uniquePassengers.count(_.age.exists(a => Set(0, 1).contains(a.years)))} babies")
-        false
-      }
-    } else {
-//      log.warn(s"Manifest for flight ${arrival.unique} has $uniquePax unique pax, but flight has $feedPax pcp pax")
-      false
+      ratio < 1.05 && ratio > 0.95
     }
+    else false
   }
 
   def egateAndDeskPaxForFlight(splitsCalculator: SplitsCalculator, fallbacks: QueueFallbacks): (Arrival, Option[ManifestLike]) => (Int, Int) = {
@@ -132,16 +124,20 @@ object EgateSimulations {
       if (totalPaxFromFeed > 0) {
         val pcpRange = arrival.pcpRange(feedSourceOrder)
         val distributePaxOverQueuesAndMinutes = WholePassengerQueueSplits.wholePaxLoadsPerQueuePerMinute(pcpRange, (_, _) => 1d, (_, _) => Open)
-        val workloadForFlight = WholePassengerQueueSplits.paxWorkloadsByQueue(distributePaxOverQueuesAndMinutes, fallbacks, feedSourceOrder, splitsCalculator.terminalSplits)
+        val workloadForFlight = WholePassengerQueueSplits.paxWorkloadsByQueue(
+          distributePaxOverQueuesAndMinutes,
+          fallbacks,
+          feedSourceOrder,
+          splitsCalculator.terminalSplits,
+        )
         val loads = workloadForFlight(ApiFlightWithSplits(arrival, Set(splits), None))
 
         val totalPax = loads.flatMap(_._2.map(_._2.size)).sum
         val egatePax = loads.getOrElse(EGate, Map.empty).values.map(_.size).sum
         val deskPax = totalPax - egatePax
 
-        if (totalPax != totalPaxFromFeed) {
-          log.warn(s"Total pax from splits $totalPax does not match total pax from flight $totalPaxFromFeed for flight ${arrival.unique}. Splits type is ${splits.splitStyle} ${splits.maybeEventType}: ${loads}")
-        }
+        if (totalPax != totalPaxFromFeed)
+          log.warn(s"Total pax from splits $totalPax does not match total pax from flight $totalPaxFromFeed for flight ${arrival.unique}. Splits type is ${splits.splitStyle}")
 
         (egatePax, deskPax)
       }

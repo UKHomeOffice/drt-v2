@@ -234,7 +234,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     val ssRes = estimates.zip(actuals).map { case (e, a) => math.pow(a - e, 2) }.sum
     val ssTot = actuals.map(a => math.pow(a - actualMean, 2)).sum
     val rSquared = 1 - (ssRes / ssTot)
-    
+
     (bias, mape, stdDev, correlation, rSquared)
   }
 
