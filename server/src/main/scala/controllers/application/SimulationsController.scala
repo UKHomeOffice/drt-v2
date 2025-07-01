@@ -190,6 +190,20 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     val actuals = rows.map { case (_, _, bx, _) => bx }
     val estimates = rows.map { case (_, _, _, drt) => drt }
 
+    val (bias, mape, stdDev, correlation, rSquared) = stats(actuals, estimates)
+
+    val response = EgateSimulationResponse(
+      csvContent = csvContent,
+      meanAbsolutePercentageError = mape,
+      standardDeviation = stdDev,
+      bias = bias,
+      correlationCoefficient = correlation,
+      rSquaredError = rSquared,
+    )
+    response
+  }
+
+  private def stats(actuals: Seq[Double], estimates: Seq[Double]): (Double, Double, Double, Double, Double) = {
     val n = estimates.length
 
     val errors = estimates.zip(actuals).map { case (e, a) => e - a }
@@ -220,17 +234,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     val ssRes = estimates.zip(actuals).map { case (e, a) => math.pow(a - e, 2) }.sum
     val ssTot = actuals.map(a => math.pow(a - actualMean, 2)).sum
     val rSquared = 1 - (ssRes / ssTot)
-
-
-    val response = EgateSimulationResponse(
-      csvContent = csvContent,
-      meanAbsolutePercentageError = mape,
-      standardDeviation = stdDev,
-      bias = bias,
-      correlationCoefficient = correlation,
-      rSquaredError = rSquared,
-    )
-    response
+    
+    (bias, mape, stdDev, correlation, rSquared)
   }
 
   def getEgateSimulation(uuid: String): Action[AnyContent] = authByRole(SuperAdmin) {
