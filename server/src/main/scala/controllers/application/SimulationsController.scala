@@ -112,7 +112,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         arrivalsForDateAndTerminal = flightsWithPcpStartDuringDate,
       )
       val drtEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateSimulations.drtEgatePercentageForDateAndTerminal(
-        flightsWithManifestsForDateAndTerminal = arrivalsWithManifests,
+        arrivalsWithManifestsForDateAndTerminal = arrivalsWithManifests,
         egateAndDeskPaxForFlight = egateAndDeskPaxForFlight,
       )
       val bxDao = BorderCrossingDao

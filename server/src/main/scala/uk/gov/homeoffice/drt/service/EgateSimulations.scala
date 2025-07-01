@@ -47,12 +47,12 @@ object EgateSimulations {
         }
     }
 
-  def drtEgatePercentageForDateAndTerminal(flightsWithManifestsForDateAndTerminal: (UtcDate, Terminal) => Future[Seq[(Arrival, Option[ManifestLike])]],
+  def drtEgatePercentageForDateAndTerminal(arrivalsWithManifestsForDateAndTerminal: (UtcDate, Terminal) => Future[Seq[(Arrival, Option[ManifestLike])]],
                                            egateAndDeskPaxForFlight: (Arrival, Option[ManifestLike]) => (Int, Int),
                                           )
                                           (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[Double] =
     (date, terminal) => {
-      flightsWithManifestsForDateAndTerminal(date, terminal)
+      arrivalsWithManifestsForDateAndTerminal(date, terminal)
         .map { flightsWithManifests =>
           val (egatePax, deskPax) = flightsWithManifests
             .map { case (flight, manifest) => egateAndDeskPaxForFlight(flight, manifest) }
