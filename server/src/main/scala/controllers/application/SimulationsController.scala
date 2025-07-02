@@ -245,7 +245,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         case Some(simulation) =>
           (simulation.status, simulation.response) match {
             case ("completed", Some(response)) => Ok(response.csvContent).as("text/csv")
-            case _ => NotFound(s"No content found for egate simulation with UUID: $uuid")
+            case (status, _) => NotFound(s"$uuid: $status")
           }
         case None => NotFound(s"Egate simulation with UUID: $uuid not found")
       }
