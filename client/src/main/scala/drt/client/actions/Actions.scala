@@ -202,7 +202,9 @@ object Actions {
 
   case object RequestRecalculateSplits extends Action
 
-  case class RequestDateRecrunch(date: LocalDate) extends Action
+  case class RequestDateDeskRecsRecalculation(date: LocalDate) extends Action
+
+  case class RequestDatePaxLoadsRecalculation(date: LocalDate) extends Action
 
   object RequestRecalculateArrivals extends Action
 
