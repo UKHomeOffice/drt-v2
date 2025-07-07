@@ -377,7 +377,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       actorService.staffRouterActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       slasActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
-      slasActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       egateBanksUpdatesActor ! AddUpdatesSubscriber(paxLoadsRequestQueueActor)
 
