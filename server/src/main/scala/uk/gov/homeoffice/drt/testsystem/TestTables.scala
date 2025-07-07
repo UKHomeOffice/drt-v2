@@ -38,7 +38,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None , None , None)))
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None, None, None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
@@ -133,7 +133,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
-  override val enableShiftPlanningChange: Boolean =  true
+  override val enableShiftPlanningChange: Boolean = true
 
 }
 
@@ -158,7 +158,7 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 }
 
 case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
- var shiftSeq = Seq.empty[Shift]
+  var shiftSeq = Seq.empty[Shift]
 
   override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = {
     val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
@@ -184,5 +184,11 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
     shiftSeq = Seq.empty
     Future.successful(shiftSeq.size)
   }
+
+//  override def getActiveShifts(port: String, terminal: String): Future[Seq[Shift]] = Future.successful(shiftSeq)
+
+  override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = Future.successful(1)
+
+  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 }
 

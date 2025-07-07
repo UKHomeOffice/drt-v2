@@ -62,4 +62,24 @@ class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
     shifts should have size 1
     shifts.head.shiftName shouldBe "shift1"
   }
+
+  "convertTo" should "handle string to Seq[StaffShift]" in {
+    val jsonString =
+      s"""
+         |{"port":"BHX",
+         |"terminal":"T1",
+         |"shiftName":"Morning",
+         |"startDate":{"year":2025,"month":7,"day":1},
+         |"startTime":"05:30",
+         |"endTime":"15:30",
+         |"endDate":null,
+         |"staffNumber":6,
+         |"frequency":null,
+         |"createdBy":null,
+         |"createdAt":"1751447676745"
+         |}
+         |""".stripMargin
+    val shifts = convertToShift(jsonString)
+    shifts.shiftName shouldBe "Morning"
+  }
 }

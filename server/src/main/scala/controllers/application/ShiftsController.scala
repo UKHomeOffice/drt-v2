@@ -80,7 +80,10 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
     json.convertTo[Seq[Shift]]
   }
 
-
+  def convertToShift(text: String): Shift = {
+    val json = text.parseJson
+    json.convertTo[Shift]
+  }
 }
 
 class ShiftsController @Inject()(cc: ControllerComponents,
@@ -101,6 +104,18 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
+  def getActiveShiftsForDate(port: String, terminal: String, date: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShifts(port, terminal, Option(date)).map { shifts =>
+      Ok(shifts.toJson.compactPrint)
+    }
+  }
+
+  def getActiveShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShifts(port, terminal, None).map { shifts =>
+      Ok(shifts.toJson.compactPrint)
+    }
+  }
+
   def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
@@ -114,6 +129,32 @@ class ShiftsController @Inject()(cc: ControllerComponents,
           }.recoverWith {
             case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
           }
+        }
+      } catch {
+        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+      }
+    }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
+  }
+
+  def updateShift(): Action[AnyContent] = Action.async { request =>
+    request.body.asText.map { text =>
+      try {
+        val shift = convertToShift(text)
+        ctrl.shiftsService.getShift(shift.port, shift.terminal, shift.shiftName).flatMap {
+          case Some(previousShift) =>
+            println(s"......previousShift $previousShift")
+            ctrl.shiftsService.updateShift(previousShift, shift).flatMap { _ =>
+              shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+                val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, shift, allShiftAssignments)
+                shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+                  Ok(write(s))
+                }
+              }.recoverWith {
+                case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+              }
+            }
+          case None =>
+            Future.successful(BadRequest("Previous shift not found"))
         }
       } catch {
         case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))

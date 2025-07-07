@@ -64,7 +64,9 @@ GET           /logged-in                                                        
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
-GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
+POST          /shifts/update                                                          controllers.application.ShiftsController.updateShift
+GET           /shifts/:port/:terminal/:date                                           controllers.application.ShiftsController.getActiveShiftsForDate(port: String, terminal: String, date: String)
+GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getActiveShifts(port: String, terminal: String)
 GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
 POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveShiftAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllShiftAssignments

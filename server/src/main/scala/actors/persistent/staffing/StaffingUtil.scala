@@ -45,6 +45,34 @@ object StaffingUtil {
     }
   }
 
+  def updateWithAShiftDefaultStaff(previousShift:Shift , shift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+    val allShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(shift)
+    println(s"...previousShift :${previousShift}  shift :$shift")
+    val splitDailyAssignmentsWithOverlap = allShiftsStaff
+      .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+      .groupBy(a => TM(a.terminal, a.start))
+      .map { case (tm, assignments) =>
+        val combinedAssignment = assignments.reduce { (a1, a2) =>
+          a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
+        }
+        tm -> combinedAssignment
+      }
+
+    val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
+
+    splitDailyAssignmentsWithOverlap.map {
+      case (tm, assignment) =>
+        existingAllAssignments.get(tm) match {
+          case Some(existing) =>
+            // If the existing assignment has zero staff, replace it with the new assignment
+            println(s"...Updating assignment for existing.numberOfStaff = ${existing.numberOfStaff} at previousShift.staffNumber=${previousShift.staffNumber} with new staff number assignment.numberOfStaff=${assignment.numberOfStaff}")
+            if ((existing.numberOfStaff == 0) || (existing.numberOfStaff == previousShift.staffNumber))
+              assignment else existing
+          case None => assignment
+        }
+    }.toSeq.sortBy(_.start)
+  }
+
   def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
 
     val allShiftsStaff: Seq[StaffAssignment] = shifts.flatMap { shift =>

@@ -232,10 +232,10 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22, 0), 1, interval, shiftDetails, assignmentsByDate)
 
       val expected = Seq(
-        StaffTableEntry(1, 0, "Night", 5, ShiftDate(2023, 10, 1, 22, 0), ShiftDate(2023, 10, 1, 23, 0)),
-        StaffTableEntry(1, 1, "Night", 5, ShiftDate(2023, 10, 1, 23, 0), ShiftDate(2023, 10, 2, 0, 0)),
-        StaffTableEntry(1, 2, "Night", 5, ShiftDate(2023, 10, 1, 0, 0), ShiftDate(2023, 10, 1, 1, 0)),
-        StaffTableEntry(1, 3, "Night", 5, ShiftDate(2023, 10, 1, 1, 0), ShiftDate(2023, 10, 1, 2, 0))
+        StaffTableEntry(1, 0, "Night", 5, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),
+        StaffTableEntry(1, 1, "Night", 5, ShiftDateTime(2023, 10, 1, 23, 0), ShiftDateTime(2023, 10, 2, 0, 0)),
+        StaffTableEntry(1, 2, "Night", 5, ShiftDateTime(2023, 10, 1, 0, 0), ShiftDateTime(2023, 10, 1, 1, 0)),
+        StaffTableEntry(1, 3, "Night", 5, ShiftDateTime(2023, 10, 1, 1, 0), ShiftDateTime(2023, 10, 1, 2, 0))
       )
 
       assert(result.size == expected.size)
@@ -244,8 +244,8 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         assert(res.row == exp.row)
         assert(res.name == exp.name)
         assert(res.staffNumber == exp.staffNumber)
-        assert(ShiftDate.isEqual(res.startTime, exp.startTime))
-        assert(ShiftDate.isEqual(res.endTime, exp.endTime))
+        assert(ShiftDateTime.isEqual(res.startTime, exp.startTime))
+        assert(ShiftDateTime.isEqual(res.endTime, exp.endTime))
       }
     }
   }

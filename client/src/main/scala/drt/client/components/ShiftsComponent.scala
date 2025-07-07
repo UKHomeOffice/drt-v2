@@ -54,7 +54,7 @@ object ShiftsComponent {
         props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
       }
 
-      <.div(AddShiftsFormComponent(ShiftFormProps(props.portCode, props.terminal.toString, 30, Seq.empty[ShiftForm], confirmHandler)))
+      <.div(AddShiftsFormComponent(ShiftFormProps(props.portCode, props.terminal.toString, 30, Seq.empty[ShiftForm], confirmHandler, isEdit = false)))
     }
 
   }

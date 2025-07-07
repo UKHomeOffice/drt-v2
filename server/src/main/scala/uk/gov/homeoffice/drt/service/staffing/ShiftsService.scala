@@ -14,7 +14,11 @@ trait ShiftsService {
 
   def getShifts(port: String, terminal: String): Future[Seq[Shift]]
 
+  def getActiveShifts(port: String, terminal: String ,date:Option[String]): Future[Seq[Shift]]
+
   def saveShift(shifts: Seq[Shift]): Future[Int]
+
+  def updateShift(previousShift: Shift, shift: Shift): Future[Int]
 
   def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
 
@@ -79,4 +83,31 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map(_.map(fromStaffShiftRow))
+
+  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = getShifts(port, terminal).map { shifts =>
+    val today = java.time.LocalDate.now()
+    val localDate = date.map { d =>
+      val parts = d.split("-")
+      java.time.LocalDate.of(parts(0).toInt, parts(1).toInt, parts(2).toInt)
+    }.getOrElse(today)
+
+    shifts.filter { shift =>
+      shift.endDate match {
+        case None => true
+        case Some(endDate) =>
+          val javaEndDate = java.time.LocalDate.of(endDate.year, endDate.month, endDate.day)
+          javaEndDate.isAfter(localDate)
+      }
+    }.filter{ shift =>
+      shift.startDate match {
+        case LocalDate(year, month, day) =>
+          val javaStartDate = java.time.LocalDate.of(year, month, day)
+          !javaStartDate.isAfter(localDate)
+      }
+    }
+  }
+
+  override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = staffShiftsDao.updateStaffShift(
+    toStaffShiftRow(previousShift, None, None, new Timestamp(System.currentTimeMillis())),
+    toStaffShiftRow(shift, None, None, new Timestamp(System.currentTimeMillis())))
 }
