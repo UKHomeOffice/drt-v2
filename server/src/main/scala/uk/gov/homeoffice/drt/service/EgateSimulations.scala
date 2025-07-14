@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -74,7 +74,10 @@ object EgateSimulations {
                 val eligible = arrivalPaxCounts.map(_._2).sum
                 val underage = arrivalPaxCounts.map(_._3).sum
 
-                storeEgateEligibleAndUnderAgeForDate(date, terminal, total, eligible, underage)
+                if (date < SDate.now().toUtcDate) {
+                  log.info(s"Storing historic egate eligibility for $date and $terminal: total=$total, eligible=$eligible, underage=$underage")
+                  storeEgateEligibleAndUnderAgeForDate(date, terminal, total, eligible, underage)
+                }
 
                 (total, eligible, underage)
               }
