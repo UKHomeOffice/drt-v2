@@ -1,17 +1,13 @@
 package uk.gov.homeoffice.drt.service
 
-import manifests.queues.SplitsCalculator
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
-import passengersplits.WholePassengerQueueSplits
-import queueus.{ChildEGateAdjustments, TerminalQueueAllocator}
-import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import uk.gov.homeoffice.drt.arrivals.SplitStyle.Ratio
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits}
-import uk.gov.homeoffice.drt.models.{ManifestLike, UniqueArrivalKey}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Open, Queue, QueueFallbacks}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.db.serialisers.EgateEligibility
+import uk.gov.homeoffice.drt.models.{ManifestLike, ManifestPassengerProfile, PaxTypeAllocator, UniqueArrivalKey}
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.UtcDate
@@ -23,15 +19,20 @@ object EgateSimulations {
 
   private val feedSourceOrder: List[FeedSource] = List(LiveFeedSource, ApiFeedSource, ForecastFeedSource, HistoricApiFeedSource, AclFeedSource)
 
-  def bxAndDrtEgatePercentageForDate(bxEgatePercentageForDateAndTerminal: (UtcDate, Terminal) => Future[Double],
-                                     drtEgatePercentageForDateAndTerminal: (UtcDate, Terminal) => Future[Double],
-                                    )
-                                    (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[(Double, Double)] =
+  def bxAndDrtEgatePctAndBxUptakePctForDate(bxEgatePercentageForDateAndTerminal: (UtcDate, Terminal) => Future[Double],
+                                            drtEgateEligibleAndActualPercentageForDateAndTerminal: (UtcDate, Terminal) => Future[(Double, Double)],
+                                            bxUptakePct: (Double, Double) => Double,
+                                           )
+                                           (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[(Double, Double, Double)] =
     (date, terminal) => {
       for {
         bxEgatePercentage <- bxEgatePercentageForDateAndTerminal(date, terminal)
-        drtEgatePercentage <- drtEgatePercentageForDateAndTerminal(date, terminal)
-      } yield (bxEgatePercentage, drtEgatePercentage)
+        (eligiblePct, drtEgatePercentage) <- drtEgateEligibleAndActualPercentageForDateAndTerminal(date, terminal)
+        bxUptakePercentage = bxUptakePct(eligiblePct, bxEgatePercentage)
+      } yield {
+        println(s"bxEgatePercentage: $bxEgatePercentage, eligiblePct: $eligiblePct, drtEgatePercentage: $drtEgatePercentage")
+        (bxEgatePercentage, drtEgatePercentage, bxUptakePercentage)
+      }
     }
 
   def bxEgatePercentageForDateAndTerminal(bxQueueTotalsForPortAndDate: (UtcDate, Terminal) => Future[Map[Queue, Int]],
@@ -47,21 +48,42 @@ object EgateSimulations {
         }
     }
 
-  def drtEgatePercentageForDateAndTerminal(arrivalsWithManifestsForDateAndTerminal: (UtcDate, Terminal) => Future[Seq[(Arrival, Option[ManifestLike])]],
-                                           egateAndDeskPaxForFlight: (Arrival, Option[ManifestLike]) => (Int, Int),
-                                          )
-                                          (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[Double] =
+  def drtEgateEligibleAndActualPercentageForDateAndTerminal(uptakePct: Double)
+                                                           (arrivalsWithManifestsForDateAndTerminal: (UtcDate, Terminal) => Future[Seq[(Arrival, Option[ManifestLike])]],
+                                                            egateEligibleAndUnderAgeForDate: (UtcDate, Terminal) => Future[Option[EgateEligibility]],
+                                                            storeEgateEligibleAndUnderAgeForDate: (UtcDate, Terminal, Int, Int, Int) => Unit,
+                                                            egateEligibleAndUnderAgePercentages: Seq[ManifestPassengerProfile] => (Double, Double),
+                                                            eligiblePercentage: (Int, Int, Int) => Double,
+                                                           )
+                                                           (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[(Double, Double)] =
     (date, terminal) => {
-      arrivalsWithManifestsForDateAndTerminal(date, terminal)
-        .map { flightsWithManifests =>
-          val (egatePax, deskPax) = flightsWithManifests
-            .map { case (flight, manifest) => egateAndDeskPaxForFlight(flight, manifest) }
-            .foldLeft((0, 0)) { case ((egateAcc, deskAcc), (egate, desk)) => (egateAcc + egate, deskAcc + desk) }
+      egateEligibleAndUnderAgeForDate(date, terminal)
+        .flatMap {
+          case Some(EgateEligibility(_, _, _, totalPax, egateEligible, egateUnderAge, _)) =>
+            Future.successful((totalPax, egateEligible, egateUnderAge))
+          case None =>
+            arrivalsWithManifestsForDateAndTerminal(date, terminal)
+              .map { arrivalsWithManifests =>
+                val arrivalPaxCounts: Seq[(Int, Int, Int)] = arrivalsWithManifests.collect {
+                  case (arrival, Some(manifest)) if manifest.uniquePassengers.nonEmpty =>
+                    val totalPcpPax = arrival.bestPaxEstimate(feedSourceOrder).getPcpPax.getOrElse(0)
+                    val (egatePaxPct, egateUnderAgePct) = egateEligibleAndUnderAgePercentages(manifest.uniquePassengers)
+                    (totalPcpPax, (egatePaxPct / 100 * totalPcpPax).round.toInt, (egateUnderAgePct / 100 * totalPcpPax).round.toInt)
+                }
+                val total = arrivalPaxCounts.map(_._1).sum
+                val eligible = arrivalPaxCounts.map(_._2).sum
+                val underage = arrivalPaxCounts.map(_._3).sum
 
-          val totalPax = egatePax + deskPax
+                storeEgateEligibleAndUnderAgeForDate(date, terminal, total, eligible, underage)
 
-          if (totalPax > 0) (egatePax.toDouble / totalPax) * 100.0
-          else 0.0
+                (total, eligible, underage)
+              }
+        }
+        .map {
+          case (total, eligible, underage) =>
+            val eligiblePct = eligiblePercentage(total, eligible, underage)
+            val egatePaxPct = (eligiblePct / 100d) * uptakePct
+            (eligiblePct, egatePaxPct)
         }
     }
 
@@ -81,7 +103,7 @@ object EgateSimulations {
             .mapAsync(1) { arrival =>
               val uniqueArrivalKey = UniqueArrivalKey(arrival, portCode)
               liveManifest(uniqueArrivalKey).flatMap {
-                case Some(manifest) if manifestOk(manifest, arrival)  =>
+                case Some(manifest) if manifestOk(manifest, arrival) =>
                   liveCount = liveCount + 1
                   Future.successful((arrival, Some(manifest)))
                 case _ =>
@@ -113,57 +135,41 @@ object EgateSimulations {
     else false
   }
 
-  def egateAndDeskPaxForFlight(splitsCalculator: SplitsCalculator, fallbacks: QueueFallbacks): (Arrival, Option[ManifestLike]) => (Int, Int) = {
-    (arrival, manifestOpt) => {
-      val splits = manifestOpt
-        .map(m => splitsCalculator.splitsForManifest(m, arrival.Terminal))
-        .getOrElse(splitsCalculator.terminalSplits(arrival.Terminal).getOrElse(Splits(Set(), TerminalAverage, None, Ratio)))
-
-      val totalPaxFromFeed = arrival.bestPaxEstimate(feedSourceOrder).getPcpPax.getOrElse(0)
-
-      if (totalPaxFromFeed > 0) {
-        val pcpRange = arrival.pcpRange(feedSourceOrder)
-        val distributePaxOverQueuesAndMinutes = WholePassengerQueueSplits.wholePaxLoadsPerQueuePerMinute(pcpRange, (_, _) => 1d, (_, _) => Open)
-        val workloadForFlight = WholePassengerQueueSplits.paxWorkloadsByQueue(
-          distributePaxOverQueuesAndMinutes,
-          fallbacks,
-          feedSourceOrder,
-          splitsCalculator.terminalSplits,
-        )
-        val loads = workloadForFlight(ApiFlightWithSplits(arrival, Set(splits), None))
-
-        val totalPax = loads.flatMap(_._2.map(_._2.size)).sum
-        val egatePax = loads.getOrElse(EGate, Map.empty).values.map(_.size).sum
-        val deskPax = totalPax - egatePax
-
-        if (totalPax != totalPaxFromFeed)
-          log.warn(s"Total pax from splits $totalPax does not match total pax from flight $totalPaxFromFeed for flight ${arrival.unique}. Splits type is ${splits.splitStyle}")
-
-        (egatePax, deskPax)
-      }
-      else (0, 0)
+  def bxUptakePct(eligiblePercentage: Double, egatePaxPercentage: Double): Double =
+    if (eligiblePercentage > 0) {
+      val uptake = egatePaxPercentage / eligiblePercentage
+      if (uptake > 1.0) 1.0 else uptake
     }
-  }
+    else 0.0
 
-  def splitsCalculatorForPaxAllocation(airportConfig: AirportConfig,
-                                       paxTypeAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],
-                                       childParentRatio: Double,
-                                    ): SplitsCalculator = {
-    val paxQueueAllocator = paxTypeQueueAllocator(airportConfig.hasTransfer, TerminalQueueAllocator(paxTypeAllocation))
-    SplitsCalculator(paxQueueAllocator, airportConfig.terminalPaxSplits, ChildEGateAdjustments(childParentRatio))
-  }
+  private val egateTypes = Seq(GBRNational, EeaMachineReadable, B5JPlusNational)
+  private val egateUnderAgeTypes = Seq(GBRNationalBelowEgateAge, EeaBelowEGateAge, B5JPlusNationalBelowEGateAge)
 
-  def queueAllocationForEgateUptake(terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],
-                                    egateUptake: Double,
-                                   ): Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]] =
-    terminalPaxTypeQueueAllocation.map { case (terminal, allocation) =>
-      terminal -> allocation.map {
-        case (paxType, queues) =>
-          val hasEgateSplit = queues.exists { case (queue, split) => queue == EGate && split > 0.0 }
-          if (hasEgateSplit)
-            (paxType, List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)))
-          else
-            (paxType, queues)
-      }
+  def egateEligibleAndUnderAgePercentages(paxTypeAllocator: PaxTypeAllocator): Seq[ManifestPassengerProfile] => (Double, Double) =
+    passengerProfiles => {
+      val totalPax = passengerProfiles.size
+      val paxTypes = passengerProfiles.map(p => paxTypeAllocator(p))
+      val egateEligibleCount = paxTypes.count(egateTypes.contains)
+      val egateBelowAgeCount = paxTypes.count(egateUnderAgeTypes.contains)
+
+      (egateEligibleCount.toDouble / totalPax * 100, egateBelowAgeCount.toDouble / totalPax * 100)
     }
+
+  //  def egateEligiblePercentage_(childParentRatio: Double)(counts: Seq[(Int, Int, Int)]): Double = {
+  //    val totalPax = counts.map(_._1).sum
+  //    val totalEgateUnderAge = counts.map(_._3).sum
+  //    val parentForKids = (totalEgateUnderAge.toDouble * childParentRatio).round
+  //    val totalEgateEligibles = counts.map(_._2).sum - parentForKids
+  //    println(s"Total Pax: $totalPax, Total Egate Eligibles: $totalEgateEligibles, Total Egate Under Age: $totalEgateUnderAge, Parent For Kids: $parentForKids")
+  //    val egateEligiblePercentage = if (totalPax > 0) (totalEgateEligibles.toDouble / totalPax) * 100.0 else 0.0
+  //    egateEligiblePercentage
+  //  }
+
+  def egateEligiblePercentage(childParentRatio: Double)(totalPax: Int, egateEligiblePax: Int, egateUnderAgePax: Int): Double = {
+    val parentForKids = (egateUnderAgePax.toDouble * childParentRatio).round
+    val totalEgateEligibles = egateEligiblePax - parentForKids
+    println(s"Total Pax: $totalPax, Total Egate Eligibles: $totalEgateEligibles, Total Egate Under Age: $egateUnderAgePax, Parent For Kids: $parentForKids")
+    val egateEligiblePercentage = if (totalPax > 0) (totalEgateEligibles.toDouble / totalPax) * 100.0 else 0.0
+    egateEligiblePercentage
+  }
 }
