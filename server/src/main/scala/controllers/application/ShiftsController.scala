@@ -6,9 +6,11 @@ import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, dateFromString, toStaffShiftRow}
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
 
+import java.sql.Date
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
@@ -92,7 +94,14 @@ class ShiftsController @Inject()(cc: ControllerComponents,
                                 )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
   def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShift(port, terminal, shiftName).map {
+    ctrl.shiftsService.getShift(port, terminal, shiftName, new Date(System.currentTimeMillis())).map {
+      case Some(shift) => Ok(shift.toString)
+      case None => NotFound
+    }
+  }
+
+  def getAShift(port: String, terminal: String, shiftName: String, startDate: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShift(port, terminal, shiftName, dateFromString(startDate)).map {
       case Some(shift) => Ok(shift.toString)
       case None => NotFound
     }
@@ -140,15 +149,20 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     request.body.asText.map { text =>
       try {
         val shift = convertToShift(text)
-        ctrl.shiftsService.getShift(shift.port, shift.terminal, shift.shiftName).flatMap {
+        ctrl.shiftsService.getShift(shift.port, shift.terminal, shift.shiftName, convertToSqlDate(shift.startDate)).flatMap {
           case Some(previousShift) =>
-            println(s"......previousShift $previousShift")
             ctrl.shiftsService.updateShift(previousShift, shift).flatMap { _ =>
               shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-                val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, shift, allShiftAssignments)
-                shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-                  Ok(write(s))
-                }
+                ctrl.shiftsService.getOverlappingStaffShifts(shift.port, shift.terminal,
+                    toStaffShiftRow(shift, None, None, new java.sql.Timestamp(System.currentTimeMillis())))
+                  .flatMap { overridingShifts =>
+                    val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, shift, allShiftAssignments)
+                    shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+                      Ok(write(s))
+                    }.recoverWith {
+                      case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+                    }
+                  }
               }.recoverWith {
                 case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
               }

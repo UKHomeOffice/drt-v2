@@ -38,25 +38,17 @@ object EditShiftsComponent {
             case month if month < 1 || month > 12 => today.getMonth
             case month => month
           }
-          viewMonth - 1 // Adjusting to zero-based index
-        case _ => today.getMonth - 1
+          viewMonth
+        case _ => today.getMonth
       }
     }
 
     private def startDateInLocalDate(month: Int): uk.gov.homeoffice.drt.time.LocalDate = {
       val today: SDateLike = SDate.now()
-      println(s"today month ${today.getMonth}")
+//      println(s"today month ${today.getMonth} $month")
       val year = if (today.getMonth > month + 1) today.getFullYear + 1 else today.getFullYear
       uk.gov.homeoffice.drt.time.LocalDate(year, month, 1)
     }
-//
-//    private def nameBasedOnChangeStartDate(startDate: LocalDate, shift: Shift): String = {
-//      if (shift.startDate == startDate) {
-//        shift.shiftName
-//      } else {
-//        s"${shift.shiftName} ${shift.startDate.year}-${shift.startDate.month}-${shift.startDate.day}"
-//      }
-//    }
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
@@ -65,7 +57,7 @@ object EditShiftsComponent {
           Shift(
             port = props.portCode,
             terminal = props.terminal.toString,
-            shiftName = s.name,//nameBasedOnChangeStartDate(startDate, s),
+            shiftName = s.name,
             startDate = startDate,
             startTime = s.startTime,
             endTime = s.endTime,

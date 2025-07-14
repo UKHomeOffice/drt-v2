@@ -189,7 +189,7 @@ object MonthlyShifts {
               <.div(^.className := "shifts-table",
                 <.div(^.className := "shifts-table-content",
                   ShiftHotTableViewComponent(ShiftHotTableViewProps(
-                    ShiftDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
+                    shiftDate = ShiftDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                     dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                     interval = props.timeSlotMinutes,
                     initialShifts = state.shiftsData,
@@ -202,14 +202,14 @@ object MonthlyShifts {
                       )).runNow()
                     },
                     handleEditShift = (index: Int, shiftSummary: ShiftSummary) => {
-//                      scope.modState(state => state.copy(
-//                        showEditStaffForm = true,
-//                        shiftsData = state.shiftsData.updated(index, shiftSummary)
-//                      )).runNow()
+                      //                      scope.modState(state => state.copy(
+                      //                        showEditStaffForm = true,
+                      //                        shiftsData = state.shiftsData.updated(index, shiftSummary)
+                      //                      )).runNow()
                       props.router.set(props.terminalPageTab.copy(subMode = "editShifts",
                         queryParams = props.terminalPageTab.queryParams +
-                          ("shiftName" -> s"${shiftSummary.name}"))
-//                          ("startDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"))
+                          ("shiftName" -> s"${shiftSummary.name}")) //+
+                        //                          ("startDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"))
                       ).runNow()
                     }
                   ))

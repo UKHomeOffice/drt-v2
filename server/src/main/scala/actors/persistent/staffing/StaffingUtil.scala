@@ -1,12 +1,11 @@
 package actors.persistent.staffing
 
-import drt.shared.{Shift, ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
-import org.joda.time.DateTimeZone
+import drt.shared._
+import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.{europeLondonId, europeLondonTimeZone}
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
-
-import java.util.TimeZone
 
 object StaffingUtil {
   def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
@@ -45,7 +44,7 @@ object StaffingUtil {
     }
   }
 
-  def updateWithAShiftDefaultStaff(previousShift:Shift , shift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateWithAShiftDefaultStaff(previousShift: Shift, overridingShift: Seq[StaffShiftRow], shift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
     val allShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(shift)
     println(s"...previousShift :${previousShift}  shift :$shift")
     val splitDailyAssignmentsWithOverlap = allShiftsStaff
@@ -60,14 +59,29 @@ object StaffingUtil {
 
     val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 
+    val overriddingShiftAssingments = overridingShift.flatMap { os =>
+      generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os))
+    }.map(a => TM(a.terminal, a.start) -> a).toMap
+
+    def findOverridingShift(assignment: StaffAssignment): Int = {
+      overriddingShiftAssingments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff).getOrElse(0)
+    }
+
     splitDailyAssignmentsWithOverlap.map {
       case (tm, assignment) =>
         existingAllAssignments.get(tm) match {
           case Some(existing) =>
-            // If the existing assignment has zero staff, replace it with the new assignment
-            println(s"...Updating assignment for existing.numberOfStaff = ${existing.numberOfStaff} at previousShift.staffNumber=${previousShift.staffNumber} with new staff number assignment.numberOfStaff=${assignment.numberOfStaff}")
-            if ((existing.numberOfStaff == 0) || (existing.numberOfStaff == previousShift.staffNumber))
-              assignment else existing
+            val isPrevStaff = existing.numberOfStaff == previousShift.staffNumber
+            if ((existing.numberOfStaff == 0) || isPrevStaff)
+              assignment
+            else {
+              // existing
+             val overridingStaff = findOverridingShift(assignment)
+             if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber ||
+                 existing.numberOfStaff == overridingStaff + shift.staffNumber)
+               assignment.copy(numberOfStaff = overridingStaff + shift.staffNumber)
+             else existing
+            }
           case None => assignment
         }
     }.toSeq.sortBy(_.start)

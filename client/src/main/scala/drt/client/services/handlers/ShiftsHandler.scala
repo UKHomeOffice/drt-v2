@@ -15,7 +15,7 @@ import upickle.default.{macroRW, ReadWriter => RW, _}
 
 case class GetShifts(port: String, terminal: String, viewDate: Option[String] = None)
 
-case class GetShift(port: String, terminal: String, shiftName: String)
+case class GetShift(port: String, terminal: String, shiftName: String , startDate: Option[String])
 
 case class SaveShifts(staffShifts: Seq[Shift])
 
@@ -120,8 +120,14 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       })
       updated(Pot.empty, apiCallEffect)
 
-    case GetShift(port, terminal, shiftName) =>
-      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal/$shiftName")
+    case GetShift(port, terminal, shiftName, startDateOption) =>
+      val url = startDateOption match {
+        case Some(date) =>
+          s"shifts/$port/$terminal/$shiftName/$date"
+        case None =>
+          s"shifts/$port/$terminal/$shiftName"
+      }
+      val apiCallEffect = Effect(DrtApi.get(url)
         .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
         .recoverWith {
           case t =>
