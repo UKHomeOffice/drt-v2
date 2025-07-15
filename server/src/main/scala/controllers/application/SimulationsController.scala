@@ -187,7 +187,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   }
 
   private def createResponse(rows: Seq[(UtcDate, Terminal, Double, Double, Double)]) = {
-    val headerRow = "Date,Terminal,BX EGate %, BX EGate uptake %,DRT EGate %,Difference %\n"
+    val headerRow = "Date,Terminal,BX EGate %,BX EGate uptake %,DRT EGate %,Difference %\n"
 
     val csvContent = headerRow + rows
       .map { case (date, terminal, bxPercentage, drtPercentage, bxUptakePct) =>

@@ -140,8 +140,8 @@ object EgateSimulations {
 
   def bxUptakePct(eligiblePercentage: Double, egatePaxPercentage: Double): Double =
     if (eligiblePercentage > 0) {
-      val uptake = egatePaxPercentage / eligiblePercentage
-      if (uptake > 1.0) 1.0 else uptake
+      val uptake = egatePaxPercentage / eligiblePercentage * 100
+      if (uptake > 100) 100 else uptake
     }
     else 0.0
 
@@ -157,16 +157,6 @@ object EgateSimulations {
 
       (egateEligibleCount.toDouble / totalPax * 100, egateBelowAgeCount.toDouble / totalPax * 100)
     }
-
-  //  def egateEligiblePercentage_(childParentRatio: Double)(counts: Seq[(Int, Int, Int)]): Double = {
-  //    val totalPax = counts.map(_._1).sum
-  //    val totalEgateUnderAge = counts.map(_._3).sum
-  //    val parentForKids = (totalEgateUnderAge.toDouble * childParentRatio).round
-  //    val totalEgateEligibles = counts.map(_._2).sum - parentForKids
-  //    println(s"Total Pax: $totalPax, Total Egate Eligibles: $totalEgateEligibles, Total Egate Under Age: $totalEgateUnderAge, Parent For Kids: $parentForKids")
-  //    val egateEligiblePercentage = if (totalPax > 0) (totalEgateEligibles.toDouble / totalPax) * 100.0 else 0.0
-  //    egateEligiblePercentage
-  //  }
 
   def egateEligiblePercentage(childParentRatio: Double)(totalPax: Int, egateEligiblePax: Int, egateUnderAgePax: Int): Double = {
     val parentForKids = (egateUnderAgePax.toDouble * childParentRatio).round
