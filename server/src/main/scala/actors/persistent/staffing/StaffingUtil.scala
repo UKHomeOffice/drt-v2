@@ -4,8 +4,9 @@ import drt.shared._
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.convertToSqlDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 object StaffingUtil {
   def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
@@ -44,10 +45,10 @@ object StaffingUtil {
     }
   }
 
-  def updateWithAShiftDefaultStaff(previousShift: Shift, overridingShift: Seq[StaffShiftRow], shift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
-    val allShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(shift)
-    println(s"...previousShift :${previousShift}  shift :$shift")
-    val splitDailyAssignmentsWithOverlap = allShiftsStaff
+  def updateWithAShiftDefaultStaff(previousShift: Shift, overridingShift: Seq[StaffShiftRow], newShift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+    val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
+    println(s"...previousShift :${previousShift}  shift :$newShift")
+    val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = newShiftsStaff
       .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
       .groupBy(a => TM(a.terminal, a.start))
       .map { case (tm, assignments) =>
@@ -59,28 +60,44 @@ object StaffingUtil {
 
     val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 
-    val overriddingShiftAssingments = overridingShift.flatMap { os =>
-      generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os))
-    }.map(a => TM(a.terminal, a.start) -> a).toMap
+    val overidingAssignments = overridingShift
+      .filterNot(s => s.port == newShift.port && s.terminal == newShift.terminal && s.shiftName == newShift.shiftName && s.startDate == convertToSqlDate(newShift.startDate)).flatMap { os =>
+        generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os))
+      }
+
+    val overriddingShiftAssingments: Map[TM, StaffAssignment] =
+      overidingAssignments.flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+        .groupBy(a => TM(a.terminal, a.start))
+        .map { case (tm, assignments) =>
+          val combinedAssignment = assignments.reduce { (a1, a2) =>
+            a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
+          }
+          tm -> combinedAssignment
+        }
+
+
+    println(s"overriddingShiftAssingments: ${overriddingShiftAssingments.size}")
+    overriddingShiftAssingments.map((a => println(SDate(a._1.minute).prettyDateTime, a._2)))
 
     def findOverridingShift(assignment: StaffAssignment): Int = {
       overriddingShiftAssingments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff).getOrElse(0)
     }
 
-    splitDailyAssignmentsWithOverlap.map {
+    newShiftSplitDailyAssignments.map {
       case (tm, assignment) =>
         existingAllAssignments.get(tm) match {
           case Some(existing) =>
-            val isPrevStaff = existing.numberOfStaff == previousShift.staffNumber
+            val isPrevStaff = previousShift.staffNumber == existing.numberOfStaff
             if ((existing.numberOfStaff == 0) || isPrevStaff)
               assignment
             else {
               // existing
-             val overridingStaff = findOverridingShift(assignment)
-             if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber ||
-                 existing.numberOfStaff == overridingStaff + shift.staffNumber)
-               assignment.copy(numberOfStaff = overridingStaff + shift.staffNumber)
-             else existing
+              val overridingStaff = findOverridingShift(assignment)
+              println(s"assignment : $assignment, existing: $existing, overridingStaff: $overridingStaff")
+              println(s"overridingStaff: $overridingStaff, existing: ${existing.numberOfStaff}, previousShift.staffNumber: ${previousShift.staffNumber}, shift.staffNumber: ${newShift.staffNumber}")
+              if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber)
+                assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
+              else existing
             }
           case None => assignment
         }
