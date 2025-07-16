@@ -110,28 +110,33 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       )
       val paxTypeAllocator = if (airportConfig.hasTransfer) B5JPlusWithTransitTypeAllocator else B5JPlusTypeAllocator
       val egateEligibilityDao = EgateEligibilityDao()
-      val storeEgateEligibility: (UtcDate, Terminal, Int, Int, Int) => Unit =
+      val storeEgateEligibility: (UtcDate, Terminal, Int, Double, Double) => Unit =
         (date, terminal, tot, el, ua) =>
           ctrl.aggregatedDb.run(egateEligibilityDao.insertOrUpdate(EgateEligibility(airportConfig.portCode, terminal, date, tot, el, ua, SDate.now())))
 
-      val drtEgatePercentage: (UtcDate, Terminal) => Future[(Double, Double)] =
+      val calcEgateEligibleAndUnderAgeForDate = EgateSimulations.drtTotalPaxEgateEligiblePctAndUnderAgePctForDate(
+        arrivalsWithManifestsForDateAndTerminal = arrivalsWithManifests,
+        egateEligibleAndUnderAgePct = EgateSimulations.egateEligibleAndUnderAgePct(paxTypeAllocator),
+        storeEgateEligibleAndUnderAgeForDate = storeEgateEligibility,
+      )
+
+      val drtEgatePercentage: (UtcDate, Terminal) => Future[(Int, Double, Double)] =
         EgateSimulations.drtEgateEligibleAndActualPercentageForDateAndTerminal(uptakePercentage)(
-          arrivalsWithManifestsForDateAndTerminal = arrivalsWithManifests,
-          egateEligibleAndUnderAgeForDate = (terminal, date) => ctrl.aggregatedDb.run(egateEligibilityDao.get(airportConfig.portCode, date, terminal)),
-          storeEgateEligibleAndUnderAgeForDate = storeEgateEligibility,
-          egateEligibleAndUnderAgePercentages = EgateSimulations.egateEligibleAndUnderAgePercentages(paxTypeAllocator),
-          eligiblePercentage = EgateSimulations.egateEligiblePercentage(childParentRatio),
+          cachedEgateEligibleAndUnderAgeForDate = (terminal, date) => ctrl.aggregatedDb.run(egateEligibilityDao.get(airportConfig.portCode, date, terminal)),
+          drtTotalPaxEgateEligiblePctAndUnderAgePctForDate = calcEgateEligibleAndUnderAgeForDate,
+          netEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio),
         )
+
       val bxDao = BorderCrossingDao
       val bxQueueTotals: (UtcDate, Terminal) => Future[Map[Queue, Int]] =
         (date, terminal) => {
           val function = bxDao.queueTotalsForPortAndDate(airportConfig.portCode.iata, Some(terminal.toString))
           ctrl.aggregatedDb.run(function(date))
         }
-      val bxEgatePercentage: (UtcDate, Terminal) => Future[Double] = EgateSimulations.bxEgatePercentageForDateAndTerminal(bxQueueTotals)
+      val bxEgatePercentage = EgateSimulations.bxTotalPaxAndEgatePctForDateAndTerminal(bxQueueTotals)
 
-      val bxAndDrtEgatePctAndBxUptakePctForDate =
-        EgateSimulations.bxAndDrtEgatePctAndBxUptakePctForDate(bxEgatePercentage, drtEgatePercentage, EgateSimulations.bxUptakePct)
+      val bxAndDrtStatsForDate =
+        EgateSimulations.bxAndDrtStatsForDate(bxEgatePercentage, drtEgatePercentage, EgateSimulations.bxUptakePct)
 
       val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
       val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
@@ -156,15 +161,15 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             val dates = DateRange(start, end).zipWithIndex
             val totalDates = dates.size
-            val stream: Source[(UtcDate, Terminal, Double, Double, Double), NotUsed] = Source(dates)
+            val stream: Source[(UtcDate, Terminal, Int, Double, Double, Int, Double), NotUsed] = Source(dates)
               .mapAsync(1) { case (date, idx) =>
-                bxAndDrtEgatePctAndBxUptakePctForDate(date, terminal).map {
-                  case (bxPercentage, drtPercentage, bxUptakePct) =>
+                bxAndDrtStatsForDate(date, terminal).map {
+                  case (bxTotalPax, bxPercentage, bxUptakePct, drtTotalPax, drtPercentage) =>
                     val progressPercentage = ((idx + 1).toDouble / totalDates) * 100
                     ctrl.aggregatedDb.run(
                       dao.insertOrUpdate(egateSimulation.copy(status = s"processing - ${progressPercentage.toInt}% complete"))
                     )
-                    (date, terminal, bxPercentage, drtPercentage, bxUptakePct)
+                    (date, terminal, bxTotalPax, bxPercentage, bxUptakePct, drtTotalPax, drtPercentage)
                 }
               }
 
@@ -186,18 +191,18 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     }
   }
 
-  private def createResponse(rows: Seq[(UtcDate, Terminal, Double, Double, Double)]) = {
-    val headerRow = "Date,Terminal,BX EGate %,BX EGate uptake %,DRT EGate %,Difference %\n"
+  private def createResponse(rows: Seq[(UtcDate, Terminal, Int, Double, Double, Int, Double)]) = {
+    val headerRow = "Date,Terminal,BX Total Pax,BX EGate %,BX uptake %,DRT Total Pax,DRT EGate %,Difference %\n"
 
     val csvContent = headerRow + rows
-      .map { case (date, terminal, bxPercentage, drtPercentage, bxUptakePct) =>
+      .map { case (date, terminal, bxTotalPax, bxPercentage, bxUptakePct, drtTotalPax, drtPercentage) =>
         val diffPct = (drtPercentage - bxPercentage) / bxPercentage * 100
-        f"${date.toISOString},${terminal.toString},$bxPercentage%.2f,$bxUptakePct%.2f,$drtPercentage%.2f,$diffPct%.2f\n"
+        f"${date.toISOString},${terminal.toString},$bxTotalPax,$bxPercentage%.2f,$bxUptakePct%.2f,$drtTotalPax,$drtPercentage%.2f,$diffPct%.2f\n"
       }
       .mkString
 
-    val actuals = rows.map { case (_, _, bx, _, _) => bx }
-    val estimates = rows.map { case (_, _, _, drt, _) => drt }
+    val actuals = rows.map { case (_, _, _, bx, _, _, _) => bx }
+    val estimates = rows.map { case (_, _, _, _, _, _, drt) => drt }
 
     val (bias, mape, stdDev, correlation, rSquared) = stats(actuals, estimates)
 

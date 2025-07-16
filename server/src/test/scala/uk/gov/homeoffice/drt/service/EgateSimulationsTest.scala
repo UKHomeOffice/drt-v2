@@ -1,8 +1,13 @@
 package uk.gov.homeoffice.drt.service
 
+import controllers.ArrivalGenerator
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.scalatest.wordspec.AnyWordSpec
 import queueus.{PaxTypeQueueAllocation, TerminalQueueAllocator}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import services.crunch.VoyageManifestGenerator
+import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.models.CountryCodes.{Canada, France, UK}
 import uk.gov.homeoffice.drt.models.DocumentType.Passport
@@ -10,7 +15,12 @@ import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, ManifestPassengerProf
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxAge, PaxType}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxAge, PaxType, PortCode}
+import uk.gov.homeoffice.drt.time.UtcDate
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class EgateSimulationsTest extends AnyWordSpec {
   val egateUptake = 0.8
@@ -60,7 +70,7 @@ class EgateSimulationsTest extends AnyWordSpec {
       val egateEligible = 5
       val egateUnderAge = 0
       val childParentRatio = 1.0
-      val egateEligiblePercentage = EgateSimulations.egateEligiblePercentage(childParentRatio)(totalPax, egateEligible, egateUnderAge)
+      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(totalPax, egateEligible, egateUnderAge)
       assert(egateEligiblePercentage == 50.0)
     }
 
@@ -69,7 +79,7 @@ class EgateSimulationsTest extends AnyWordSpec {
       val egateEligible = 5
       val egateUnderAge = 2
       val childParentRatio = 1.0
-      val egateEligiblePercentage = EgateSimulations.egateEligiblePercentage(childParentRatio)(totalPax, egateEligible, egateUnderAge)
+      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(totalPax, egateEligible, egateUnderAge)
       assert(egateEligiblePercentage == 30.0) // 5 eligible, 2 underage, so 5 - (2 * 1) = 3 eligible for egates
     }
 
@@ -80,7 +90,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         (30, 5, 0), // 5 eligible, no underage
       )
       val childParentRatio = 1.5
-      val egateEligiblePercentage = EgateSimulations.egateEligiblePercentage(childParentRatio)(counts.map(_._1).sum, counts.map(_._2).sum, counts.map(_._3).sum)
+      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(counts.map(_._1).sum, counts.map(_._2).sum, counts.map(_._3).sum)
       assert(egateEligiblePercentage == (30d / 180) * 100) // 180 total, 35 eligible, 4.5 underage - leaves 30 eligible for egates
     }
   }
@@ -100,136 +110,80 @@ class EgateSimulationsTest extends AnyWordSpec {
     }
   }
 
-//  "queueAllocationForEgateUptake" should {
-//    "update pax types with an egate/desk split based on given egate uptake, and leave others alone" in {
-//      val allocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]] = Map(T1 -> Map(
-//        EeaMachineReadable -> Seq((EGate, 0.5), (EeaDesk, 0.5)),
-//        VisaNational -> Seq((NonEeaDesk, 1))),
-//      )
-//      val updatedUptake = 0.8
-//      val updated = EgateSimulations.queueAllocationForEgateUptake(allocation, updatedUptake)
-//      assert(updated == Map(T1 -> Map(
-//        EeaMachineReadable -> Seq((EGate, updatedUptake), (EeaDesk, 1 - updatedUptake)),
-//        VisaNational -> Seq((NonEeaDesk, 1))
-//      )))
-//    }
-//  }
-//
-//  "egateAndDeskPaxForFlight" should {
-//    val fallbacks = QueueFallbacks((_, _) => Seq.empty)
-//
-//    "give total egate and desk pax that match the egate uptake in the splits calculator and all manifest pax are egate eligible" in {
-//      val splitsCalculator = SplitsCalculator(paxQueueAllocator, Map.empty[Terminal, SplitRatios])
-//      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
-//      val manifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
-//
-//      val fallbacks = QueueFallbacks((_, _) => Seq.empty)
-//      val (egatePax, deskPax) = EgateSimulations.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
-//
-//      assert(egatePax == 80)
-//      assert(deskPax == 20)
-//    }
-//
-//    "give zero egate and 100% pax when there are no egate eligible pax in the manifest" in {
-//      val splitsCalculator = SplitsCalculator(paxQueueAllocator, Map.empty[Terminal, SplitRatios])
-//      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
-//      val manifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(visa))
-//
-//      val (egatePax, deskPax) = EgateSimulations.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, Option(manifest))
-//
-//      assert(egatePax == 0)
-//      assert(deskPax == 100)
-//    }
-//
-//    "give total egate and desk pax that match the terminal splits when there's no manifest" in {
-//      val terminalSplits: Map[Terminal, SplitRatios] = Map(T1 -> SplitRatios(SplitSources.TerminalAverage, List(
-//        SplitRatio(PaxTypeAndQueue(EeaMachineReadable, EeaDesk), 0.2),
-//        SplitRatio(PaxTypeAndQueue(EeaMachineReadable, EGate), 0.8),
-//      )))
-//      val splitsCalculator = SplitsCalculator(paxQueueAllocator, terminalSplits)
-//      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
-//
-//      val (egatePax, deskPax) = EgateSimulations.egateAndDeskPaxForFlight(splitsCalculator, fallbacks)(arrival, None)
-//
-//      assert(egatePax == 80)
-//      assert(deskPax == 20)
-//    }
-//  }
-//
-//  "arrivalsWithManifestsForDateAndTerminal" should {
-//    implicit val system: ActorSystem = ActorSystem("EgateUptakeSimulationTest")
-//    implicit val mat: Materializer = Materializer.matFromSystem
-//
-//    "return arrivals with live manifests when available" in {
-//      val terminal = T1
-//      val portCode = PortCode("STN")
-//      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
-//      val liveManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(visa))
-//      val historicManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
-//
-//      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
-//        portCode,
-//        _ => Future.successful(Some(liveManifest)),
-//        _ => Future.successful(Some(historicManifest)),
-//        (_, _) => Future.successful(Seq(arrival)),
-//      )
-//
-//      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
-//
-//      assert(result == Seq((arrival, Some(liveManifest))))
-//    }
-//
-//    "return arrivals with historic manifests when live manifests are not available" in {
-//      val terminal = T1
-//      val portCode = PortCode("STN")
-//      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
-//      val historicManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
-//
-//      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
-//        portCode,
-//        _ => Future.successful(None),
-//        _ => Future.successful(Some(historicManifest)),
-//        (_, _) => Future.successful(Seq(arrival)),
-//      )
-//
-//      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
-//
-//      assert(result == Seq((arrival, Some(historicManifest))))
-//    }
-//
-//    "return empty when no arrivals are found for the date and terminal" in {
-//      val terminal = T1
-//      val portCode = PortCode("STN")
-//
-//      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
-//        portCode,
-//        _ => Future.successful(None),
-//        _ => Future.successful(None),
-//        (_, _) => Future.successful(Seq.empty),
-//      )
-//
-//      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
-//
-//      assert(result.isEmpty)
-//    }
-//
-//    "return empty when both live and historic manifests are not available" in {
-//      val terminal = T1
-//      val portCode = PortCode("STN")
-//      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
-//
-//      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
-//        portCode,
-//        _ => Future.successful(None),
-//        _ => Future.successful(None),
-//        (_, _) => Future.successful(Seq(arrival)),
-//      )
-//
-//      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
-//
-//      assert(result == Seq((arrival, None)))
-//    }
-//  }
+  "arrivalsWithManifestsForDateAndTerminal" should {
+    implicit val system: ActorSystem = ActorSystem("EgateUptakeSimulationTest")
+    implicit val mat: Materializer = Materializer.matFromSystem
+
+    "return arrivals with live manifests when available" in {
+      val terminal = T1
+      val portCode = PortCode("STN")
+      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
+      val liveManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(visa))
+      val historicManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
+
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
+        portCode,
+        _ => Future.successful(Some(liveManifest)),
+        _ => Future.successful(Some(historicManifest)),
+        (_, _) => Future.successful(Seq(arrival)),
+      )
+
+      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
+
+      assert(result == Seq((arrival, Some(liveManifest))))
+    }
+
+    "return arrivals with historic manifests when live manifests are not available" in {
+      val terminal = T1
+      val portCode = PortCode("STN")
+      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
+      val historicManifest = VoyageManifestGenerator.voyageManifest(paxInfos = List.fill(100)(euPassport))
+
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
+        portCode,
+        _ => Future.successful(None),
+        _ => Future.successful(Some(historicManifest)),
+        (_, _) => Future.successful(Seq(arrival)),
+      )
+
+      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
+
+      assert(result == Seq((arrival, Some(historicManifest))))
+    }
+
+    "return empty when no arrivals are found for the date and terminal" in {
+      val terminal = T1
+      val portCode = PortCode("STN")
+
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
+        portCode,
+        _ => Future.successful(None),
+        _ => Future.successful(None),
+        (_, _) => Future.successful(Seq.empty),
+      )
+
+      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
+
+      assert(result.isEmpty)
+    }
+
+    "return empty when both live and historic manifests are not available" in {
+      val terminal = T1
+      val portCode = PortCode("STN")
+      val arrival = ArrivalGenerator.arrival(totalPax = Option(100), feedSource = LiveFeedSource)
+
+      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
+        portCode,
+        _ => Future.successful(None),
+        _ => Future.successful(None),
+        (_, _) => Future.successful(Seq(arrival)),
+      )
+
+      val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
+
+      assert(result == Seq((arrival, None)))
+    }
+  }
 //
 //  "drtEgatePercentageForDateAndTerminal" should {
 //    "calculate the egate percentage as the average from the egate/desk splits from each flight" in {
