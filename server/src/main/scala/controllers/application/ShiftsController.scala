@@ -148,15 +148,15 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   def updateShift(): Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
-        val shift = convertToShift(text)
-        ctrl.shiftsService.getShift(shift.port, shift.terminal, shift.shiftName, convertToSqlDate(shift.startDate)).flatMap {
+        val newShift = convertToShift(text)
+        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, convertToSqlDate(newShift.startDate)).flatMap {
           case Some(previousShift) =>
-            ctrl.shiftsService.updateShift(previousShift, shift).flatMap { _ =>
+            ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { _ =>
               shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-                ctrl.shiftsService.getOverlappingStaffShifts(shift.port, shift.terminal,
-                    toStaffShiftRow(shift, None, None, new java.sql.Timestamp(System.currentTimeMillis())))
+                ctrl.shiftsService.getOverlappingStaffShifts(newShift.port, newShift.terminal,
+                    toStaffShiftRow(newShift, None, None, new java.sql.Timestamp(System.currentTimeMillis())))
                   .flatMap { overridingShifts =>
-                    val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, shift, allShiftAssignments)
+                    val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShift, allShiftAssignments)
                     shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
                       Ok(write(s))
                     }.recoverWith {

@@ -197,9 +197,7 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
       (s.startTime <= shift.endTime && s.endTime >= shift.startTime)
   ) match {
     case Nil => Future.successful(Seq.empty)
-    case overlappingShifts => Future.successful(overlappingShifts
-    )
-
+    case overlappingShifts => Future.successful(overlappingShifts)
   }
 
 }

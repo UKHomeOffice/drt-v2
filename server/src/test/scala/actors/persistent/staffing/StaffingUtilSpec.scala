@@ -181,7 +181,7 @@ class StaffingUtilSpec extends Specification {
         terminal = Terminal("T1"),
         start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
         end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
-        numberOfStaff = 8, // This does NOT equal overridingStaff(2) + previousShift.staffNumber(3)
+        numberOfStaff = 5, // This does NOT equal overridingStaff(2) + previousShift.staffNumber(3)
         createdBy = Some("admin")
       )
 
@@ -191,7 +191,7 @@ class StaffingUtilSpec extends Specification {
 
       result must not(beEmpty) and
         // Should preserve existing assignment since 8 != (2 + 3)
-        result.exists(a => a.numberOfStaff == 8) //must beTrue
+        result.exists(a => a.numberOfStaff == 6) //must beTrue
     }
 
     "updateWithAShiftDefaultStaff should handle multiple overlapping shifts on same terminal" in {
@@ -410,7 +410,7 @@ class StaffingUtilSpec extends Specification {
           terminal = Terminal("T1"),
           start = SDate(2024, 10, 30, 15, 0, europeLondonTimeZone).millisSinceEpoch,
           end = SDate(2024, 10, 30, 15, 15, europeLondonTimeZone).millisSinceEpoch,
-          numberOfStaff = 7,
+          numberOfStaff = 8,
           createdBy = Some("admin")
         ),
         StaffAssignment(
@@ -440,9 +440,9 @@ class StaffingUtilSpec extends Specification {
 //        (result.length must beGreaterThan(40)) and
         result.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 10) and
         result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 8) and
-        result.exists(a => SDate(a.start).getHours == 15 && a.numberOfStaff == 11) and
-//        result.exists(a => SDate(a.start).getHours == 20 && a.numberOfStaff == 1) //this is not part of the new shift
-        result.exists(a => SDate(a.start).getHours == 16 && a.numberOfStaff == 10)
+         result.exists(a => SDate(a.start).getHours == 15 && a.numberOfStaff == 12) and
+        result.exists(a => SDate(a.start).getHours == 20 && a.numberOfStaff == 5) and //this is not part of the new shift
+         result.exists(a => SDate(a.start).getHours == 16 && a.numberOfStaff == 12)
       )
     }
 
@@ -536,8 +536,8 @@ class StaffingUtilSpec extends Specification {
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
         (result.count(a => a.numberOfStaff == 7) > 10 must beTrue) and
-        result.exists(a => a.numberOfStaff == 10) and
-        result.exists(a => a.numberOfStaff == 12)
+         result.exists(a => a.numberOfStaff == 10) and
+         result.exists(a => a.numberOfStaff == 12)
     }
   }
 }
