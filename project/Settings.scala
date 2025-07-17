@@ -31,7 +31,7 @@ object Settings {
     val drtCirium = "v339"
     val bluebus = "v149"
 
-    val pekko = "1.1.3"
+    val pekko = "1.1.5"
     val pekkoHttp = "1.1.0"
     val pekkoPersistenceJdbc = "1.1.0"
     val slick = "3.5.2"
