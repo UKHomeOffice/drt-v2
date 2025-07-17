@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -27,7 +27,7 @@ object FlightUpdatesSupervisor {
 }
 
 class FlightUpdatesSupervisor(now: () => SDateLike,
-                              terminals: List[Terminal],
+                              terminalsForDate: LocalDate => Seq[Terminal],
                               updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -38,7 +38,6 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"flight-updates-supervisor-kill-actor-flight")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
@@ -94,10 +93,12 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
       .map(m => SDate(m).getUtcLastMidnight.millisSinceEpoch)
       .distinct
 
-    for {
-      terminal <- terminals
+    val terminalDays = for {
       day <- daysMillis
+      terminal <- terminalsForDate(SDate(day).toLocalDate)
     } yield (terminal, day)
+
+    terminalDays.toList
   }
 
   def updatesActor(terminal: Terminal, day: MillisSinceEpoch): ActorRef =

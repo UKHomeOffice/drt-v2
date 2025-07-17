@@ -39,13 +39,13 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
-import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
+import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService, QueueConfig}
 import uk.gov.homeoffice.drt.testsystem.TestActors.TestShiftsActor
 import uk.gov.homeoffice.drt.time._
 
@@ -137,19 +137,19 @@ class TestDrtActor extends Actor {
       val portStateProbe = testProbe("portstate")
       val nowMillis = () => tc.now().millisSinceEpoch
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
-
+      val terminals: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
       def feedArrivalsRouter(source: FeedSource,
                              partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              name: String): ActorRef =
         system.actorOf(Props(new FeedArrivalsRouterActor(
-          tc.airportConfig.terminals,
+          terminals,
           getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
           updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
           partitionUpdates,
         )), name = name)
 
       val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
-        partitionUpdatesBase(tc.airportConfig.terminals, tc.now, tc.forecastMaxDays),
+        partitionUpdatesBase(terminals, tc.now, tc.forecastMaxDays),
         "forecast-base-arrivals-actor")
       val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
       val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
@@ -208,27 +208,31 @@ class TestDrtActor extends Actor {
               doUpdate(updates, removals)
           }
 
-          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
+          val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit] = {
             val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
-            (date, updates) => {
-              doUpdate(date, updates).map(_ => ())
+            terminal => (date, updates, removals) => {
+              doUpdate(terminal)(date, updates, removals).map(_ => ())
             }
           }
           (updateFlightsLiveView, update15MinuteQueueSlotsLiveView)
         case None =>
-          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
+          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: Terminal) => (_: UtcDate, _: Iterable[CrunchMinute], _: Iterable[TQM]) => Future.successful(()))
       }
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
+      val terminalsForDateRange = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
+      val terminalsForDate = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
+      val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal)
+
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, terminalsForDateRange, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
       val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
-      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal, update15MinuteQueueSlotsLiveView)
+      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, terminalsForDateRange, queuesForDateAndTerminal, update15MinuteQueueSlotsLiveView)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
       val queuesActor = minuteLookups.queueMinutesRouterActor
       val staffActor = minuteLookups.staffMinutesRouterActor
-      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
-      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
-      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
-      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)), "partitioned-port-state-actor")
+      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, terminalsForDate, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
+      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, terminalsForDate, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
+      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, terminalsForDate, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, paxFeedSourceOrder)), "partitioned-port-state-actor")
       tc.initialPortState match {
         case Some(ps) =>
           val withPcpTimes = ps.flights.view.mapValues {
@@ -309,14 +313,18 @@ class TestDrtActor extends Actor {
           flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           deskRecsProvider = portDeskRecs,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-          queueStatusProvider = DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
+          queueStatusProvider = () => portEgatesProvider().map { ep =>
+            val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal)
+            DynamicQueueStatusProvider(queuesForDateAndTerminal, tc.airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+          },
           updateLivePaxView = _ => Future.successful(StatusReply.Ack),
           terminalSplits = splitsCalculator.terminalSplits,
           queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
-          queuesByTerminal = tc.airportConfig.queuesByTerminal,
+          queuesByTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal),
           paxFeedSourceOrder = paxFeedSourceOrder,
           updateCapacity = _ => Future.successful(Done),
           setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+          validTerminals = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
         )
 
         val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(

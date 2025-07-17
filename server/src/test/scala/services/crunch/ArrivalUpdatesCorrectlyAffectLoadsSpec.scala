@@ -4,12 +4,12 @@ import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import drt.shared._
 import services.crunch.VoyageManifestGenerator._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes, FeedArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes, FeedArrival, LiveArrival}
 import uk.gov.homeoffice.drt.models.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Map, SortedMap}
 import scala.concurrent.Await
@@ -21,12 +21,12 @@ class ArrivalUpdatesCorrectlyAffectLoadsSpec extends CrunchTestLike {
     setPcpTimes = TestDefaults.setPcpFromBest,
     airportConfig = defaultAirportConfig.copy(
       slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
-      queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
+      queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq()))
     )
   ))
-  val arrivalOne = ArrivalGenerator.live(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", totalPax = Option(100))
+  val arrivalOne: LiveArrival = ArrivalGenerator.live(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", totalPax = Option(100))
 
-  val arrivalTwo = ArrivalGenerator.live(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", totalPax = Option(117))
+  val arrivalTwo: LiveArrival = ArrivalGenerator.live(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", totalPax = Option(117))
 
   "Given crunch inputs and an arrival" >> {
 

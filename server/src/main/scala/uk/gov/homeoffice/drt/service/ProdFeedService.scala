@@ -97,14 +97,17 @@ object ProdFeedService {
       (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
     )
 
-  def partitionUpdatesBase(terminals: Iterable[Terminal],
+  def partitionUpdatesBase(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
                            now: () => SDateLike,
                            forecastMaxDays: Int,
                           ): PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]] = {
     case arrivals =>
+      val terminals = terminalsForDateRange(now().toLocalDate, now().addDays(forecastMaxDays).toLocalDate)
+      val dates = DateRange(now().toUtcDate, now().addDays(forecastMaxDays).toUtcDate)
+
       val partitions = for {
         terminal <- terminals
-        day <- DateRange(now().toUtcDate, now().addDays(forecastMaxDays).toUtcDate)
+        day <- dates
       } yield {
         (terminal, day) -> FeedArrivals(arrivals.arrivals.filter(a => a.terminal == terminal && SDate(a.scheduled).toUtcDate == day))
       }
@@ -360,14 +363,14 @@ case class ProdFeedService(journalType: StreamingJournalLike,
                                  partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                                  name: String): ActorRef =
     system.actorOf(Props(new FeedArrivalsRouterActor(
-      allTerminals = airportConfig.terminals,
+      terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal),
       arrivalsByDayLookup = getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
       updateArrivals = updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
       partitionUpdates = partitionUpdates,
     )), name = name)
 
   override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
-    partitionUpdatesBase(airportConfig.terminals, now, forecastMaxDays),
+    partitionUpdatesBase(QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal), now, forecastMaxDays),
     "forecast-base-arrivals-actor")
   override val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
   override val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")

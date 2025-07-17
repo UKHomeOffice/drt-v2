@@ -4,10 +4,8 @@ import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
 
@@ -28,7 +26,6 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
   val flightUpdatesActor: ActorRef = system.actorOf(Props(new DummyActor))
   val pointInTime = "2020-07-06T12:00"
   val myNow: () => SDateLike = () => SDate(pointInTime)
-  val queues: Map[Terminal, Seq[Queue]] = defaultAirportConfig.queuesByTerminal
   val journalType: StreamingJournalLike = InMemoryStreamingJournal
 
   "Given a PartitionedPortStateActor, a legacy data cutoff off of 2020-07-06T12:00" >> {
@@ -42,7 +39,6 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
           staffUpdatesActor,
           flightUpdatesActor,
           myNow,
-          queues,
           journalType
         )))
         val rangeStart = SDate("2020-10-10")
@@ -65,7 +61,6 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
           staffUpdatesActor,
           flightUpdatesActor,
           myNow,
-          queues,
           journalType
         )))
         val rangeStart = SDate("2020-07-06T00:00", utcTimeZone)

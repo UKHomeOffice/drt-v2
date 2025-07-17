@@ -15,6 +15,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypeAndQueue, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -143,7 +144,9 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
 
 
   private def getProvider = {
-    val queues = SortedMap[Terminal, Seq[Queue]](T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+    val queues: (LocalDate, LocalDate, Terminal) => Seq[Queue] = QueueConfig.queuesForDateRangeAndTerminal(
+      SortedMap(LocalDate(2014, 1, 1) -> SortedMap[Terminal, Seq[Queue]](T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
+    )
     val divertedQueues = Map[Queue, Queue]()
     val terminalDesks = Map[Terminal, Int](T1 -> 10)
     val flexedQueuesPriority = List(EeaDesk, EGate, NonEeaDesk)
@@ -155,9 +158,20 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val minutesToCrunch = 3
     val offsetMinutes = 0
     val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax _
-    val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks(Map()), FlightFilter(List()), 45, paxFeedSourceOrder)
+    val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks((_, _) => Seq.empty), FlightFilter(List()), 45, paxFeedSourceOrder)
 
-    PortDesksAndWaitsProvider(queues, divertedQueues, terminalDesks, flexedQueuesPriority, slas,
-      procTimes, minutesToCrunch, offsetMinutes, tryCrunch, workLoadCalc, paxFeedSourceOrder)
+    PortDesksAndWaitsProvider(
+      queues,
+      divertedQueues,
+      terminalDesks,
+      flexedQueuesPriority,
+      slas,
+      procTimes,
+      minutesToCrunch,
+      offsetMinutes,
+      tryCrunch,
+      workLoadCalc,
+      paxFeedSourceOrder
+    )
   }
 }

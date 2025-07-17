@@ -166,7 +166,6 @@ class StaffDeploymentSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
-          queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
           terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),
@@ -187,7 +186,6 @@ class StaffDeploymentSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
-          ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch))
           ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
       }
       offerAndWait(crunch.fixedPointsInput, initialFixedPoints)

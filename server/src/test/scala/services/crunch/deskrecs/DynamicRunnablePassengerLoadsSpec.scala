@@ -22,6 +22,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHist
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.SortedSet
@@ -54,8 +55,11 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
       arrivalsProvider = mockFlightsProvider(List(flight)),
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
-      queuesByTerminal = airportConfig.queuesByTerminal,
+      dynamicQueueStatusProvider = () => MockEgatesProvider.portProvider(airportConfig)().map { ep =>
+        val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
+        DynamicQueueStatusProvider(queuesForDateAndTerminal, airportConfig.maxDesksByTerminalAndQueue24Hrs, ep)
+      },
+      queuesByTerminal = QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal),
       updateLiveView = _ => {
         updatesProbe.ref ! "Live view updated"
         Future.successful(StatusReply.Ack)
@@ -70,6 +74,7 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         Future.successful(Done)
       },
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+      validTerminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal),
     )
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, SortedSet.empty[TerminalUpdateRequest], "passenger-loads")
 

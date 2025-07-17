@@ -2,20 +2,19 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
-import japgolly.scalajs.react.vdom.TagOf
-import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import org.scalajs.dom.HTMLElement
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.util.Try
+case class DisplayPaxTypesAndQueues(displayLabel: String, paxTypeAndQueues: Seq[PaxTypeAndQueue]) {
+  override def toString: String = s"$displayLabel -> $paxTypeAndQueues"
+}
 
 object BigSummaryBoxes {
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean = {
@@ -84,20 +83,49 @@ object BigSummaryBoxes {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumActPax(flights: Seq[ApiFlightWithSplits], sourceOrderPreference: Seq[FeedSource]): Int = flights.map(_.apiFlight.bestPcpPaxEstimate(sourceOrderPreference).getOrElse(0)).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits],
+                sourceOrderPreference: Seq[FeedSource]): Int = flights.map(_.apiFlight.bestPcpPaxEstimate(sourceOrderPreference).getOrElse(0)).sum
 
-  def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
+  case class Props(flightCount: Int,
+                   actPaxCount: Int,
+                   bestPaxCount: Int,
+                   aggSplits: Map[PaxTypeAndQueue, Int],
+                   paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
 
-  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
+  private val splitPassengerQueueMapping = Seq(
+    DisplayPaxTypesAndQueues("to eGates", Seq(gbrNationalToEgate, eeaMachineReadableToEGate, b5jsskToEGate)),
+    DisplayPaxTypesAndQueues("B5J+ to EEA", Seq(b5jsskToDesk, b5jsskChildToDesk)),
+    DisplayPaxTypesAndQueues("EEA to EEA", Seq(eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, eeaChildToDesk)),
+    DisplayPaxTypesAndQueues("GBR to EEA", Seq(gbrNationalToDesk, gbrNationalChildToDesk)),
+    DisplayPaxTypesAndQueues("Non-Visa to Non-EEA", Seq(nonVisaNationalToDesk)),
+    DisplayPaxTypesAndQueues("Visa to Non-EEA", Seq(visaNationalToDesk)),
+  )
 
-  def GraphComponent(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): TagOf[HTMLElement] = {
-    val value = Try {
-      val orderedSplitCounts: Iterable[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-      SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts))
+  private val splitPassengerQueueOtherPorts = Seq(
+    DisplayPaxTypesAndQueues("to eGates" , Seq(gbrNationalToEgate, eeaMachineReadableToEGate, b5jsskToEGate)),
+    DisplayPaxTypesAndQueues("B5J+ to Desk" , Seq(b5jsskToDesk, b5jsskChildToDesk)),
+    DisplayPaxTypesAndQueues("EEA to Desk" , Seq(eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, eeaChildToDesk)),
+    DisplayPaxTypesAndQueues("GBR to Desk" , Seq(gbrNationalToDesk, gbrNationalChildToDesk)),
+    DisplayPaxTypesAndQueues("Non-Visa to Desk" , Seq(nonVisaNationalToDesk)),
+    DisplayPaxTypesAndQueues("Visa to Desk" , Seq(visaNationalToDesk)),
+  )
+
+  private def paxSplitPercentages(queuePax: Map[PaxTypeAndQueue, Int], mapping: Seq[DisplayPaxTypesAndQueues]): Seq[(String, Int)] = {
+    val totalPaxCount = queuePax.values.sum
+    mapping.map {
+      displayPaxTypesAndQueues =>
+        val queuePaxCount = displayPaxTypesAndQueues.paxTypeAndQueues.map(ptq => queuePax.getOrElse(ptq, 0)).sum.toDouble
+        val paxCountPercentage = ((queuePaxCount / totalPaxCount) * 100).toInt
+        (displayPaxTypesAndQueues.displayLabel, paxCountPercentage)
     }
-    val g: Try[TagOf[HTMLElement]] = value recoverWith {
-      case f => Try(<.div(f.toString()))
-    }
-    g.get
   }
+
+  def paxSplitPercentagesWithSingleDeskQueue(queuePax: Map[PaxTypeAndQueue, Int]): Seq[(String, Int)] = {
+    paxSplitPercentages(queuePax, splitPassengerQueueOtherPorts)
+  }
+
+  def paxSplitPercentagesWithSplitDeskQueues(queuePax: Map[PaxTypeAndQueue, Int]): Seq[(String, Int)] = {
+    paxSplitPercentages(queuePax, splitPassengerQueueMapping)
+  }
+
 }

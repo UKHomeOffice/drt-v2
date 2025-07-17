@@ -51,7 +51,9 @@ object MainMenu {
         List((PortFeedUpload, forecastUploadFile))
       else List.empty
 
-    def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
+    val terminals = airportConfig.terminals(SDate.now().toLocalDate)
+
+    def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = terminals.map { tn =>
       val terminalName = tn.toString
       val targetLoc = currentLoc match {
         case tptl: TerminalPageTabLoc if tptl.mode == Dashboard =>
@@ -74,7 +76,7 @@ object MainMenu {
     val itemsForLoggedInUser: List[MenuItem] = restrictedMenuItemsForRole(restrictedMenuItems, userRoles, nonTerminalUnrestrictedMenuItems.length)
 
     val nonTerminalMenuItems = nonTerminalUnrestrictedMenuItems ::: itemsForLoggedInUser
-    nonTerminalMenuItems :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminals.size, feeds)
+    nonTerminalMenuItems :+ statusMenuItem(nonTerminalMenuItems.length + terminals.size, feeds)
   }
 
   private def restrictedMenuItemsForRole(restrictedMenuItems: List[(Role, Int => MenuItem)], roles: Set[Role], startIndex: Int): List[MenuItem] = {

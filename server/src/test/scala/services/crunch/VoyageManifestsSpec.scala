@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -56,7 +56,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           nonVisaNationalToDesk -> 25d / 60
         )),
-        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
       )
     ))
 
@@ -101,7 +101,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
             terminalPaxTypeQueueAllocation = airportConfig.terminalPaxTypeQueueAllocation.updated(
               T1, airportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2))
             ),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
+            queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate)))
           )
         ))
 
@@ -151,7 +151,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
               T1, airportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
               )
             ),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
+            queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))),
             hasTransfer = true
           )
         ))
@@ -275,7 +275,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
               T1, airportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
               )
             ),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
+            queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))),
             hasTransfer = true
           )
         ))
@@ -328,7 +328,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
       )
     ))
 
@@ -377,7 +377,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
       )
     ))
 
@@ -426,7 +426,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)))
       )
     ))
 

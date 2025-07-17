@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -171,9 +172,11 @@ class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[I
       log.warn(s"CrunchManagerActor received unexpected message: $other")
   }
 
+  val terminals = QueueConfig.terminalsForDate(ac.queuesByTerminal)
+
   private def millisToTerminalUpdateRequests(um: Set[Long]): Set[TerminalUpdateRequest] = {
     um.map(ms => SDate(ms).toLocalDate)
-      .flatMap(ld => ac.terminals.map(TerminalUpdateRequest(_, ld)))
+      .flatMap(ld => terminals(ld).map(TerminalUpdateRequest(_, ld)))
   }
 
   private def queueLookups(millis: Set[Long], subscriber: Option[ActorRef], lookup: UtcDate => Future[Iterable[UniqueArrival]], label: String)

@@ -4,7 +4,7 @@ import actors.CrunchManagerActor._
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
 import com.google.inject.Inject
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
-import drt.shared.PortState
+import drt.shared.{CrunchApi, PortState}
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
@@ -71,10 +71,10 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val forecast = portStateFuture
         .map {
           case portState: PortState =>
+            val queues = ctrl.applicationService.queuesForDateRangeAndTerminal
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
-            val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
-              airportConfig.queuesByTerminal(terminal).toList)
+            val hf: CrunchApi.ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues)
             Option(ForecastPeriodWithHeadlines(fp, hf))
         }
         .recover {

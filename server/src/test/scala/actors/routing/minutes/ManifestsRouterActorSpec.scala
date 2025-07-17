@@ -20,7 +20,7 @@ import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode, Terminals}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -39,7 +39,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       requestAndTerminateActor ! ((date, maybePit))
       Future(VoyageManifests.empty)
     }
-    override val terminals: Iterable[Terminals.Terminal] = defaultAirportConfig.terminals
+    override val terminals: LocalDate => Iterable[Terminals.Terminal] = defaultAirportConfig.terminals
   }
 
   val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(Set.empty[TerminalUpdateRequest])

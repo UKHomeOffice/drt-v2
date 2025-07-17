@@ -1,5 +1,8 @@
 package drt.server.feeds.bhx
 
+import drt.server.feeds.Feed.FeedTick
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport
@@ -8,9 +11,6 @@ import org.apache.pekko.http.scaladsl.model.headers._
 import org.apache.pekko.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

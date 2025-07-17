@@ -51,6 +51,16 @@ class AzinqEdiFeedSpec extends Specification {
 
       Await.result(feed(), 1.second) === List()
     }
+
+    "The AzinqFeed should ignore the arrival when the terminal is not present" >> {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val mat: Materializer = Materializer(system)
+
+      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("","A")))))
+
+      Await.result(feed(), 1.second) === List()
+    }
+
   }
 
   private def arrival: LiveArrival = LiveArrival(

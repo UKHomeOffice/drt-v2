@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.gbrNationalChildToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -47,7 +47,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
         )))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -70,7 +70,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
         )))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))

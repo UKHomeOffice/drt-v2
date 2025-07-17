@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.models.VoyageManifests
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -22,7 +22,7 @@ trait ManifestLookupsLike {
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val requestAndTerminateActor: ActorRef
-  val terminals: Iterable[Terminal]
+  val terminals: LocalDate => Iterable[Terminal]
 
   val updateManifests: ManifestsUpdate = (date: UtcDate, vms: VoyageManifests) => {
     val actor = system.actorOf(DayManifestActor.props(date, terminals))
@@ -40,7 +40,7 @@ trait ManifestLookupsLike {
   }
 }
 
-case class ManifestLookups(system: ActorSystem, terminals: Iterable[Terminal]) extends ManifestLookupsLike {
+case class ManifestLookups(system: ActorSystem, terminals: LocalDate => Iterable[Terminal]) extends ManifestLookupsLike {
   override val requestAndTerminateActor: ActorRef = system
     .actorOf(Props(new RequestAndTerminateActor()), "manifests-lookup-kill-actor")
 }

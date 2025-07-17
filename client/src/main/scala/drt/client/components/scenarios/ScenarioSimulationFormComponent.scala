@@ -3,11 +3,10 @@ package drt.client.components.scenarios
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.actions.Actions.GetSimulation
-import io.kinoplan.scalajs.react.material.ui.core._
 import drt.client.components.styles.ScalaCssImplicits._
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
+import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.{`type`, id, onChange, onClick, value}
@@ -19,6 +18,7 @@ import uk.gov.homeoffice.drt.ports.Queues.EGate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.scalajs.js
@@ -26,8 +26,6 @@ import scala.util.Try
 
 
 object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
-
-  val steps: Seq[String] = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
   case class State(simulationFormFields: SimulationFormFields, panelStatus: Map[String, Boolean]) {
     def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
@@ -231,7 +229,9 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
         val showCharts: Callback = Callback(SPACircuit.dispatch(GetSimulation(state.simulationFormFields)))
 
-        val terminalHasEgates = props.airportConfig.queuesByTerminal(props.terminal).contains(EGate)
+        val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.date, props.terminal)
+
+        val terminalHasEgates = queues.contains(EGate)
 
         <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
           MuiAccordion(expanded = isOpen("passengerWeighting"))(

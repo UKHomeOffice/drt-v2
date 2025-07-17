@@ -7,9 +7,10 @@ import actors.persistent.staffing.{FixedPointsActor, LegacyShiftAssignmentsActor
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Terminals}
+import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors._
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 case class TestActorService(journalType: StreamingJournalLike,
                             airportConfig: AirportConfig,
@@ -43,25 +44,28 @@ case class TestActorService(journalType: StreamingJournalLike,
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
   override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesRouterActor
   override val staffRouterActor: ActorRef = minuteLookups.staffMinutesRouterActor
+
+  val terminals: LocalDate => Seq[Terminals.Terminal] = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
+
   override val queueUpdates: ActorRef = system.actorOf(Props(
     new QueueTestUpdatesSupervisor(
-      now,
-      airportConfig.queuesByTerminal.keys.toList,
-      PartitionedPortStateActor.queueUpdatesProps(now, journalType)
+      now = now,
+      terminals = terminals,
+      updatesActorFactory = PartitionedPortStateActor.queueUpdatesProps(now, journalType)
     )),
     "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(
     new StaffTestUpdatesSupervisor(
-      now,
-      airportConfig.queuesByTerminal.keys.toList,
-      PartitionedPortStateActor.staffUpdatesProps(now, journalType)
+      now = now,
+      terminals = terminals,
+      updatesActorFactory = PartitionedPortStateActor.staffUpdatesProps(now, journalType)
     )
   ), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(
     new TestFlightUpdatesSupervisor(
-      now,
-      airportConfig.queuesByTerminal.keys.toList,
-      PartitionedPortStateActor.flightUpdatesProps(now, journalType)
+      now = now,
+      terminals = terminals,
+      updatesActorFactory = PartitionedPortStateActor.flightUpdatesProps(now, journalType)
     )
   ), "updates-supervisor-flight")
 
@@ -75,11 +79,9 @@ case class TestActorService(journalType: StreamingJournalLike,
         staffUpdates,
         flightUpdates,
         now,
-        airportConfig.queuesByTerminal,
         journalType
       )
     ),
     "port-state-actor"
   )
-
 }

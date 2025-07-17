@@ -98,10 +98,10 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
         val start = SDate(startDay.toLong, europeLondonTimeZone)
         val end = start.addDays(sixMonthsDays)
-        val queues = ctrl.airportConfig.queuesByTerminal(Terminal(terminalName))
-        val queueNames = Queues.inOrder(queues).map(Queues.displayName)
+        val queuesForDateRange = ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal).toSeq
+        val queueNames = Queues.inOrder(queuesForDateRange).map(Queues.displayName)
         val rowHeaders = Seq("Date", "Total pax") ++ queueNames ++ Seq("Total workload")
-        val makeHeadlines = StaffRequirementExports.toPassengerHeadlines(queues)
+        val makeHeadlines = StaffRequirementExports.toPassengerHeadlines(queuesForDateRange)
 
         StaffRequirementExports
           .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
@@ -113,6 +113,7 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
             val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }
+
       }
     }
   }

@@ -1,14 +1,14 @@
 package actors
 
 import actors.daily._
+import drt.shared.CrunchApi._
+import drt.shared._
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import org.apache.pekko.pattern.{StatusReply, ask, pipe}
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.util.Timeout
-import drt.shared.CrunchApi._
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.acking.Acking
@@ -16,7 +16,6 @@ import uk.gov.homeoffice.drt.actor.acking.Acking.AckingAsker
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
@@ -181,7 +180,6 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
                                 staffUpdatesActor: ActorRef,
                                 flightUpdatesActor: ActorRef,
                                 val now: () => SDateLike,
-                                val queues: Map[Terminal, Seq[Queue]],
                                 val journalType: StreamingJournalLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -190,8 +188,6 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(90 seconds)
-
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
   private val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
   private val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)

@@ -66,7 +66,9 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
         staff_planning_interval_minutes = None,
         hide_pax_data_source_description = None,
         show_staffing_shift_view = None,
-        desks_and_queues_interval_minutes = None
+        desks_and_queues_interval_minutes = None,
+        port_dashboard_interval_minutes = None,
+        port_dashboard_terminals = None
       ))
     Future.successful(Ok(s"User-tracked"))
   }

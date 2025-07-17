@@ -93,8 +93,7 @@ object RunnableCrunch {
                 FeedArrivals(List())
             }
             .mapAsync(1) {
-              case FeedArrivals(as) =>
-                applyPaxDeltas(as.toList).map(FeedArrivals(_))
+              case FeedArrivals(as) => applyPaxDeltas(as.toList).map(FeedArrivals)
             } ~> baseArrivalsSink
 
           forecastArrivalsSourceSync ~> forecastBroadcast

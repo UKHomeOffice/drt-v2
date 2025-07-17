@@ -175,25 +175,29 @@ steps:
     depends_on:
       - Code coverage report
 
-#  - name: Dependency check
-#    pull: if-not-exists
-#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
-#    commands:
-#      - /root/entrypoint.sh
-#      - sbt -mem 4096 dependencyCheck
-#    environment:
-#      NVD_BASE_URL: http://nvdmirror:8008
-#      ARTIFACTORY_PASSWORD:
-#        from_secret: ARTIFACTORY_PASSWORD
-#      ARTIFACTORY_USERNAME: drt_ci
-#      ENV_LOG_LEVEL: ERROR
-#    when:
-#      event:
-#        - push
-#      branch:
-#        - master
-#    depends_on:
-#      - Scapegoat
+  - name: Dependency check
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - sbt -Dlog4j2.level=info dependencyCheck
+    environment:
+      NVD_API_KEY:
+        from_secret: NVD_API_KEY_SECRET
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - Build docker image
+
 
   - name: Sonar scanner
     pull: if-not-exists
@@ -208,7 +212,7 @@ steps:
       branch:
         - master
     depends_on:
-#      - Dependency check
+      - Dependency check
       - Scapegoat
 
   - name: End to end test
