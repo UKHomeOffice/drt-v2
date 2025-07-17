@@ -45,7 +45,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         nonEea,
       )
 
-      val (egateEligibleCount, egateUnderAgeCount) = EgateSimulations.egateEligibleAndUnderAgePercentages(B5JPlusTypeAllocator)(manifest)
+      val (egateEligibleCount, egateUnderAgeCount) = EgateSimulations.egateEligibleAndUnderAgePct(B5JPlusTypeAllocator)(manifest)
 
       assert(egateEligibleCount == 75)
       assert(egateUnderAgeCount == 0)
@@ -57,7 +57,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         nonEea,
       )
 
-      val (egateEligibleCount, egateUnderAgeCount) = EgateSimulations.egateEligibleAndUnderAgePercentages(B5JPlusTypeAllocator)(manifest)
+      val (egateEligibleCount, egateUnderAgeCount) = EgateSimulations.egateEligibleAndUnderAgePct(B5JPlusTypeAllocator)(manifest)
 
       assert(egateEligibleCount == 0)
       assert(egateUnderAgeCount == 75)
@@ -66,31 +66,29 @@ class EgateSimulationsTest extends AnyWordSpec {
 
   "egateEligiblePercentage" should {
     "return the egate eligibles as a percentage of the total passengers when there are no underage passengers" in {
-      val totalPax = 10
-      val egateEligible = 5
-      val egateUnderAge = 0
+      val egateEligiblePct = 5
+      val egateUnderAgePct = 0
       val childParentRatio = 1.0
-      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(totalPax, egateEligible, egateUnderAge)
-      assert(egateEligiblePercentage == 50.0)
+      val netEgateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(egateEligiblePct, egateUnderAgePct)
+      assert(netEgateEligiblePercentage == 5.0)
     }
 
     "return the egate eligibles as a percentage of the total passengers when there are underage passengers" in {
-      val totalPax = 10
-      val egateEligible = 5
-      val egateUnderAge = 2
+      val egateEligiblePct = 5
+      val egateUnderAgePct = 2
       val childParentRatio = 1.0
-      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(totalPax, egateEligible, egateUnderAge)
-      assert(egateEligiblePercentage == 30.0) // 5 eligible, 2 underage, so 5 - (2 * 1) = 3 eligible for egates
+      val netEgateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(egateEligiblePct, egateUnderAgePct)
+      assert(netEgateEligiblePercentage == 3.0) // 5 eligible, 2 underage, so 5 - (2 * 1) = 3 eligible for egates
     }
 
     "return the egate eligibles as a percentage of the total passengers when there are underage passengers and multiple counts" in {
       val counts = Seq(
-        (100, 20, 1), // 20 eligible, 1 underage
-        (50, 10, 2), // 10 eligible, 2 underage
-        (30, 5, 0), // 5 eligible, no underage
+        (20, 1), // 20 eligible, 1 underage
+        (10, 2), // 10 eligible, 2 underage
+        (5, 0), // 5 eligible, no underage
       )
       val childParentRatio = 1.5
-      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(counts.map(_._1).sum, counts.map(_._2).sum, counts.map(_._3).sum)
+      val egateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(counts.map(_._1).sum, counts.map(_._2).sum)
       assert(egateEligiblePercentage == (30d / 180) * 100) // 180 total, 35 eligible, 4.5 underage - leaves 30 eligible for egates
     }
   }
@@ -184,7 +182,8 @@ class EgateSimulationsTest extends AnyWordSpec {
       assert(result == Seq((arrival, None)))
     }
   }
-//
+
+
 //  "drtEgatePercentageForDateAndTerminal" should {
 //    "calculate the egate percentage as the average from the egate/desk splits from each flight" in {
 //      val terminal = T1
