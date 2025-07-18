@@ -1,6 +1,6 @@
 package services.crunch
 
-import actors.CrunchManagerActor.{ReProcessDates, Recrunch}
+import actors.CrunchManagerActor.{ReProcessDates, RecalculatePaxLoads}
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
@@ -30,11 +30,11 @@ object CrunchManager {
 
     flightsActor
       .ask(RemoveSplitsForDateRange(start.millisSinceEpoch, endMillis))
-      .map(_ => queueDaysToReProcess(crunchManager, offsetMinutes, forecastMaxDays, now, m => Recrunch(m)))
+      .map(_ => queueDaysToReProcess(crunchManager, offsetMinutes, forecastMaxDays, now, m => RecalculatePaxLoads(m)))
       .recover {
         case t =>
           log.error("Failed to remove splits for date range", t)
-          queueDaysToReProcess(crunchManager, offsetMinutes, forecastMaxDays, now, m => Recrunch(m))
+          queueDaysToReProcess(crunchManager, offsetMinutes, forecastMaxDays, now, m => RecalculatePaxLoads(m))
       }
   }
 }

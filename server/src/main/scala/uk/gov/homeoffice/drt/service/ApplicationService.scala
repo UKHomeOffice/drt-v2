@@ -394,11 +394,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
       actorService.staffRouterActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       slasActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
-      slasActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       egateBanksUpdatesActor ! AddUpdatesSubscriber(paxLoadsRequestQueueActor)
 
-      crunchManagerActor ! AddQueueCrunchSubscriber(paxLoadsRequestQueueActor)
+      crunchManagerActor ! AddQueuePaxLoadsSubscriber(paxLoadsRequestQueueActor)
+      crunchManagerActor ! AddQueueDeskRecsSubscriber(deskRecsRequestQueueActor)
       crunchManagerActor ! AddQueueRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
       crunchManagerActor ! AddQueueRecalculateLiveSplitsSubscriber(liveSplitsQueueActor)
       crunchManagerActor ! AddQueueHistoricSplitsLookupSubscriber(historicSplitsQueueActor)
