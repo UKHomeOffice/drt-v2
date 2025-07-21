@@ -6,7 +6,7 @@ import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, dateFromString, toStaffShiftRow}
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil._
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
 
@@ -152,19 +152,24 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, convertToSqlDate(newShift.startDate)).flatMap {
           case Some(previousShift) =>
             ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { _ =>
+              val newShiftRow = if (previousShift.endDate.isDefined) newShift.copy(endDate = previousShift.endDate) else newShift
               shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-                ctrl.shiftsService.getOverlappingStaffShifts(newShift.port, newShift.terminal,
-                    toStaffShiftRow(newShift, None, None, new java.sql.Timestamp(System.currentTimeMillis())))
+                ctrl.shiftsService.getOverlappingStaffShifts(newShiftRow.port, newShiftRow.terminal,
+                    toStaffShiftRow(newShiftRow, None, None, new java.sql.Timestamp(System.currentTimeMillis())))
                   .flatMap { overridingShifts =>
-                    val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShift, allShiftAssignments)
+                    val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShiftRow, allShiftAssignments)
                     shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
                       Ok(write(s))
                     }.recoverWith {
-                      case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+                      case e: Exception =>
+                        log.error(s"Failed to update shifts with assignments: ", e.printStackTrace())
+                        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
                     }
                   }
               }.recoverWith {
-                case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+                case e: Exception =>
+                  log.error(s"Failed to update shifts: ", e.printStackTrace())
+                  Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
               }
             }
           case None =>

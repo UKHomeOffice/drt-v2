@@ -57,7 +57,8 @@ class ShiftsParsingSpec extends AnyFlatSpec with Matchers {
   )
 
   "upickle" should "parse JSON into Seq[Shift] correctly" in {
-    val json = """
+    val json =
+      """
       [
         {
           "createdAt": 1751379140536,
@@ -153,12 +154,11 @@ class ShiftsParsingSpec extends AnyFlatSpec with Matchers {
       )
     )
     val json = write(shifts)
-    json should include ("Afternoon")
-    json should include ("Morning")
-    json should include ("Late")
-    json should include ("\"endDate\":null")
-    json should include ("\"endDate\":{\"day\":1,\"month\":12,\"year\":2025}")
+    json should include("Afternoon")
+    json should include("Morning")
+    json should include("Late")
+    json should include("\"endDate\":null")
+    json should include("\"endDate\":{\"year\":2025,\"month\":12,\"day\":1}")
   }
-
 
 }

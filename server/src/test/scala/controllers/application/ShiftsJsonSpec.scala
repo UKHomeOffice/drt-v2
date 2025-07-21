@@ -76,7 +76,7 @@ class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
          |"staffNumber":6,
          |"frequency":null,
          |"createdBy":null,
-         |"createdAt":"1751447676745"
+         |"createdAt":1
          |}
          |""".stripMargin
     val shifts = convertToShift(jsonString)

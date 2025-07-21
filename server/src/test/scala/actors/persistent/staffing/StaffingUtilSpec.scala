@@ -311,8 +311,7 @@ class StaffingUtilSpec extends Specification {
         result.forall(_.terminal.toString == "T1") and
         result.exists(a => SDate(a.start).getHours == 12 && a.numberOfStaff == 12) and // 6 + 6 = 12 for override1
         result.exists(a => SDate(a.start).getHours == 10 && a.numberOfStaff == 9) and // 3 + 6 = 9 for override2
-        result.exists(a => SDate(a.start).getHours == 11 && SDate(a.start).getMinutes ==  30 && a.numberOfStaff == 11) //and // 5 + 6 = 11 for override3
-//        result.exists(a => SDate(a.start).getHours == 19 && a.numberOfStaff == 7)     // Should preserve the 7 staff assignment this is outside new shift period
+        result.exists(a => SDate(a.start).getHours == 11 && SDate(a.start).getMinutes == 30 && a.numberOfStaff == 11)
     }
 
     "updateWithAShiftDefaultStaff should handle long shift spans with same terminal overlaps" in {
@@ -410,7 +409,7 @@ class StaffingUtilSpec extends Specification {
           terminal = Terminal("T1"),
           start = SDate(2024, 10, 30, 15, 0, europeLondonTimeZone).millisSinceEpoch,
           end = SDate(2024, 10, 30, 15, 15, europeLondonTimeZone).millisSinceEpoch,
-          numberOfStaff = 8,
+          numberOfStaff = 7,
           createdBy = Some("admin")
         ),
         StaffAssignment(
@@ -426,7 +425,7 @@ class StaffingUtilSpec extends Specification {
           terminal = Terminal("T1"),
           start = SDate(2024, 10, 30, 16, 0, europeLondonTimeZone).millisSinceEpoch,
           end = SDate(2024, 10, 30, 16, 15, europeLondonTimeZone).millisSinceEpoch,
-          numberOfStaff = 10,
+          numberOfStaff = 7,
           createdBy = Some("admin")
         )
       )
@@ -437,13 +436,12 @@ class StaffingUtilSpec extends Specification {
 
       (result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
-//        (result.length must beGreaterThan(40)) and
         result.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 10) and
         result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 8) and
-         result.exists(a => SDate(a.start).getHours == 15 && a.numberOfStaff == 12) and
-        result.exists(a => SDate(a.start).getHours == 20 && a.numberOfStaff == 5) and //this is not part of the new shift
-         result.exists(a => SDate(a.start).getHours == 16 && a.numberOfStaff == 12)
-      )
+        result.exists(a => SDate(a.start).getHours == 15 && a.numberOfStaff == 11) and
+        result.exists(a => SDate(a.start).getHours == 16 && a.numberOfStaff == 11) and
+        result.exists(a => SDate(a.start).getHours == 20 && a.numberOfStaff == 1)
+        )
     }
 
     "updateWithAShiftDefaultStaff should handle zero staff existing assignments on same terminal" in {
@@ -535,9 +533,10 @@ class StaffingUtilSpec extends Specification {
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
-        (result.count(a => a.numberOfStaff == 7) > 10 must beTrue) and
-         result.exists(a => a.numberOfStaff == 10) and
-         result.exists(a => a.numberOfStaff == 12)
+        result.exists(a => SDate(a.start).getHours == 10 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 12 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 7)
     }
   }
 }

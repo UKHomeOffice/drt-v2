@@ -1,6 +1,7 @@
 package actors.persistent.staffing
 
 import drt.shared._
+import org.joda.time.{DateTimeZone, LocalDateTime}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -12,6 +13,13 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 object StaffingUtil {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  def safeSDate(year: Int, month: Int, day: Int, hour: Int, minute: Int, tz: DateTimeZone): SDateLike = {
+    val ldt = new LocalDateTime(year, month, day, hour, minute)
+    val dt = if (!tz.isLocalDateTimeGap(ldt)) ldt.toDateTime(tz)
+    else ldt.plusHours(1).toDateTime(tz) // shift forward if in gap
+    SDate(dt)
+  }
+
   def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
     val (startHH, startMM) = shift.startTime.split(":") match {
       case Array(hh, mm) => (hh.toInt, mm.toInt)
@@ -20,20 +28,19 @@ object StaffingUtil {
       case Array(hh, mm) => (hh.toInt, mm.toInt)
     }
 
-    val startDate = SDate(shift.startDate.year, shift.startDate.month, shift.startDate.day)
-    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day)).getOrElse(startDate.addMonths(6))
+    val startDate = SDate(shift.startDate.year, shift.startDate.month, shift.startDate.day, 0, 0, europeLondonTimeZone)
+    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(startDate.addMonths(6))
 
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
       val currentDate: SDateLike = startDate.addDays(day)
-      val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
-
+      val startMillis = safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
       val isShiftEndAfterMidNight = endHH < startHH || (endHH == startHH && endMM < startMM)
       val endMillis = if (isShiftEndAfterMidNight) {
-        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
+        safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
           europeLondonTimeZone).addDays(1).millisSinceEpoch
       } else {
-        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
+        safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
           europeLondonTimeZone).millisSinceEpoch
       }
 
@@ -79,9 +86,6 @@ object StaffingUtil {
 
     val isTimeChange = previousShift.startTime != newShift.startTime || previousShift.endTime != newShift.endTime
 
-    println(s"overriddingShiftAssingments: ${overriddingShiftAssingments.size}")
-    overriddingShiftAssingments.map((a => println(SDate(a._1.minute).prettyDateTime, a._2)))
-
     def findOverridingShift(assignment: StaffAssignment): Int = {
       overriddingShiftAssingments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff).getOrElse(0)
     }
@@ -90,12 +94,8 @@ object StaffingUtil {
       case (tm, assignment) =>
         existingAllAssignments.get(tm) match {
           case Some(existing) =>
-            val isPrevStaff = previousShift.staffNumber == existing.numberOfStaff
             val overridingStaff = findOverridingShift(assignment)
-            log.info(s"overridingStaff: $overridingStaff, isPrevStaff: $isPrevStaff")
-            log.info(s"assignment : $assignment, existing: $existing, overridingStaff: $overridingStaff")
-            log.info(s"overridingStaff: $overridingStaff, existing: ${existing.numberOfStaff}, previousShift.staffNumber: ${previousShift.staffNumber}, shift.staffNumber: ${newShift.staffNumber}")
-            if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber || isTimeChange )
+            if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber || isTimeChange)
               assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
             else
               existing
@@ -105,28 +105,28 @@ object StaffingUtil {
     }.toSeq.sortBy(_.start)
 
 
-      def timeChangeMerge()= {
-        val timeChangedOverridingShiftAssignments: Seq[StaffAssignmentLike] = overriddingShiftAssingments.map { case (tm, overridingAssignment) =>
-          newShiftSplitDailyAssignments.get(tm) match {
-            case Some(newShiftAssignment) =>
-              updatedNewShiftsAssignments.find(a => a.terminal == newShiftAssignment.terminal && a.start == newShiftAssignment.start) match {
-                case Some(updatedAssignments) =>
-                  updatedAssignments
-                case None =>
-                  newShiftAssignment
-              }
-            case None =>
-              existingAllAssignments.get(tm) match {
-                case Some(existingAssignment) =>
-                  if( existingAssignment.numberOfStaff != overridingAssignment.numberOfStaff)
-                    overridingAssignment//.copy(numberOfStaff = overridingAssignment.numberOfStaff)
-                  else
-                    existingAssignment
-                case None =>
+    def timeChangeMerge() = {
+      val timeChangedOverridingShiftAssignments: Seq[StaffAssignmentLike] = overriddingShiftAssingments.map { case (tm, overridingAssignment) =>
+        newShiftSplitDailyAssignments.get(tm) match {
+          case Some(newShiftAssignment) =>
+            updatedNewShiftsAssignments.find(a => a.terminal == newShiftAssignment.terminal && a.start == newShiftAssignment.start) match {
+              case Some(updatedAssignments) =>
+                updatedAssignments
+              case None =>
+                newShiftAssignment
+            }
+          case None =>
+            existingAllAssignments.get(tm) match {
+              case Some(existingAssignment) =>
+                if (existingAssignment.numberOfStaff > overridingAssignment.numberOfStaff)
                   overridingAssignment
-              }
-          }
-        }.toSeq
+                else
+                  existingAssignment
+              case None =>
+                overridingAssignment
+            }
+        }
+      }.toSeq
 
       val merged = {
         val timeChangedMap = timeChangedOverridingShiftAssignments.map(a => TM(a.terminal, a.start) -> a).toMap
@@ -141,7 +141,7 @@ object StaffingUtil {
     }
 
     if (isTimeChange)
-      timeChangeMerge
+      timeChangeMerge()
     else
       updatedNewShiftsAssignments
   }
