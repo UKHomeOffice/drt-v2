@@ -20,18 +20,17 @@ object EgateSimulations {
   private val feedSourceOrder: List[FeedSource] = List(LiveFeedSource, ApiFeedSource, ForecastFeedSource, HistoricApiFeedSource, AclFeedSource)
 
   def bxAndDrtStatsForDate(bxEgateTotalAndPercentageForDateAndTerminal: (UtcDate, Terminal) => Future[(Int, Double)],
-                           drtEgateEligibleAndActualPercentageForDateAndTerminal: (UtcDate, Terminal) => Future[(Int, Double, Double)],
+                           drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal: (UtcDate, Terminal) => Future[(Int, Double, Double)],
                            bxUptakePct: (Double, Double) => Double,
                           )
                           (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[(Int, Double, Double, Int, Double)] =
     (date, terminal) => {
       for {
         (bxTotalPax, bxEgatePct) <- bxEgateTotalAndPercentageForDateAndTerminal(date, terminal)
-        (drtTotalPax, eligiblePct, drtEgatePercentage) <- drtEgateEligibleAndActualPercentageForDateAndTerminal(date, terminal)
-        bxUptakePercentage = bxUptakePct(eligiblePct, bxEgatePct)
+        (drtTotalPax, drtNetEligiblePct, drtEgatePct) <- drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal(date, terminal)
+        bxUptakePercentage = bxUptakePct(drtNetEligiblePct, bxEgatePct)
       } yield {
-        println(s"bxEgatePercentage: $bxEgatePct, eligiblePct: $eligiblePct, drtEgatePercentage: $drtEgatePercentage")
-        (bxTotalPax, bxEgatePct, bxUptakePercentage, drtTotalPax, drtEgatePercentage)
+        (bxTotalPax, bxEgatePct, bxUptakePercentage, drtTotalPax, drtEgatePct)
       }
     }
 
@@ -49,12 +48,12 @@ object EgateSimulations {
         }
     }
 
-  def drtEgateEligibleAndActualPercentageForDateAndTerminal(uptakePct: Double)
-                                                           (cachedEgateEligibleAndUnderAgeForDate: (UtcDate, Terminal) => Future[Option[EgateEligibility]],
-                                                            drtTotalPaxEgateEligiblePctAndUnderAgePctForDate: (UtcDate, Terminal) => Future[(Int, Double, Double)],
-                                                            netEligiblePercentage: (Double, Double) => Double,
-                                                           )
-                                                           (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[(Int, Double, Double)] =
+  def drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal(uptakePct: Double)
+                                                                   (cachedEgateEligibleAndUnderAgeForDate: (UtcDate, Terminal) => Future[Option[EgateEligibility]],
+                                                                    drtTotalPaxEgateEligiblePctAndUnderAgePctForDate: (UtcDate, Terminal) => Future[(Int, Double, Double)],
+                                                                    netEligiblePercentage: (Double, Double) => Double,
+                                                                   )
+                                                                   (implicit ec: ExecutionContext): (UtcDate, Terminal) => Future[(Int, Double, Double)] =
     (date, terminal) => {
       cachedEgateEligibleAndUnderAgeForDate(date, terminal)
         .flatMap {
@@ -64,8 +63,8 @@ object EgateSimulations {
             drtTotalPaxEgateEligiblePctAndUnderAgePctForDate(date, terminal)
         }
         .map {
-          case (totalPax, eligiblePct, underagePct) =>
-            val netEligiblePct = netEligiblePercentage(eligiblePct, underagePct)
+          case (totalPax, eligiblePct, underAgePct) =>
+            val netEligiblePct = netEligiblePercentage(eligiblePct, underAgePct)
             val egatePaxPct = (netEligiblePct / 100d) * uptakePct
             (totalPax, netEligiblePct, egatePaxPct)
         }
@@ -121,11 +120,10 @@ object EgateSimulations {
                   Future.successful((arrival, Some(manifest)))
                 case _ =>
                   historicManifest(uniqueArrivalKey).map { historicManifest =>
-                    if (historicManifest.isDefined) {
+                    if (historicManifest.isDefined)
                       historicCount = historicCount + 1
-                    } else {
+                    else
                       terminalCount = terminalCount + 1
-                    }
                     (arrival, historicManifest)
                   }
               }
@@ -148,9 +146,9 @@ object EgateSimulations {
     else false
   }
 
-  def bxUptakePct(eligiblePercentage: Double, egatePaxPercentage: Double): Double =
-    if (eligiblePercentage > 0) {
-      val uptake = egatePaxPercentage / eligiblePercentage * 100
+  def bxUptakePct(netEligiblePercentage: Double, egatePaxPercentage: Double): Double =
+    if (netEligiblePercentage > 0) {
+      val uptake = egatePaxPercentage / netEligiblePercentage * 100
       if (uptake > 100) 100 else uptake
     }
     else 0.0
@@ -171,7 +169,6 @@ object EgateSimulations {
   def netEgateEligiblePct(adultChildRatio: Double)(egateEligiblePct: Double, egateUnderAgePct: Double): Double = {
     val accompanyingAdultsPct = adultChildRatio * egateUnderAgePct
     val finalEgateEligiblePct = egateEligiblePct - accompanyingAdultsPct
-    println(s"Egate Eligible %: $egateEligiblePct, Egate Under Age: $egateUnderAgePct, ratio: $adultChildRatio. Final eligible %: $finalEgateEligiblePct")
 
     finalEgateEligiblePct
   }
