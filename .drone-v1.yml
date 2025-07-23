@@ -1,7 +1,7 @@
 ---
 kind: pipeline
 name: DRT-V2
-type: kubernetese
+type: kubernetes
 
 platform:
   os: linux
