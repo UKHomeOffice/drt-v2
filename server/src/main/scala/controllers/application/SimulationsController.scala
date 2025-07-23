@@ -248,14 +248,14 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
       def uptakeStdDev(x: Double): Double = {
         val ys = dates
-          .map(date => Await.result(uptakePctForDate(x, date), 5.second))
+          .map(date => Await.result(uptakePctForDate(x, date), 30.second))
           .filter(_y => 60 <= _y && _y <= 100)
 
         val mean = ys.sum / ys.length
         math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
       }
 
-      val bestAdultChildRatio = optimise(uptakeStdDev, 1d, 2d, 1.5).getPoint()(0)
+      val bestAdultChildRatio = optimise(uptakeStdDev, 1d, 2.5d, 1.5).getPoint()(0)
 
       val drtVsBxDiffPctForDate: (Double, UtcDate) => Future[Double] =
         (uptakePct, date) => {
