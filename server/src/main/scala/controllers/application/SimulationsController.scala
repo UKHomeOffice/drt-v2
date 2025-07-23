@@ -273,7 +273,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         ys.sum / ys.length
       }
 
-      val bestUptakePct = optimise(egateMeanDiff, 90, 95, 92.5).getPoint()(0)
+      val bestUptakePct = optimise(egateMeanDiff, 85, 95, 90).getPoint()(0)
 
       println(f"Best adult-to-child ratio: $bestAdultChildRatio%.5f")
       println(f"Best uptake percentage: $bestUptakePct%.5f")
