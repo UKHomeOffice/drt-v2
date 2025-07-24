@@ -9,13 +9,13 @@ import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
-import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
+import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, StaffShiftRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import java.sql.Timestamp
+import java.sql.{Date, Timestamp}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,7 +38,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None , None , None)))
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None, None, None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
@@ -133,7 +133,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
-  override val enableShiftPlanningChange: Boolean =  true
+  override val enableShiftPlanningChange: Boolean = true
 
 }
 
@@ -158,12 +158,8 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 }
 
 case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
- var shiftSeq = Seq.empty[Shift]
-
-  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = {
-    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
-    Future.successful(shift)
-  }
+  var shiftSeq = Seq.empty[Shift]
+  var shiftRowSeq = Seq.empty[StaffShiftRow]
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = {
     Future.successful(shiftSeq)
@@ -184,5 +180,24 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
     shiftSeq = Seq.empty
     Future.successful(shiftSeq.size)
   }
-}
 
+  override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = Future.successful(1)
+
+  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+
+  override def getShift(port: String, terminal: String, shiftName: String, startDate: Date): Future[Option[Shift]] = {
+    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
+    Future.successful(shift)
+  }
+
+  override def getOverlappingStaffShifts(port: String, terminal: String, shift: StaffShiftRow): Future[Seq[StaffShiftRow]] = shiftRowSeq.filter(
+    s => s.port == port && s.terminal == terminal &&
+      (s.startDate.before(shift.startDate) || s.startDate.equals(shift.startDate)) &&
+      (s.endDate.isEmpty || s.endDate.get.after(shift.startDate)) &&
+      (s.startTime <= shift.endTime && s.endTime >= shift.startTime)
+  ) match {
+    case Nil => Future.successful(Seq.empty)
+    case overlappingShifts => Future.successful(overlappingShifts)
+  }
+
+}

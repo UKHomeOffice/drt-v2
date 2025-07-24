@@ -6,9 +6,11 @@ import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil._
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
 
+import java.sql.Date
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
@@ -80,7 +82,10 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
     json.convertTo[Seq[Shift]]
   }
 
-
+  def convertToShift(text: String): Shift = {
+    val json = text.parseJson
+    json.convertTo[Shift]
+  }
 }
 
 class ShiftsController @Inject()(cc: ControllerComponents,
@@ -89,7 +94,14 @@ class ShiftsController @Inject()(cc: ControllerComponents,
                                 )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
   def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShift(port, terminal, shiftName).map {
+    ctrl.shiftsService.getShift(port, terminal, shiftName, new Date(System.currentTimeMillis())).map {
+      case Some(shift) => Ok(shift.toString)
+      case None => NotFound
+    }
+  }
+
+  def getAShift(port: String, terminal: String, shiftName: String, startDate: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShift(port, terminal, shiftName, dateFromString(startDate)).map {
       case Some(shift) => Ok(shift.toString)
       case None => NotFound
     }
@@ -101,11 +113,23 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
+  def getActiveShiftsForDate(port: String, terminal: String, date: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShifts(port, terminal, Option(date)).map { shifts =>
+      Ok(shifts.toJson.compactPrint)
+    }
+  }
+
+  def getActiveShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShifts(port, terminal, None).map { shifts =>
+      Ok(shifts.toJson.compactPrint)
+    }
+  }
+
   def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
         val shifts = convertTo(text)
-        ctrl.shiftsService.saveShift(shifts).flatMap { result =>
+        ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
           shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
             val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShiftAssignments)
             shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
@@ -114,6 +138,42 @@ class ShiftsController @Inject()(cc: ControllerComponents,
           }.recoverWith {
             case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
           }
+        }
+      } catch {
+        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+      }
+    }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
+  }
+
+  def updateShift(): Action[AnyContent] = Action.async { request =>
+    request.body.asText.map { text =>
+      try {
+        val newShift = convertToShift(text)
+        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, convertToSqlDate(newShift.startDate)).flatMap {
+          case Some(previousShift) =>
+            ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { _ =>
+              val newShiftRow = if (previousShift.endDate.isDefined) newShift.copy(endDate = previousShift.endDate) else newShift
+              shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+                ctrl.shiftsService.getOverlappingStaffShifts(newShiftRow.port, newShiftRow.terminal,
+                    toStaffShiftRow(newShiftRow, new java.sql.Timestamp(System.currentTimeMillis())))
+                  .flatMap { overridingShifts =>
+                    val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShiftRow, allShiftAssignments)
+                    shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+                      Ok(write(s))
+                    }.recoverWith {
+                      case e: Exception =>
+                        log.error(s"Failed to update shifts with assignments: ", e.printStackTrace())
+                        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+                    }
+                  }
+              }.recoverWith {
+                case e: Exception =>
+                  log.error(s"Failed to update shifts: ", e.printStackTrace())
+                  Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+              }
+            }
+          case None =>
+            Future.successful(BadRequest("Previous shift not found"))
         }
       } catch {
         case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))

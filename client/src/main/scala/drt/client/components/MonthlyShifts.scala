@@ -170,7 +170,11 @@ object MonthlyShifts {
                 },
                 onOpen = (_: ReactEventFromHtml) => Callback {})(
                 <.div(UpdateStaffForTimeRangeForm(IUpdateStaffForTimeRangeForm(
-                  ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
+                  ustd = IUpdateStaffForTimeRangeData(
+                    startDayAt = Moment.utc(),
+                    startTimeAt = Moment.utc(),
+                    endTimeAt = Moment.utc(),
+                    endDayAt = Moment.utc(), actualStaff = "0"),
                   interval = props.timeSlotMinutes,
                   handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
                     SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
@@ -185,7 +189,7 @@ object MonthlyShifts {
               <.div(^.className := "shifts-table",
                 <.div(^.className := "shifts-table-content",
                   ShiftHotTableViewComponent(ShiftHotTableViewProps(
-                    ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
+                    shiftDate = ShiftDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                     dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                     interval = props.timeSlotMinutes,
                     initialShifts = state.shiftsData,
@@ -196,7 +200,13 @@ object MonthlyShifts {
                         shiftsData = updateShifts,
                         changedAssignments = updateChanges
                       )).runNow()
-                    }))
+                    },
+                    handleEditShift = (index: Int, shiftSummary: ShiftSummary) => {
+                      props.router.set(props.terminalPageTab.copy(subMode = "editShifts",
+                        queryParams = props.terminalPageTab.queryParams + ("shiftName" -> s"${shiftSummary.name}"))
+                      ).runNow()
+                    }
+                  ))
                 ),
                 <.div(^.className := "terminal-staffing-content-header",
                   MuiButton(color = Color.primary, variant = "contained")

@@ -8,15 +8,18 @@ import drt.client.logger.log
 import drt.client.services.DrtApi
 import drt.shared.{Shift, ShiftAssignments}
 import uk.gov.homeoffice.drt.time.LocalDate
+import upickle.default.{ReadWriter => RW, _}
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class GetShifts(port: String, terminal: String)
+case class GetShifts(port: String, terminal: String, viewDate: Option[String] = None)
 
-case class GetShift(port: String, terminal: String, shiftName: String)
+case class GetShift(port: String, terminal: String, shiftName: String, startDate: Option[String])
 
 case class SaveShifts(staffShifts: Seq[Shift])
+
+case class UpdateShift(shift: Option[Shift])
 
 case class RemoveShift(port: String, terminal: String, shiftName: String)
 
@@ -25,27 +28,91 @@ case class SetShifts(staffShifts: Seq[Shift])
 
 class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActionHandler(modelRW) {
 
-  import upickle.default.{macroRW, ReadWriter => RW, _}
+  implicit val localDateRW: RW[LocalDate] =
+    readwriter[ujson.Value].bimap[LocalDate](
+      ld => ujson.Obj(
+        "year" -> ld.year,
+        "month" -> ld.month,
+        "day" -> ld.day
+      ),
+      json => LocalDate(
+        json("year").num.toInt,
+        json("month").num.toInt,
+        json("day").num.toInt
+      )
+    )
 
-  implicit val localDateRW: RW[LocalDate] = macroRW
-  implicit val staffShiftRW: RW[Shift] = macroRW
+  implicit val shiftRW: RW[Shift] = readwriter[ujson.Value].bimap[Shift](
+    shift => ujson.Obj(
+      "port" -> shift.port,
+      "terminal" -> shift.terminal,
+      "shiftName" -> shift.shiftName,
+      "startDate" -> writeJs(shift.startDate),
+      "startTime" -> shift.startTime,
+      "endTime" -> shift.endTime,
+      "endDate" -> shift.endDate.map(writeJs(_)).getOrElse(ujson.Null),
+      "staffNumber" -> shift.staffNumber,
+      "frequency" -> shift.frequency.map(ujson.Str(_)).getOrElse(ujson.Null),
+      "createdBy" -> shift.createdBy.map(ujson.Str(_)).getOrElse(ujson.Null),
+      "createdAt" -> ujson.Num(shift.createdAt)
+    ),
+    json => {
+      val obj = json.obj
+      Shift(
+        port = obj("port").str,
+        terminal = obj("terminal").str,
+        shiftName = obj("shiftName").str,
+        startDate = read[LocalDate](obj("startDate")),
+        startTime = obj("startTime").str,
+        endTime = obj("endTime").str,
+        endDate = obj.get("endDate").flatMap {
+          case ujson.Null => None
+          case other => Some(read[LocalDate](other))
+        },
+        staffNumber = obj("staffNumber").num.toInt,
+        frequency = obj.get("frequency").collect { case ujson.Str(s) => s },
+        createdBy = obj.get("createdBy").collect { case ujson.Str(s) => s },
+        createdAt = obj("createdAt").num.toLong
+      )
+    }
+  )
 
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetShifts(port, terminal) =>
-      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal")
-        .map { r =>
-          val shifts = read[Seq[Shift]](r.responseText)
-          SetShifts(shifts)
+    case GetShifts(port, terminal, dateOption) =>
+      val url = dateOption match {
+        case Some(date) =>
+          s"shifts/$port/$terminal/$date"
+        case None =>
+          s"shifts/$port/$terminal"
+      }
+      val apiCallEffect = Effect(DrtApi.get(url).map { r =>
+        log.info(msg = s"Received shifts for $port/$terminal")
+        val arr = ujson.read(r.responseText).arr
+        arr.zipWithIndex.foreach { case (el, idx) =>
+          try {
+            read[Shift](el)
+          } catch {
+            case e: Exception =>
+              log.error(s"Failed to parse shift at index $idx: ${el.render()}. Error: ${e.getMessage}")
+          }
         }
-        .recoverWith {
-          case t =>
-            log.error(msg = s"Failed to get shifts: ${t.getMessage}")
-            Future(NoAction)
-        })
+        val shifts = read[Seq[Shift]](r.responseText)
+        SetShifts(shifts)
+      }.recoverWith {
+        case t =>
+          log.error(msg = s"Failed to get shifts: ${t.getMessage}")
+          Future(NoAction)
+      })
       updated(Pot.empty, apiCallEffect)
 
-    case GetShift(port, terminal, shiftName) =>
-      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal/$shiftName")
+    case GetShift(port, terminal, shiftName, startDateOption) =>
+      val url = startDateOption match {
+        case Some(date) =>
+          s"shifts/$port/$terminal/$shiftName/$date"
+        case None =>
+          s"shifts/$port/$terminal/$shiftName"
+      }
+      val apiCallEffect = Effect(DrtApi.get(url)
         .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
         .recoverWith {
           case t =>
@@ -63,6 +130,21 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
             Future(NoAction)
         })
       updated(Pot.empty, apiCallEffect)
+
+    case UpdateShift(shift) =>
+      shift match {
+        case Some(s) =>
+          val apiCallEffect = Effect(DrtApi.post("shifts/update", write(s))
+            .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
+            .recoverWith {
+              case t =>
+                log.error(msg = s"Failed to update shift: ${t.getMessage}")
+                Future(NoAction)
+            })
+          updated(Pot.empty, apiCallEffect)
+        case None =>
+          noChange
+      }
 
     case RemoveShift(port, terminal, shiftName) =>
       val apiCallEffect = Effect(DrtApi.delete(s"shifts/remove/$port/$terminal/$shiftName")
