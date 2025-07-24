@@ -98,8 +98,6 @@ GET           /desk-rec-simulation                                              
 + nocsrf
 PUT           /egate-uptake-simulation/:terminalName/:startDate/:endDate/:uptakePercentage  controllers.application.SimulationsController.doEgateSimulation(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double)
 GET           /egate-uptake-simulation/:uuid                                          controllers.application.SimulationsController.getEgateSimulation(uuid: String)
-GET           /egate-optimise-adultchildratio/:terminalName/:startDate/:endDate/:uptakePercentage    controllers.application.SimulationsController.optimiseAdultChildRatio(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double)
-GET           /egate-optimise-uptake/:terminalName/:startDate/:endDate/:adultChildRatio    controllers.application.SimulationsController.optimiseUptakePct(terminalName: String, startDate: String, endDate: String, adultChildRatio: Double)
 GET           /egate-optimise/:terminalName/:startDate/:endDate                       controllers.application.SimulationsController.optimiseEgates(terminalName: String, startDate: String, endDate: String)
 
 GET           /forecast-accuracy/compare/:modelNames/:terminalName/:startDate/:endDate  controllers.application.ForecastAccuracyController.forecastModelComparison(modelNames: String, terminalName: String, startDate: String, endDate: String)

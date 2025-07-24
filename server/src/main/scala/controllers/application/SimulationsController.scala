@@ -11,7 +11,7 @@ import manifests.passengers.BestAvailableManifest
 import org.apache.commons.math3.analysis.MultivariateFunction
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.{NelderMeadSimplex, SimplexOptimizer}
 import org.apache.commons.math3.optim.nonlinear.scalar.{GoalType, ObjectiveFunction}
-import org.apache.commons.math3.optim.{InitialGuess, MaxEval, PointValuePair}
+import org.apache.commons.math3.optim.{InitialGuess, MaxEval}
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.Props
 import org.apache.pekko.pattern.ask
@@ -86,61 +86,11 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
   def doEgateSimulation(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
     Action.async { request =>
-      val maybeChildParentRatio = request.queryString.get("childParentRatio").flatMap(_.headOption).map(_.toDouble)
+      val maybeAdultChildRatio = request.queryString.get("adultChildRatio").flatMap(_.headOption).map(_.toDouble)
       val terminal = Terminal(terminalName)
-      val childParentRatio = maybeChildParentRatio.getOrElse(1d)
-      val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] =
-        (ua: UniqueArrivalKey) =>
-          ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
-      val flightsWithPcpStartDuringDate: (UtcDate, Terminal) => Future[Seq[Arrival]] =
-        (d: UtcDate, t: Terminal) => {
-          val start = SDate(d)
-          val end = start.addDays(1).addMinutes(-1)
-          ctrl
-            .flightsForPcpDateRange(d, d, Seq(t))
-            .map { case (_, flights) =>
-              flights.collect {
-                case fws if fws.apiFlight.hasPcpDuring(start, end, ctrl.feedService.paxFeedSourceOrder) => fws.unique -> fws.apiFlight
-              }.toMap.values
-            }
-            .runWith(Sink.seq)
-            .map(_.flatten)
-        }
-      val arrivalsWithManifests = EgateSimulations.arrivalsWithManifestsForDateAndTerminal(
-        portCode = airportConfig.portCode,
-        liveManifest = ctrl.applicationService.manifestProvider,
-        historicManifest = historicManifest,
-        arrivalsForDateAndTerminal = flightsWithPcpStartDuringDate,
-      )
-      val paxTypeAllocator = if (airportConfig.hasTransfer) B5JPlusWithTransitTypeAllocator else B5JPlusTypeAllocator
-      val egateEligibilityDao = EgateEligibilityDao()
-      val storeEgateEligibility: (UtcDate, Terminal, Int, Double, Double) => Unit =
-        (date, terminal, tot, el, ua) =>
-          ctrl.aggregatedDb.run(egateEligibilityDao.insertOrUpdate(EgateEligibility(airportConfig.portCode, terminal, date, tot, el, ua, SDate.now())))
+      val childParentRatio = maybeAdultChildRatio.getOrElse(1d)
 
-      val calcEgateEligibleAndUnderAgeForDate = EgateSimulations.drtTotalPaxEgateEligiblePctAndUnderAgePctForDate(
-        arrivalsWithManifestsForDateAndTerminal = arrivalsWithManifests,
-        egateEligibleAndUnderAgePct = EgateSimulations.egateEligibleAndUnderAgePct(paxTypeAllocator),
-        storeEgateEligibleAndUnderAgeForDate = storeEgateEligibility,
-      )
-
-      val drtEgatePercentage: (UtcDate, Terminal) => Future[(Int, Double, Double)] =
-        EgateSimulations.drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal(uptakePercentage)(
-          cachedEgateEligibleAndUnderAgeForDate = (terminal, date) => ctrl.aggregatedDb.run(egateEligibilityDao.get(airportConfig.portCode, date, terminal)),
-          drtTotalPaxEgateEligiblePctAndUnderAgePctForDate = calcEgateEligibleAndUnderAgeForDate,
-          netEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio),
-        )
-
-      val bxDao = BorderCrossingDao
-      val bxQueueTotals: (UtcDate, Terminal) => Future[Map[Queue, Int]] =
-        (date, terminal) => {
-          val function = bxDao.queueTotalsForPortAndDate(airportConfig.portCode.iata, Some(terminal.toString))
-          ctrl.aggregatedDb.run(function(date))
-        }
-      val bxEgatePercentage = EgateSimulations.bxTotalPaxAndEgatePctForDateAndTerminal(bxQueueTotals)
-
-      val bxAndDrtStatsForDate =
-        EgateSimulations.bxAndDrtStatsForDate(bxEgatePercentage, drtEgatePercentage, EgateSimulations.bxUptakePct)
+      val bxAndDrtStatsForDate = bxAndDrtStatsForUptakeAndAdultChildRatio()(uptakePercentage, childParentRatio)
 
       val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
       val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
@@ -195,46 +145,12 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     }
   }
 
-  def optimiseAdultChildRatio(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double): Action[AnyContent] = authByRole(SuperAdmin) {
-    Action {
-      val terminal = Terminal(terminalName)
-
-      val statsForDate = statsFn()
-
-      val uptakePctForDate: (Double, UtcDate) => Future[Double] =
-        (adultChildRatio, date) => {
-          val fn = statsForDate(uptakePercentage, adultChildRatio)
-          fn(date, terminal).map(_._3)
-        }
-      val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
-      val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
-
-      val dates = DateRange(start, end)
-
-      def uptakeStdDev(x: Double): Double = {
-        val ys = dates
-          .map(date => Await.result(uptakePctForDate(x, date), 5.second))
-          .filter(_y => 60 <= _y && _y <= 100)
-
-        val mean = ys.sum / ys.length
-        math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
-      }
-
-      val result: PointValuePair = optimise(uptakeStdDev, 1d, 2d, 1.5)
-
-      println(f"Best x: ${result.getPoint()(0)}%.5f")
-      println(f"Min std dev: ${result.getValue}%.5f")
-
-      Ok(f"Best adult to child ratio: ${result.getPoint()(0)}%.5f")
-    }
-  }
-
   def optimiseEgates(terminalName: String, startDate: String, endDate: String): Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
       val terminal = Terminal(terminalName)
 
       val startUptakePercentage = 93d
-      val statsForDate = statsFn()
+      val statsForDate = bxAndDrtStatsForUptakeAndAdultChildRatio()
 
       val uptakePctForDate: (Double, UtcDate) => Future[Double] =
         (adultChildRatio, date) => {
@@ -255,7 +171,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
       }
 
-      val bestAdultChildRatio = optimise(uptakeStdDev, 1d, 2.5d, 1.5).getPoint()(0)
+      val bestAdultChildRatio = optimiseWithBounds(uptakeStdDev, 1d, 2.5d, 1.5)
 
       val drtVsBxDiffPctForDate: (Double, UtcDate) => Future[Double] =
         (uptakePct, date) => {
@@ -273,10 +189,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         ys.sum / ys.length
       }
 
-      val bestUptakePct = optimise(egateMeanDiff, 85, 95, 90).getPoint()(0)
-
-      println(f"Best adult-to-child ratio: $bestAdultChildRatio%.5f")
-      println(f"Best uptake percentage: $bestUptakePct%.5f")
+      val bestUptakePct = optimiseWithBounds(egateMeanDiff, 85, 95, 90)
 
       Ok(
         f"""{
@@ -286,13 +199,10 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     }
   }
 
-  private def optimise(//startDate: String,
-                       //endDate: String,
-                       objective: Double => Double,
-                       //fn: (Double, UtcDate) => Future[Double],
-                       lowerBound: Double,
-                       upperBound: Double,
-                       initialGuess: Double) = {
+  private def optimiseWithBounds(objective: Double => Double,
+                                 lowerBound: Double,
+                                 upperBound: Double,
+                                 initialGuess: Double): Double = {
     val boundedObjective = new MultivariateFunction {
       override def value(x: Array[Double]): Double = {
         val x0 = x(0)
@@ -310,10 +220,10 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       GoalType.MINIMIZE,
       new InitialGuess(Array(initialGuess)),
       simplex
-    )
+    ).getPoint()(0)
   }
 
-  private def statsFn(): (Double, Double) => (UtcDate, Terminal) => Future[(Int, Double, Double, Int, Double)] = {
+  private def bxAndDrtStatsForUptakeAndAdultChildRatio(): (Double, Double) => (UtcDate, Terminal) => Future[(Int, Double, Double, Int, Double)] = {
     val historicManifest: UniqueArrivalKey => Future[Option[BestAvailableManifest]] =
       (ua: UniqueArrivalKey) =>
         ctrl.applicationService.manifestLookupService.maybeBestAvailableManifest(ua.arrivalPort, ua.departurePort, ua.voyageNumber, ua.scheduled).map(_._2)
@@ -366,43 +276,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       }
     val bxEgatePercentage = EgateSimulations.bxTotalPaxAndEgatePctForDateAndTerminal(bxQueueTotals)
 
-    val statsForDate = (up: Double, acr: Double) => EgateSimulations.bxAndDrtStatsForDate(bxEgatePercentage, drtEgatePercentage(up, acr), EgateSimulations.bxUptakePct)
-    statsForDate
-  }
-
-  def optimiseUptakePct(terminalName: String, startDate: String, endDate: String, adultChildRatio: Double): Action[AnyContent] = authByRole(SuperAdmin) {
-    Action {
-      val terminal = Terminal(terminalName)
-
-      val statsForDate = statsFn()
-
-      val drtVsBxDiffPctForDate: (Double, UtcDate) => Future[Double] =
-        (uptakePct, date) => {
-          val fn = statsForDate(uptakePct, adultChildRatio)
-          fn(date, terminal).map {
-            case (_, bxEgatePct, _, _, drtEgatePct) => Math.abs((drtEgatePct - bxEgatePct) / bxEgatePct * 100)
-          }
-        }
-      val start = UtcDate.parse(startDate).getOrElse(throw new IllegalArgumentException(s"Invalid start date: $startDate"))
-      val end = UtcDate.parse(endDate).getOrElse(throw new IllegalArgumentException(s"Invalid end date: $endDate"))
-
-      val dates = DateRange(start, end)
-
-      def egateMeanDiff(x: Double): Double = {
-        val ys = dates
-          .map(date => Await.result(drtVsBxDiffPctForDate(x, date), 5.second))
-          .filter(_y => _y <= 10)
-
-        ys.sum / ys.length
-      }
-
-      val result: PointValuePair = optimise(egateMeanDiff, 90, 95, 92.5)
-
-      println(f"Best x: ${result.getPoint()(0)}%.5f")
-      println(f"Min std dev: ${result.getValue}%.5f")
-
-      Ok(f"Best uptake percentage: ${result.getPoint()(0)}%.5f")
-    }
+    (up: Double, acr: Double) => EgateSimulations.bxAndDrtStatsForDate(bxEgatePercentage, drtEgatePercentage(up, acr), EgateSimulations.bxUptakePct)
   }
 
   private def createResponse(rows: Seq[(UtcDate, Terminal, Int, Double, Double, Int, Double)]) = {
