@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{RequestFullForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
+import drt.client.actions.Actions.{RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
 import drt.client.components.ToolTips._
 import drt.client.components.styles.DrtReactTheme
 import drt.client.logger.{Logger, LoggerFactory}
@@ -52,10 +52,6 @@ object FeedsStatusPage {
 
       def requestMissingPaxNos(): Callback = Callback {
         SPACircuit.dispatch(RequestMissingPaxNos)
-      }
-
-      def requestFullForecastRecrunch(): Callback = Callback {
-        SPACircuit.dispatch(RequestFullForecastRecrunch)
       }
 
       modelRcp { proxy =>
@@ -128,9 +124,6 @@ object FeedsStatusPage {
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
               ThemeProvider(DrtReactTheme)(
-                MuiButton(variant = "outlined", color = Color.primary)(
-                  <.div("Refresh full forecast recrunch", ^.onClick --> requestFullForecastRecrunch())
-                ),
                 MuiButton(variant = "outlined", color = Color.primary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),
