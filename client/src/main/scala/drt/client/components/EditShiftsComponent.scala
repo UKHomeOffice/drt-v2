@@ -5,7 +5,7 @@ import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{SaveShifts, UpdateShift}
+import drt.client.services.handlers.UpdateShift
 import drt.shared.Shift
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -45,7 +45,6 @@ object EditShiftsComponent {
 
     private def startDateInLocalDate(month: Int): uk.gov.homeoffice.drt.time.LocalDate = {
       val today: SDateLike = SDate.now()
-//      println(s"today month ${today.getMonth} $month")
       val year = if (today.getMonth > month + 1) today.getFullYear + 1 else today.getFullYear
       uk.gov.homeoffice.drt.time.LocalDate(year, month, 1)
     }
@@ -84,10 +83,15 @@ object EditShiftsComponent {
               defaultStaffNumber = s.staffNumber,
               startMonth = getMonthOnStartDateCheck(props.viewDate)
             )
-          }.filter(s => s.name == props.shiftName) // Filter by the shift name passed in props
-          println(s"Shifts: ${shiftForms.map(s => s"Id : ${s.id} Name: ${s.name}, StartTime: ${s.startTime}, EndTime: ${s.endTime}, StaffNumber: ${s.defaultStaffNumber}")}")
+          }.filter(s => s.name == props.shiftName)
 
-          AddShiftsFormComponent(ShiftFormProps(port = props.portCode, terminal = props.terminal.toString, interval = 30, initialShifts = shiftForms, confirmHandler = confirmHandler, isEdit = true))
+          AddShiftsFormComponent(
+            ShiftFormProps(port = props.portCode,
+              terminal = props.terminal.toString,
+              interval = 30,
+              initialShifts = shiftForms,
+              confirmHandler = confirmHandler,
+              isEdit = true))
         })
     }
 
@@ -97,11 +101,16 @@ object EditShiftsComponent {
     State()
   }
 
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingShiftsV2")
+  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingEditShiftsV2")
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, portCode: String, shifts: Pot[Seq[Shift]], shiftName: String, viewDate: Option[String], router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode, shifts, shiftName, viewDate, router))
+  def apply(terminal: Terminal,
+            portCode: String,
+            shifts: Pot[Seq[Shift]],
+            shiftName: String,
+            viewDate: Option[String],
+            router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode, shifts, shiftName, viewDate, router))
 }

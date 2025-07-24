@@ -15,7 +15,7 @@ import upickle.default.{macroRW, ReadWriter => RW, _}
 
 case class GetShifts(port: String, terminal: String, viewDate: Option[String] = None)
 
-case class GetShift(port: String, terminal: String, shiftName: String , startDate: Option[String])
+case class GetShift(port: String, terminal: String, shiftName: String, startDate: Option[String])
 
 case class SaveShifts(staffShifts: Seq[Shift])
 
@@ -27,21 +27,6 @@ case class SetShifts(staffShifts: Seq[Shift])
 
 
 class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActionHandler(modelRW) {
-
-  //  implicit val localDateRW: RW[LocalDate] = readwriter[ujson.Value].bimap[LocalDate](
-  //    ld => ujson.Obj(
-  //      "year" -> ld.year,
-  //      "month" -> ld.month,
-  //      "day" -> ld.day
-  //    ),
-  //    json => LocalDate(
-  //      json("year").num.toInt,
-  //      json("month").num.toInt,
-  //      json("day").num.toInt
-  //    )
-  //  )
-  //
-  //  implicit val staffShiftRW: RW[Shift] = macroRW
 
   implicit val localDateRW: RW[LocalDate] =
     readwriter[ujson.Value].bimap[LocalDate](
@@ -136,8 +121,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         })
       updated(Pot.empty, apiCallEffect)
 
-    case SaveShifts(staffShifts)
-    =>
+    case SaveShifts(staffShifts) =>
       val apiCallEffect = Effect(DrtApi.post("shifts/save", write(staffShifts))
         .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
         .recoverWith {
@@ -147,9 +131,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         })
       updated(Pot.empty, apiCallEffect)
 
-    case UpdateShift(shift)
-    =>
-      println(s"...UpdateShift: $shift")
+    case UpdateShift(shift) =>
       shift match {
         case Some(s) =>
           val apiCallEffect = Effect(DrtApi.post("shifts/update", write(s))
@@ -164,8 +146,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
           noChange
       }
 
-    case RemoveShift(port, terminal, shiftName)
-    =>
+    case RemoveShift(port, terminal, shiftName) =>
       val apiCallEffect = Effect(DrtApi.delete(s"shifts/remove/$port/$terminal/$shiftName")
         .map(_ => NoAction)
         .recoverWith {
@@ -175,8 +156,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         })
       updated(Pot.empty, apiCallEffect)
 
-    case SetShifts(staffShifts)
-    =>
+    case SetShifts(staffShifts) =>
       updated(Ready(staffShifts))
   }
 }

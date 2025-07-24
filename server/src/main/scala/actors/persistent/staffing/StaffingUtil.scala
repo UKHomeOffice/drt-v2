@@ -1,24 +1,16 @@
 package actors.persistent.staffing
 
 import drt.shared._
-import org.joda.time.{DateTimeZone, LocalDateTime}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.convertToSqlDate
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, safeSDate}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 object StaffingUtil {
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def safeSDate(year: Int, month: Int, day: Int, hour: Int, minute: Int, tz: DateTimeZone): SDateLike = {
-    val ldt = new LocalDateTime(year, month, day, hour, minute)
-    val dt = if (!tz.isLocalDateTimeGap(ldt)) ldt.toDateTime(tz)
-    else ldt.plusHours(1).toDateTime(tz) // shift forward if in gap
-    SDate(dt)
-  }
 
   def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
     val (startHH, startMM) = shift.startTime.split(":") match {
@@ -55,9 +47,8 @@ object StaffingUtil {
     }
   }
 
-  def updateWithAShiftDefaultStaff(previousShift: Shift, overridingShift: Seq[StaffShiftRow], newShift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
-    val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
-    val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = newShiftsStaff
+  private def combinedAssignments(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
+    shiftAssignments
       .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
       .groupBy(a => TM(a.terminal, a.start))
       .map { case (tm, assignments) =>
@@ -67,28 +58,24 @@ object StaffingUtil {
         tm -> combinedAssignment
       }
 
-    val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
+  def updateWithAShiftDefaultStaff(previousShift: Shift, overridingShift: Seq[StaffShiftRow], newShift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+    val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
+    val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = combinedAssignments(newShiftsStaff)
 
     val overidingAssignments = overridingShift
       .filterNot(s => s.port == newShift.port && s.terminal == newShift.terminal && s.shiftName == newShift.shiftName && s.startDate == convertToSqlDate(newShift.startDate)).flatMap { os =>
         generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os))
       }
 
-    val overriddingShiftAssingments: Map[TM, StaffAssignment] =
-      overidingAssignments.flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
-        .groupBy(a => TM(a.terminal, a.start))
-        .map { case (tm, assignments) =>
-          val combinedAssignment = assignments.reduce { (a1, a2) =>
-            a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
-          }
-          tm -> combinedAssignment
-        }
+    val overriddingShiftAssingments: Map[TM, StaffAssignment] = combinedAssignments(overidingAssignments)
 
     val isTimeChange = previousShift.startTime != newShift.startTime || previousShift.endTime != newShift.endTime
 
     def findOverridingShift(assignment: StaffAssignment): Int = {
       overriddingShiftAssingments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff).getOrElse(0)
     }
+
+    val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 
     val updatedNewShiftsAssignments = newShiftSplitDailyAssignments.map {
       case (tm, assignment) =>
@@ -152,15 +139,7 @@ object StaffingUtil {
       generateDailyAssignments(shift)
     }
 
-    val splitDailyAssignmentsWithOverlap = allShiftsStaff
-      .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
-      .groupBy(a => TM(a.terminal, a.start))
-      .map { case (tm, assignments) =>
-        val combinedAssignment = assignments.reduce { (a1, a2) =>
-          a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
-        }
-        tm -> combinedAssignment
-      }
+    val splitDailyAssignmentsWithOverlap = combinedAssignments(allShiftsStaff)
 
     val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 

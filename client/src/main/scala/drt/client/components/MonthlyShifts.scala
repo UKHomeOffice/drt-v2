@@ -202,14 +202,8 @@ object MonthlyShifts {
                       )).runNow()
                     },
                     handleEditShift = (index: Int, shiftSummary: ShiftSummary) => {
-                      //                      scope.modState(state => state.copy(
-                      //                        showEditStaffForm = true,
-                      //                        shiftsData = state.shiftsData.updated(index, shiftSummary)
-                      //                      )).runNow()
                       props.router.set(props.terminalPageTab.copy(subMode = "editShifts",
-                        queryParams = props.terminalPageTab.queryParams +
-                          ("shiftName" -> s"${shiftSummary.name}")) //+
-                        //                          ("startDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"))
+                        queryParams = props.terminalPageTab.queryParams + ("shiftName" -> s"${shiftSummary.name}"))
                       ).runNow()
                     }
                   ))
