@@ -7,7 +7,6 @@ import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil._
 import java.sql.Timestamp
 
 class StaffingUtilSpec extends Specification {
@@ -52,7 +51,9 @@ class StaffingUtilSpec extends Specification {
       )
 
       val allShifts = ShiftAssignments(
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15)
+        StaffAssignment("afternoon", Terminal("T1"),
+          SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch,
+          SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15)
       )
 
       val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
@@ -72,7 +73,7 @@ class StaffingUtilSpec extends Specification {
         startTime = "08:00",
         endTime = "16:00",
         endDate = Some(baseDate),
-        staffNumber = 3, // Previous shift had 3 staff
+        staffNumber = 3,
         frequency = None,
         createdBy = Some("admin"),
         createdAt = System.currentTimeMillis()
@@ -80,7 +81,6 @@ class StaffingUtilSpec extends Specification {
 
       val overridingShift = Seq(
         StaffShiftRow(
-          // id = Some(1),
           port = "LHR",
           terminal = "T1",
           shiftName = "Override Shift",
@@ -103,7 +103,7 @@ class StaffingUtilSpec extends Specification {
         startTime = "10:00",
         endTime = "14:00",
         endDate = Some(baseDate),
-        staffNumber = 4, // New shift wants 4 staff
+        staffNumber = 4,
         frequency = None,
         createdBy = Some("admin"),
         createdAt = System.currentTimeMillis()
@@ -124,8 +124,7 @@ class StaffingUtilSpec extends Specification {
       val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShift, newShift, allShifts)
 
       result must not(beEmpty) and
-        // Should update to overridingStaff(2) + newShift.staffNumber(4) = 6
-        result.exists(a => a.numberOfStaff == 6) //must beTrue
+        result.exists(a => a.numberOfStaff == 6)
     }
 
     "updateWithAShiftDefaultStaff should preserve existing when staff doesn't match override + previous" in {
@@ -214,7 +213,7 @@ class StaffingUtilSpec extends Specification {
       val overridingShifts = Seq(
         StaffShiftRow(
           port = "LHR",
-          terminal = "T1", // Same terminal
+          terminal = "T1",
           shiftName = "Override Shift 1",
           startDate = ShiftUtil.convertToSqlDate(baseDate),
           startTime = "10:00",
@@ -227,7 +226,7 @@ class StaffingUtilSpec extends Specification {
         ),
         StaffShiftRow(
           port = "LHR",
-          terminal = "T1", // Same terminal
+          terminal = "T1",
           shiftName = "Override Shift 2",
           startDate = ShiftUtil.convertToSqlDate(baseDate),
           startTime = "12:00",
@@ -240,7 +239,7 @@ class StaffingUtilSpec extends Specification {
         ),
         StaffShiftRow(
           port = "LHR",
-          terminal = "T1", // Same terminal
+          terminal = "T1",
           shiftName = "Override Shift 3",
           startDate = ShiftUtil.convertToSqlDate(baseDate),
           startTime = "11:00",
@@ -255,7 +254,7 @@ class StaffingUtilSpec extends Specification {
 
       val newShift = Shift(
         port = "LHR",
-        terminal = "T1", // Same terminal
+        terminal = "T1",
         shiftName = "New Shift",
         startDate = baseDate,
         startTime = "09:00",
