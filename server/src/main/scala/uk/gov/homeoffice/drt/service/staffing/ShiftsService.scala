@@ -8,6 +8,7 @@ import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{fromStaffShiftRow, toSt
 import java.sql.Timestamp
 import java.time.{LocalDate => JavaLocalDate}
 import scala.concurrent.{ExecutionContext, Future}
+
 trait ShiftsService {
   def getShift(port: String, terminal: String, shiftName: String, startDate: java.sql.Date): Future[Option[Shift]]
 
@@ -29,7 +30,7 @@ trait ShiftsService {
 case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends ShiftsService {
 
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
-    val shiftRows = shifts.map(shift => toStaffShiftRow(shift, None, None, new Timestamp(System.currentTimeMillis())))
+    val shiftRows = shifts.map(shift => toStaffShiftRow(shift, new Timestamp(System.currentTimeMillis())))
     Future.sequence(shiftRows.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
   }
 
@@ -38,7 +39,7 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
 
   override def getShift(port: String, terminal: String, shiftName: String, startDate: java.sql.Date): Future[Option[Shift]] =
-    staffShiftsDao.getStaffShiftByPortAndTerminal(port, terminal, shiftName, startDate).map(_.headOption).map(_.map(fromStaffShiftRow))
+    staffShiftsDao.getStaffShiftByPortAndTerminal(port, terminal, shiftName, startDate).map(_.map(fromStaffShiftRow))
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map(_.map(fromStaffShiftRow))
@@ -72,8 +73,8 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   }
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = staffShiftsDao.updateStaffShift(
-    toStaffShiftRow(previousShift, None, None, new Timestamp(System.currentTimeMillis())),
-    toStaffShiftRow(shift, None, None, new Timestamp(System.currentTimeMillis())))
+    toStaffShiftRow(previousShift, new Timestamp(System.currentTimeMillis())),
+    toStaffShiftRow(shift, new Timestamp(System.currentTimeMillis())))
 
   override def getOverlappingStaffShifts(port: String, terminal: String, shift: StaffShiftRow): Future[Seq[StaffShiftRow]] =
     staffShiftsDao.getOverlappingStaffShifts(port, terminal, shift)

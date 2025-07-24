@@ -174,7 +174,6 @@ object MonthlyShiftsUtil {
         ShiftDetails(shift, terminal, shiftAssignments),
         assignmentsByDate,
       )
-      println(s"Shift: ${shift.shiftName}, Start: ${shift.startTime}, End: ${shift.endTime}, StaffNumber: ${shift.staffNumber}, ${shift.startDate} Entries: ${tableEntries.size}")
       ShiftSummaryStaffing(
         index = index,
         shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime ,
@@ -186,15 +185,15 @@ object MonthlyShiftsUtil {
   }
 
   def updateChangeAssignment(previousChange: Seq[StaffTableEntry], newChange: Seq[StaffTableEntry]): Seq[StaffTableEntry] = {
-    val previousChangeMap = previousChange.map(a => (ShiftDateTime.toString(a.startTime)) -> a).toMap
-    val newChangeMap = newChange.map(a => (ShiftDateTime.toString(a.startTime)) -> a).toMap
+    val previousChangeMap = previousChange.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
+    val newChangeMap = newChange.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
     val mergedMap = previousChangeMap ++ newChangeMap
     mergedMap.values.toSeq
   }
 
   def updateAssignments(shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry], slotMinutes: Int): Seq[ShiftSummaryStaffing] = {
     val changedAssignmentsWithSlotMap: Seq[StaffTableEntry] = changedAssignments.flatMap(a => StaffTableEntry.splitIntoSlots(a, slotMinutes))
-    val changedAssignmentsMap: Map[String, StaffTableEntry] = changedAssignmentsWithSlotMap.map(a => (ShiftDateTime.toString(a.startTime)) -> a).toMap
+    val changedAssignmentsMap: Map[String, StaffTableEntry] = changedAssignmentsWithSlotMap.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
     shifts.map { shift: ShiftSummaryStaffing =>
       val updatedAssignments = shift.staffTableEntries.map { assignment =>
         changedAssignmentsMap.getOrElse(ShiftDateTime.toString(assignment.startTime), assignment)

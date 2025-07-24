@@ -2,7 +2,8 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.component.JsFn.Component
+import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
@@ -71,7 +72,7 @@ trait ShiftSummary extends js.Object {
 }
 
 object ShiftSummary {
-  def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String , startDate: ShiftDate): ShiftSummary = {
+  def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String, startDate: ShiftDate): ShiftSummary = {
     val p = (new js.Object).asInstanceOf[ShiftSummary]
     p.name = name
     p.defaultStaffNumber = defaultStaffNumber
@@ -103,7 +104,8 @@ object StaffTableEntry {
   }
 
   def splitIntoSlots(shiftAssignment: StaffTableEntry, slotMinutes: Int): Seq[StaffTableEntry] =
-    (shiftDateToSDate(shiftAssignment.startTime).millisSinceEpoch until shiftDateToSDate(shiftAssignment.endTime).millisSinceEpoch by slotMinutes.minutes.toMillis).map(start =>
+    (shiftDateToSDate(shiftAssignment.startTime).millisSinceEpoch until shiftDateToSDate(shiftAssignment.endTime).millisSinceEpoch
+      by slotMinutes.minutes.toMillis).map(start =>
       StaffTableEntry(
         column = shiftAssignment.column,
         row = shiftAssignment.row,
@@ -167,7 +169,8 @@ object ShiftHotTableViewProps {
     p.dayRange = dayRange
     p.interval = interval
     p.shiftSummaries = initialShifts.toJSArray
-    p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing], changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
+    p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
+                           changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)
     p
   }
@@ -178,7 +181,7 @@ object ShiftHotTableViewComponent {
   @JSImport("@drt/drt-react", "ShiftHotTableView")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[ShiftHotTableViewProps, Children.None](RawComponent)
+  val component: Component[ShiftHotTableViewProps, CtorType.Props] = JsFnComponent[ShiftHotTableViewProps, Children.None](RawComponent)
 
   def apply(props: ShiftHotTableViewProps): VdomElement = component(props)
 

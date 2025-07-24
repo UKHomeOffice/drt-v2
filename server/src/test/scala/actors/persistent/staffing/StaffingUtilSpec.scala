@@ -58,7 +58,7 @@ class StaffingUtilSpec extends Specification {
 
       val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
-      updatedAssignments must have size (8)
+      updatedAssignments must have size 8
       updatedAssignments.head.numberOfStaff must beEqualTo(5)
     }
 
@@ -433,14 +433,14 @@ class StaffingUtilSpec extends Specification {
 
       val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShift, allShifts)
 
-      (result must not(beEmpty) and
+      result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
         result.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 10) and
         result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 8) and
         result.exists(a => SDate(a.start).getHours == 15 && a.numberOfStaff == 11) and
         result.exists(a => SDate(a.start).getHours == 16 && a.numberOfStaff == 11) and
         result.exists(a => SDate(a.start).getHours == 20 && a.numberOfStaff == 1)
-        )
+
     }
 
     "updateWithAShiftDefaultStaff should handle zero staff existing assignments on same terminal" in {

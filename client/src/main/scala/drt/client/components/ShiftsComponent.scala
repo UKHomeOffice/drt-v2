@@ -17,14 +17,11 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object ShiftsComponent {
 
-  case class State()
-
   case class Props(terminal: Terminal, portCode: String, router: RouterCtl[Loc])
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
-  class Backend(scope: BackendScope[Props, State]) {
+  class Backend(scope: BackendScope[Props, Unit]) {
 
     import upickle.default.{macroRW, ReadWriter => RW}
 
@@ -35,7 +32,7 @@ object ShiftsComponent {
       uk.gov.homeoffice.drt.time.LocalDate(today.getFullYear, today.getMonth, 1)
     }
 
-    def render(props: Props, state: State): VdomTagOf[Div] = {
+    def render(props: Props): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
         val staffShifts = shifts.map(s => Shift(
           port = props.portCode,
@@ -59,15 +56,10 @@ object ShiftsComponent {
 
   }
 
-  private def stateFromProps(props: Props): State = {
-    State()
-  }
-
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingShiftsV2")
-    .initialStateFromProps(stateFromProps)
+  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingShiftsV2")
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, portCode: String, router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode, router))
+  def apply(terminal: Terminal, portCode: String, router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, router))
 }

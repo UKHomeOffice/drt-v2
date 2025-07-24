@@ -129,7 +129,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     request.body.asText.map { text =>
       try {
         val shifts = convertTo(text)
-        ctrl.shiftsService.saveShift(shifts).flatMap { result =>
+        ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
           shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
             val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShiftAssignments)
             shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
@@ -155,7 +155,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
               val newShiftRow = if (previousShift.endDate.isDefined) newShift.copy(endDate = previousShift.endDate) else newShift
               shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
                 ctrl.shiftsService.getOverlappingStaffShifts(newShiftRow.port, newShiftRow.terminal,
-                    toStaffShiftRow(newShiftRow, None, None, new java.sql.Timestamp(System.currentTimeMillis())))
+                    toStaffShiftRow(newShiftRow, new java.sql.Timestamp(System.currentTimeMillis())))
                   .flatMap { overridingShifts =>
                     val updatedAssignments = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShiftRow, allShiftAssignments)
                     shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>

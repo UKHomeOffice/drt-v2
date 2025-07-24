@@ -10,7 +10,7 @@ import java.time.{LocalDate => JavaLocalDate}
 
 object ShiftUtil {
 
-  def toStaffShiftRow(shift: Shift, createdBy: Option[String], frequency: Option[String], createdAt: Timestamp): StaffShiftRow = {
+  def toStaffShiftRow(shift: Shift, createdAt: Timestamp): StaffShiftRow = {
     StaffShiftRow(
       port = shift.port,
       terminal = shift.terminal,
@@ -47,7 +47,7 @@ object ShiftUtil {
     Date.valueOf(javaLocalDate)
   }
 
-  def convertToLocalDate(sqlDate: java.sql.Date): LocalDate = {
+  private def convertToLocalDate(sqlDate: java.sql.Date): LocalDate = {
     val localDate = sqlDate.toLocalDate
     LocalDate(localDate.getYear, localDate.getMonthValue, localDate.getDayOfMonth)
   }

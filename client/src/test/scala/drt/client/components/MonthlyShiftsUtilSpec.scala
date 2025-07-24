@@ -116,7 +116,6 @@ object MonthlyShiftsUtilSpec extends TestSuite {
     }
 
     test("assignmentsForShift should generate correct row and col values for daily dayRange") {
-      val firstDay: SDateLike = SDate("2023-10-01T00:00:00Z")
       val daysCount = 1
       val interval = 60
       val terminal = Terminal("T1")
@@ -136,8 +135,8 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val shiftAssignments = ShiftAssignments(Seq.empty)
 
       val shiftPeriod = ShiftPeriod(
-        start = SDate(2023, 10, 1, 8, 0),
-        end = SDate(2023, 10, 1, 9, 0),
+        start = SDate(2023, 10, 1, 8),
+        end = SDate(2023, 10, 1, 9),
         endHour = 9,
         endMinute = 0,
         interval = interval,
@@ -207,8 +206,6 @@ object MonthlyShiftsUtilSpec extends TestSuite {
     }
 
     test("createStaffTableEntries should generate correct assignments for shifts ending after midnight") {
-      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
-      val dayRange = "monthly"
       val interval = 60
       val terminal = Terminal("T1")
       val staffShift = Shift(
@@ -229,7 +226,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val shiftDetails = ShiftDetails(staffShift, terminal, shifts)
 
       val assignmentsByDate: Map[LocalDate, Seq[StaffAssignmentLike]] = Map.empty
-      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22, 0), 1, interval, shiftDetails, assignmentsByDate)
+      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22), 1, interval, shiftDetails, assignmentsByDate)
 
       val expected = Seq(
         StaffTableEntry(1, 0, "Night", 5, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),

@@ -17,14 +17,12 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 object EditShiftsComponent {
 
-  case class State()
 
   case class Props(terminal: Terminal, portCode: String, shiftsPot: Pot[Seq[Shift]], shiftName: String, viewDate: Option[String], router: RouterCtl[Loc])
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
-  class Backend(scope: BackendScope[Props, State]) {
+  class Backend(scope: BackendScope[Props, Unit]) {
 
     import upickle.default.{macroRW, ReadWriter => RW}
 
@@ -49,7 +47,7 @@ object EditShiftsComponent {
       uk.gov.homeoffice.drt.time.LocalDate(year, month, 1)
     }
 
-    def render(props: Props, state: State): VdomTagOf[Div] = {
+    def render(props: Props): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
         val staffShifts = shifts.map { s =>
           val startDate: LocalDate = startDateInLocalDate(s.editStartMonth)
@@ -97,20 +95,17 @@ object EditShiftsComponent {
 
   }
 
-  private def stateFromProps(props: Props): State = {
-    State()
-  }
 
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingEditShiftsV2")
-    .initialStateFromProps(stateFromProps)
+  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingEditShiftsV2")
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
+
 
   def apply(terminal: Terminal,
             portCode: String,
             shifts: Pot[Seq[Shift]],
             shiftName: String,
             viewDate: Option[String],
-            router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode, shifts, shiftName, viewDate, router))
+            router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, shifts, shiftName, viewDate, router))
 }

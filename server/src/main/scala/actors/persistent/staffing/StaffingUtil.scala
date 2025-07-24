@@ -58,12 +58,18 @@ object StaffingUtil {
         tm -> combinedAssignment
       }
 
-  def updateWithAShiftDefaultStaff(previousShift: Shift, overridingShift: Seq[StaffShiftRow], newShift: Shift, allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateWithAShiftDefaultStaff(previousShift: Shift,
+                                   overridingShift: Seq[StaffShiftRow],
+                                   newShift: Shift,
+                                   allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
     val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
     val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = combinedAssignments(newShiftsStaff)
 
     val overidingAssignments = overridingShift
-      .filterNot(s => s.port == newShift.port && s.terminal == newShift.terminal && s.shiftName == newShift.shiftName && s.startDate == convertToSqlDate(newShift.startDate)).flatMap { os =>
+      .filterNot(s => s.port == newShift.port &&
+        s.terminal == newShift.terminal &&
+        s.shiftName == newShift.shiftName &&
+        s.startDate == convertToSqlDate(newShift.startDate)).flatMap { os =>
         generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os))
       }
 

@@ -1,6 +1,7 @@
 package drt.client.components
 
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.component.JsFn.Component
+import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -43,7 +44,11 @@ trait ShiftFormProps extends js.Object {
 }
 
 object ShiftFormProps {
-  def apply(port: String, terminal: String, interval: Int, initialShifts: Seq[ShiftForm], confirmHandler: Seq[ShiftForm] => Unit, isEdit: Boolean): ShiftFormProps = {
+  def apply(port: String,
+            terminal: String,
+            interval: Int,
+            initialShifts: Seq[ShiftForm],
+            confirmHandler: Seq[ShiftForm] => Unit, isEdit: Boolean): ShiftFormProps = {
     val p = (new js.Object).asInstanceOf[ShiftFormProps]
     p.port = port
     p.terminal = terminal
@@ -60,7 +65,7 @@ object AddShiftsFormComponent {
   @JSImport("@drt/drt-react", "AddShiftsForm")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[ShiftFormProps, Children.None](RawComponent)
+  val component: Component[ShiftFormProps, CtorType.Props] = JsFnComponent[ShiftFormProps, Children.None](RawComponent)
 
   def apply(props: ShiftFormProps): VdomElement = {
     component(props)

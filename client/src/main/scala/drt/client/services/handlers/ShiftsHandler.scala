@@ -8,10 +8,10 @@ import drt.client.logger.log
 import drt.client.services.DrtApi
 import drt.shared.{Shift, ShiftAssignments}
 import uk.gov.homeoffice.drt.time.LocalDate
+import upickle.default.{ReadWriter => RW, _}
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import upickle.default.{macroRW, ReadWriter => RW, _}
 
 case class GetShifts(port: String, terminal: String, viewDate: Option[String] = None)
 
