@@ -34,13 +34,13 @@ object StaffingUtil {
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
       val currentDate: SDateLike = startDate.addDays(day)
-      val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
+      val startMillis = safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
       val isShiftEndAfterMidNight = endHH < startHH || (endHH == startHH && endMM < startMM)
       val endMillis = if (isShiftEndAfterMidNight) {
-        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
+        safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
           europeLondonTimeZone).addDays(1).millisSinceEpoch
       } else {
-        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
+        safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
           europeLondonTimeZone).millisSinceEpoch
       }
 
