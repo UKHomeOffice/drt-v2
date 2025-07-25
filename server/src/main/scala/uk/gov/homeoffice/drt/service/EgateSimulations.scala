@@ -148,8 +148,7 @@ object EgateSimulations {
 
   def bxUptakePct(netEligiblePercentage: Double, egatePaxPercentage: Double): Double =
     if (netEligiblePercentage > 0) {
-      val uptake = egatePaxPercentage / netEligiblePercentage * 100
-      if (uptake > 100) 100 else uptake
+      egatePaxPercentage / netEligiblePercentage * 100
     }
     else 0.0
 

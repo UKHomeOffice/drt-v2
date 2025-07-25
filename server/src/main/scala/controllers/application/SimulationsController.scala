@@ -171,7 +171,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
       }
 
-      val bestAdultChildRatio = optimiseWithBounds(uptakeStdDev, 1d, 2.5d, 1.5)
+      val bestAdultChildRatio = optimiseWithBounds(uptakeStdDev, 1d, 2d, 1.5)
 
       val drtVsBxDiffPctForDate: (Double, UtcDate) => Future[Double] =
         (uptakePct, date) => {
@@ -184,7 +184,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       def egateMeanDiff(x: Double): Double = {
         val ys = dates
           .map(date => Await.result(drtVsBxDiffPctForDate(x, date), 5.second))
-          .filter(_y => _y <= 10)
+          .filter(_y => -10 <= _y &&  _y <= 10)
 
         ys.sum / ys.length
       }
