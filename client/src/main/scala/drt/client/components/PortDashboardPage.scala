@@ -204,8 +204,8 @@ object PortDashboardPage {
                         s"Terminal ${Terminal.numberString(terminal)}"
                       )
                     ),
-                    portDashboardModel.portState.renderReady(portState => {
-                      portDashboardModel.featureFlags.renderReady(_ => {
+                    portDashboardModel.portState.renderReady { portState =>
+                      portDashboardModel.featureFlags.renderReady { _ =>
                         val portStateForDashboard = portState.windowWithTerminalFilter(
                           displayPeriod.start,
                           displayPeriod.start.addMinutes(selectedPeriodLengthMinutes),
@@ -240,8 +240,8 @@ object PortDashboardPage {
                             )
                           )
                         }
-                      })
-                    })
+                      }
+                    }
                   )
                 }.toTagMod
               )
