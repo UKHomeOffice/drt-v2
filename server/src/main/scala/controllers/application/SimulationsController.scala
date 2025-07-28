@@ -167,6 +167,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
           .map(date => Await.result(uptakePctForDate(x, date), 30.second))
           .filter(_y => 60 <= _y && _y <= 100)
 
+        log.info(s"Uptake percentages for adult-child ratio $x: ${ys.mkString(", ")}")
+
         val mean = ys.sum / ys.length
         math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
       }
