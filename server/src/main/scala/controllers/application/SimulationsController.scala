@@ -183,7 +183,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
       def egateMeanDiff(x: Double): Double = {
         val ys = dates
-          .map(date => Await.result(drtVsBxDiffPctForDate(x, date), 5.second))
+          .map(date => Await.result(drtVsBxDiffPctForDate(x, date), 30.second))
           .filter(_y => -10 <= _y &&  _y <= 10)
 
         ys.sum / ys.length
