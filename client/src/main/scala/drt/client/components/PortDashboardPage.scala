@@ -22,7 +22,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Terminals}
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.mutable.LinkedHashMap
+import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 object PortDashboardPage {
@@ -52,12 +52,13 @@ object PortDashboardPage {
         p.dashboardPage.period.getOrElse(1)
       }.getOrElse(1)
 
-      val rangeOptions = LinkedHashMap(
-        15 -> "15 minutes",
-        30 -> "30 minutes",
-        60 -> "1 hour",
-        120 -> "2 hours",
-        180 -> "3 hours")
+      val rangeOptions = Seq(
+        45 -> "45 minutes",
+        90 -> "90 minutes",
+        180 -> "3 hours",
+        360 -> "6 hours",
+        540 -> "9 hours",
+      )
 
       val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder, rm.userPreferences))
 
@@ -68,7 +69,7 @@ object PortDashboardPage {
           portDashboardModel.airportConfig.renderReady(portConfig => {
             val portName = portConfig.portCode.iata.toLowerCase
             portDashboardModel.userPreferences.renderReady(userPreferences => {
-              val selectedPeriodLengthMinutes = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 60)).getOrElse(60)
+              val selectedPeriodLengthMinutes = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 180)).getOrElse(180)
 
               val userHasTerminalPreference: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
 
@@ -82,12 +83,13 @@ object PortDashboardPage {
               }
 
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now(), selectedPeriodLengthMinutes)
-              val periods = Map(1 -> DisplayPeriod(currentPeriodStart, selectedPeriodLengthMinutes),
+              val periods = Map(
+                1 -> DisplayPeriod(currentPeriodStart, selectedPeriodLengthMinutes),
                 2 -> DisplayPeriod(currentPeriodStart.addMinutes(selectedPeriodLengthMinutes), selectedPeriodLengthMinutes),
                 3 -> DisplayPeriod(currentPeriodStart.addMinutes(2 * selectedPeriodLengthMinutes), selectedPeriodLengthMinutes),
               )
 
-              def displayPeriod = periods(p.dashboardPage.period.getOrElse(1))
+              def displayPeriod: DisplayPeriod = periods(p.dashboardPage.period.getOrElse(1))
 
               val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)
 
@@ -129,11 +131,16 @@ object PortDashboardPage {
                 p.router.set(p.dashboardPage)
               }
 
+              val displayPeriodDisplay = selectedPeriodLengthMinutes % 60 match {
+                case 0 => s"${selectedPeriodLengthMinutes.minutes.toHours} hours"
+                case _ => s"$selectedPeriodLengthMinutes minutes"
+              }
+
               <.div(<.h3(s"Filter upcoming arrivals"),
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
-                      <.label(^.htmlFor := "period-select", <.strong("Time:")),
+                      <.label(^.htmlFor := "period-select", <.strong("Time window:")),
                       <.div(^.className := "port-dashboard-select",
                         <.select(
                           ^.className := "form-control dynamic-width",
@@ -179,10 +186,10 @@ object PortDashboardPage {
                   <.h3(s"Arrivals"),
                   <.div(^.className := "port-dashboard-selection",
                     <.span(<.strong("Filters applied:")),
-                    <.span(s"Time period : ${selectedPeriodLengthMinutes} minutes period (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
+                    <.span(s"Time period: $displayPeriodDisplay (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
                     if (terminals.size > 1) {
                       <.span(^.className := "selection-separator")
-                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sortBy(_.toString).mkString(", ")}")
+                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sorted.mkString(", ")}")
                     } else ""
                   )
                 ),
@@ -197,11 +204,11 @@ object PortDashboardPage {
                         s"Terminal ${Terminal.numberString(terminal)}"
                       )
                     ),
-                    portDashboardModel.portState.renderReady(portState => {
-                      portDashboardModel.featureFlags.renderReady(_ => {
+                    portDashboardModel.portState.renderReady { portState =>
+                      portDashboardModel.featureFlags.renderReady { _ =>
                         val portStateForDashboard = portState.windowWithTerminalFilter(
                           displayPeriod.start,
-                          displayPeriod.start.addMinutes(selectedPeriodLengthMinutes * 3),
+                          displayPeriod.start.addMinutes(selectedPeriodLengthMinutes),
                           QueueConfig.terminalsForDateRange(portConfig.queuesByTerminal),
                           QueueConfig.queuesForDateRangeAndTerminal(portConfig.queuesByTerminal),
                           portDashboardModel.paxFeedSourceOrder,
@@ -228,13 +235,13 @@ object PortDashboardPage {
                               queues = terminalQueuesInOrder,
                               timeWindowStart = displayPeriod.start,
                               paxFeedSourceOrder = portDashboardModel.paxFeedSourceOrder,
-                              periodLengthMinutes = selectedPeriodLengthMinutes,
+                              periodLengthMinutes = selectedPeriodLengthMinutes / 3,
                               terminalHasSingleDeskQueue = queues.contains(QueueDesk),
                             )
                           )
                         }
-                      })
-                    })
+                      }
+                    }
                   )
                 }.toTagMod
               )
