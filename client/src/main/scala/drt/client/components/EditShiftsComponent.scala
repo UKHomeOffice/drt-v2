@@ -3,10 +3,12 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.UpdateShift
 import drt.shared.Shift
+import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{VdomTagOf, _}
@@ -66,6 +68,7 @@ object EditShiftsComponent {
           )
         }
         SPACircuit.dispatch(UpdateShift(staffShifts.headOption)) // Assuming only one shift is being edited
+        Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "update")).runNow()
         props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
       }
 
