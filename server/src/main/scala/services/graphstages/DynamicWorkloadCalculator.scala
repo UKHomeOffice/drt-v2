@@ -1,11 +1,11 @@
 package services.graphstages
 
-import org.apache.pekko.stream.Materializer
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import org.apache.pekko.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.WholePassengerQueueSplits
-import Crunch.SplitMinutes
+import services.graphstages.Crunch.SplitMinutes
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -31,12 +31,12 @@ trait WorkloadCalculatorLike {
   val flightHasWorkload: FlightFilter
 
   def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits], redListUpdates: RedListUpdates): Iterable[ApiFlightWithSplits] =
-    flights.filter(fws => flightHasWorkload.apply(fws, redListUpdates))
+    flights.filter(fws => terminalProcTimes.contains(fws.apiFlight.Terminal) && flightHasWorkload.apply(fws, redListUpdates))
 
 }
 
 case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                                     fallbacksProvider: QueueFallbacks,
+                                     fallbacks: QueueFallbacks,
                                      flightHasWorkload: FlightFilter,
                                      fallbackProcessingTime: Double,
                                      paxFeedSourceOrder: List[FeedSource],
@@ -60,8 +60,13 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
         .getOrElse(terminal, Map.empty)
         .getOrElse(PaxTypeAndQueue(paxType, queue), fallbackProcessingTime)
 
-    val loadMinutes = WholePassengerQueueSplits.splits(
-      minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder, terminalSplits)
+    val loadMinutes = relevantFlights
+      .groupBy(_.apiFlight.Terminal)
+      .flatMap { case (terminal, flightsForTerminal) =>
+        val distributePaxOverQueuesAndMinutes = WholePassengerQueueSplits.wholePaxLoadsPerQueuePerMinute(minuteMillis, procTimes(terminal), terminalQueueStatuses(terminal))
+        val workloadForFlight = WholePassengerQueueSplits.paxWorkloadsByQueue(distributePaxOverQueuesAndMinutes, fallbacks, paxFeedSourceOrder, terminalSplits)
+        WholePassengerQueueSplits.queueWorkloads(workloadForFlight, flightsForTerminal)
+      }
 
     SplitMinutes(loadMinutes)
   }

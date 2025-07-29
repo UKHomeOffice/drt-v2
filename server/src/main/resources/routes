@@ -95,6 +95,10 @@ GET           /export/staff-movements/:date/:terminal                           
 GET           /export/port-config                                                     controllers.application.ExportPortConfigController.exportConfig
 GET           /export/desk-rec-simulation                                             controllers.application.SimulationsController.simulationExport
 GET           /desk-rec-simulation                                                    controllers.application.SimulationsController.simulation
++ nocsrf
+PUT           /egate-uptake-simulation/:terminalName/:startDate/:endDate/:uptakePercentage  controllers.application.SimulationsController.doEgateSimulation(terminalName: String, startDate: String, endDate: String, uptakePercentage: Double)
+GET           /egate-uptake-simulation/:uuid                                          controllers.application.SimulationsController.getEgateSimulation(uuid: String)
+GET           /egate-optimise/:terminalName/:startDate/:endDate                       controllers.application.SimulationsController.optimiseEgates(terminalName: String, startDate: String, endDate: String)
 
 GET           /forecast-accuracy/compare/:modelNames/:terminalName/:startDate/:endDate  controllers.application.ForecastAccuracyController.forecastModelComparison(modelNames: String, terminalName: String, startDate: String, endDate: String)
 GET           /forecast-accuracy/:date                                                controllers.application.ForecastAccuracyController.getForecastAccuracy(date: String)
@@ -137,7 +141,7 @@ PUT           /api/passengers/:startDate/:endDate                               
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
 
 + nocsrf
-PUT           /api/v1/flights/:startDateLocal/:endDateLocal                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateLocal: String, endDateLocal: String)
+PUT           /api/v1/flights/:startDateUtc/:endDateUtc                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateUtc: String, endDateUtc: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)

@@ -2,9 +2,9 @@ package uk.gov.homeoffice.drt.service
 
 import actors.CrunchManagerActor._
 import actors._
-import actors.daily.{PassengersActor, RequestAndTerminate}
+import actors.daily.PassengersActor
 import actors.persistent._
-import actors.persistent.arrivals.AclForecastArrivalsActor
+import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
@@ -25,7 +25,6 @@ import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
 import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableLiveSplits, RunnableMergedArrivals}
-import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
@@ -111,7 +110,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
   val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Seq[Queue] =
     QueueConfig.queuesForDateRangeAndTerminal(airportConfig.queuesByTerminal)
-  val validTerminalsForDate: LocalDate => Seq[Terminal] =
+  private val validTerminalsForDate: LocalDate => Seq[Terminal] =
     QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
 
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
@@ -132,8 +131,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val portDeployments: PortDesksAndWaitsProviderLike =
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
-
-  val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(arrival.Terminal, 300000L)
@@ -164,10 +161,19 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] =
     (d: UtcDate) => flightsProvider.allTerminalsDateScheduledOrPcp(d).map(_._2).runWith(Sink.fold(Seq.empty[ApiFlightWithSplits])(_ ++ _))
 
-  private val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = (d: UtcDate) => {
-    val actor = system.actorOf(Props(new AclForecastArrivalsActor(now, DrtStaticParameters.expireAfterMillis, Option(SDate(d).millisSinceEpoch))))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[ArrivalsState]
+
+  val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = feedService.activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
+    case Some((_, _, _, actor)) =>
+      log.info(s"Using ACL feed actor: $actor")
+      (date: UtcDate) =>
+        actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(date, date))
+          .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
+          .flatMap(_.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
+          .map(f => ArrivalsState.empty(AclFeedSource) ++ f.map(_.toArrival(AclFeedSource)))
+    case None =>
+      (_: UtcDate) => Future.successful(ArrivalsState.empty(AclFeedSource))
   }
+
   private lazy val uniqueFlightsForDate = PassengersLiveView.uniqueFlightsForDate(
     flights = flightsForDate,
     baseArrivals = aclArrivalsForDate,

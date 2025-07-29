@@ -23,7 +23,7 @@ import org.apache.pekko.stream.{Materializer, OverflowStrategy, UniqueKillSwitch
 import org.apache.pekko.testkit.TestProbe
 import org.apache.pekko.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
+import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider, TerminalQueueAllocator}
 import services.arrivals
 import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
@@ -265,7 +265,7 @@ class TestDrtActor extends Actor {
 
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider) _
 
-      val ptqa = paxTypeQueueAllocator(tc.airportConfig)
+      val ptqa = paxTypeQueueAllocator(tc.airportConfig.hasTransfer, TerminalQueueAllocator(tc.airportConfig.terminalPaxTypeQueueAllocation))
       val splitAdjustments = AdjustmentsNoop
 
       val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)

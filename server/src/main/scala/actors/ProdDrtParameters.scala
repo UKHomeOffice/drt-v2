@@ -49,7 +49,7 @@ trait DrtParameters {
   val displayRedListInfo: Boolean
 
   val enableToggleDisplayWaitTimes: Boolean
-  val adjustEGateUseByUnder12s: Boolean
+  val adjustEGateUseByUnderAge: Boolean
 
   val lcyLiveEndPointUrl: String
   val lcyLiveUsername: String
@@ -124,7 +124,7 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val displayRedListInfo: Boolean = config.get[Boolean]("feature-flags.display-red-list-info")
 
   override val enableToggleDisplayWaitTimes: Boolean = config.get[Boolean]("feature-flags.enable-toggle-display-wait-times")
-  override val adjustEGateUseByUnder12s: Boolean = config.get[Boolean]("feature-flags.adjust-egates-use-by-u12s")
+  override val adjustEGateUseByUnderAge: Boolean = config.get[Boolean]("feature-flags.adjust-egates-use-by-u12s")
 
   override val lcyLiveEndPointUrl: String = config.get[String]("feeds.lcy.live.endPointUrl")
   override val lcyLiveUsername: String = config.get[String]("feeds.lcy.live.username")

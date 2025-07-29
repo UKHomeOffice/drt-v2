@@ -122,7 +122,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val useApiPaxNos: Boolean = true
   override val displayRedListInfo: Boolean = false
   override val enableToggleDisplayWaitTimes: Boolean = false
-  override val adjustEGateUseByUnder12s: Boolean = false
+  override val adjustEGateUseByUnderAge: Boolean = false
   override val lcyLiveEndPointUrl: String = ""
   override val lcyLiveUsername: String = ""
   override val lcyLivePassword: String = ""
