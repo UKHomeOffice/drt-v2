@@ -167,10 +167,13 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
           .map(date => Await.result(uptakePctForDate(x, date), 30.second))
           .filter(_y => 60 <= _y && _y <= 100)
 
-        log.info(s"Uptake percentages for adult-child ratio $x: ${ys.mkString(", ")}")
-
-        val mean = ys.sum / ys.length
-        math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
+        if (ys.size < dates.size * 0.85) {
+          log.warning(s"Not enough data points for adult-child ratio $x: ${ys.size} out of ${dates.size}")
+          1e9 // Heavy penalty for insufficient data
+        } else {
+          val mean = ys.sum / ys.length
+          math.sqrt(ys.map(y => math.pow(y - mean, 2)).sum / ys.length)
+        }
       }
 
       val bestAdultChildRatio = optimiseWithBounds(uptakeStdDev, 1d, 2d, 1.5)
