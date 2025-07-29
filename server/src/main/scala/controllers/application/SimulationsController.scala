@@ -197,11 +197,15 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
       val bestUptakePct = optimiseWithBounds(egateMeanDiff, 85, 98, 90)
 
-      Ok(
+      val jsonResponse =
         f"""{
            |  "bestAdultChildRatio": $bestAdultChildRatio%.5f,
            |  "bestUptakePercentage": $bestUptakePct%.5f
-           |}""".stripMargin)
+           |}""".stripMargin
+
+      log.info(s"Optimised egate simulation for terminal $terminal from $startDate to $endDate: Adult-Child Ratio: $bestAdultChildRatio, Uptake Percentage: $bestUptakePct")
+
+      Ok(jsonResponse)
     }
   }
 
