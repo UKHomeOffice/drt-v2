@@ -217,7 +217,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       }
     }
 
-    val optimizer = new SimplexOptimizer(1e-8, 1e-10)
+    val optimizer = new SimplexOptimizer(1e-3, 1e-3)
     val simplex = new NelderMeadSimplex(1)
 
     optimizer.optimize(
