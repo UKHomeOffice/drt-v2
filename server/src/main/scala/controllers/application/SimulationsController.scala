@@ -195,7 +195,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         ys.sum / ys.length
       }
 
-      val bestUptakePct = optimiseWithBounds(egateMeanDiff, 85, 95, 90)
+      val bestUptakePct = optimiseWithBounds(egateMeanDiff, 85, 98, 90)
 
       Ok(
         f"""{
