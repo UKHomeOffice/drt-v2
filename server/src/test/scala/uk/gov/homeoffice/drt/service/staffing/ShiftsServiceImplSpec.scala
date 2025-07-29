@@ -86,7 +86,7 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
       )
 
       when(mockDao.getStaffShiftsByPortAndTerminal(any[String], any[String]))
-        .thenReturn(Future.successful(testShifts.map(uk.gov.homeoffice.drt.service.staffing.ShiftUtil.toStaffShiftRow(_, None, None, new Timestamp(systemTime)))))
+        .thenReturn(Future.successful(testShifts.map(uk.gov.homeoffice.drt.service.staffing.ShiftUtil.toStaffShiftRow(_, new Timestamp(systemTime)))))
 
       val result = Await.result(service.getActiveShifts("LHR", "T2", Some("2024-08-02")), 1.seconds)
       val expectedShift = testShifts.filter(s => s.shiftName== "TEST2").sortBy(_.startDate)

@@ -88,9 +88,11 @@ object StaffingUtil {
         existingAllAssignments.get(tm) match {
           case Some(existing) =>
             val overridingStaff = findOverridingShift(assignment)
-            if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber || isTimeChange)
+            if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber)
               assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
-            else
+            else if (isTimeChange && (existing.numberOfStaff == overridingStaff || existing.numberOfStaff == previousShift.staffNumber || existing.numberOfStaff == 0))
+              assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
+              else
               existing
 
           case None => assignment

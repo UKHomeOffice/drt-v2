@@ -180,7 +180,7 @@ class StaffingUtilSpec extends Specification {
         terminal = Terminal("T1"),
         start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
         end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
-        numberOfStaff = 5, // This does NOT equal overridingStaff(2) + previousShift.staffNumber(3)
+        numberOfStaff = 8, // This does NOT equal overridingStaff(2) + previousShift.staffNumber(3)
         createdBy = Some("admin")
       )
 
@@ -190,7 +190,7 @@ class StaffingUtilSpec extends Specification {
 
       result must not(beEmpty) and
         // Should preserve existing assignment since 8 != (2 + 3)
-        result.exists(a => a.numberOfStaff == 6) //must beTrue
+        result.exists(a => a.numberOfStaff == 8) //must beTrue
     }
 
     "updateWithAShiftDefaultStaff should handle multiple overlapping shifts on same terminal" in {
@@ -535,7 +535,7 @@ class StaffingUtilSpec extends Specification {
         result.exists(a => SDate(a.start).getHours == 10 && a.numberOfStaff == 10) and
         result.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 10) and
         result.exists(a => SDate(a.start).getHours == 12 && a.numberOfStaff == 10) and
-        result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 7)
+        result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 12)
     }
   }
 }
