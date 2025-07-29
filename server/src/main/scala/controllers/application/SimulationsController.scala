@@ -177,7 +177,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         }
       }
 
-      val bestAdultChildRatio = optimiseWithBounds(uptakeStdDev, 1d, 2d, 1.5)
+      val bestAdultChildRatio = optimiseWithBounds(uptakeStdDev, 1d, 3d, 1.5)
 
       val drtVsBxDiffPctForDate: (Double, UtcDate) => Future[Double] =
         (uptakePct, date) => {
