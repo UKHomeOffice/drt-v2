@@ -112,7 +112,7 @@ object TerminalPlanningComponent {
 
             <.div(
               MuiTypography(variant = "h2")(s"Planning"),
-              MuiTypography(variant = "h3")("Headline Figures"),
+              MuiTypography(variant = "h3", sx = SxProps(Map("paddingTop" -> "0px")))("Headline Figures"),
               <.div(^.className := "terminal-content-header",
                 <.div(^.className := "staffing-controls-wrapper",
                   <.div(^.className := "staffing-controls-row",
