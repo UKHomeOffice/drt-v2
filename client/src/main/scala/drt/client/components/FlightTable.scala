@@ -134,7 +134,7 @@ object FlightTable {
       }
 
       <.div(^.className := "arrivals-title",
-        MuiTypography(variant = "h2")(s"Arrivals at ${props.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
+        MuiTypography(variant = "h2")(s"Arrivals"),
         (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
           case (true, Some((_, sourcesPot))) =>
             <.div(^.tabIndex := 0,

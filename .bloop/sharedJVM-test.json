@@ -1,0 +1,1065 @@
+{
+    "version": "1.4.0",
+    "project": {
+        "name": "sharedJVM-test",
+        "directory": "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm",
+        "workspaceDir": "/Users/nilesh/Repository/DRT_REPOS/drt-v2",
+        "sources": [
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/src/test/scala",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/src/test/scala-2.13",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/src/test/scala-2",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/src/test/java",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/src/test/scala-2.13",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/src/test/scala-2",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/src/test/scala",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/target/scala-2.13/src_managed/test"
+        ],
+        "dependencies": [
+            "sharedJVM"
+        ],
+        "classpath": [
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/.bloop/sharedJVM/scala-2.13/classes",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/3.3.1/upickle_2.13-3.3.1.jar",
+            "/Users/nilesh/.ivy2/local/uk.gov.homeoffice/drt-lib_2.13/vDEV/jars/drt-lib_2.13.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/suzaku/boopickle_2.13/1.3.3/boopickle_2.13-1.3.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/webjars/webjars-locator/0.52/webjars-locator-0.52.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/3.3.1/ujson_2.13-3.3.1.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upack_2.13/3.3.1/upack_2.13-3.3.1.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/3.3.1/upickle-implicits_2.13-3.3.1.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-runtime_2.13/0.11.17/scalapb-runtime_2.13-0.11.17.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-csv/1.13.0/commons-csv-1.13.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_2.13/2.12.0/cats-core_2.13-2.12.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/scribe-slf4j_2.13/3.16.0/scribe-slf4j_2.13-3.16.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.13/0.6.1/ssl-config-core_2.13-0.6.1.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-actor_2.13/1.1.3/pekko-actor_2.13-1.1.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-persistence_2.13/1.1.3/pekko-persistence_2.13-1.1.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-persistence-query_2.13/1.1.3/pekko-persistence-query_2.13-1.1.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http_2.13/1.1.0/pekko-http_2.13-1.1.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http-spray-json_2.13/1.1.0/pekko-http-spray-json_2.13-1.1.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-slf4j_2.13/1.1.3/pekko-slf4j_2.13-1.1.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/joda-time/joda-time/2.12.7/joda-time-2.12.7.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/slick/slick_2.13/3.5.2/slick_2.13-3.5.2.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/webjars/webjars-locator-core/0.58/webjars-locator-core-0.58.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.14.3/jackson-databind-2.14.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-text/1.11.0/commons-text-1.11.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/spullara/mustache/java/compiler/0.9.11/compiler-0.9.11.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/3.3.1/upickle-core_2.13-3.3.1.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/thesamet/scalapb/lenses_2.13/0.11.17/lenses_2.13-0.11.17.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/google/protobuf/protobuf-java/3.19.6/protobuf-java-3.19.6.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_2.13/2.12.0/scala-collection-compat_2.13-2.12.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/commons-io/commons-io/2.18.0/commons-io-2.18.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/commons-codec/commons-codec/1.17.2/commons-codec-1.17.2.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_2.13/2.12.0/cats-kernel_2.13-2.12.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/scribe_2.13/3.16.0/scribe_2.13-3.16.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.16/slf4j-api-2.0.16.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-stream_2.13/1.1.3/pekko-stream_2.13-1.1.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-protobuf-v3_2.13/1.1.3/pekko-protobuf-v3_2.13-1.1.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http-core_2.13/1.1.0/pekko-http-core_2.13-1.1.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/spray/spray-json_2.13/1.3.6/spray-json_2.13-1.3.6.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/github/classgraph/classgraph/4.8.168/classgraph-4.8.168.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.15.2/jackson-core-2.15.2.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.14.3/jackson-annotations-2.14.3.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.13.0/commons-lang3-3.13.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.0/geny_2.13-1.1.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/perfolation_2.13/1.2.11/perfolation_2.13-1.2.11.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_2.13/0.4.2/sourcecode_2.13-0.4.2.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/moduload_2.13/1.1.7/moduload_2.13-1.1.7.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-parsing_2.13/1.1.0/pekko-parsing_2.13-1.1.0.jar",
+            "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/parboiled/parboiled_2.13/2.5.1/parboiled_2.13-2.5.1.jar"
+        ],
+        "out": "/Users/nilesh/Repository/DRT_REPOS/drt-v2/.bloop/sharedJVM",
+        "classesDir": "/Users/nilesh/Repository/DRT_REPOS/drt-v2/.bloop/sharedJVM/scala-2.13/test-classes",
+        "resources": [
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/src/test/resources",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/src/test/resources",
+            "/Users/nilesh/Repository/DRT_REPOS/drt-v2/shared/.jvm/target/scala-2.13/resource_managed/test"
+        ],
+        "scala": {
+            "organization": "org.scala-lang",
+            "name": "scala-compiler",
+            "version": "2.13.16",
+            "options": [
+                
+            ],
+            "jars": [
+                "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.jar",
+                "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.13.16/scala-compiler-2.13.16.jar",
+                "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.jar",
+                "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/github/java-diff-utils/java-diff-utils/4.15/java-diff-utils-4.15.jar",
+                "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/jline/jline/3.27.1/jline-3.27.1-jdk8.jar"
+            ],
+            "setup": {
+                "order": "mixed",
+                "addLibraryToBootClasspath": false,
+                "addCompilerToClasspath": false,
+                "addExtraJarsToClasspath": false,
+                "manageBootClasspath": false,
+                "filterLibraryFromClasspath": false
+            },
+            "bridgeJars": [
+                "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala2-sbt-bridge/2.13.16/scala2-sbt-bridge-2.13.16.jar"
+            ]
+        },
+        "java": {
+            "options": [
+                
+            ]
+        },
+        "test": {
+            "frameworks": [
+                {
+                    "names": [
+                        "org.scalacheck.ScalaCheckFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "org.specs2.runner.Specs2Framework",
+                        "org.specs2.runner.SpecsFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "org.specs.runner.SpecsFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "org.scalatest.tools.Framework",
+                        "org.scalatest.tools.ScalaTestFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "com.novocode.junit.JUnitFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "munit.Framework"
+                    ]
+                },
+                {
+                    "names": [
+                        "zio.test.sbt.ZTestFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "weaver.framework.CatsEffect"
+                    ]
+                },
+                {
+                    "names": [
+                        "hedgehog.sbt.Framework"
+                    ]
+                }
+            ],
+            "options": {
+                "excludes": [
+                    
+                ],
+                "arguments": [
+                    
+                ]
+            }
+        },
+        "platform": {
+            "name": "jvm",
+            "config": {
+                "home": "/opt/homebrew/Cellar/openjdk/23/libexec/openjdk.jdk/Contents/Home",
+                "options": [
+                    "-Duser.dir=/Users/nilesh/Repository/DRT_REPOS/drt-v2"
+                ]
+            },
+            "mainClass": [
+                
+            ]
+        },
+        "resolution": {
+            "modules": [
+                {
+                    "organization": "org.scala-lang",
+                    "name": "scala-library",
+                    "version": "2.13.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scala-library",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.jar"
+                        },
+                        {
+                            "name": "scala-library",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "upickle_2.13",
+                    "version": "3.3.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "upickle_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/3.3.1/upickle_2.13-3.3.1.jar"
+                        },
+                        {
+                            "name": "upickle_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/3.3.1/upickle_2.13-3.3.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "uk.gov.homeoffice",
+                    "name": "drt-lib_2.13",
+                    "version": "vDEV",
+                    "configurations": "compile",
+                    "artifacts": [
+                        {
+                            "name": "drt-lib_2.13",
+                            "checksum": {
+                                "type": "sha1",
+                                "digest": "ccb93e306a7a1973a9bc171ef04ce27bb8d78562"
+                            },
+                            "path": "/Users/nilesh/.ivy2/local/uk.gov.homeoffice/drt-lib_2.13/vDEV/jars/drt-lib_2.13.jar"
+                        },
+                        {
+                            "name": "drt-lib_2.13",
+                            "classifier": "sources",
+                            "checksum": {
+                                "type": "sha1",
+                                "digest": "8fc67505cc38203a96cdb5cc7698f592482e38a0"
+                            },
+                            "path": "/Users/nilesh/.ivy2/local/uk.gov.homeoffice/drt-lib_2.13/vDEV/srcs/drt-lib_2.13-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.suzaku",
+                    "name": "boopickle_2.13",
+                    "version": "1.3.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "boopickle_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/suzaku/boopickle_2.13/1.3.3/boopickle_2.13-1.3.3.jar"
+                        },
+                        {
+                            "name": "boopickle_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/suzaku/boopickle_2.13/1.3.3/boopickle_2.13-1.3.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.webjars",
+                    "name": "webjars-locator",
+                    "version": "0.52",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "webjars-locator",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/webjars/webjars-locator/0.52/webjars-locator-0.52.jar"
+                        },
+                        {
+                            "name": "webjars-locator",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/webjars/webjars-locator/0.52/webjars-locator-0.52-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "ujson_2.13",
+                    "version": "3.3.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "ujson_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/3.3.1/ujson_2.13-3.3.1.jar"
+                        },
+                        {
+                            "name": "ujson_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/3.3.1/ujson_2.13-3.3.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "upack_2.13",
+                    "version": "3.3.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "upack_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upack_2.13/3.3.1/upack_2.13-3.3.1.jar"
+                        },
+                        {
+                            "name": "upack_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upack_2.13/3.3.1/upack_2.13-3.3.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "upickle-implicits_2.13",
+                    "version": "3.3.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "upickle-implicits_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/3.3.1/upickle-implicits_2.13-3.3.1.jar"
+                        },
+                        {
+                            "name": "upickle-implicits_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/3.3.1/upickle-implicits_2.13-3.3.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.thesamet.scalapb",
+                    "name": "scalapb-runtime_2.13",
+                    "version": "0.11.17",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scalapb-runtime_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-runtime_2.13/0.11.17/scalapb-runtime_2.13-0.11.17.jar"
+                        },
+                        {
+                            "name": "scalapb-runtime_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/thesamet/scalapb/scalapb-runtime_2.13/0.11.17/scalapb-runtime_2.13-0.11.17-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.commons",
+                    "name": "commons-csv",
+                    "version": "1.13.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "commons-csv",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-csv/1.13.0/commons-csv-1.13.0.jar"
+                        },
+                        {
+                            "name": "commons-csv",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-csv/1.13.0/commons-csv-1.13.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-core_2.13",
+                    "version": "2.12.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "cats-core_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_2.13/2.12.0/cats-core_2.13-2.12.0.jar"
+                        },
+                        {
+                            "name": "cats-core_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_2.13/2.12.0/cats-core_2.13-2.12.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.outr",
+                    "name": "scribe-slf4j_2.13",
+                    "version": "3.16.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scribe-slf4j_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/scribe-slf4j_2.13/3.16.0/scribe-slf4j_2.13-3.16.0.jar"
+                        },
+                        {
+                            "name": "scribe-slf4j_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/scribe-slf4j_2.13/3.16.0/scribe-slf4j_2.13-3.16.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.typesafe",
+                    "name": "ssl-config-core_2.13",
+                    "version": "0.6.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "ssl-config-core_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.13/0.6.1/ssl-config-core_2.13-0.6.1.jar"
+                        },
+                        {
+                            "name": "ssl-config-core_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.13/0.6.1/ssl-config-core_2.13-0.6.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-actor_2.13",
+                    "version": "1.1.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-actor_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-actor_2.13/1.1.3/pekko-actor_2.13-1.1.3.jar"
+                        },
+                        {
+                            "name": "pekko-actor_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-actor_2.13/1.1.3/pekko-actor_2.13-1.1.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-persistence_2.13",
+                    "version": "1.1.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-persistence_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-persistence_2.13/1.1.3/pekko-persistence_2.13-1.1.3.jar"
+                        },
+                        {
+                            "name": "pekko-persistence_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-persistence_2.13/1.1.3/pekko-persistence_2.13-1.1.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-persistence-query_2.13",
+                    "version": "1.1.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-persistence-query_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-persistence-query_2.13/1.1.3/pekko-persistence-query_2.13-1.1.3.jar"
+                        },
+                        {
+                            "name": "pekko-persistence-query_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-persistence-query_2.13/1.1.3/pekko-persistence-query_2.13-1.1.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-http_2.13",
+                    "version": "1.1.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-http_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http_2.13/1.1.0/pekko-http_2.13-1.1.0.jar"
+                        },
+                        {
+                            "name": "pekko-http_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http_2.13/1.1.0/pekko-http_2.13-1.1.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-http-spray-json_2.13",
+                    "version": "1.1.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-http-spray-json_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http-spray-json_2.13/1.1.0/pekko-http-spray-json_2.13-1.1.0.jar"
+                        },
+                        {
+                            "name": "pekko-http-spray-json_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http-spray-json_2.13/1.1.0/pekko-http-spray-json_2.13-1.1.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-slf4j_2.13",
+                    "version": "1.1.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-slf4j_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-slf4j_2.13/1.1.3/pekko-slf4j_2.13-1.1.3.jar"
+                        },
+                        {
+                            "name": "pekko-slf4j_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-slf4j_2.13/1.1.3/pekko-slf4j_2.13-1.1.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "joda-time",
+                    "name": "joda-time",
+                    "version": "2.12.7",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "joda-time",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/joda-time/joda-time/2.12.7/joda-time-2.12.7.jar"
+                        },
+                        {
+                            "name": "joda-time",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/joda-time/joda-time/2.12.7/joda-time-2.12.7-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.typesafe.slick",
+                    "name": "slick_2.13",
+                    "version": "3.5.2",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "slick_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/slick/slick_2.13/3.5.2/slick_2.13-3.5.2.jar"
+                        },
+                        {
+                            "name": "slick_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/slick/slick_2.13/3.5.2/slick_2.13-3.5.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.webjars",
+                    "name": "webjars-locator-core",
+                    "version": "0.58",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "webjars-locator-core",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/webjars/webjars-locator-core/0.58/webjars-locator-core-0.58.jar"
+                        },
+                        {
+                            "name": "webjars-locator-core",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/webjars/webjars-locator-core/0.58/webjars-locator-core-0.58-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.fasterxml.jackson.core",
+                    "name": "jackson-databind",
+                    "version": "2.14.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "jackson-databind",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.14.3/jackson-databind-2.14.3.jar"
+                        },
+                        {
+                            "name": "jackson-databind",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.14.3/jackson-databind-2.14.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.commons",
+                    "name": "commons-text",
+                    "version": "1.11.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "commons-text",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-text/1.11.0/commons-text-1.11.0.jar"
+                        },
+                        {
+                            "name": "commons-text",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-text/1.11.0/commons-text-1.11.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.github.spullara.mustache.java",
+                    "name": "compiler",
+                    "version": "0.9.11",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "compiler",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/spullara/mustache/java/compiler/0.9.11/compiler-0.9.11.jar"
+                        },
+                        {
+                            "name": "compiler",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/spullara/mustache/java/compiler/0.9.11/compiler-0.9.11-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "upickle-core_2.13",
+                    "version": "3.3.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "upickle-core_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/3.3.1/upickle-core_2.13-3.3.1.jar"
+                        },
+                        {
+                            "name": "upickle-core_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/3.3.1/upickle-core_2.13-3.3.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.thesamet.scalapb",
+                    "name": "lenses_2.13",
+                    "version": "0.11.17",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "lenses_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/thesamet/scalapb/lenses_2.13/0.11.17/lenses_2.13-0.11.17.jar"
+                        },
+                        {
+                            "name": "lenses_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/thesamet/scalapb/lenses_2.13/0.11.17/lenses_2.13-0.11.17-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.google.protobuf",
+                    "name": "protobuf-java",
+                    "version": "3.19.6",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "protobuf-java",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/google/protobuf/protobuf-java/3.19.6/protobuf-java-3.19.6.jar"
+                        },
+                        {
+                            "name": "protobuf-java",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/google/protobuf/protobuf-java/3.19.6/protobuf-java-3.19.6-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scala-lang.modules",
+                    "name": "scala-collection-compat_2.13",
+                    "version": "2.12.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scala-collection-compat_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_2.13/2.12.0/scala-collection-compat_2.13-2.12.0.jar"
+                        },
+                        {
+                            "name": "scala-collection-compat_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_2.13/2.12.0/scala-collection-compat_2.13-2.12.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "commons-io",
+                    "name": "commons-io",
+                    "version": "2.18.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "commons-io",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/commons-io/commons-io/2.18.0/commons-io-2.18.0.jar"
+                        },
+                        {
+                            "name": "commons-io",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/commons-io/commons-io/2.18.0/commons-io-2.18.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "commons-codec",
+                    "name": "commons-codec",
+                    "version": "1.17.2",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "commons-codec",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/commons-codec/commons-codec/1.17.2/commons-codec-1.17.2.jar"
+                        },
+                        {
+                            "name": "commons-codec",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/commons-codec/commons-codec/1.17.2/commons-codec-1.17.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-kernel_2.13",
+                    "version": "2.12.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "cats-kernel_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_2.13/2.12.0/cats-kernel_2.13-2.12.0.jar"
+                        },
+                        {
+                            "name": "cats-kernel_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_2.13/2.12.0/cats-kernel_2.13-2.12.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.outr",
+                    "name": "scribe_2.13",
+                    "version": "3.16.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scribe_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/scribe_2.13/3.16.0/scribe_2.13-3.16.0.jar"
+                        },
+                        {
+                            "name": "scribe_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/scribe_2.13/3.16.0/scribe_2.13-3.16.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.slf4j",
+                    "name": "slf4j-api",
+                    "version": "2.0.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "slf4j-api",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.16/slf4j-api-2.0.16.jar"
+                        },
+                        {
+                            "name": "slf4j-api",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.16/slf4j-api-2.0.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.typesafe",
+                    "name": "config",
+                    "version": "1.4.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "config",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3.jar"
+                        },
+                        {
+                            "name": "config",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-stream_2.13",
+                    "version": "1.1.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-stream_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-stream_2.13/1.1.3/pekko-stream_2.13-1.1.3.jar"
+                        },
+                        {
+                            "name": "pekko-stream_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-stream_2.13/1.1.3/pekko-stream_2.13-1.1.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-protobuf-v3_2.13",
+                    "version": "1.1.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-protobuf-v3_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-protobuf-v3_2.13/1.1.3/pekko-protobuf-v3_2.13-1.1.3.jar"
+                        },
+                        {
+                            "name": "pekko-protobuf-v3_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-protobuf-v3_2.13/1.1.3/pekko-protobuf-v3_2.13-1.1.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-http-core_2.13",
+                    "version": "1.1.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-http-core_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http-core_2.13/1.1.0/pekko-http-core_2.13-1.1.0.jar"
+                        },
+                        {
+                            "name": "pekko-http-core_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-http-core_2.13/1.1.0/pekko-http-core_2.13-1.1.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.spray",
+                    "name": "spray-json_2.13",
+                    "version": "1.3.6",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "spray-json_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/spray/spray-json_2.13/1.3.6/spray-json_2.13-1.3.6.jar"
+                        },
+                        {
+                            "name": "spray-json_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/spray/spray-json_2.13/1.3.6/spray-json_2.13-1.3.6-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.reactivestreams",
+                    "name": "reactive-streams",
+                    "version": "1.0.4",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "reactive-streams",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar"
+                        },
+                        {
+                            "name": "reactive-streams",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.github.classgraph",
+                    "name": "classgraph",
+                    "version": "4.8.168",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "classgraph",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/github/classgraph/classgraph/4.8.168/classgraph-4.8.168.jar"
+                        },
+                        {
+                            "name": "classgraph",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/github/classgraph/classgraph/4.8.168/classgraph-4.8.168-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.fasterxml.jackson.core",
+                    "name": "jackson-core",
+                    "version": "2.15.2",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "jackson-core",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.15.2/jackson-core-2.15.2.jar"
+                        },
+                        {
+                            "name": "jackson-core",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.15.2/jackson-core-2.15.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.fasterxml.jackson.core",
+                    "name": "jackson-annotations",
+                    "version": "2.14.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "jackson-annotations",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.14.3/jackson-annotations-2.14.3.jar"
+                        },
+                        {
+                            "name": "jackson-annotations",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.14.3/jackson-annotations-2.14.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.commons",
+                    "name": "commons-lang3",
+                    "version": "3.13.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "commons-lang3",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.13.0/commons-lang3-3.13.0.jar"
+                        },
+                        {
+                            "name": "commons-lang3",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/commons/commons-lang3/3.13.0/commons-lang3-3.13.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "geny_2.13",
+                    "version": "1.1.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "geny_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.0/geny_2.13-1.1.0.jar"
+                        },
+                        {
+                            "name": "geny_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.0/geny_2.13-1.1.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.outr",
+                    "name": "perfolation_2.13",
+                    "version": "1.2.11",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "perfolation_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/perfolation_2.13/1.2.11/perfolation_2.13-1.2.11.jar"
+                        },
+                        {
+                            "name": "perfolation_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/perfolation_2.13/1.2.11/perfolation_2.13-1.2.11-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "sourcecode_2.13",
+                    "version": "0.4.2",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "sourcecode_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_2.13/0.4.2/sourcecode_2.13-0.4.2.jar"
+                        },
+                        {
+                            "name": "sourcecode_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_2.13/0.4.2/sourcecode_2.13-0.4.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.outr",
+                    "name": "moduload_2.13",
+                    "version": "1.1.7",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "moduload_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/moduload_2.13/1.1.7/moduload_2.13-1.1.7.jar"
+                        },
+                        {
+                            "name": "moduload_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/outr/moduload_2.13/1.1.7/moduload_2.13-1.1.7-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.pekko",
+                    "name": "pekko-parsing_2.13",
+                    "version": "1.1.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "pekko-parsing_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-parsing_2.13/1.1.0/pekko-parsing_2.13-1.1.0.jar"
+                        },
+                        {
+                            "name": "pekko-parsing_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/pekko/pekko-parsing_2.13/1.1.0/pekko-parsing_2.13-1.1.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.parboiled",
+                    "name": "parboiled_2.13",
+                    "version": "2.5.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "parboiled_2.13",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/parboiled/parboiled_2.13/2.5.1/parboiled_2.13-2.5.1.jar"
+                        },
+                        {
+                            "name": "parboiled_2.13",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/parboiled/parboiled_2.13/2.5.1/parboiled_2.13-2.5.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scala-lang",
+                    "name": "scala-library",
+                    "version": "2.13.16",
+                    "configurations": "optional",
+                    "artifacts": [
+                        {
+                            "name": "scala-library",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.jar"
+                        },
+                        {
+                            "name": "scala-library",
+                            "classifier": "sources",
+                            "path": "/Users/nilesh/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16-sources.jar"
+                        }
+                    ]
+                }
+            ]
+        },
+        "tags": [
+            "test"
+        ]
+    }
+}

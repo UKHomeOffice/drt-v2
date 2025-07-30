@@ -2,8 +2,8 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.actions.Actions.{FileUploadInProgress, ForecastFileUploadAction, ResetFileUpload}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import drt.client.util.AirportName.getAirportByCode
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -50,7 +50,8 @@ object ForecastUploadComponent {
       val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState, m.airportConfig))
       fileUploadStateRCP(fileUploadStateMP => {
         <.div(
-          MuiTypography(variant = "h1")(s"Forecast Feed File Upload ${p.airportConfigPot.get.portCode.iata} (${p.airportConfigPot.get.portName})"),
+          MuiTypography(variant = "h1")(s"Forecast Feed File Upload ${p.airportConfigPot.get.portCode.iata} (${{getAirportByCode(p.airportConfigPot.get.portCode.toString())
+            .getOrElse(p.airportConfigPot.get.portName)}})"),
             fileUploadStateMP().airportConfig.renderReady { airportConfig =>
             if (fileUploadStateMP().fileUploadState.isEmpty) {
               upload(airportConfig.portCode.iata)

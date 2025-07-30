@@ -1,0 +1,4 @@
+Date,Flight Number,POA Forecast Version,Ope,Seats,Aircraft Type,Terminal,ArrDep,Orig Dest,Airport Code,Scheduled Time,POA PAX,Transfer PAX,CSA PAX,Time,Hour,Int/Dom,Date/Time
+03-Feb-23,AA0101,POA FCST 02-08-01,3O,174,320,South,Arrival,"Tangier (Ibn Batuta), Morocco",TNG,1440,130,0,130,14:40,14,I,03/02/2023 14:40
+03-Feb-23,AB1111,POA FCST 02-07-02,AT,159,73H,North,Arrival,"Casablanca Mohamed V, Morocco",CMN,1425,157,0,157,14:25,14,I,03/02/2023 14:25
+03-Feb-23,AC1234,POA FCST 02-06-03,BA,218,320,South,Arrival,"Alicante, Spain",ALC,1235,114,0,114,12:35,12,I,03/02/2023 12:35

@@ -111,7 +111,7 @@ object TerminalPlanningComponent {
             }
 
             <.div(
-              MuiTypography(variant = "h2")(s"Planning at ${props.page.portCodeStr} (${props.airportConfig.portName}), ${props.page.terminalName}"),
+              MuiTypography(variant = "h2")(s"Planning"),
               MuiTypography(variant = "h3")("Headline Figures"),
               <.div(^.className := "terminal-content-header",
                 <.div(^.className := "staffing-controls-wrapper",

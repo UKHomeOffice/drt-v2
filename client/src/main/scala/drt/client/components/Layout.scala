@@ -107,7 +107,7 @@ object Layout {
                         case TerminalPageTabLoc(terminalName, _, _, _) =>
                           val terminal = Terminal(terminalName)
                           <.div(^.className := "terminal-header",
-                            MuiTypography(variant = "h1")("Queues & Arrivals"),
+                            MuiTypography(variant = "h1")(s"$terminalName Terminal"),
                             <.div(^.className := "status-bar",
                               ApiStatusComponent(ApiStatusComponent.Props(
                                 !airportConfig.noLivePortFeed,

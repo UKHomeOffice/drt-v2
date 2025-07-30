@@ -4,6 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.services.JSDateConversions.SDate
+import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.{WalkTime, WalkTimes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
@@ -40,7 +41,8 @@ object PortConfigPage {
         gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
-          MuiTypography(variant = "h1")(s"Port configuration for ${airportConfig.portCode} (${airportConfig.portName})"),
+          MuiTypography(variant = "h1")(s"Port configuration for ${airportConfig.portCode} (${getAirportByCode(airportConfig.portCode.toString())
+            .getOrElse(airportConfig.portName)})"),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates schedule"),

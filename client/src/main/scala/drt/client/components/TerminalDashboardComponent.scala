@@ -87,7 +87,7 @@ object TerminalDashboardComponent {
         }.sum.round
         <.div(
           MuiTypography(variant = "h2")
-          (s"Dashboard ${props.terminalPageTabLoc.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTabLoc.terminal}"),
+          (s"Dashboard"),
           <.div(^.className := "terminal-dashboard",
             if (props.terminalPageTabLoc.queryParams.contains("showArrivals")) {
               val closeArrivalsPopupLink = props.terminalPageTabLoc.copy(
