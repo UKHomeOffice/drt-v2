@@ -22,6 +22,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
     resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+    coverageEnabled := false,
   )
   .jsConfigure(_.enablePlugins(ScalaJSWeb))
 
@@ -36,6 +37,7 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
       "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
     ),
     resolvers += Resolver.defaultLocal,
+    coverageEnabled := false,
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
 
@@ -75,6 +77,7 @@ lazy val client: Project = (project in file("client"))
     scalaJSUseMainModuleInitializer := true,
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
+    coverageEnabled := false,
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb, TzdbPlugin)
   .dependsOn(shared.js, clientMacrosJS)
@@ -123,6 +126,7 @@ lazy val server = (project in file("server"))
     ),
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
+    coverageEnabled := true,
   )
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
