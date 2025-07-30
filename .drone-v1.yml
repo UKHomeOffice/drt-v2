@@ -140,8 +140,7 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - sbt -mem 4096 --error coverage test | true
-      - sbt coverageReport
+      - sbt -mem 4096 --error clean coverage test coverageReport
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -153,7 +152,7 @@ steps:
       branch:
         - master
     depends_on:
-      - Publish app
+      - Unit tests
 
   - name: Scapegoat
     pull: if-not-exists
@@ -196,8 +195,7 @@ steps:
       branch:
         - master
     depends_on:
-      - Build docker image
-
+      - Scapegoat
 
   - name: Sonar scanner
     pull: if-not-exists
@@ -213,7 +211,6 @@ steps:
         - master
     depends_on:
       - Dependency check
-      - Scapegoat
 
   - name: End to end test
     pull: if-not-exists
