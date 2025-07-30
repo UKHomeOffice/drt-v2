@@ -152,7 +152,7 @@ steps:
       branch:
         - master
     depends_on:
-      - Publish app
+      - Unit tests
 
   - name: Scapegoat
     pull: if-not-exists
@@ -195,8 +195,7 @@ steps:
       branch:
         - master
     depends_on:
-      - Build docker image
-
+      - Scapegoat
 
   - name: Sonar scanner
     pull: if-not-exists
@@ -212,7 +211,6 @@ steps:
         - master
     depends_on:
       - Dependency check
-      - Scapegoat
 
   - name: End to end test
     pull: if-not-exists
