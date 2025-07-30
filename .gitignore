@@ -52,3 +52,9 @@ server/src/main/assets/main.js
 runsbt.sh
 
 client/node_modules
+#vcode
+#.metals
+#.bloop
+#.bloop/*
+#.vscode
+#metals*

@@ -1,8 +1,0 @@
-{
-    "files.watcherExclude": {
-        "**/target": true
-    },
-    "metals.javaHome": "/opt/homebrew/Cellar/openjdk/23",
-    "java.jdt.ls.java.home": "",
-    "maven.terminal.useJavaHome": true
-}
