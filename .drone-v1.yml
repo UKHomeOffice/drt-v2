@@ -229,6 +229,11 @@ steps:
           sleep 0.5
         done
       - echo "Container $${DRONE_COMMIT_SHA} is running"
+      - |
+        while [ "$(docker inspect -f '{{.State.Running}}' "$${DRONE_COMMIT_SHA}")" == "true" ]; do
+          echo "Running..."
+          sleep 0.5
+        done
       - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-8679 /bin/bash -c "/app/node_modules/.bin/cypress run"
     volumes:
       - name: dockerclientconfig
