@@ -8,6 +8,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.UpdateUserPreferences
+import drt.client.util.AirportName.getAirportByCode
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
@@ -65,7 +66,8 @@ object PortDashboardPage {
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
         val portDashboardModel: PortDashboardModel = modelMP()
         <.div(^.className := "terminal-summary-dashboard",
-          MuiTypography(variant = "h1")(s"Dashboard ${p.dashboardPage.portCodeStr} (${p.dashboardPage.portConfig.portName})"),
+          MuiTypography(variant = "h1")(s"Dashboard: ${p.dashboardPage.portCodeStr} (${getAirportByCode(p.dashboardPage.portCodeStr)
+            .getOrElse(p.dashboardPage.portConfig.portName)})"),
           portDashboardModel.airportConfig.renderReady(portConfig => {
             val portName = portConfig.portCode.iata.toLowerCase
             portDashboardModel.userPreferences.renderReady(userPreferences => {

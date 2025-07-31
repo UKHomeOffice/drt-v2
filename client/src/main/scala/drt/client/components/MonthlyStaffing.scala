@@ -109,7 +109,7 @@ object MonthlyStaffing {
       ))
       <.div(
         <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
-          MuiTypography(variant = "h2")(s"Monthly staffing at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminalName}"),
+          MuiTypography(variant = "h2")(s"Monthly staffing"),
           if (props.isStaffShiftPage) {
             <.div(^.className := "staffing-controls-toggle",
               <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center", "paddingTop" -> "15px"))(

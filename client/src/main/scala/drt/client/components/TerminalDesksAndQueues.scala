@@ -271,7 +271,7 @@ object TerminalDesksAndQueues {
             .view.mapValues(_.map(_._2).max).toMap
 
           <.div(^.className := "desks-queues-title",
-            MuiTypography(variant = "h2")(s"Desks and queues at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminal}"),
+            MuiTypography(variant = "h2")(s"Desks and queues"),
             StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),

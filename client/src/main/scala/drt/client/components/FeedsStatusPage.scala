@@ -8,6 +8,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
+import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.MillisSinceEpoch
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
@@ -142,7 +143,8 @@ object FeedsStatusPage {
         }
 
         <.div(
-          MuiTypography(variant = "h1")(s"Feeds status at ${props.airportConfigPot.get.portCode} (${props.airportConfigPot.get.portName})"),
+          MuiTypography(variant = "h1")(s"Feeds status: ${props.airportConfigPot.get.portCode} (${getAirportByCode(props.airportConfigPot.get.portCode.toString())
+            .getOrElse(props.airportConfigPot.get.portName)})"),
           <.div(^.className := "feed-status-container",
             statusContentPot.getOrElse(EmptyVdom)
           ),

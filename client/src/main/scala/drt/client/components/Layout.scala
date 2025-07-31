@@ -9,6 +9,8 @@ import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
+import drt.client.util.AirportName.getAirportByCode
+import drt.client.util.TerminalName.getTerminalDisplayName
 import drt.shared.ContactDetails
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
@@ -107,7 +109,7 @@ object Layout {
                         case TerminalPageTabLoc(terminalName, _, _, _) =>
                           val terminal = Terminal(terminalName)
                           <.div(^.className := "terminal-header",
-                            MuiTypography(variant = "h1")("Queues & Arrivals"),
+                            MuiTypography(variant = "h1")(headerDisplay(airportConfig, terminalName)),
                             <.div(^.className := "status-bar",
                               ApiStatusComponent(ApiStatusComponent.Props(
                                 !airportConfig.noLivePortFeed,
@@ -139,6 +141,13 @@ object Layout {
         Callback(SPACircuit.dispatch(ShouldViewBanner()))
     }
     .build
+
+  private def headerDisplay(airportConfig: AirportConfig, terminalName: String) = {
+    s"${getTerminalDisplayName(terminalName).getOrElse(terminalName)} Terminal:  ${airportConfig.portCode} (${
+      getAirportByCode(airportConfig.portCode.toString())
+        .getOrElse(airportConfig.portName)
+    })"
+  }
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }
