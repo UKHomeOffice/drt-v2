@@ -50,7 +50,7 @@ object ForecastUploadComponent {
       val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState, m.airportConfig))
       fileUploadStateRCP(fileUploadStateMP => {
         <.div(
-          MuiTypography(variant = "h1")(s"Forecast Feed File Upload ${p.airportConfigPot.get.portCode.iata} (${{getAirportByCode(p.airportConfigPot.get.portCode.toString())
+          MuiTypography(variant = "h1")(s"Forecast Feed File Upload: ${p.airportConfigPot.get.portCode.iata} (${{getAirportByCode(p.airportConfigPot.get.portCode.toString())
             .getOrElse(p.airportConfigPot.get.portName)}})"),
             fileUploadStateMP().airportConfig.renderReady { airportConfig =>
             if (fileUploadStateMP().fileUploadState.isEmpty) {

@@ -41,7 +41,7 @@ object PortConfigPage {
         gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
-          MuiTypography(variant = "h1")(s"Port configuration for ${airportConfig.portCode} (${getAirportByCode(airportConfig.portCode.toString())
+          MuiTypography(variant = "h1")(s"Port configuration: ${airportConfig.portCode} (${getAirportByCode(airportConfig.portCode.toString())
             .getOrElse(airportConfig.portName)})"),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(

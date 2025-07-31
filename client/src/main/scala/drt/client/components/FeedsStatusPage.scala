@@ -143,7 +143,7 @@ object FeedsStatusPage {
         }
 
         <.div(
-          MuiTypography(variant = "h1")(s"Feeds status at ${props.airportConfigPot.get.portCode} (${getAirportByCode(props.airportConfigPot.get.portCode.toString())
+          MuiTypography(variant = "h1")(s"Feeds status: ${props.airportConfigPot.get.portCode} (${getAirportByCode(props.airportConfigPot.get.portCode.toString())
             .getOrElse(props.airportConfigPot.get.portName)})"),
           <.div(^.className := "feed-status-container",
             statusContentPot.getOrElse(EmptyVdom)
