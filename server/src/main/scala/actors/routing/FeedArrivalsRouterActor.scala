@@ -2,13 +2,13 @@ package actors.routing
 
 import actors.PartitionedPortStateActor.{DateRangeMillisLike, PointInTimeQuery}
 import actors.daily.RequestAndTerminate
-import actors.routing.FeedArrivalsRouterActor.{FeedArrivals, utcDateToLocalDates}
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
@@ -86,14 +86,6 @@ object FeedArrivalsRouterActor {
       }
       .filter { case (_, flights) => flights.nonEmpty }
   }
-
-  def utcDateToLocalDates(utcDate: UtcDate): Set[LocalDate] = {
-    val date = SDate(utcDate)
-    Set(
-      date.toLocalDate,
-      date.addDays(1).addMinutes(-1).toLocalDate
-    )
-  }
 }
 
 class FeedArrivalsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
@@ -124,7 +116,7 @@ class FeedArrivalsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => I
   override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[TerminalUpdateRequest]] = {
     updateArrivals(partition, updates.arrivals).map {
       case true =>
-        utcDateToLocalDates(partition._2).map(TerminalUpdateRequest(partition._1, _))
+        Set(TerminalUpdateRequest(partition._1, LocalDate(partition._2.year, partition._2.month, partition._2.day)))
       case false =>
         Set.empty
     }
