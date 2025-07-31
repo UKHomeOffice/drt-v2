@@ -9,6 +9,8 @@ import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
+import drt.client.util.TerminalName
+import drt.client.util.TerminalName.getTerminalDisplayName
 import drt.shared.ContactDetails
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
@@ -107,7 +109,7 @@ object Layout {
                         case TerminalPageTabLoc(terminalName, _, _, _) =>
                           val terminal = Terminal(terminalName)
                           <.div(^.className := "terminal-header",
-                            MuiTypography(variant = "h1")(s"$terminalName Terminal"),
+                            MuiTypography(variant = "h1")(s"${getTerminalDisplayName(terminalName).getOrElse(terminalName)} Terminal"),
                             <.div(^.className := "status-bar",
                               ApiStatusComponent(ApiStatusComponent.Props(
                                 !airportConfig.noLivePortFeed,
