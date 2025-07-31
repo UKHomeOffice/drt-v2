@@ -6,6 +6,7 @@ import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.spa.TerminalPageModes.Dashboard
+import drt.client.util.AirportName.getAirportByCode
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -17,6 +18,8 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, PortRegion}
+
+import scala.scalajs.js
 
 object MainMenu {
   case class Props(router: RouterCtl[Loc],
@@ -166,10 +169,14 @@ object PortSwitcher {
   private def listPorts(ports: Set[PortCode], currentPort: PortCode): List[VdomTagOf[LI]] =
     ports.toList.sorted.map { p =>
       <.li(^.className := "dropdown-item",
-        if (p == currentPort) <.span(p.iata, ^.disabled := true, ^.className := "non-selectable port")
-        else <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata)
+        if (p == currentPort) <.span(portDisplayName(p), ^.disabled := true, ^.className := "non-selectable port")
+        else <.a(^.href := SPAMain.urls.urlForPort(p.toString), portDisplayName(p))
       )
     }
+
+  private def portDisplayName(p: PortCode) = {
+    s"${p.iata} (${getAirportByCode(p.iata).getOrElse(p.toString)})"
+  }
 
   def apply(user: LoggedInUser, portCode: PortCode): VdomElement = component(Props(user, portCode))
 }
