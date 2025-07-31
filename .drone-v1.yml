@@ -234,6 +234,7 @@ steps:
           echo "Running..."
           sleep 0.5
         done
+      - docker logs $${DRONE_COMMIT_SHA}
       - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-8679 /bin/bash -c "/app/node_modules/.bin/cypress run"
     volumes:
       - name: dockerclientconfig
