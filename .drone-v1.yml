@@ -236,7 +236,8 @@ steps:
     when:
       event:
         - push
-#    depends_on:
+    depends_on:
+      - ECR login
 #      - Publish app
 
   - name: Slack notification
