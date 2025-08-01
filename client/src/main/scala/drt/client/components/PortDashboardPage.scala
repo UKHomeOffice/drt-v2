@@ -54,6 +54,7 @@ object PortDashboardPage {
 
       val rangeOptions = Seq(
         45 -> "45 minutes",
+        60 -> "60 minutes",
         90 -> "90 minutes",
         180 -> "3 hours",
         360 -> "6 hours",
