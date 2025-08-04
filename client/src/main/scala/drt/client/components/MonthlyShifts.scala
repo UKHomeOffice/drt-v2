@@ -120,7 +120,7 @@ object MonthlyShifts {
         <.div(^.className := "staffing-container",
           <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
             MuiTypography(variant = "h2")
-            (s"Monthly staffing at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminalName}"),
+            (s"Monthly staffing"),
             <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center", "paddingTop" -> "15px"))(
               MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))("Show shifts"),
               MuiFormControl()(

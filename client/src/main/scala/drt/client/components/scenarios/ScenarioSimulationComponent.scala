@@ -39,7 +39,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.date, props.terminal)
 
       <.div(
-        MuiTypography(variant = "h2")(s"Simulate a day at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
+        MuiTypography(variant = "h2")(s"Simulate a day"),
         MuiPaper()(
           DefaultFormFieldsStyle.simulation,
           MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 2)(
