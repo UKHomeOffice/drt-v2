@@ -181,11 +181,11 @@ object TerminalDesksAndQueues {
         )
       }
 
-       def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) =>  Callback{
+      def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) => Callback {
         e.preventDefault()
-         GoogleEventTracker.sendEvent(s"$terminal", s"Select ${timeInterval.queryParamsValue} interval", timeInterval.toString)
-         SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes = if (timeInterval == Hourly) 60 else 15)))
-       }
+        GoogleEventTracker.sendEvent(s"$terminal", s"Select ${timeInterval.queryParamsValue} interval", timeInterval.toString)
+        SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes = if (timeInterval == Hourly) 60 else 15)))
+      }
 
 
       def toggleDisplayType(newDisplayType: DisplayType) = (e: ReactEventFromInput) => {
@@ -282,10 +282,12 @@ object TerminalDesksAndQueues {
               else EmptyVdom,
             ),
             if (state.displayType == ChartsView) {
-              queues.map { queue =>
-                val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
-                QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), interval, state.deskType))
-              }.toTagMod
+              queues
+                .filter(slas.contains)
+                .map { queue =>
+                  val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
+                  QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), interval, state.deskType))
+                }.toTagMod
             } else {
               <.div(
                 <.table(
@@ -298,7 +300,7 @@ object TerminalDesksAndQueues {
                     viewMinutes.map { millis =>
                       val rowProps = TerminalDesksAndQueuesRow.Props(
                         minuteMillis = millis,
-                        queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
+                        queueMinutes = queues.map(q => windowCrunchMinutes(millis).getOrElse(q, CrunchMinute(props.terminal, q, millis, 0, 0, 0, 0, None, None, None, None, None, None, None))),
                         staffMinute = staffMinutesWithLocalUpdates(props.addedStaffMovementMinutes, windowStaffMinutes.getOrElse(millis, StaffMinute.empty)),
                         maxPaxInQueues = maxPaxInQueues,
                         airportConfig = props.airportConfig,
