@@ -30,6 +30,7 @@ class SimulationMinuteSpec extends Specification {
         minute = 0L,
         desks = 2,
         waitTime = 3,
+        maybePaxInQueue = Option(4),
       )
     }
     "When they have the same values `maybeUpdated` should return None" >> {
