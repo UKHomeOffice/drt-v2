@@ -97,6 +97,13 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
           log.info(s"[deployments] Optimising ${request.terminal} ${request.date.toISOString}")
           loadsToQueueMinutes(request.minutesInMillis(ac.crunchOffsetMinutes), loads, deskLimitsByTerminal, "deployments", request.terminal)
             .map { minutes =>
+//              if (request.date == LocalDate(2025, 8, 5)) {
+//                println(s"[deployments] ${request.terminal} ${request.date.toISOString} - wait times:\n${minutes.asContainer.minutes.toSeq.sortBy(_.minute).map { x =>
+//                  val min: CrunchMinute = x.toMinute
+//                  s"${min.minute} -> ${min.deployedDesks} desks -> ${min.deployedWait} wait time"
+//                }.mkString("\n")
+//                }")
+//              }
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
               setUpdatedAtForDay(request.terminal, request.date, SDate.now().millisSinceEpoch)
               Option(minutes)

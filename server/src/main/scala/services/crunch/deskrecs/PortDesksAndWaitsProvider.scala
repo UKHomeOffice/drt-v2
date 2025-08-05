@@ -43,6 +43,15 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Te
                                  )
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
     terminalLoadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description, terminal).map { deskRecMinutes =>
+//      val date = SDate(minuteMillis.min).toLocalDate
+//      println(s"---- Loads to simulations for $date ${deskRecMinutes.minutes.size} minutes ----\n")
+//      if (date == LocalDate(2025, 8, 5)) {
+//        deskRecMinutes.minutes.toSeq.sortBy(_.minute).foreach { case DeskRecMinute(t, q, m, pl, wl, d, w, mp) =>
+//          val sDateLike = SDate(m)
+//          println(s"DeskRecMinute: $t, $q, ${sDateLike.toISOString}: $pl, $wl, $d, $w, $mp")
+//        }
+//      }
+
       val simMinutes = deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq
       log.info(s"Deployments & waits calculated for ${SDate(minuteMillis.min).toISOString} to ${SDate(minuteMillis.max).toISOString}")
       SimulationMinutes(simMinutes)

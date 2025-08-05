@@ -92,7 +92,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
   }
 
   object MockTerminalDeskLimits extends TerminalDeskLimitsLike {
-    override val minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]] = Map(
+    override val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]] = _ => Map(
       EeaDesk -> IndexedSeq.fill(24)(10),
       EGate -> IndexedSeq.fill(24)(10),
       NonEeaDesk -> IndexedSeq.fill(24)(10),
