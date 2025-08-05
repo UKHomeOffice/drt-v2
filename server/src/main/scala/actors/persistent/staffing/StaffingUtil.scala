@@ -47,7 +47,7 @@ object StaffingUtil {
     }
   }
 
-  private def combinedAssignments(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
+  private def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
     shiftAssignments
       .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
       .groupBy(a => TM(a.terminal, a.start))
@@ -58,12 +58,12 @@ object StaffingUtil {
         tm -> combinedAssignment
       }
 
-  def updateWithAShiftDefaultStaff(previousShift: Shift,
-                                   overridingShift: Seq[StaffShiftRow],
-                                   newShift: Shift,
-                                   allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateAssignmentsForShiftChange(previousShift: Shift,
+                                      overridingShift: Seq[StaffShiftRow],
+                                      newShift: Shift,
+                                      allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
     val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
-    val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = combinedAssignments(newShiftsStaff)
+    val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(newShiftsStaff)
 
     val overidingAssignments = overridingShift
       .filterNot(s => s.port == newShift.port &&
@@ -73,7 +73,7 @@ object StaffingUtil {
         generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os))
       }
 
-    val overriddingShiftAssingments: Map[TM, StaffAssignment] = combinedAssignments(overidingAssignments)
+    val overriddingShiftAssingments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(overidingAssignments)
 
     val isTimeChange = previousShift.startTime != newShift.startTime || previousShift.endTime != newShift.endTime
 
@@ -92,7 +92,7 @@ object StaffingUtil {
               assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
             else if (isTimeChange && (existing.numberOfStaff == overridingStaff || existing.numberOfStaff == previousShift.staffNumber || existing.numberOfStaff == 0))
               assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
-              else
+            else
               existing
 
           case None => assignment
@@ -147,7 +147,7 @@ object StaffingUtil {
       generateDailyAssignments(shift)
     }
 
-    val splitDailyAssignmentsWithOverlap = combinedAssignments(allShiftsStaff)
+    val splitDailyAssignmentsWithOverlap = staffAssignmentsSlotSummaries(allShiftsStaff)
 
     val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 

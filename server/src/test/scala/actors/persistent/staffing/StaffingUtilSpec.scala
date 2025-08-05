@@ -121,7 +121,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = Seq(existingAssignment))
 
-      val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShift, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, newShift, allShifts)
 
       result must not(beEmpty) and
         result.exists(a => a.numberOfStaff == 6)
@@ -186,7 +186,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = Seq(existingAssignment))
 
-      val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShift, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, newShift, allShifts)
 
       result must not(beEmpty) and
         // Should preserve existing assignment since 8 != (2 + 3)
@@ -304,7 +304,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, newShift, allShifts)
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
@@ -431,7 +431,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShifts, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, newShift, allShifts)
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
@@ -528,7 +528,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result = StaffingUtil.updateWithAShiftDefaultStaff(previousShift, overridingShift, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, newShift, allShifts)
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and

@@ -4,7 +4,6 @@ import drt.shared.Shift
 import org.joda.time.{DateTimeZone, LocalDateTime}
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
-
 import java.sql.{Date, Timestamp}
 import java.time.{LocalDate => JavaLocalDate}
 
@@ -50,6 +49,17 @@ object ShiftUtil {
   private def convertToLocalDate(sqlDate: java.sql.Date): LocalDate = {
     val localDate = sqlDate.toLocalDate
     LocalDate(localDate.getYear, localDate.getMonthValue, localDate.getDayOfMonth)
+  }
+
+  def currentLocalDate: LocalDate = {
+    val now = JavaLocalDate.now()
+    LocalDate(now.getYear, now.getMonthValue, now.getDayOfMonth)
+  }
+
+  def localDateFromString(date: String): LocalDate = {
+    val parts = date.split("-")
+    if (parts.length != 3) throw new IllegalArgumentException(s"Invalid date format: $date")
+    LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt)
   }
 
   def dateFromString(date: String): Date = {

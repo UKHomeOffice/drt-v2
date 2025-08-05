@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, StaffShiftRow, UserFeedbac
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.sql.{Date, Timestamp}
 import scala.concurrent.duration.FiniteDuration
@@ -185,7 +185,7 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
 
   override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 
-  override def getShift(port: String, terminal: String, shiftName: String, startDate: Date): Future[Option[Shift]] = {
+  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
     val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
     Future.successful(shift)
   }

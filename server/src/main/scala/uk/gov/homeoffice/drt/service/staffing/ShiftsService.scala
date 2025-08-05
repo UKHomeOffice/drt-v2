@@ -3,14 +3,15 @@ package uk.gov.homeoffice.drt.service.staffing
 import drt.shared.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{fromStaffShiftRow, toStaffShiftRow}
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, fromStaffShiftRow, toStaffShiftRow}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import java.sql.Timestamp
 import java.time.{LocalDate => JavaLocalDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ShiftsService {
-  def getShift(port: String, terminal: String, shiftName: String, startDate: java.sql.Date): Future[Option[Shift]]
+  def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]]
 
   def getShifts(port: String, terminal: String): Future[Seq[Shift]]
 
@@ -38,8 +39,8 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
 
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
 
-  override def getShift(port: String, terminal: String, shiftName: String, startDate: java.sql.Date): Future[Option[Shift]] =
-    staffShiftsDao.getStaffShiftByPortAndTerminal(port, terminal, shiftName, startDate).map(_.map(fromStaffShiftRow))
+  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] =
+    staffShiftsDao.getStaffShiftByPortAndTerminal(port, terminal, shiftName, convertToSqlDate(startDate)).map(_.map(fromStaffShiftRow))
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map(_.map(fromStaffShiftRow))

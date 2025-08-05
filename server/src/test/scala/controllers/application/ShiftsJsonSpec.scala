@@ -58,7 +58,7 @@ class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
         |]
         |""".stripMargin
 
-    val shifts = convertTo(jsonString)
+    val shifts = shiftsFromJson(jsonString)
     shifts should have size 1
     shifts.head.shiftName shouldBe "shift1"
   }
@@ -79,7 +79,7 @@ class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
          |"createdAt":1
          |}
          |""".stripMargin
-    val shifts = convertToShift(jsonString)
+    val shifts = shiftFromJson(jsonString)
     shifts.shiftName shouldBe "Morning"
   }
 }

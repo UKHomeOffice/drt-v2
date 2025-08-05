@@ -248,7 +248,7 @@ object TerminalComponent {
                       })
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "editShifts" =>
-                      <.div(drt.client.components.EditShiftsComponent(props.terminalPageTab.terminal,
+                      <.div(EditShiftsComponent(props.terminalPageTab.terminal,
                         props.terminalPageTab.portCodeStr,
                         terminalModel.shiftsPot,
                         props.terminalPageTab.queryParams("shiftName"),
@@ -256,7 +256,7 @@ object TerminalComponent {
                         props.router))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
-                      <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
+                      <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, emptyShifts))

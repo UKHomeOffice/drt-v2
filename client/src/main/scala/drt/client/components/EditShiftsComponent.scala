@@ -74,7 +74,7 @@ object EditShiftsComponent {
 
       <.div(
         props.shiftsPot.renderReady { shifts =>
-          val shiftForms: Seq[ShiftForm] = shifts.zipWithIndex.map { case (s, index) =>
+          val shiftForms: Seq[ShiftForm] = shifts.filter(s => s.shiftName == props.shiftName).zipWithIndex.map { case (s, index) =>
             ShiftForm(
               id = index + 1,
               name = s.shiftName,
@@ -84,7 +84,7 @@ object EditShiftsComponent {
               defaultStaffNumber = s.staffNumber,
               startMonth = getMonthOnStartDateCheck(props.viewDate)
             )
-          }.filter(s => s.name == props.shiftName)
+          }
 
           AddShiftsFormComponent(
             ShiftFormProps(port = props.portCode,
