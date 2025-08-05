@@ -9,8 +9,6 @@ import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
 import uk.gov.homeoffice.drt.service.staffing.ShiftUtil._
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
-
-import java.sql.Date
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
@@ -93,34 +91,34 @@ class ShiftsController @Inject()(cc: ControllerComponents,
                                  shiftAssignmentsService: ShiftAssignmentsService,
                                 )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
-  def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShift(port, terminal, shiftName, currentLocalDate).map {
+  def getShift(terminal: String, shiftName: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, shiftName, currentLocalDate).map {
       case Some(shift) => Ok(shift.toString)
       case None => NotFound
     }
   }
 
-  def getAShift(port: String, terminal: String, shiftName: String, startDate: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShift(port, terminal, shiftName, localDateFromString(startDate)).map {
+  def getAShift(terminal: String, shiftName: String, startDate: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, shiftName, localDateFromString(startDate)).map {
       case Some(shift) => Ok(shift.toString)
       case None => NotFound
     }
   }
 
-  def getShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShifts(port, terminal).map { shifts =>
+  def getShifts(terminal: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShifts(ctrl.airportConfig.portCode.iata, terminal).map { shifts =>
       Ok(shifts.toJson.compactPrint)
     }
   }
 
-  def getActiveShiftsForDate(port: String, terminal: String, date: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getActiveShifts(port, terminal, Option(date)).map { shifts =>
+  def getActiveShiftsForDate(terminal: String, date: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShifts(ctrl.airportConfig.portCode.iata, terminal, Option(date)).map { shifts =>
       Ok(shifts.toJson.compactPrint)
     }
   }
 
-  def getActiveShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getActiveShifts(port, terminal, None).map { shifts =>
+  def getActiveShifts(terminal: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShifts(ctrl.airportConfig.portCode.iata, terminal, None).map { shifts =>
       Ok(shifts.toJson.compactPrint)
     }
   }
