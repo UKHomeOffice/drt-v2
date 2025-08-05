@@ -13,6 +13,7 @@ object SimulationMinute {
     minute = crunchMinute.minute,
     desks = crunchMinute.deployedDesks.getOrElse(0),
     waitTime = crunchMinute.deployedWait.getOrElse(0),
+    maybePaxInQueue = crunchMinute.maybeDeployedPaxInQueue,
   )
 }
 
@@ -20,12 +21,14 @@ case class SimulationMinute(terminal: Terminal,
                             queue: Queue,
                             minute: MillisSinceEpoch,
                             desks: Int,
-                            waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
+                            waitTime: Int,
+                            maybePaxInQueue: Option[Int],
+                           ) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
   lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
   override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
     if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
-      deployedDesks = Option(desks), deployedWait = Option(waitTime), lastUpdated = Option(now)
+      deployedDesks = Option(desks), deployedWait = Option(waitTime), maybeDeployedPaxInQueue = maybePaxInQueue, lastUpdated = Option(now)
     ))
     else None
 
@@ -44,7 +47,7 @@ case class SimulationMinute(terminal: Terminal,
     maybePaxInQueue = None,
     deployedDesks = Option(desks),
     deployedWait = Option(waitTime),
-    maybeDeployedPaxInQueue = None,
+    maybeDeployedPaxInQueue = maybePaxInQueue,
     lastUpdated = None)
 
 }

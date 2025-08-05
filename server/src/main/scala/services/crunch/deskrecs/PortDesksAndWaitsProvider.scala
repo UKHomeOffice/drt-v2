@@ -51,7 +51,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Te
 
   private def deskRecsToSimulations(terminalQueueDeskRecs: Iterable[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
     .map {
-      case DeskRecMinute(t, q, m, _, _, d, w, _) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
+      case DeskRecMinute(t, q, m, _, _, d, w, piq) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w, piq))
     }.toMap
 
   private def terminalDescRecs(terminal: Terminal, description: String): TerminalDesksAndWaitsProvider =

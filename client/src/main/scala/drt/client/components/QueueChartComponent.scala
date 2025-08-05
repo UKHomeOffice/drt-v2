@@ -15,7 +15,8 @@ object QueueChartComponent {
                    queueSummaries: List[(Long, Map[Queue, CrunchMinute])],
                    sla: Int,
                    interval: Int,
-                   deskType: DeskType)
+                   deskType: DeskType,
+                  )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("QueueChart")
     .render_P { props =>
@@ -25,7 +26,11 @@ object QueueChartComponent {
       val paxInQueueSet: ChartJsDataSet = ChartJsDataSet.line(
         label = "Pax in queue",
         data = props.queueSummaries.map {
-          case (_, queuesAndMinutes) => queuesAndMinutes(props.queue).maybePaxInQueue.getOrElse(0).toDouble
+          case (_, queuesAndMinutes) =>
+            if (props.deskType == Ideal)
+              queuesAndMinutes(props.queue).maybePaxInQueue.getOrElse(0).toDouble
+            else
+              queuesAndMinutes(props.queue).maybeDeployedPaxInQueue.getOrElse(0).toDouble
         },
         colour = RGBA.blue1,
         backgroundColour = Option(RGBA.blue1.copy(alpha = 0.2)),
