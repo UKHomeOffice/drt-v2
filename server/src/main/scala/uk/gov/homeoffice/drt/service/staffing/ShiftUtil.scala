@@ -1,9 +1,8 @@
 package uk.gov.homeoffice.drt.service.staffing
 
 import drt.shared.Shift
-import org.joda.time.{DateTimeZone, LocalDateTime}
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.LocalDate
 import java.sql.{Date, Timestamp}
 import java.time.{LocalDate => JavaLocalDate}
 
@@ -42,7 +41,7 @@ object ShiftUtil {
   }
 
   def convertToSqlDate(localDate: LocalDate): java.sql.Date = {
-    val javaLocalDate = JavaLocalDate.of(localDate.year, localDate.month , localDate.day)
+    val javaLocalDate = JavaLocalDate.of(localDate.year, localDate.month, localDate.day)
     Date.valueOf(javaLocalDate)
   }
 
@@ -62,15 +61,8 @@ object ShiftUtil {
     LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt)
   }
 
-  def dateFromString(date: String): Date = {
-    java.sql.Date.valueOf(date)
-  }
-
-  def safeSDate(year: Int, month: Int, day: Int, hour: Int, minute: Int, tz: DateTimeZone): SDateLike = {
-    val ldt = new LocalDateTime(year, month, day, hour, minute)
-    val dt = if (!tz.isLocalDateTimeGap(ldt)) ldt.toDateTime(tz)
-    else ldt.plusHours(1).toDateTime(tz) // shift forward if in gap
-    SDate(dt)
+  def localDateFromString(date: Option[String]): LocalDate = {
+    date.map(localDateFromString).getOrElse(currentLocalDate)
   }
 
 }

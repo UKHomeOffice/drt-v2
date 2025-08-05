@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, safeSDate}
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.convertToSqlDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -26,13 +26,13 @@ object StaffingUtil {
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
       val currentDate: SDateLike = startDate.addDays(day)
-      val startMillis = safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
+      val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
       val isShiftEndAfterMidNight = endHH < startHH || (endHH == startHH && endMM < startMM)
       val endMillis = if (isShiftEndAfterMidNight) {
-        safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
+        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
           europeLondonTimeZone).addDays(1).millisSinceEpoch
       } else {
-        safeSDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
+        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
           europeLondonTimeZone).millisSinceEpoch
       }
 

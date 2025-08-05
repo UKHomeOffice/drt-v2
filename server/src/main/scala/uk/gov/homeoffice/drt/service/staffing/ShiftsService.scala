@@ -3,11 +3,9 @@ package uk.gov.homeoffice.drt.service.staffing
 import drt.shared.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, fromStaffShiftRow, toStaffShiftRow}
+import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, fromStaffShiftRow, localDateFromString, toStaffShiftRow}
 import uk.gov.homeoffice.drt.time.LocalDate
-
 import java.sql.Timestamp
-import java.time.{LocalDate => JavaLocalDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ShiftsService {
@@ -46,32 +44,13 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map(_.map(fromStaffShiftRow))
 
   override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = getShifts(port, terminal).map { shifts =>
-    val localDate: JavaLocalDate = localDateFromString(date)
+    val localDate: LocalDate = localDateFromString(date)
     shifts.filter { shift =>
-      shift.endDate match {
-        case None => true
-        case Some(endDate) =>
-          val javaEndDate = java.time.LocalDate.of(endDate.year, endDate.month, endDate.day)
-          javaEndDate.isAfter(localDate)
-      }
-    }.filter { shift =>
-      shift.startDate match {
-        case uk.gov.homeoffice.drt.time.LocalDate(year, month, day) =>
-          val javaStartDate = java.time.LocalDate.of(year, month, day)
-          !javaStartDate.isAfter(localDate)
-        case _ => false
-      }
+      shift.startDate.compare(localDate) <= 0 &&
+        (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDate) >= 0))
     }
   }
 
-  private def localDateFromString(date: Option[String]) = {
-    val today = java.time.LocalDate.now()
-    val localDate = date.map { d =>
-      val parts = d.split("-")
-      java.time.LocalDate.of(parts(0).toInt, parts(1).toInt, parts(2).toInt)
-    }.getOrElse(today)
-    localDate
-  }
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = staffShiftsDao.updateStaffShift(
     toStaffShiftRow(previousShift, new Timestamp(System.currentTimeMillis())),
