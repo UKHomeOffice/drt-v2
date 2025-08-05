@@ -44,7 +44,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
       "Then I should get 5 for every hour - the available staff" >> {
         val terminalDesks = 10
         val availableStaff = List.fill(24)(5)
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), Map(), Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => Map(), Map())
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(5, 24)
 
@@ -58,7 +58,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
       "Then I should get 10 for every hour - the terminal desks" >> {
         val terminalDesks = 10
         val availableStaff = List.fill(24)(20)
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), Map(), Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => Map(), Map())
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(10, 24)
 
