@@ -93,8 +93,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
   private val enableShiftPlanningChanges: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
-  private val optimiserDeskRecs: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)
-  private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = !params.disableDeploymentFairXmax)
+
+  private val useFairXmaxForDeskRecs: Boolean = true
+  private val useFairXmaxForDeployment: Boolean = !params.disableDeploymentFairXmax
+  private val optimiserDeskRecs: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeskRecs)
+  private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeployment)
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
     (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))

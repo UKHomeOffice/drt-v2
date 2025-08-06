@@ -2,9 +2,7 @@ package services
 
 import org.specs2.mutable.Specification
 import services.workload.QueuePassenger
-import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
-
-import scala.util.Try
+import uk.gov.homeoffice.drt.egates.Desk
 
 
 class OptimiserWithFlexibleProcessorsSpec extends Specification {
@@ -270,6 +268,26 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
         "I should see 1 for the first 30 minutes, followed by 5 for the last 90 (to keep the wait time from creeping up)" >> {
           processed.get.recommendedDesks === IndexedSeq.fill(30)(1) ++ IndexedSeq.fill(90)(5)
         }
+      }
+    }
+  }
+
+  "fairXmax" >> {
+    val minDesks = IndexedSeq.fill(120)(0)
+    val maxDesks = IndexedSeq.fill(60)(5) ++ IndexedSeq.fill(60)(0)
+    val passengers = IndexedSeq.fill(45)(Iterable(5d)) ++ IndexedSeq.fill(75)(Iterable.empty)
+    "When I ask for the recommended desks using fair xmax" >> {
+      val provider1then10 = WorkloadProcessorsProvider(IndexedSeq.fill(120)(WorkloadProcessors(Seq.fill(10)(Desk))))
+      val processed = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)(passengers, minDesks, maxDesks, OptimiserConfig(25, provider1then10))
+      "I should see desks being tapered off before dropping to 0" >> {
+        processed.get.recommendedDesks === IndexedSeq.fill(45)(4) ++ IndexedSeq.fill(15)(3) ++ IndexedSeq.fill(60)(0)
+      }
+    }
+    "When I ask for the recommended desks without using fair xmax" >> {
+      val provider1then10 = WorkloadProcessorsProvider(IndexedSeq.fill(120)(WorkloadProcessors(Seq.fill(10)(Desk))))
+      val processed = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = false)(passengers, minDesks, maxDesks, OptimiserConfig(25, provider1then10))
+      "I should see the full 5 desks being used until the full workload is processed" >> {
+        processed.get.recommendedDesks === IndexedSeq.fill(45)(5) ++ IndexedSeq.fill(75)(0)
       }
     }
   }
