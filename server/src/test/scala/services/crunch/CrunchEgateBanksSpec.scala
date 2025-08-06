@@ -51,7 +51,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
         airportConfig = airportConfig,
-        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax
+        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)
       ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
