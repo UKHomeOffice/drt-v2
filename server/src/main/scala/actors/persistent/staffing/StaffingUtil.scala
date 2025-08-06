@@ -105,13 +105,13 @@ object StaffingUtil {
 
   private def getUpdatedNewShiftsAssignments(newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
                                              existingAllAssignments: Map[TM, StaffAssignmentLike],
-                                             overriddingShiftAssingments: Map[TM, StaffAssignment],
+                                             overridingShiftAssignments: Map[TM, StaffAssignment],
                                              previousShift: Shift,
                                              newShift: Shift,
                                              isTimeChange: Boolean
                                             ): Seq[StaffAssignmentLike] = {
     def findOverridingShift(assignment: StaffAssignment): Int =
-      overriddingShiftAssingments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff).getOrElse(0)
+      overridingShiftAssignments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff).getOrElse(0)
 
     newShiftSplitDailyAssignments.map {
       case (tm, assignment) =>
@@ -135,12 +135,12 @@ object StaffingUtil {
     }.toSeq.sortBy(_.start)
   }
 
-  private def timeChangeMerge(overriddingShiftAssingments: Map[TM, StaffAssignment],
+  private def timeChangeMerge(overridingShiftAssignments: Map[TM, StaffAssignment],
                               newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
                               updatedNewShiftsAssignments: Seq[StaffAssignmentLike],
                               existingAllAssignments: Map[TM, StaffAssignmentLike]
                              ): Seq[StaffAssignmentLike] = {
-    val timeChangedOverridingShiftAssignments: Seq[StaffAssignmentLike] = overriddingShiftAssingments.map {
+    val timeChangedOverridingShiftAssignments: Seq[StaffAssignmentLike] = overridingShiftAssignments.map {
       case (tm, overridingAssignment) =>
         newShiftSplitDailyAssignments.get(tm) match {
           case Some(newShiftAssignment) =>
