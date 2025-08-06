@@ -1,7 +1,8 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{Shift, ShiftAssignments, StaffAssignmentLike}
+import drt.shared.{ShiftAssignments, StaffAssignmentLike}
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 

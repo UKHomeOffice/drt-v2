@@ -1,11 +1,9 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import drt.shared.Shift
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
-import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.{convertToSqlDate, fromStaffShiftRow, localDateFromString, toStaffShiftRow}
 import uk.gov.homeoffice.drt.time.LocalDate
-import java.sql.Timestamp
+import uk.gov.homeoffice.drt.util.ShiftUtil.{convertToSqlDate, fromStaffShiftRow, localDateFromString, toStaffShiftRow}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ShiftsService {
@@ -21,7 +19,7 @@ trait ShiftsService {
 
   def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
 
-  def getOverlappingStaffShifts(port: String, terminal: String, shift: StaffShiftRow): Future[Seq[StaffShiftRow]]
+  def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]]
 
   def deleteShifts(): Future[Int]
 }
@@ -29,8 +27,7 @@ trait ShiftsService {
 case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends ShiftsService {
 
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
-    val shiftRows = shifts.map(shift => toStaffShiftRow(shift, new Timestamp(System.currentTimeMillis())))
-    Future.sequence(shiftRows.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
+    Future.sequence(shifts.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
   }
 
   override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = staffShiftsDao.deleteStaffShift(port, terminal, shiftName)
@@ -38,10 +35,10 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
 
   override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] =
-    staffShiftsDao.getStaffShiftByPortAndTerminal(port, terminal, shiftName, convertToSqlDate(startDate)).map(_.map(fromStaffShiftRow))
+    staffShiftsDao.getStaffShift(port, terminal, shiftName, startDate)
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
-    staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map(_.map(fromStaffShiftRow))
+    staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal)
 
   override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = getShifts(port, terminal).map { shifts =>
     val localDate: LocalDate = localDateFromString(date)
@@ -51,11 +48,8 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
     }
   }
 
+  override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = staffShiftsDao.updateStaffShift(previousShift, shift)
 
-  override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = staffShiftsDao.updateStaffShift(
-    toStaffShiftRow(previousShift, new Timestamp(System.currentTimeMillis())),
-    toStaffShiftRow(shift, new Timestamp(System.currentTimeMillis())))
-
-  override def getOverlappingStaffShifts(port: String, terminal: String, shift: StaffShiftRow): Future[Seq[StaffShiftRow]] =
+  override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] =
     staffShiftsDao.getOverlappingStaffShifts(port, terminal, shift)
 }

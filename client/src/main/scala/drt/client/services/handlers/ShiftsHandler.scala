@@ -6,9 +6,10 @@ import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions.SetAllShiftAssignments
 import drt.client.logger.log
 import drt.client.services.DrtApi
-import drt.shared.{Shift, ShiftAssignments}
+import drt.shared.ShiftAssignments
+import uk.gov.homeoffice.drt.Shift
 import upickle.default._
-import drt.shared.Shift._
+
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 

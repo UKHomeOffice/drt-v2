@@ -1,11 +1,10 @@
 package controllers
 
-import drt.shared.Shift
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import drt.shared.Shift._
+import uk.gov.homeoffice.drt.Shift
 class ShiftsParsingSpec extends AnyFlatSpec with Matchers {
 
   "upickle" should "parse JSON into Seq[Shift] correctly" in {

@@ -1,13 +1,11 @@
 package actors.persistent.staffing
 
-import drt.shared.{Shift, ShiftAssignments, StaffAssignment}
+import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
-import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
-import java.sql.Timestamp
 
 class StaffingUtilSpec extends Specification {
 
@@ -80,18 +78,18 @@ class StaffingUtilSpec extends Specification {
       )
 
       val overridingShift = Seq(
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Override Shift",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "10:00",
           endTime = "14:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 2, // Override adds 2 staff
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         )
       )
 
@@ -145,18 +143,18 @@ class StaffingUtilSpec extends Specification {
       )
 
       val overridingShift = Seq(
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Override Shift",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "10:00",
           endTime = "14:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 2,
           createdBy = Some("admin"),
           frequency = None,
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         )
       )
 
@@ -211,44 +209,44 @@ class StaffingUtilSpec extends Specification {
       )
 
       val overridingShifts = Seq(
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Override Shift 1",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "10:00",
           endTime = "14:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 3,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         ),
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Override Shift 2",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "12:00",
           endTime = "18:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 1,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         ),
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Override Shift 3",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "11:00",
           endTime = "15:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 2,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         )
       )
 
@@ -331,44 +329,44 @@ class StaffingUtilSpec extends Specification {
       )
 
       val overridingShifts = Seq(
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Morning Override",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "08:00",
           endTime = "12:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 2,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         ),
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Afternoon Override",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "14:00",
           endTime = "18:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 3,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         ),
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Evening Override",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "19:00",
           endTime = "23:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 1,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         )
       )
 
@@ -461,18 +459,18 @@ class StaffingUtilSpec extends Specification {
       )
 
       val overridingShift = Seq(
-        StaffShiftRow(
+        Shift(
           port = "LHR",
           terminal = "T1", // Same terminal
           shiftName = "Override Shift",
-          startDate = ShiftUtil.convertToSqlDate(baseDate),
+          startDate = baseDate,
           startTime = "10:00",
           endTime = "14:00",
-          endDate = Some(ShiftUtil.convertToSqlDate(baseDate)),
+          endDate = Some(baseDate),
           staffNumber = 3,
           frequency = None,
           createdBy = Some("admin"),
-          createdAt = new Timestamp(System.currentTimeMillis())
+          createdAt = System.currentTimeMillis()
         )
       )
 

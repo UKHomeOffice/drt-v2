@@ -1,11 +1,12 @@
 package controllers.application
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Shift, ShiftAssignments, StaffAssignment, StaffAssignmentLike}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike}
 import org.specs2.mutable.Specification
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService

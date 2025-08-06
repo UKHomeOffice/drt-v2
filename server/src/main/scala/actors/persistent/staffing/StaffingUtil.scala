@@ -2,10 +2,8 @@ package actors.persistent.staffing
 
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil.convertToSqlDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -59,7 +57,7 @@ object StaffingUtil {
       }
 
   def updateAssignmentsForShiftChange(previousShift: Shift,
-                                      overridingShift: Seq[StaffShiftRow],
+                                      overridingShift: Seq[Shift],
                                       newShift: Shift,
                                       allShifts: ShiftAssignments
                                      ): Seq[StaffAssignmentLike] = {
@@ -90,7 +88,7 @@ object StaffingUtil {
       updatedNewShiftsAssignments
   }
 
-  private def getOverridingAssignments(overridingShift: Seq[StaffShiftRow],
+  private def getOverridingAssignments(overridingShift: Seq[Shift],
                                        newShift: Shift
                                       ): Seq[StaffAssignment] = {
     overridingShift
@@ -98,9 +96,9 @@ object StaffingUtil {
         s.port == newShift.port &&
           s.terminal == newShift.terminal &&
           s.shiftName == newShift.shiftName &&
-          s.startDate == convertToSqlDate(newShift.startDate)
+          s.startDate == newShift.startDate
       )
-      .flatMap(os => generateDailyAssignments(ShiftUtil.fromStaffShiftRow(os)))
+      .flatMap(os => generateDailyAssignments(os))
   }
 
   private def getUpdatedNewShiftsAssignments(newShiftSplitDailyAssignments: Map[TM, StaffAssignment],

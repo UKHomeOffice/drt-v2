@@ -2,11 +2,12 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.DrtParameters
 import com.google.inject.Inject
-import drt.shared.{DropIn, Shift}
+import drt.shared.DropIn
 import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, StaffShiftRow, UserFeedbackRow, UserRow, UserTableLike}
@@ -159,7 +160,7 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 
 case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
   var shiftSeq = Seq.empty[Shift]
-  var shiftRowSeq = Seq.empty[StaffShiftRow]
+  var shiftRowSeq = Seq.empty[Shift]
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = {
     Future.successful(shiftSeq)
@@ -190,14 +191,14 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
     Future.successful(shift)
   }
 
-  override def getOverlappingStaffShifts(port: String, terminal: String, shift: StaffShiftRow): Future[Seq[StaffShiftRow]] = shiftRowSeq.filter(
-    s => s.port == port && s.terminal == terminal &&
-      (s.startDate.before(shift.startDate) || s.startDate.equals(shift.startDate)) &&
-      (s.endDate.isEmpty || s.endDate.get.after(shift.startDate)) &&
-      (s.startTime <= shift.endTime && s.endTime >= shift.startTime)
-  ) match {
-    case Nil => Future.successful(Seq.empty)
-    case overlappingShifts => Future.successful(overlappingShifts)
+  override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] = {
+    val overlappingShifts = shiftSeq.filter(s =>
+      s.port == port && s.terminal == terminal &&
+        (s.startDate.compare(shift.startDate) < 0 || s.startDate.compare(shift.startDate) == 0) &&
+        (s.endDate.isEmpty || s.endDate.exists(_.compare(shift.startDate) > 0) &&
+          (s.startTime <= shift.endTime && s.endTime >= shift.startTime)
+          )
+    )
+    Future.successful(overlappingShifts)
   }
-
 }

@@ -3,8 +3,8 @@ package controllers.application
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import spray.json._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.time.LocalDate
-import drt.shared.Shift
 
 class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
 

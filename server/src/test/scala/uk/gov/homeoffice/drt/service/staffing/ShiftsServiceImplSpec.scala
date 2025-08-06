@@ -6,19 +6,17 @@ import org.apache.pekko.Done
 import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.testkit.{TestKit, TestProbe}
 import org.apache.pekko.util.Timeout
-import drt.shared.{Shift, ShiftAssignments, StaffAssignment}
-import org.mockito.ArgumentMatchers.{any, contains}
+import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
-
-import java.sql.{Date, Timestamp}
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.DurationInt
 
@@ -85,8 +83,8 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
         shift.copy(startDate = LocalDate(2024, 9, 1), shiftName = "TEST3", startTime = "17:00", endTime = "23:00")
       )
 
-      when(mockDao.getStaffShiftsByPortAndTerminal(any[String], any[String]))
-        .thenReturn(Future.successful(testShifts.map(uk.gov.homeoffice.drt.service.staffing.ShiftUtil.toStaffShiftRow(_, new Timestamp(systemTime)))))
+      when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2"))
+        .thenReturn(Future.successful(testShifts))
 
       val result = Await.result(service.getActiveShifts("LHR", "T2", Some("2024-08-02")), 1.seconds)
       val expectedShift = testShifts.filter(s => s.shiftName== "TEST2").sortBy(_.startDate)

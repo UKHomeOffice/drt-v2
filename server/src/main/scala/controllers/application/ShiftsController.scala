@@ -1,14 +1,16 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import drt.shared.Shift
+import actors.persistent.staffing.StaffingUtil.updateWithShiftDefaultStaff
 import play.api.mvc._
 import spray.json._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
-import uk.gov.homeoffice.drt.service.staffing.ShiftUtil._
 import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.util.ShiftUtil.{currentLocalDate, localDateFromString}
 import upickle.default.write
+
 import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
@@ -129,7 +131,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         val shifts = shiftsFromJson(text)
         ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
           shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-            val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShiftAssignments)
+            val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
             shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
               Ok(write(s))
             }
@@ -152,8 +154,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
             ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { _ =>
               val updatedNewShift = if (previousShift.endDate.isDefined) newShift.copy(endDate = previousShift.endDate) else newShift
               shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-                ctrl.shiftsService.getOverlappingStaffShifts(updatedNewShift.port, updatedNewShift.terminal,
-                    toStaffShiftRow(updatedNewShift, new java.sql.Timestamp(System.currentTimeMillis())))
+                ctrl.shiftsService.getOverlappingStaffShifts(updatedNewShift.port, updatedNewShift.terminal, updatedNewShift)
                   .flatMap { overridingShifts =>
                     val updatedAssignments = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, updatedNewShift, allShiftAssignments)
                     shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
