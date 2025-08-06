@@ -69,6 +69,8 @@ trait DrtParameters {
   val isTestEnvironment: Boolean
 
   val enableShiftPlanningChange: Boolean
+
+  val disableDeploymentFairXmax: Boolean
 }
 
 object DrtParameters {
@@ -146,4 +148,6 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 
   override val enableShiftPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
+
+  override val disableDeploymentFairXmax: Boolean = config.get[Boolean]("feature-flags.disable-deployment-fair-xmax")
 }
