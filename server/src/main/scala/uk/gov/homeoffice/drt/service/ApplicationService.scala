@@ -94,7 +94,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
   private val enableShiftPlanningChanges: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
   private val optimiserDeskRecs: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)
-  private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = false)
+  private val nonFairXmaxPorts: Set[String] = Set("BHX")
+  private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = !nonFairXmaxPorts.contains(airportConfig.portCode.iata))
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
     (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))
