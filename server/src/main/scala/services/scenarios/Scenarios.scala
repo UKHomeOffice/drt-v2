@@ -49,7 +49,7 @@ object Scenarios {
     val portDesksAndWaitsProvider: PortDesksAndWaitsProvider =
       PortDesksAndWaitsProvider(
         simulationAirportConfig,
-        OptimiserWithFlexibleProcessors.crunchWholePax,
+        OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true),
         FlightFilter.forPortConfig(simulationAirportConfig),
         paxFeedSourceOrder,
         sla,

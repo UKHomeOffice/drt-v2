@@ -157,7 +157,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     ))
     val minutesToCrunch = 3
     val offsetMinutes = 0
-    val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax _
+    val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true) _
     val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks((_, _) => Seq.empty), FlightFilter(List()), 45, paxFeedSourceOrder)
 
     PortDesksAndWaitsProvider(

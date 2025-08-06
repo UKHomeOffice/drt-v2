@@ -93,7 +93,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
   private val enableShiftPlanningChanges: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
-  private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
+
+  private val useFairXmaxForDeskRecs: Boolean = true
+  private val useFairXmaxForDeployment: Boolean = !params.disableDeploymentFairXmax
+  private val optimiserDeskRecs: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeskRecs)
+  private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeployment)
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
     (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))
@@ -116,7 +120,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
   val portDeskRecs: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
+    PortDesksAndWaitsProvider(airportConfig, optimiserDeskRecs, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
 
   private val deploymentSlas: (LocalDate, Queue) => Future[Int] =
     (date, queue) =>
@@ -130,7 +134,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       }
 
   private val portDeployments: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
+    PortDesksAndWaitsProvider(airportConfig, optimiserDeployments, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(arrival.Terminal, 300000L)

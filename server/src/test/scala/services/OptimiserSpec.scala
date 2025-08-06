@@ -197,7 +197,7 @@ class OptimiserSpec extends Specification {
     rTimer.report("renjin crunch")
 
     val sTimer = new Timer
-    val sResult = OptimiserWithFlexibleProcessors.crunchWholePax(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, desksWorkloadsProvider(workloads.size))).get.recommendedDesks
+    val sResult = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, desksWorkloadsProvider(workloads.size))).get.recommendedDesks
     sTimer.report("scala crunch")
 
     val diffs = sResult.zip(rResult).zipWithIndex.grouped(15).map(_.head).collect {
@@ -212,7 +212,7 @@ class OptimiserSpec extends Specification {
       "I should get a failed result" >> {
         val work = List.fill(10)(Iterable(1d))
         val capacity = List.fill(15)(10)
-        val result = OptimiserWithFlexibleProcessors.crunchWholePax(work, capacity, capacity, OptimiserConfig(25, desksWorkloadsProvider(work.size)))
+        val result = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)(work, capacity, capacity, OptimiserConfig(25, desksWorkloadsProvider(work.size)))
 
         result must haveClass[Failure[Exception]]
       }
