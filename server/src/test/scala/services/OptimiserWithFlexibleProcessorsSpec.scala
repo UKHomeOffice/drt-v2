@@ -2,7 +2,9 @@ package services
 
 import org.specs2.mutable.Specification
 import services.workload.QueuePassenger
-import uk.gov.homeoffice.drt.egates.Desk
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
+
+import scala.util.Try
 
 
 class OptimiserWithFlexibleProcessorsSpec extends Specification {
