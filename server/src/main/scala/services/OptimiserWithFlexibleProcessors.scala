@@ -46,23 +46,27 @@ object OptimiserWithFlexibleProcessors {
   val targetWidth = 60
   val rollingBuffer = 120
 
-  def crunchWholePax(passengerLoads: Iterable[Iterable[Double]],
+  def crunchWholePax(useFairXmax: Boolean)
+                    (passengerLoads: Iterable[Iterable[Double]],
                      minDesks: Iterable[Int],
                      maxDesks: Iterable[Int],
-                     config: OptimiserConfig): Try[OptimizerCrunchResult] = {
+                     config: OptimiserConfig,
+                    ): Try[OptimizerCrunchResult] = {
     val processorsCount = config.processors.processorsByMinute.length
     assert(processorsCount == passengerLoads.size, s"processors by minute ($processorsCount) needs to match workload length (${passengerLoads.size})")
     val indexedWork = passengerLoads.map(_.sum).toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = if (passengerLoads.size >= 60) {
-      val fairMaxDesks = rollingFairXmax(indexedWork,
+    val bestMaxDesks = if (passengerLoads.size >= 60 && useFairXmax) {
+      val fairMaxDesks = rollingFairXmax(
+        indexedWork,
         indexedMinDesks,
         blockSize,
         (0.75 * config.sla).round.toInt,
         targetWidth,
         rollingBuffer,
-        config.processors)
+        config.processors,
+      )
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 

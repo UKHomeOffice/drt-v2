@@ -1,14 +1,13 @@
 package services.crunch.deskrecs
 
+import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
-import services.{OptimiserConfig, OptimizerCrunchResult}
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.TryCrunchWholePax
+import services.{OptimiserConfig, OptimizerCrunchResult, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{Map, NumericRange}
