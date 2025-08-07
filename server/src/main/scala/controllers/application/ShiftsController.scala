@@ -145,11 +145,11 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
-  def updateShift(): Action[AnyContent] = Action.async { request =>
+  def updateShift(previousName: String): Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
         val newShift = shiftFromJson(text)
-        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, newShift.startDate).flatMap {
+        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, previousName, newShift.startDate).flatMap {
           case Some(previousShift) =>
             ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { _ =>
               val updatedNewShift = if (previousShift.endDate.isDefined) newShift.copy(endDate = previousShift.endDate) else newShift

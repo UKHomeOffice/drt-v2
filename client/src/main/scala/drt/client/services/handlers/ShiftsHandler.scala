@@ -19,7 +19,7 @@ case class GetShift(terminal: String, shiftName: String, startDate: Option[Strin
 
 case class SaveShifts(staffShifts: Seq[Shift])
 
-case class UpdateShift(shift: Option[Shift])
+case class UpdateShift(shift: Option[Shift], shiftName: String)
 
 case class RemoveShift(terminal: String, shiftName: String)
 
@@ -82,10 +82,10 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         })
       updated(Pot.empty, apiCallEffect)
 
-    case UpdateShift(shift) =>
+    case UpdateShift(shift, shiftName) =>
       shift match {
         case Some(s) =>
-          val apiCallEffect = Effect(DrtApi.post("shifts/update", write(s))
+          val apiCallEffect = Effect(DrtApi.post(s"shifts/update/$shiftName", write(s))
             .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
             .recoverWith {
               case t =>
