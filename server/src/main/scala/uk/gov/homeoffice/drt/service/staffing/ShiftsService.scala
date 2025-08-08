@@ -35,7 +35,7 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
 
   override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] =
-    staffShiftsDao.getStaffShift(port, terminal, shiftName, startDate)
+    staffShiftsDao.searchStaffShift(port, terminal, shiftName, startDate)
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal)

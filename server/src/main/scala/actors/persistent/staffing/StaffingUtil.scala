@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 object StaffingUtil {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -82,7 +82,9 @@ object StaffingUtil {
         overridingShiftAssignments,
         newShiftSplitDailyAssignments,
         updatedNewShiftsAssignments,
-        existingAllAssignments
+        existingAllAssignments,
+        previousShift,
+        newShift
       )
     else
       updatedNewShiftsAssignments
@@ -126,17 +128,25 @@ object StaffingUtil {
                 )
             )
               assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
-            else
+            else if (existing.numberOfStaff != previousShift.staffNumber)
               existing
+            else
+              assignment
           case None => assignment
         }
     }.toSeq.sortBy(_.start)
   }
 
+  private def getMillisSinceEpoch(startDate: LocalDate): Long = {
+    SDate(startDate.year, startDate.month, startDate.day, 0, 0, europeLondonTimeZone).millisSinceEpoch
+  }
+
   private def timeChangeMerge(overridingShiftAssignments: Map[TM, StaffAssignment],
                               newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
                               updatedNewShiftsAssignments: Seq[StaffAssignmentLike],
-                              existingAllAssignments: Map[TM, StaffAssignmentLike]
+                              existingAllAssignments: Map[TM, StaffAssignmentLike],
+                              previousShift: Shift,
+                              newShift: Shift
                              ): Seq[StaffAssignmentLike] = {
     val timeChangedOverridingShiftAssignments: Seq[StaffAssignmentLike] = overridingShiftAssignments.map {
       case (tm, overridingAssignment) =>
@@ -151,7 +161,7 @@ object StaffingUtil {
           case None =>
             existingAllAssignments.get(tm) match {
               case Some(existingAssignment) =>
-                if (existingAssignment.numberOfStaff > overridingAssignment.numberOfStaff)
+                if ((existingAssignment.numberOfStaff == overridingAssignment.numberOfStaff + previousShift.staffNumber) && existingAssignment.start > getMillisSinceEpoch(newShift.startDate))
                   overridingAssignment
                 else
                   existingAssignment
