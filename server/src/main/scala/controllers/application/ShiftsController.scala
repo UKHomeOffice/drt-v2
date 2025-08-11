@@ -145,34 +145,48 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
+  private def updateAssignments(previousShift: Shift, updatedNewShift: Shift) = {
+    shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+      ctrl.shiftsService.getOverlappingStaffShifts(updatedNewShift.port, updatedNewShift.terminal, updatedNewShift)
+        .flatMap { overridingShifts =>
+          val updatedAssignments = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, updatedNewShift, allShiftAssignments)
+          shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+            Ok(write(s))
+          }.recoverWith {
+            case e: Exception =>
+              log.error(s"Failed to update shifts with assignments: ", e.printStackTrace())
+              Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+          }
+        }
+    }.recoverWith {
+      case e: Exception =>
+        log.error(s"Failed to update shifts: ", e.printStackTrace())
+        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+    }
+  }
+
   def updateShift(previousName: String): Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
         val newShift = shiftFromJson(text)
         ctrl.shiftsService.getShift(newShift.port, newShift.terminal, previousName, newShift.startDate).flatMap {
           case Some(previousShift) =>
-            ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { _ =>
-              val updatedNewShift = if (previousShift.endDate.isDefined) newShift.copy(endDate = previousShift.endDate) else newShift
-              shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-                ctrl.shiftsService.getOverlappingStaffShifts(updatedNewShift.port, updatedNewShift.terminal, updatedNewShift)
-                  .flatMap { overridingShifts =>
-                    val updatedAssignments = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, updatedNewShift, allShiftAssignments)
-                    shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-                      Ok(write(s))
-                    }.recoverWith {
-                      case e: Exception =>
-                        log.error(s"Failed to update shifts with assignments: ", e.printStackTrace())
-                        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
-                    }
-                  }
-              }.recoverWith {
-                case e: Exception =>
-                  log.error(s"Failed to update shifts: ", e.printStackTrace())
-                  Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
-              }
+            ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { updatedNewShift =>
+              updateAssignments(previousShift, updatedNewShift)
             }
           case None =>
-            Future.successful(BadRequest("Previous shift not found"))
+            ctrl.shiftsService.latestStaffShiftForADate(newShift.port, newShift.terminal, newShift.startDate, newShift.startTime).flatMap {
+              case Some(previousShift) =>
+                ctrl.shiftsService.createNewShiftWhileEditing(previousShift, newShift).flatMap { updatedNewShift =>
+                  updateAssignments(previousShift, updatedNewShift)
+                }
+              case None =>
+                Future.successful(BadRequest(s"Previous shift not found for update: $previousName on ${newShift.startDate}"))
+            }.recoverWith {
+              case e: Exception =>
+                log.error(s"Failed to find previous shift for update: ", e.printStackTrace())
+                Future.successful(BadRequest(s"Failed to find previous shift for update: ${e.getMessage}"))
+            }
         }
       } catch {
         case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))

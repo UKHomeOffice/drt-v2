@@ -10,13 +10,13 @@ import slickdb._
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
-import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, StaffShiftRow, UserFeedbackRow, UserRow, UserTableLike}
+import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
-import java.sql.{Date, Timestamp}
+import java.sql.Timestamp
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -182,7 +182,7 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
     Future.successful(shiftSeq.size)
   }
 
-  override def updateShift(previousShift: Shift, shift: Shift): Future[Int] = Future.successful(1)
+  override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
 
   override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 
@@ -201,4 +201,13 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
     )
     Future.successful(overlappingShifts)
   }
+
+  override def latestStaffShiftForADate(port: String,
+                                        terminal: String,
+                                        startDate: LocalDate,
+                                        startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]] =
+    Future.successful(shiftSeq.filter(s => s.port == port && s.terminal == terminal && s.startDate == startDate && s.startTime == startTime).lastOption)
+
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[Shift] =
+    Future.successful(shiftRow)
 }
