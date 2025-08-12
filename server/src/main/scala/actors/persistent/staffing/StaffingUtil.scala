@@ -118,20 +118,20 @@ object StaffingUtil {
         existingAllAssignments.get(tm) match {
           case Some(existing) =>
             val overridingStaff = findOverridingShift(assignment)
-            if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber)
+//            if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber)
               assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
-            else if (
-              isTimeChange && (
-                existing.numberOfStaff == overridingStaff ||
-                  existing.numberOfStaff == previousShift.staffNumber ||
-                  existing.numberOfStaff == 0
-                )
-            )
-              assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
-            else if (existing.numberOfStaff != previousShift.staffNumber)
-              existing
-            else
-              assignment
+//            else if (
+//              isTimeChange && (
+//                existing.numberOfStaff == overridingStaff ||
+//                  existing.numberOfStaff == previousShift.staffNumber ||
+//                  existing.numberOfStaff == 0
+//                )
+//            )
+//              assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
+////            else if (existing.numberOfStaff != previousShift.staffNumber)
+////              existing
+//            else
+//              assignment
           case None => assignment
         }
     }.toSeq.sortBy(_.start)
@@ -163,8 +163,9 @@ object StaffingUtil {
               case Some(existingAssignment) =>
                 if ((existingAssignment.numberOfStaff == overridingAssignment.numberOfStaff + previousShift.staffNumber) && existingAssignment.start > getMillisSinceEpoch(newShift.startDate))
                   overridingAssignment
-                else
-                  existingAssignment
+                else if (existingAssignment.numberOfStaff == overridingAssignment.numberOfStaff + newShift.staffNumber && existingAssignment.start > getMillisSinceEpoch(newShift.startDate))
+                  overridingAssignment
+                else existingAssignment
               case None => overridingAssignment
             }
         }

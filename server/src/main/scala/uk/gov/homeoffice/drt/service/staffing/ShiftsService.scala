@@ -58,10 +58,13 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
     staffShiftsDao.getOverlappingStaffShifts(port, terminal, shift)
 
   override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[Shift] = {
-    staffShiftsDao.isShiftAfterStartDateExists(shiftRow).flatMap {
-      case true => Future.failed(
-        new IllegalArgumentException(s"Future Shift for ${shiftRow.port} ${shiftRow.terminal} ${shiftRow.shiftName} on ${shiftRow.startDate} already exists"))
-      case false => staffShiftsDao.createNewShiftWhileEditing(previousShift, shiftRow).map { newShift =>
+    staffShiftsDao.latestShiftAfterStartDateExists(shiftRow).flatMap {
+      case Some(existingFutureShift) =>
+        staffShiftsDao.updateStaffShift(previousShift, existingFutureShift, shiftRow).map { updatedShift =>
+          fromStaffShiftRow(toStaffShiftRow(updatedShift.copy(createdAt = System.currentTimeMillis())))
+        }
+
+      case None => staffShiftsDao.createNewShiftWhileEditing(previousShift, shiftRow).map { newShift =>
         fromStaffShiftRow(toStaffShiftRow(newShift.copy(createdAt = System.currentTimeMillis())))
       }
     }
