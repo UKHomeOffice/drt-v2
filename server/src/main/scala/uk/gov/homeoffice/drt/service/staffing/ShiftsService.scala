@@ -19,7 +19,7 @@ trait ShiftsService {
 
   def updateShift(previousShift: Shift, shift: Shift): Future[Shift]
 
-  def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[Shift]
+  def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])]
 
   def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
 
@@ -57,15 +57,15 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] =
     staffShiftsDao.getOverlappingStaffShifts(port, terminal, shift)
 
-  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[Shift] = {
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] = {
     staffShiftsDao.latestShiftAfterStartDateExists(shiftRow).flatMap {
       case Some(existingFutureShift) =>
         staffShiftsDao.updateStaffShift(previousShift, existingFutureShift, shiftRow).map { updatedShift =>
-          fromStaffShiftRow(toStaffShiftRow(updatedShift.copy(createdAt = System.currentTimeMillis())))
+          (fromStaffShiftRow(toStaffShiftRow(updatedShift.copy(createdAt = System.currentTimeMillis()))), Some(existingFutureShift))
         }
 
       case None => staffShiftsDao.createNewShiftWhileEditing(previousShift, shiftRow).map { newShift =>
-        fromStaffShiftRow(toStaffShiftRow(newShift.copy(createdAt = System.currentTimeMillis())))
+        (fromStaffShiftRow(toStaffShiftRow(newShift.copy(createdAt = System.currentTimeMillis()))),None)
       }
     }
   }

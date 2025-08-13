@@ -1,6 +1,6 @@
 package actors.persistent.staffing
 
-import drt.shared.{ShiftAssignments, StaffAssignment}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -119,10 +119,113 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = Seq(existingAssignment))
 
-      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, newShift, allShifts)
-
+      val result: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, None, newShift, allShifts)
       result must not(beEmpty) and
         result.exists(a => a.numberOfStaff == 6)
+    }
+
+    "updateWithAShiftDefaultStaff should update when existing staff equals overriding + future shift staff and override future numbers" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Previous Shift",
+        startDate = baseDate,
+        startTime = "08:00",
+        endTime = "16:00",
+        endDate = Some(baseDate),
+        staffNumber = 3,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val overridingShift = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift",
+          startDate = baseDate,
+          startTime = "10:00",
+          endTime = "14:00",
+          endDate = Some(LocalDate(2024, 10, 31)),
+          staffNumber = 2, // Override adds 2 staff
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        )
+      )
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "New Shift",
+        startDate = baseDate,
+        startTime = "07:00",
+        endTime = "14:00",
+        endDate = Some(LocalDate(2024, 10, 31)),
+        staffNumber = 4,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      // Existing assignment has 5 staff (2 override + 3 previous = 5)
+      val existingAssignments = Seq(StaffAssignment(
+        name = "Previous Shift",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 30, 8, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 30, 8, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 3,
+        createdBy = Some("admin")
+      ), StaffAssignment(
+        name = "Existing Assignment",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 5, // This equals overridingStaff(2) + previousShift.staffNumber(3)
+        createdBy = Some("admin")
+      ), StaffAssignment(
+        name = "Future Shift",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 31, 8, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 31, 8, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 7,
+        createdBy = Some("admin")
+      ), StaffAssignment(
+        name = "Future Shift",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 31, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 31, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 9, // This equals overridingStaff(2) + previousShift.staffNumber(3)
+        createdBy = Some("admin")
+      ))
+
+      val futureShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Future Shift",
+        startDate = LocalDate(2024, 10, 31),
+        startTime = "08:00",
+        endTime = "14:00",
+        endDate = Some(LocalDate(2024, 10, 31)),
+        staffNumber = 7,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val allShifts = ShiftAssignments(assignments = existingAssignments)
+
+      val result: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, Option(futureShift), newShift, allShifts)
+//      result.map(
+//        a => println(s"Updated Assignment: ${a.name}, Start: ${SDate(a.start).toISOString}, End: ${SDate(a.end).toISOString}, Staff: ${a.numberOfStaff}")
+//      )
+      result must not(beEmpty)
+      result.exists(a => a.numberOfStaff == 6)
+      !result.exists(a => a.numberOfStaff == 9) // Previous + override should be replaced
+      !result.exists(a => a.numberOfStaff == 7) // Future shift should not exits
     }
 
     "updateWithAShiftDefaultStaff should preserve existing when staff doesn't match override + previous" in {
@@ -184,7 +287,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = Seq(existingAssignment))
 
-      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, None, newShift, allShifts)
 
       result must not(beEmpty) and
         // Should preserve existing assignment since 8 != (2 + 3)
@@ -302,7 +405,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, None, newShift, allShifts)
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
@@ -429,7 +532,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, None, newShift, allShifts)
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and
@@ -495,7 +598,7 @@ class StaffingUtilSpec extends Specification {
           terminal = Terminal("T1"),
           start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
           end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
-          numberOfStaff = 0, // Zero staff - should be replaced
+          numberOfStaff = 8,
           createdBy = Some("admin")
         ),
         StaffAssignment(
@@ -526,7 +629,7 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, newShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, None, newShift, allShifts)
 
       result must not(beEmpty) and
         result.forall(_.terminal.toString == "T1") and

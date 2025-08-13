@@ -145,11 +145,16 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
-  private def updateAssignments(previousShift: Shift, updatedNewShift: Shift) = {
+  private def updateAssignments(previousShift: Shift, futureExistingShift: Option[Shift], updatedNewShift: Shift) = {
     shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
       ctrl.shiftsService.getOverlappingStaffShifts(updatedNewShift.port, updatedNewShift.terminal, updatedNewShift)
         .flatMap { overridingShifts =>
-          val updatedAssignments = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, updatedNewShift, allShiftAssignments)
+          val updatedAssignments = StaffingUtil.updateAssignmentsForShiftChange(
+            previousShift,
+            overridingShifts,
+            futureExistingShift,
+            updatedNewShift,
+            allShiftAssignments)
           shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
             Ok(write(s))
           }.recoverWith {
@@ -172,13 +177,13 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         ctrl.shiftsService.getShift(newShift.port, newShift.terminal, previousName, newShift.startDate).flatMap {
           case Some(previousShift) =>
             ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { updatedNewShift =>
-              updateAssignments(previousShift, updatedNewShift)
+              updateAssignments(previousShift, None, updatedNewShift)
             }
           case None =>
             ctrl.shiftsService.latestStaffShiftForADate(newShift.port, newShift.terminal, newShift.startDate, newShift.startTime).flatMap {
               case Some(previousShift) =>
-                ctrl.shiftsService.createNewShiftWhileEditing(previousShift, newShift).flatMap { updatedNewShift =>
-                  updateAssignments(previousShift, updatedNewShift)
+                ctrl.shiftsService.createNewShiftWhileEditing(previousShift, newShift).flatMap { case (updatedNewShift, futureExistingShift) =>
+                  updateAssignments(previousShift, futureExistingShift, updatedNewShift)
                 }
               case None =>
                 Future.successful(BadRequest(s"Previous shift not found for update: $previousName on ${newShift.startDate}"))

@@ -208,6 +208,6 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
                                         startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]] =
     Future.successful(shiftSeq.filter(s => s.port == port && s.terminal == terminal && s.startDate == startDate && s.startTime == startTime).lastOption)
 
-  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[Shift] =
-    Future.successful(shiftRow)
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] =
+    Future.successful((shiftRow, None))
 }
