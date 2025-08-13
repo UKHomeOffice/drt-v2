@@ -182,7 +182,7 @@ object Settings {
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
 
-    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
+    "org.webjars" % "font-awesome" % "7.0.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
     "org.webjars" %% "webjars-play" % "3.0.2",
     "org.webjars" % "webjars-locator" % "0.52",
