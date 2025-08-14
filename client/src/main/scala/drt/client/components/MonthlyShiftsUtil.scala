@@ -1,7 +1,8 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{Shift, ShiftAssignments, StaffAssignmentLike}
+import drt.shared.{ShiftAssignments, StaffAssignmentLike}
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -143,8 +144,8 @@ object MonthlyShiftsUtil {
           row = if (shiftPeriod.isShiftEndAfterMidnight) index + shiftPeriod.addToIndex else index,
           name = assignment.name,
           staffNumber = assignment.numberOfStaff,
-          startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
-          endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
+          startTime = ShiftDateTime(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+          endTime = ShiftDateTime(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
         )
       case None =>
         StaffTableEntry(
@@ -152,8 +153,8 @@ object MonthlyShiftsUtil {
           row = if (shiftPeriod.isShiftEndAfterMidnight) index + shiftPeriod.addToIndex else index,
           name = shift.shiftName,
           staffNumber = if (shiftPeriod.isFirstDayForShiftEndAfterMidnight) 0 else shift.staffNumber,
-          startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
-          endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
+          startTime = ShiftDateTime(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+          endTime = ShiftDateTime(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
         )
     }
   }
@@ -176,25 +177,27 @@ object MonthlyShiftsUtil {
       )
       ShiftSummaryStaffing(
         index = index,
-        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime),
+        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime ,
+          startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year)
+        ),
         staffTableEntries = tableEntries
       )
     }
   }
 
   def updateChangeAssignment(previousChange: Seq[StaffTableEntry], newChange: Seq[StaffTableEntry]): Seq[StaffTableEntry] = {
-    val previousChangeMap = previousChange.map(a => (ShiftDate.toString(a.startTime)) -> a).toMap
-    val newChangeMap = newChange.map(a => (ShiftDate.toString(a.startTime)) -> a).toMap
+    val previousChangeMap = previousChange.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
+    val newChangeMap = newChange.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
     val mergedMap = previousChangeMap ++ newChangeMap
     mergedMap.values.toSeq
   }
 
   def updateAssignments(shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry], slotMinutes: Int): Seq[ShiftSummaryStaffing] = {
     val changedAssignmentsWithSlotMap: Seq[StaffTableEntry] = changedAssignments.flatMap(a => StaffTableEntry.splitIntoSlots(a, slotMinutes))
-    val changedAssignmentsMap: Map[String, StaffTableEntry] = changedAssignmentsWithSlotMap.map(a => (ShiftDate.toString(a.startTime)) -> a).toMap
+    val changedAssignmentsMap: Map[String, StaffTableEntry] = changedAssignmentsWithSlotMap.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
     shifts.map { shift: ShiftSummaryStaffing =>
       val updatedAssignments = shift.staffTableEntries.map { assignment =>
-        changedAssignmentsMap.getOrElse(ShiftDate.toString(assignment.startTime), assignment)
+        changedAssignmentsMap.getOrElse(ShiftDateTime.toString(assignment.startTime), assignment)
       }
       ShiftSummaryStaffing(shift.index, shift.shiftSummary, updatedAssignments.toSeq)
     }

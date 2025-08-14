@@ -2,18 +2,19 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.DrtParameters
 import com.google.inject.Inject
-import drt.shared.{DropIn, Shift}
+import drt.shared.DropIn
 import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.ShiftsService
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.sql.Timestamp
 import scala.concurrent.duration.FiniteDuration
@@ -38,7 +39,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None , None , None)))
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None, None, None, None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
@@ -158,12 +159,8 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 }
 
 case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
- var shiftSeq = Seq.empty[Shift]
-
-  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = {
-    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
-    Future.successful(shift)
-  }
+  var shiftSeq = Seq.empty[Shift]
+  var shiftRowSeq = Seq.empty[Shift]
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = {
     Future.successful(shiftSeq)
@@ -184,5 +181,33 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
     shiftSeq = Seq.empty
     Future.successful(shiftSeq.size)
   }
-}
 
+  override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
+
+  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+
+  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
+    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
+    Future.successful(shift)
+  }
+
+  override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] = {
+    val overlappingShifts = shiftSeq.filter(s =>
+      s.port == port && s.terminal == terminal &&
+        (s.startDate.compare(shift.startDate) < 0 || s.startDate.compare(shift.startDate) == 0) &&
+        (s.endDate.isEmpty || s.endDate.exists(_.compare(shift.startDate) > 0) &&
+          (s.startTime <= shift.endTime && s.endTime >= shift.startTime)
+          )
+    )
+    Future.successful(overlappingShifts)
+  }
+
+  override def latestStaffShiftForADate(port: String,
+                                        terminal: String,
+                                        startDate: LocalDate,
+                                        startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]] =
+    Future.successful(shiftSeq.filter(s => s.port == port && s.terminal == terminal && s.startDate == startDate && s.startTime == startTime).lastOption)
+
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] =
+    Future.successful((shiftRow, None))
+}

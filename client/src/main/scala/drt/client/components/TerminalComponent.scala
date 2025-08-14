@@ -22,6 +22,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
@@ -163,7 +164,9 @@ object TerminalComponent {
                       val terminal = props.terminalPageTab.terminal
                       val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
                       val queues = terminalModel.airportConfigPot.map { ac =>
-                        QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal).filterNot(_ == Transfer).toList
+                        QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal)
+                          .filterNot(_ == Transfer)
+                          .toList
                       }
                       val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, q)))
                       val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, q)))
@@ -247,8 +250,16 @@ object TerminalComponent {
                           airportConfig))
                       })
 
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "editShifts" =>
+                      <.div(EditShiftsComponent(props.terminalPageTab.terminal,
+                        props.terminalPageTab.portCodeStr,
+                        terminalModel.shiftsPot,
+                        props.terminalPageTab.queryParams("shiftName"),
+                        props.terminalPageTab.queryParams.get("date"),
+                        props.router))
+
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
-                      <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
+                      <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, emptyShifts))
@@ -278,8 +289,7 @@ object TerminalComponent {
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
     .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr,
-        p.props.terminalPageTab.terminal.toString))))
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString, p.props.terminalPageTab.queryParams.get("date")))))
     .build
 
   private def terminalTabs(props: Props,

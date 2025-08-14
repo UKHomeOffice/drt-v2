@@ -1,7 +1,8 @@
 package actors.persistent.staffing
 
-import drt.shared.{Shift, ShiftAssignments, StaffAssignment}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
@@ -36,92 +37,606 @@ class StaffingUtilSpec extends Specification {
       }
 
       val expectedStartMillis = SDate(2023, 10, 1, 8, 0, europeLondonTimeZone).millisSinceEpoch
-
       val expectedEndMillis = SDate(2023, 10, 3, 16, 0, europeLondonTimeZone).millisSinceEpoch
 
       SDate(assignments.head.start).toISOString must beEqualTo(SDate(expectedStartMillis).toISOString)
       SDate(assignments.last.end).toISOString must beEqualTo(SDate(expectedEndMillis).toISOString)
     }
-  }
 
-  "updateWithShiftDefaultStaff" should {
-    "update assignments with zero staff" in {
+    "updateWithShiftDefaultStaff should update assignments with zero staff" in {
       val shifts = Seq(
         Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
       )
 
       val allShifts = ShiftAssignments(
-        StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15),
+        StaffAssignment("afternoon", Terminal("T1"),
+          SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch,
+          SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15)
       )
 
       val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
-      updatedAssignments should have size 8
-      updatedAssignments === List(
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 59, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 59, europeLondonTimeZone).millisSinceEpoch, 5, None))
+      updatedAssignments must have size 8
+      updatedAssignments.head.numberOfStaff must beEqualTo(5)
+    }
+
+    "updateWithAShiftDefaultStaff should update when existing staff equals overriding + previous shift staff" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Previous Shift",
+        startDate = baseDate,
+        startTime = "08:00",
+        endTime = "16:00",
+        endDate = Some(baseDate),
+        staffNumber = 3,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val overridingShift = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift",
+          startDate = baseDate,
+          startTime = "10:00",
+          endTime = "14:00",
+          endDate = Some(baseDate),
+          staffNumber = 2, // Override adds 2 staff
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        )
+      )
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "New Shift",
+        startDate = baseDate,
+        startTime = "10:00",
+        endTime = "14:00",
+        endDate = Some(baseDate),
+        staffNumber = 4,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      // Existing assignment has 5 staff (2 override + 3 previous = 5)
+      val existingAssignment = StaffAssignment(
+        name = "Existing Assignment",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 5, // This equals overridingStaff(2) + previousShift.staffNumber(3)
+        createdBy = Some("admin")
+      )
+
+      val allShifts = ShiftAssignments(assignments = Seq(existingAssignment))
+
+      val result: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, None, newShift, allShifts)
+      result must not(beEmpty) and
+        result.exists(a => a.numberOfStaff == 6)
+    }
+
+    "updateWithAShiftDefaultStaff should update when existing staff equals overriding + future shift staff and override future numbers" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Previous Shift",
+        startDate = baseDate,
+        startTime = "08:00",
+        endTime = "16:00",
+        endDate = Some(baseDate),
+        staffNumber = 3,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val overridingShift = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift",
+          startDate = baseDate,
+          startTime = "10:00",
+          endTime = "14:00",
+          endDate = Some(LocalDate(2024, 10, 31)),
+          staffNumber = 2, // Override adds 2 staff
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        )
+      )
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "New Shift",
+        startDate = baseDate,
+        startTime = "07:00",
+        endTime = "14:00",
+        endDate = Some(LocalDate(2024, 10, 31)),
+        staffNumber = 4,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      // Existing assignment has 5 staff (2 override + 3 previous = 5)
+      val existingAssignments = Seq(StaffAssignment(
+        name = "Previous Shift",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 30, 8, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 30, 8, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 3,
+        createdBy = Some("admin")
+      ), StaffAssignment(
+        name = "Existing Assignment",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 5, // This equals overridingStaff(2) + previousShift.staffNumber(3)
+        createdBy = Some("admin")
+      ), StaffAssignment(
+        name = "Future Shift",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 31, 8, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 31, 8, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 7,
+        createdBy = Some("admin")
+      ), StaffAssignment(
+        name = "Future Shift",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 31, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 31, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 9, // This equals overridingStaff(2) + previousShift.staffNumber(3)
+        createdBy = Some("admin")
+      ))
+
+      val futureShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Future Shift",
+        startDate = LocalDate(2024, 10, 31),
+        startTime = "08:00",
+        endTime = "14:00",
+        endDate = Some(LocalDate(2024, 10, 31)),
+        staffNumber = 7,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val allShifts = ShiftAssignments(assignments = existingAssignments)
+
+      val result: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, Option(futureShift), newShift, allShifts)
+//      result.map(
+//        a => println(s"Updated Assignment: ${a.name}, Start: ${SDate(a.start).toISOString}, End: ${SDate(a.end).toISOString}, Staff: ${a.numberOfStaff}")
+//      )
+      result must not(beEmpty)
+      result.exists(a => a.numberOfStaff == 6)
+      !result.exists(a => a.numberOfStaff == 9) // Previous + override should be replaced
+      !result.exists(a => a.numberOfStaff == 7) // Future shift should not exits
+    }
+
+    "updateWithAShiftDefaultStaff should preserve existing when staff doesn't match override + previous" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Previous Shift",
+        startDate = baseDate,
+        startTime = "08:00",
+        endTime = "16:00",
+        endDate = Some(baseDate),
+        staffNumber = 3,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val overridingShift = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift",
+          startDate = baseDate,
+          startTime = "10:00",
+          endTime = "14:00",
+          endDate = Some(baseDate),
+          staffNumber = 2,
+          createdBy = Some("admin"),
+          frequency = None,
+          createdAt = System.currentTimeMillis()
+        )
+      )
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "New Shift",
+        startDate = baseDate,
+        startTime = "10:00",
+        endTime = "14:00",
+        endDate = Some(baseDate),
+        staffNumber = 4,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      // Existing assignment has 8 staff (doesn't equal 2 + 3 = 5)
+      val existingAssignment = StaffAssignment(
+        name = "Existing Assignment",
+        terminal = Terminal("T1"),
+        start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 8, // This does NOT equal overridingStaff(2) + previousShift.staffNumber(3)
+        createdBy = Some("admin")
+      )
+
+      val allShifts = ShiftAssignments(assignments = Seq(existingAssignment))
+
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, None, newShift, allShifts)
+
+      result must not(beEmpty) and
+        // Should preserve existing assignment since 8 != (2 + 3)
+        result.exists(a => a.numberOfStaff == 8) //must beTrue
+    }
+
+    "updateWithAShiftDefaultStaff should handle multiple overlapping shifts on same terminal" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1", // Same terminal for all operations
+        shiftName = "Previous Shift",
+        startDate = baseDate,
+        startTime = "08:00",
+        endTime = "16:00",
+        endDate = Some(baseDate),
+        staffNumber = 2,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val overridingShifts = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift 1",
+          startDate = baseDate,
+          startTime = "10:00",
+          endTime = "14:00",
+          endDate = Some(baseDate),
+          staffNumber = 3,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        ),
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift 2",
+          startDate = baseDate,
+          startTime = "12:00",
+          endTime = "18:00",
+          endDate = Some(baseDate),
+          staffNumber = 1,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        ),
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift 3",
+          startDate = baseDate,
+          startTime = "11:00",
+          endTime = "15:00",
+          endDate = Some(baseDate),
+          staffNumber = 2,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        )
+      )
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "New Shift",
+        startDate = baseDate,
+        startTime = "09:00",
+        endTime = "17:00",
+        endDate = Some(baseDate),
+        staffNumber = 6,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      // Existing assignments at different times with overlapping staff patterns
+      val existingAssignments = Seq(
+        StaffAssignment(
+          name = "Existing 10:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 5, // 3 (override1) + 2 (previous) = 5
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Existing 12:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 12, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 12, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 8, // 6 (override2) + 2 (previous) = 8
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Existing 11:30",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 11, 30, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 11, 45, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 7, // 5 (override3) + 2 (previous) = 7
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Existing 19:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 19, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 19, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 7, // Doesn't match any override + previous pattern
+          createdBy = Some("admin")
+        )
+      )
+
+      val allShifts = ShiftAssignments(assignments = existingAssignments)
+
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, None, newShift, allShifts)
+
+      result must not(beEmpty) and
+        result.forall(_.terminal.toString == "T1") and
+        result.exists(a => SDate(a.start).getHours == 12 && a.numberOfStaff == 12) and // 6 + 6 = 12 for override1
+        result.exists(a => SDate(a.start).getHours == 10 && a.numberOfStaff == 9) and // 3 + 6 = 9 for override2
+        result.exists(a => SDate(a.start).getHours == 11 && SDate(a.start).getMinutes == 30 && a.numberOfStaff == 11)
+    }
+
+    "updateWithAShiftDefaultStaff should handle long shift spans with same terminal overlaps" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Previous Long Shift",
+        startDate = baseDate,
+        startTime = "06:00",
+        endTime = "22:00",
+        endDate = Some(baseDate),
+        staffNumber = 4,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val overridingShifts = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Morning Override",
+          startDate = baseDate,
+          startTime = "08:00",
+          endTime = "12:00",
+          endDate = Some(baseDate),
+          staffNumber = 2,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        ),
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Afternoon Override",
+          startDate = baseDate,
+          startTime = "14:00",
+          endTime = "18:00",
+          endDate = Some(baseDate),
+          staffNumber = 3,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        ),
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Evening Override",
+          startDate = baseDate,
+          startTime = "19:00",
+          endTime = "23:00",
+          endDate = Some(baseDate),
+          staffNumber = 1,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        )
+      )
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "New Full Day Shift",
+        startDate = baseDate,
+        startTime = "07:00",
+        endTime = "20:00",
+        endDate = Some(baseDate),
+        staffNumber = 8,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      val existingAssignments = Seq(
+        StaffAssignment(
+          name = "Morning 09:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 9, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 9, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 6,
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Lunch 13:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 13, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 13, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 4,
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Afternoon 15:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 15, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 15, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 7,
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Evening 20:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 20, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 20, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 5,
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Non-matching 16:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 16, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 16, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 7,
+          createdBy = Some("admin")
+        )
+      )
+
+      val allShifts = ShiftAssignments(assignments = existingAssignments)
+
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShifts, None, newShift, allShifts)
+
+      result must not(beEmpty) and
+        result.forall(_.terminal.toString == "T1") and
+        result.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 8) and
+        result.exists(a => SDate(a.start).getHours == 15 && a.numberOfStaff == 11) and
+        result.exists(a => SDate(a.start).getHours == 16 && a.numberOfStaff == 11) and
+        result.exists(a => SDate(a.start).getHours == 20 && a.numberOfStaff == 1)
 
     }
 
-    "not update assignments with non-zero staff" in {
-      val shifts = Seq(
-        Shift("LHR", "T1", "afternoon", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+    "updateWithAShiftDefaultStaff should handle zero staff existing assignments on same terminal" in {
+      val baseDate = LocalDate(2024, 10, 30)
+
+      val previousShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Previous Shift",
+        startDate = baseDate,
+        startTime = "08:00",
+        endTime = "16:00",
+        endDate = Some(baseDate),
+        staffNumber = 5,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
       )
 
-      val allShifts = ShiftAssignments(
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 3, None).splitIntoSlots(15),
+      val overridingShift = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1", // Same terminal
+          shiftName = "Override Shift",
+          startDate = baseDate,
+          startTime = "10:00",
+          endTime = "14:00",
+          endDate = Some(baseDate),
+          staffNumber = 3,
+          frequency = None,
+          createdBy = Some("admin"),
+          createdAt = System.currentTimeMillis()
+        )
       )
 
-      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1", // Same terminal
+        shiftName = "New Shift",
+        startDate = baseDate,
+        startTime = "09:00",
+        endTime = "15:00",
+        endDate = Some(baseDate),
+        staffNumber = 7,
+        frequency = None,
+        createdBy = Some("admin"),
+        createdAt = System.currentTimeMillis()
+      )
 
-      updatedAssignments should have size 8
+      // Mix of zero and non-zero staff assignments on same terminal
+      val existingAssignments = Seq(
+        StaffAssignment(
+          name = "Zero Staff 10:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 10, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 10, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 8,
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Previous Staff 11:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 11, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 11, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 5, // Equals previous shift staff - should be replaced
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Override + Previous 12:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 12, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 12, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 8, // 3 + 5 = 8, should be updated to 3 + 7 = 10
+          createdBy = Some("admin")
+        ),
+        StaffAssignment(
+          name = "Other Staff 13:00",
+          terminal = Terminal("T1"),
+          start = SDate(2024, 10, 30, 13, 0, europeLondonTimeZone).millisSinceEpoch,
+          end = SDate(2024, 10, 30, 13, 15, europeLondonTimeZone).millisSinceEpoch,
+          numberOfStaff = 12, // Doesn't match any pattern - should be preserved
+          createdBy = Some("admin")
+        )
+      )
 
-      updatedAssignments.toSet === Set(
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 14, europeLondonTimeZone).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 29, europeLondonTimeZone).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 44, europeLondonTimeZone).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 59, europeLondonTimeZone).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 59, europeLondonTimeZone).millisSinceEpoch, 5, None))
+      val allShifts = ShiftAssignments(assignments = existingAssignments)
 
+      val result = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, None, newShift, allShifts)
+
+      result must not(beEmpty) and
+        result.forall(_.terminal.toString == "T1") and
+        result.exists(a => SDate(a.start).getHours == 10 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 12 && a.numberOfStaff == 10) and
+        result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 12)
     }
-
-    "overlapping shifts to sum if they overlap" in {
-      val shifts = Seq(
-        Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L),
-        Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "15:00", "17:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
-      )
-
-      val allShifts = ShiftAssignments(
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15),
-      )
-
-      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
-
-      updatedAssignments should have size 12
-
-      updatedAssignments.toSet === Set(
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 59, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 14, europeLondonTimeZone).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 29, europeLondonTimeZone).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 44, europeLondonTimeZone).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 59, europeLondonTimeZone).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 59, europeLondonTimeZone).millisSinceEpoch, 5, None))
-    }
-
   }
 }

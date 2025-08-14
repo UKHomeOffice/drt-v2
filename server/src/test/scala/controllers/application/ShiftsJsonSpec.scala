@@ -3,8 +3,8 @@ package controllers.application
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import spray.json._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.time.LocalDate
-import drt.shared.Shift
 
 class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
 
@@ -58,8 +58,28 @@ class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
         |]
         |""".stripMargin
 
-    val shifts = convertTo(jsonString)
+    val shifts = shiftsFromJson(jsonString)
     shifts should have size 1
     shifts.head.shiftName shouldBe "shift1"
+  }
+
+  "convertTo" should "handle string to Seq[StaffShift]" in {
+    val jsonString =
+      s"""
+         |{"port":"BHX",
+         |"terminal":"T1",
+         |"shiftName":"Morning",
+         |"startDate":{"year":2025,"month":7,"day":1},
+         |"startTime":"05:30",
+         |"endTime":"15:30",
+         |"endDate":null,
+         |"staffNumber":6,
+         |"frequency":null,
+         |"createdBy":null,
+         |"createdAt":1
+         |}
+         |""".stripMargin
+    val shifts = shiftFromJson(jsonString)
+    shifts.shiftName shouldBe "Morning"
   }
 }

@@ -10,7 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.{ForecastAccuracy, WalkTimes}
-import uk.gov.homeoffice.drt.ABFeature
+import uk.gov.homeoffice.drt.{ABFeature, Shift}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates

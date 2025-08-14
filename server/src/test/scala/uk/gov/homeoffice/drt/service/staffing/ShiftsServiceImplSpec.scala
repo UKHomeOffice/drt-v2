@@ -7,14 +7,17 @@ import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.testkit.{TestKit, TestProbe}
 import org.apache.pekko.util.Timeout
 import drt.shared.{ShiftAssignments, StaffAssignment}
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
-
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.DurationInt
 
 
@@ -23,9 +26,23 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
   implicit val timeout: Timeout = new Timeout(1.second)
 
   def mockActor(probe: ActorRef): ActorRef = system.actorOf(Props(new MockActor(probe)))
+
   val liveProbe: TestProbe = TestProbe("live")
   val writeProbe: TestProbe = TestProbe("write")
   val pitProbe: TestProbe = TestProbe("pit")
+  val systemTime = System.currentTimeMillis()
+  val shift = Shift(port = "LHR",
+    terminal = "T2",
+    shiftName = "TEST1",
+    startDate = LocalDate(2024, 7, 1),
+    startTime = "09:00",
+    endTime = "15:00",
+    endDate = None,
+    staffNumber = 5,
+    frequency = None,
+    createdBy = None,
+    createdAt = systemTime)
+
 
   "A ShiftsServiceImpl" should {
     val service = LegacyShiftAssignmentsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
@@ -56,5 +73,23 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
       service.updateShiftAssignments(assignments.assignments)
       writeProbe.expectMsg(UpdateShifts(assignments.assignments))
     }
+
+    "filter active shifts by date" in {
+      val mockDao = mock[StaffShiftsDao]
+      val service = ShiftsServiceImpl(mockDao)
+      val testShifts: Seq[Shift] = Seq(
+        shift.copy(startDate = LocalDate(2024, 7, 1), endDate = Option(LocalDate(2024, 7, 30)), shiftName = "TEST1", startTime = "09:00", endTime = "15:00"),
+        shift.copy(startDate = LocalDate(2024, 8, 1), shiftName = "TEST2", startTime = "14:00", endTime = "18:00"),
+        shift.copy(startDate = LocalDate(2024, 9, 1), shiftName = "TEST3", startTime = "17:00", endTime = "23:00")
+      )
+
+      when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2"))
+        .thenReturn(Future.successful(testShifts))
+
+      val result = Await.result(service.getActiveShifts("LHR", "T2", Some("2024-08-02")), 1.seconds)
+      val expectedShift = testShifts.filter(s => s.shiftName== "TEST2").sortBy(_.startDate)
+      result should contain theSameElementsAs expectedShift
+    }
   }
+
 }

@@ -64,8 +64,11 @@ GET           /logged-in                                                        
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
-GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
-GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
+POST          /shifts/update/:previousName                                            controllers.application.ShiftsController.updateShift(previousName: String)
+GET           /shifts/:terminal/:date                                                 controllers.application.ShiftsController.getActiveShiftsForDate(terminal: String, date: String)
+GET           /shifts/:terminal                                                       controllers.application.ShiftsController.getActiveShifts(terminal: String)
+GET           /shifts/:terminal/:shiftName/:startDate                                 controllers.application.ShiftsController.getAShift(terminal: String, shiftName: String, startDate: String)
+GET           /shifts/:terminal/:shiftName                                            controllers.application.ShiftsController.getShift(terminal: String, shiftName: String)
 POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveShiftAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllShiftAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftAssignmentsController.getShiftAssignmentsForDate(localDate: String)

@@ -6,46 +6,64 @@ import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions.SetAllShiftAssignments
 import drt.client.logger.log
 import drt.client.services.DrtApi
-import drt.shared.{Shift, ShiftAssignments}
-import uk.gov.homeoffice.drt.time.LocalDate
+import drt.shared.ShiftAssignments
+import uk.gov.homeoffice.drt.Shift
+import upickle.default._
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class GetShifts(port: String, terminal: String)
+case class GetShifts(terminal: String, viewDate: Option[String] = None)
 
-case class GetShift(port: String, terminal: String, shiftName: String)
+case class GetShift(terminal: String, shiftName: String, startDate: Option[String])
 
 case class SaveShifts(staffShifts: Seq[Shift])
 
-case class RemoveShift(port: String, terminal: String, shiftName: String)
+case class UpdateShift(shift: Option[Shift], shiftName: String)
+
+case class RemoveShift(terminal: String, shiftName: String)
 
 case class SetShifts(staffShifts: Seq[Shift])
 
 
 class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActionHandler(modelRW) {
 
-  import upickle.default.{macroRW, ReadWriter => RW, _}
-
-  implicit val localDateRW: RW[LocalDate] = macroRW
-  implicit val staffShiftRW: RW[Shift] = macroRW
-
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetShifts(port, terminal) =>
-      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal")
-        .map { r =>
-          val shifts = read[Seq[Shift]](r.responseText)
-          SetShifts(shifts)
+    case GetShifts(terminal, dateOption) =>
+      val url = dateOption match {
+        case Some(date) =>
+          s"shifts/$terminal/$date"
+        case None =>
+          s"shifts/$terminal"
+      }
+      val apiCallEffect = Effect(DrtApi.get(url).map { r =>
+        log.info(msg = s"Received shifts for $terminal")
+        val arr = ujson.read(r.responseText).arr
+        arr.zipWithIndex.foreach { case (el, idx) =>
+          try {
+            read[Shift](el)
+          } catch {
+            case e: Exception =>
+              log.error(s"Failed to parse shift at index $idx: ${el.render()}. Error: ${e.getMessage}")
+          }
         }
-        .recoverWith {
-          case t =>
-            log.error(msg = s"Failed to get shifts: ${t.getMessage}")
-            Future(NoAction)
-        })
+        val shifts = read[Seq[Shift]](r.responseText)
+        SetShifts(shifts)
+      }.recoverWith {
+        case t =>
+          log.error(msg = s"Failed to get shifts: ${t.getMessage}")
+          Future(NoAction)
+      })
       updated(Pot.empty, apiCallEffect)
 
-    case GetShift(port, terminal, shiftName) =>
-      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal/$shiftName")
+    case GetShift(terminal, shiftName, startDateOption) =>
+      val url = startDateOption match {
+        case Some(date) =>
+          s"shifts/$terminal/$shiftName/$date"
+        case None =>
+          s"shifts/$terminal/$shiftName"
+      }
+      val apiCallEffect = Effect(DrtApi.get(url)
         .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
         .recoverWith {
           case t =>
@@ -64,8 +82,23 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         })
       updated(Pot.empty, apiCallEffect)
 
-    case RemoveShift(port, terminal, shiftName) =>
-      val apiCallEffect = Effect(DrtApi.delete(s"shifts/remove/$port/$terminal/$shiftName")
+    case UpdateShift(shift, shiftName) =>
+      shift match {
+        case Some(s) =>
+          val apiCallEffect = Effect(DrtApi.post(s"shifts/update/$shiftName", write(s))
+            .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
+            .recoverWith {
+              case t =>
+                log.error(msg = s"Failed to update shift: ${t.getMessage}")
+                Future(NoAction)
+            })
+          updated(Pot.empty, apiCallEffect)
+        case None =>
+          noChange
+      }
+
+    case RemoveShift(terminal, shiftName) =>
+      val apiCallEffect = Effect(DrtApi.delete(s"shifts/remove/$terminal/$shiftName")
         .map(_ => NoAction)
         .recoverWith {
           case t =>
