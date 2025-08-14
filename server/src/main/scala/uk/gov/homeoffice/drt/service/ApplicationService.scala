@@ -2,9 +2,9 @@ package uk.gov.homeoffice.drt.service
 
 import actors.CrunchManagerActor._
 import actors._
-import actors.daily.{PassengersActor, RequestAndTerminate}
+import actors.daily.PassengersActor
 import actors.persistent._
-import actors.persistent.arrivals.AclForecastArrivalsActor
+import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
@@ -25,7 +25,6 @@ import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
 import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableLiveSplits, RunnableMergedArrivals}
-import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
@@ -94,7 +93,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
   private val enableShiftPlanningChanges: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
-  private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
+
+  private val useFairXmaxForDeskRecs: Boolean = true
+  private val useFairXmaxForDeployment: Boolean = !params.disableDeploymentFairXmax
+  private val optimiserDeskRecs: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeskRecs)
+  private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeployment)
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
     (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))
@@ -111,13 +114,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
     QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)
   val queuesForDateRangeAndTerminal: (LocalDate, LocalDate, Terminal) => Seq[Queue] =
     QueueConfig.queuesForDateRangeAndTerminal(airportConfig.queuesByTerminal)
-  val validTerminalsForDate: LocalDate => Seq[Terminal] =
+  private val validTerminalsForDate: LocalDate => Seq[Terminal] =
     QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
 
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
   val portDeskRecs: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
+    PortDesksAndWaitsProvider(airportConfig, optimiserDeskRecs, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
 
   private val deploymentSlas: (LocalDate, Queue) => Future[Int] =
     (date, queue) =>
@@ -131,9 +134,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       }
 
   private val portDeployments: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
-
-  val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
+    PortDesksAndWaitsProvider(airportConfig, optimiserDeployments, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(arrival.Terminal, 300000L)
@@ -164,10 +165,19 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] =
     (d: UtcDate) => flightsProvider.allTerminalsDateScheduledOrPcp(d).map(_._2).runWith(Sink.fold(Seq.empty[ApiFlightWithSplits])(_ ++ _))
 
-  private val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = (d: UtcDate) => {
-    val actor = system.actorOf(Props(new AclForecastArrivalsActor(now, DrtStaticParameters.expireAfterMillis, Option(SDate(d).millisSinceEpoch))))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[ArrivalsState]
+
+  val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = feedService.activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
+    case Some((_, _, _, actor)) =>
+      log.info(s"Using ACL feed actor: $actor")
+      (date: UtcDate) =>
+        actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(date, date))
+          .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
+          .flatMap(_.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
+          .map(f => ArrivalsState.empty(AclFeedSource) ++ f.map(_.toArrival(AclFeedSource)))
+    case None =>
+      (_: UtcDate) => Future.successful(ArrivalsState.empty(AclFeedSource))
   }
+
   private lazy val uniqueFlightsForDate = PassengersLiveView.uniqueFlightsForDate(
     flights = flightsForDate,
     baseArrivals = aclArrivalsForDate,
@@ -394,11 +404,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
       actorService.staffRouterActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       slasActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
-      slasActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       egateBanksUpdatesActor ! AddUpdatesSubscriber(paxLoadsRequestQueueActor)
 
-      crunchManagerActor ! AddQueueCrunchSubscriber(paxLoadsRequestQueueActor)
+      crunchManagerActor ! AddQueuePaxLoadsSubscriber(paxLoadsRequestQueueActor)
+      crunchManagerActor ! AddQueueDeskRecsSubscriber(deskRecsRequestQueueActor)
       crunchManagerActor ! AddQueueRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
       crunchManagerActor ! AddQueueRecalculateLiveSplitsSubscriber(liveSplitsQueueActor)
       crunchManagerActor ! AddQueueHistoricSplitsLookupSubscriber(historicSplitsQueueActor)

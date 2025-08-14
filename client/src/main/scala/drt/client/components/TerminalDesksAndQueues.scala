@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType}
-import drt.client.actions.Actions.RequestDateRecrunch
+import drt.client.actions.Actions.{RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation}
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -30,6 +30,8 @@ import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
+
+import scala.scalajs.js
 
 object TerminalDesksAndQueues {
 
@@ -194,8 +196,12 @@ object TerminalDesksAndQueues {
         )
       }
 
-      def requestForecastRecrunch(): Callback = Callback {
-        SPACircuit.dispatch(RequestDateRecrunch(startDate))
+      def requestDeskRecsRecalculation(): Callback = Callback {
+        SPACircuit.dispatch(RequestDateDeskRecsRecalculation(props.viewStart.toLocalDate))
+      }
+
+      def requestPaxLoadsRecalculation(): Callback = Callback {
+        SPACircuit.dispatch(RequestDatePaxLoadsRecalculation(props.viewStart.toLocalDate))
       }
 
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
@@ -265,11 +271,15 @@ object TerminalDesksAndQueues {
             .view.mapValues(_.map(_._2).max).toMap
 
           <.div(^.className := "desks-queues-title",
-            MuiTypography(variant = "h2")(s"Desks and queues at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminal}"),
+            MuiTypography(variant = "h2")(s"Desks and queues"),
             StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
-              if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,
+              if (props.loggedInUser.hasRole(SuperAdmin)) <.div(^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
+                adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
+                adminRecalcButton(requestPaxLoadsRecalculation, "Recalc Pax Loads"),
+              )
+              else EmptyVdom,
             ),
             if (state.displayType == ChartsView) {
               queues.map { queue =>
@@ -321,14 +331,14 @@ object TerminalDesksAndQueues {
       .filter(_.createdAt > staffMinute.lastUpdated.getOrElse(0L))
       .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
 
-  private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
+  private def adminRecalcButton(requestRecalc: () => Callback, label: String): VdomTagOf[Div] = {
     <.div(^.className := "re-crunch", MuiButton(
       variant = "outlined",
       size = "medium",
       color = Color.primary,
     )(MuiIcons(RefreshOutlined)(fontSize = "large"),
-      ^.onClick --> requestForecastRecrunch(),
-      "Request re-crunch")
+      ^.onClick --> requestRecalc(),
+      label)
     )
   }
 

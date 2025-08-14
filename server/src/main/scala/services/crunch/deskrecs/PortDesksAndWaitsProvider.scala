@@ -51,7 +51,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Te
 
   private def deskRecsToSimulations(terminalQueueDeskRecs: Iterable[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
     .map {
-      case DeskRecMinute(t, q, m, _, _, d, w, _) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
+      case DeskRecMinute(t, q, m, _, _, d, w, piq) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w, piq))
     }.toMap
 
   private def terminalDescRecs(terminal: Terminal, description: String): TerminalDesksAndWaitsProvider =
@@ -63,18 +63,18 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: (LocalDate, LocalDate, Te
                               terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
                               terminalSplits: Terminal => Option[Splits],
                              )
-                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] = workloadCalculator
-    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder, terminalSplits).minutes
-    .groupBy {
-      case (TQM(t, q, m), _) =>
-        val finalQueueName = divertedQueues.getOrElse(q, q)
-        TQM(t, finalQueueName, m)
-    }
-    .map {
-      case (tqm, minutes) =>
-        val loads = minutes.values
-        (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None))
-    }
+                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] =
+    workloadCalculator
+      .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder, terminalSplits).minutes
+      .groupBy {
+        case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
+          TQM(t, finalQueueName, m)
+      }
+      .map {
+        case (tqm, minutes) =>
+          val loads = minutes.values
+          (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None))
+      }
 
   private def terminalWorkLoadsByQueue(terminal: Terminal,
                                        minuteMillis: NumericRange[MillisSinceEpoch],
@@ -133,7 +133,7 @@ object PortDesksAndWaitsProvider {
 
     val calculator = DynamicWorkloadCalculator(
       terminalProcTimes = airportConfig.terminalProcessingTimes,
-      fallbacksProvider = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)),
+      fallbacks = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)),
       flightHasWorkload = flightFilter,
       fallbackProcessingTime = AirportConfigDefaults.fallbackProcessingTime,
       paxFeedSourceOrder = paxFeedSourceOrder

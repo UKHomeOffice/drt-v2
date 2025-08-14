@@ -15,7 +15,6 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, Split
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration.DurationInt
 
 case class TestStaffAssignmentService(staff: Int) extends StaffAssignmentService {
@@ -179,7 +178,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
           )
         ),
         now = () => shiftStart,
-        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax
+        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)
       ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)

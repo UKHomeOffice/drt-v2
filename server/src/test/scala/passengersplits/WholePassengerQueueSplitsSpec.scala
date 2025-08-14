@@ -141,7 +141,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
     val dayStart = pcpStart.getLocalLastMidnight.millisSinceEpoch
     val dayEnd = pcpStart.getLocalNextMidnight.millisSinceEpoch
     val range = dayStart to dayEnd by 60000L
-    val queueLoads = wholePaxLoadsPerQueuePerMinute(range, pcpPax, wholePaxSplits, processingTime, (_, _) => Open, (_, _) => List(), pcpStart)
+    val queueLoads = wholePaxLoadsPerQueuePerMinute(range, processingTime, (_, _) => Open)(pcpPax, wholePaxSplits, (_, _) => List(), pcpStart)
 
     queueLoads.values.map(_.map(_._2.size).sum).sum === pcpPax
   }
@@ -229,15 +229,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
       EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)),
       EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0, 20.0)))
 
-    val result = wholePaxLoadsPerQueuePerMinute(
-      minuteMilli to minuteMilli,
-      totalPax,
-      wholeSplits,
-      processingTime,
-      (_, _) => Open,
-      (_, _) => List(),
-      firstMinute,
-    )
+    val result = wholePaxLoadsPerQueuePerMinute(minuteMilli to minuteMilli, processingTime, (_, _) => Open)(totalPax, wholeSplits, (_, _) => List(), firstMinute)
     result should ===(expected)
   }
 
@@ -257,15 +249,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
       EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 25.0, 25.0, 30.0, 30.0, 30.0, 30.0)),
       EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0)))
 
-    val result = wholePaxLoadsPerQueuePerMinute(
-      minuteMilli to minuteMilli,
-      totalPax,
-      wholeSplits,
-      processingTime,
-      (_, _) => Open,
-      (_, _) => List(),
-      firstMinute,
-    )
+    val result = wholePaxLoadsPerQueuePerMinute(minuteMilli to minuteMilli, processingTime, (_, _) => Open)(totalPax, wholeSplits, (_, _) => List(), firstMinute)
     result should ===(expected)
   }
 
@@ -278,15 +262,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val expected = Map()
 
-    val result = wholePaxLoadsPerQueuePerMinute(
-      0L to 1L,
-      totalPax,
-      wholeSplits,
-      processingTime,
-      (_, _) => Open,
-      (_, _) => List(),
-      firstMinute,
-    )
+    val result = wholePaxLoadsPerQueuePerMinute(0L to 1L, processingTime, (_, _) => Open)(totalPax, wholeSplits, (_, _) => List(), firstMinute)
     result should ===(expected)
   }
 
@@ -301,15 +277,11 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
       wholePaxLoadsPerQueuePerMinute(
         0L to 60000L by 60000L,
-        totalPax,
-        wholeSplits,
         processingTime,
         (_, millis) => {
           queueStatusMinutesLookedAt = queueStatusMinutesLookedAt + millis
           Open
-        },
-        (_, _) => List(),
-        SDate(0L),
+        })(totalPax, wholeSplits, (_, _) => List(), SDate(0L),
       )
 
       queueStatusMinutesLookedAt should ===(Set(0L, 60000L))

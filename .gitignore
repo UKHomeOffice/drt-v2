@@ -53,8 +53,9 @@ runsbt.sh
 
 client/node_modules
 
-#vcode
+# vcode
 .metals
+.metals/*
 .bloop
 .bloop/*
 .vscode

@@ -9,7 +9,7 @@ import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import services.crunch.CrunchManager.{queueDaysToReCrunchWithUpdatedSplits, queueDaysToReProcess}
+import services.crunch.CrunchManager.queueDaysToReProcess
 import services.exports.Forecast
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -125,38 +125,35 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   private val offsetMinutes: Int = airportConfig.crunchOffsetMinutes
   private val crunchManagerActor: ActorRef = ctrl.applicationService.crunchManagerActor
 
-  def reCrunch(fromStr: String, toStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
+  private sealed trait CalcType
+
+  private case object PaxLoadsCalc extends CalcType
+
+  private case object DeskRecsCalc extends CalcType
+
+  def recalculatePaxLoads(fromStr: String, toStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
+    recalculate(fromStr, toStr, PaxLoadsCalc)
+  }
+
+  def recalculateDeskRecs(fromStr: String, toStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
+    recalculate(fromStr, toStr, DeskRecsCalc)
+  }
+
+  private def recalculate(fromStr: String, toStr: String, calcType: CalcType): Action[AnyContent] =
     Action {
       val maybeFuture = for {
         from <- LocalDate.parse(fromStr)
         to <- LocalDate.parse(toStr)
       } yield {
         val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch }.toSet
-        crunchManagerActor ! Recrunch(datesToReCrunch)
-        Ok(s"Queued dates $from to $to for re-crunch")
+        crunchManagerActor ! (calcType match {
+          case PaxLoadsCalc => RecalculatePaxLoads(datesToReCrunch)
+          case DeskRecsCalc => RecalculateDeskRecs(datesToReCrunch)
+        })
+        Ok(s"Queued dates $from to $to for ${calcType.getClass}")
       }
       maybeFuture.getOrElse(BadRequest(s"Unable to parse dates '$fromStr' or '$toStr'"))
     }
-  }
-
-  def reCrunchFullForecast: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action { request: Request[AnyContent] =>
-      request.body.asText match {
-        case Some("true") =>
-          queueDaysToReCrunchWithUpdatedSplits(
-            ctrl.actorService.flightsRouterActor,
-            crunchManagerActor,
-            offsetMinutes,
-            forecastLengthDays,
-            now
-          )
-          Ok("Re-crunching with updated splits")
-        case _ =>
-          queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => Recrunch(m))
-          Ok("Re-crunching without updating splits")
-      }
-    }
-  }
 
   def recalculateSplits: Action[AnyContent] = authByRole(SuperAdmin) {
     Action {

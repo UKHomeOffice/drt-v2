@@ -10,6 +10,7 @@ import drt.shared._
 import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -86,8 +87,7 @@ object TerminalDashboardComponent {
           case (_, cm) if cm.terminal == props.terminalPageTabLoc.terminal => cm.paxLoad
         }.sum.round
         <.div(
-          MuiTypography(variant = "h2")
-          (s"Dashboard ${props.terminalPageTabLoc.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTabLoc.terminal}"),
+          MuiTypography(variant = "h2", sx = SxProps(Map("paddingBottom" -> "0px")))(s"Dashboard"),
           <.div(^.className := "terminal-dashboard",
             if (props.terminalPageTabLoc.queryParams.contains("showArrivals")) {
               val closeArrivalsPopupLink = props.terminalPageTabLoc.copy(

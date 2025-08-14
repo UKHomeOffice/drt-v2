@@ -15,6 +15,7 @@ import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
 import drt.shared.api.WalkTimes
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -177,6 +178,7 @@ object TerminalComponent {
                         case None => if (hasStaff) "deployments" else "ideal"
                       }
                       <.div(
+                        MuiTypography(variant = "h2")(s"Queues & Arrivals"),
                         <.div(^.className := s"terminal-content-header $headerClass",
                           DaySelectorComponent(
                             DaySelectorComponent.Props(

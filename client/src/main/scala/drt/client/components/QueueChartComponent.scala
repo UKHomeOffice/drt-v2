@@ -15,17 +15,22 @@ object QueueChartComponent {
                    queueSummaries: List[(Long, Map[Queue, CrunchMinute])],
                    sla: Int,
                    interval: Int,
-                   deskType: DeskType)
+                   deskType: DeskType,
+                  )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("QueueChart")
     .render_P { props =>
       val minutesInADay = 1440
       val intervalRange = minutesInADay / props.interval
-      val labels: Seq[String] = (0 until intervalRange).map(m => SDate("2022-08-17T23:00").addMinutes(m * props.interval).toHoursAndMinutes)
+      val labels: Seq[String] = (0 until intervalRange).map(m => SDate.midnightThisMorning().addMinutes(m * props.interval).toHoursAndMinutes)
       val paxInQueueSet: ChartJsDataSet = ChartJsDataSet.line(
         label = "Pax in queue",
         data = props.queueSummaries.map {
-          case (_, queuesAndMinutes) => queuesAndMinutes(props.queue).maybePaxInQueue.getOrElse(0).toDouble
+          case (_, queuesAndMinutes) =>
+            if (props.deskType == Ideal)
+              queuesAndMinutes(props.queue).maybePaxInQueue.getOrElse(0).toDouble
+            else
+              queuesAndMinutes(props.queue).maybeDeployedPaxInQueue.getOrElse(0).toDouble
         },
         colour = RGBA.blue1,
         backgroundColour = Option(RGBA.blue1.copy(alpha = 0.2)),

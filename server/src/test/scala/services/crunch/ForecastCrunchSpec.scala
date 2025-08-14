@@ -92,7 +92,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       ),
       now = () => SDate(scheduled),
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
-      cruncher = OptimiserWithFlexibleProcessors.crunchWholePax,
+      cruncher = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true),
       forecastMaxDays = 4
     ))
 

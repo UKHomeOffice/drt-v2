@@ -92,7 +92,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
   }
 
   object MockTerminalDeskLimits extends TerminalDeskLimitsLike {
-    override val minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]] = Map(
+    override val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]] = _ => Map(
       EeaDesk -> IndexedSeq.fill(24)(10),
       EGate -> IndexedSeq.fill(24)(10),
       NonEeaDesk -> IndexedSeq.fill(24)(10),
@@ -157,7 +157,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     ))
     val minutesToCrunch = 3
     val offsetMinutes = 0
-    val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax _
+    val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true) _
     val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks((_, _) => Seq.empty), FlightFilter(List()), 45, paxFeedSourceOrder)
 
     PortDesksAndWaitsProvider(

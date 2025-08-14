@@ -18,7 +18,9 @@ import scala.concurrent.{ExecutionContext, Future}
 object CrunchManagerActor {
   private val log = LoggerFactory.getLogger(getClass)
 
-  case class AddQueueCrunchSubscriber(subscriber: ActorRef)
+  case class AddQueuePaxLoadsSubscriber(subscriber: ActorRef)
+
+  case class AddQueueDeskRecsSubscriber(subscriber: ActorRef)
 
   case class AddQueueRecalculateArrivalsSubscriber(subscriber: ActorRef)
 
@@ -38,7 +40,9 @@ object CrunchManagerActor {
 
   case class RecalculateHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
 
-  case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
+  case class RecalculatePaxLoads(updatedMillis: Set[Long]) extends ReProcessDates
+
+  case class RecalculateDeskRecs(updatedMillis: Set[Long]) extends ReProcessDates
 
   case class LookupHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
 
@@ -114,15 +118,19 @@ class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[I
                         (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
-  private var maybeQueueCrunchSubscriber: Option[ActorRef] = None
+  private var maybeQueuePaxLoadsSubscriber: Option[ActorRef] = None
+  private var maybeQueueDeskRecsSubscriber: Option[ActorRef] = None
   private var maybeQueueRecalculateArrivalsSubscriber: Option[ActorRef] = None
   private var maybeQueueRecalculateLiveSplitsLookupSubscriber: Option[ActorRef] = None
   private var maybeQueueHistoricSplitsLookupSubscriber: Option[ActorRef] = None
   private var maybeQueueHistoricPaxLookupSubscriber: Option[ActorRef] = None
 
   override def receive: Receive = {
-    case AddQueueCrunchSubscriber(subscriber) =>
-      maybeQueueCrunchSubscriber = Option(subscriber)
+    case AddQueuePaxLoadsSubscriber(subscriber) =>
+      maybeQueuePaxLoadsSubscriber = Option(subscriber)
+
+    case AddQueueDeskRecsSubscriber(subscriber) =>
+      maybeQueueDeskRecsSubscriber = Option(subscriber)
 
     case AddQueueRecalculateArrivalsSubscriber(subscriber) =>
       maybeQueueRecalculateArrivalsSubscriber = Option(subscriber)
@@ -136,9 +144,13 @@ class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[I
     case AddQueueHistoricPaxLookupSubscriber(subscriber) =>
       maybeQueueHistoricPaxLookupSubscriber = Option(subscriber)
 
-    case Recrunch(um) =>
+    case RecalculatePaxLoads(um) =>
       val updateRequests = millisToTerminalUpdateRequests(um)
-      maybeQueueCrunchSubscriber.foreach(_ ! updateRequests)
+      maybeQueuePaxLoadsSubscriber.foreach(_ ! updateRequests)
+
+    case RecalculateDeskRecs(um) =>
+      val updateRequests = millisToTerminalUpdateRequests(um)
+      maybeQueueDeskRecsSubscriber.foreach(_ ! updateRequests)
 
     case RecalculateArrivals(um) =>
       val updateRequests = millisToTerminalUpdateRequests(um)

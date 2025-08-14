@@ -2,22 +2,14 @@ package manifests.queues
 
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
-import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.Splits
 import uk.gov.homeoffice.drt.models.ManifestLike
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.InvalidSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
 
-object SplitsCalculator {
-  def apply(airportConfig: AirportConfig, queueAdjustments: QueueAdjustments): SplitsCalculator = {
-    val queueAllocator = paxTypeQueueAllocator(airportConfig)
-    val terminalSplitRatios = airportConfig.terminalPaxSplits
-    SplitsCalculator(queueAllocator, terminalSplitRatios, queueAdjustments)
-  }
-}
 
 case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
                             terminalSplitRatios: Map[Terminal, SplitRatios],

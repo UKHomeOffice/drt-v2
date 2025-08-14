@@ -52,7 +52,7 @@ object JSDateConversions {
 
       def addMillis(millisToAdd: Int): SDateLike = copy(ms = ms + millisToAdd)
 
-      def millisSinceEpoch: MillisSinceEpoch = ms //mdate.atZone(europeLondonZoneId).toInstant.toEpochMilli
+      def millisSinceEpoch: MillisSinceEpoch = ms
 
       def toLocalDateTimeString(): String = f"$getFullYear-$getMonth%02d-$getDate%02d $getHours%02d:$getMinutes%02d"
 

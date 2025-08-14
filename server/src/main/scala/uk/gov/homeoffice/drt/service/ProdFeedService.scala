@@ -58,7 +58,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object ProdFeedService {
   def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(FeedSource, Boolean, Option[FiniteDuration], ActorRef)],
                                  )
-                                 (implicit timeout: Timeout, ec: ExecutionContext, mat: Materializer): Seq[(DateLike, Terminal) => Future[FeedArrivalSet]] =
+                                 (implicit ec: ExecutionContext, mat: Materializer): Seq[(DateLike, Terminal) => Future[FeedArrivalSet]] =
     feedActorsWithPrimary
       .map {
         case (feedSource, isPrimary, maybeFuzzyThreshold, actor) =>
@@ -66,7 +66,7 @@ object ProdFeedService {
             val start = SDate(date)
             val end = start.addDays(1).addMinutes(-1)
             actor
-              .ask(FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(start.toUtcDate, end.toUtcDate, terminal))
+              .ask(FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(start.toUtcDate, end.toUtcDate, terminal))(Timeout(30.seconds))
               .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
               .flatMap(s => s.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
               .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => fa.unique -> fa.toArrival(feedSource)).toMap))

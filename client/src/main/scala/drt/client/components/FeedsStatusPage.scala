@@ -1,13 +1,14 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{RequestFullForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
+import drt.client.actions.Actions.{RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
 import drt.client.components.ToolTips._
 import drt.client.components.styles.DrtReactTheme
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
+import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.MillisSinceEpoch
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
@@ -52,10 +53,6 @@ object FeedsStatusPage {
 
       def requestMissingPaxNos(): Callback = Callback {
         SPACircuit.dispatch(RequestMissingPaxNos)
-      }
-
-      def requestFullForecastRecrunch(): Callback = Callback {
-        SPACircuit.dispatch(RequestFullForecastRecrunch)
       }
 
       modelRcp { proxy =>
@@ -129,9 +126,6 @@ object FeedsStatusPage {
             <.div(^.className := "crunch-actions-container",
               ThemeProvider(DrtReactTheme)(
                 MuiButton(variant = "outlined", color = Color.primary)(
-                  <.div("Refresh full forecast recrunch", ^.onClick --> requestFullForecastRecrunch())
-                ),
-                MuiButton(variant = "outlined", color = Color.primary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),
                 MuiButton(variant = "outlined", color = Color.primary)(
@@ -149,7 +143,8 @@ object FeedsStatusPage {
         }
 
         <.div(
-          MuiTypography(variant = "h1")(s"Feeds status at ${props.airportConfigPot.get.portCode} (${props.airportConfigPot.get.portName})"),
+          MuiTypography(variant = "h1")(s"Feeds status: ${props.airportConfigPot.get.portCode} (${getAirportByCode(props.airportConfigPot.get.portCode.toString())
+            .getOrElse(props.airportConfigPot.get.portName)})"),
           <.div(^.className := "feed-status-container",
             statusContentPot.getOrElse(EmptyVdom)
           ),

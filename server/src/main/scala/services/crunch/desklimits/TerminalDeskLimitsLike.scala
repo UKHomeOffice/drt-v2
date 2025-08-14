@@ -4,6 +4,7 @@ import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,13 +33,15 @@ case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates
 }
 
 trait TerminalDeskLimitsLike {
-  val minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]
+  val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]]
 
   def deskLimitsForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]])
                           (implicit ec: ExecutionContext): Future[(Iterable[Int], WorkloadProcessorsProvider)] = {
+    val date = SDate(minuteMillis.min).toLocalDate
+
     maxDesksForMinutes(minuteMillis, queue, allocatedDesks).map { processorProvider =>
       val minDesks = DeskRecs
-        .desksForMillis(minuteMillis, minDesksByQueue24Hrs(queue))
+        .desksForMillis(minuteMillis, minDesksByQueue24Hrs(date).getOrElse(queue, IndexedSeq.fill(24)(0)))
         .toList.zip(processorProvider.processorsByMinute)
         .map { case (min, max) =>
           Math.min(min, max.maxCapacity)
