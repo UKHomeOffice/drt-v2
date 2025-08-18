@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
@@ -31,7 +31,7 @@ class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
     "When I ask for max desks at each hour from midnight to midnight outside BST " +
     "Then I should get 10 for every hour" >> {
     val maxDesks = IndexedSeq.fill(24)(10)
-    val limits = FixedTerminalDeskLimits(_ => Map(EeaDesk -> minDesks), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
+    val limits = FixedTerminalDeskLimits(_ => Future.successful(Map(EeaDesk -> minDesks)), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
     val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
     val expected = uniformDesksForHours(10, 24)
 
@@ -42,7 +42,7 @@ class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
     "When I ask for max desks at each hour from midnight to midnight inside BST " +
     "Then I should get 0 through 23, ie not offset by an hour" >> {
     val maxDesks = 0 to 23
-    val limits = FixedTerminalDeskLimits(_ => Map(EeaDesk -> minDesks), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
+    val limits = FixedTerminalDeskLimits(_ => Future.successful(Map(EeaDesk -> minDesks)), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
     val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, Map())
     val expected = WorkloadProcessorsProvider((0 to 23).map(d => WorkloadProcessors(Seq.fill(d)(Desk))))
 

@@ -8,7 +8,7 @@ import uk.gov.homeoffice.drt.time.LocalDate
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.Future
 
-case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
+case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: LocalDate => Future[Map[Queue, IndexedSeq[Int]]],
                                    maxDesksByQueue24Hrs: Map[Queue, QueueCapacityProvider],
                                   ) extends TerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],

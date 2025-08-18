@@ -26,11 +26,11 @@ class FlexedTerminalDeskLimitsSpec extends CrunchTestLike {
   val nonBstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = nonBst20200101 until nonBst20200202 by oneHourMillis
   val bstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = bst20200601 until bst20200602 by oneHourMillis
 
-  val minDesksByQueue: Map[Queue, IndexedSeq[Int]] = Map(
+  val minDesksByQueue: Future[Map[Queue, IndexedSeq[Int]]] = Future.successful(Map(
     EeaDesk -> minDesks,
     NonEeaDesk -> minDesks,
     EGate -> minDesks
-    )
+    ))
 
   "Given a flexed desk limits provider with one flexed queue and 10 flexed desks " >> {
     "When I ask for max desks at each hour from midnight to midnight outside BST " >> {

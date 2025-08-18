@@ -13,26 +13,27 @@ import scala.concurrent.{ExecutionContext, Future}
 case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[Int],
                                                       terminalDesks: Int,
                                                       flexedQueues: Set[Queue],
-                                                      minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
+                                                      minDesksByQueue24Hrs: LocalDate => Future[Map[Queue, IndexedSeq[Int]]],
                                                       capacityByQueue: Map[Queue, QueueCapacityProvider],
                                                      )
                                                      (implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {
     val eventualMaxProcessorsProvider = maxProcessors(minuteMillis, queue, allocatedDesks)
-    val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
-    eventualMaxProcessorsProvider.map { desksProvider =>
-      val desksByMinute: IndexedSeq[Int] = desksProvider.processorsByMinute.map(_.processors.size)
-      val availableDesks: Iterable[Int] = Crunch.reduceIterables[Int](List(desksByMinute, availableStaffByMinute))(Math.min)
-      WorkloadProcessorsProvider(desksProvider.processorsByMinute.zip(availableDesks).map {
-        case (processors, available) => processors.copy(processors = processors.processors.take(available))
-      })
+    eventualMaxProcessorsProvider.flatMap { desksProvider =>
+      availableStaffForMinutes(minuteMillis, queue, allocatedDesks).map { availableStaffByMinute =>
+        val desksByMinute: IndexedSeq[Int] = desksProvider.processorsByMinute.map(_.processors.size)
+        val availableDesks: Iterable[Int] = Crunch.reduceIterables[Int](List(desksByMinute, availableStaffByMinute))(Math.min)
+        WorkloadProcessorsProvider(desksProvider.processorsByMinute.zip(availableDesks).map {
+          case (processors, available) => processors.copy(processors = processors.processors.take(available))
+        })
+      }
     }
   }
 
   private def availableStaffForMinutes(minuteMillis: NumericRange[Long],
                                        queue: Queue,
-                                       allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
+                                       allocatedDesks: Map[Queue, List[Int]]): Future[Iterable[Int]] = {
     val processedQueues = allocatedDesks.keys.toSet
     val deployedByQueue = allocatedDesks.values.toList
     val totalDeployedByMinute = if (deployedByQueue.nonEmpty) Crunch.reduceIterables[Int](deployedByQueue)(_ + _)
@@ -40,13 +41,15 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
 
     val date = SDate(minuteMillis.min).toLocalDate
 
-    val remainingQueues = minDesksByQueue24Hrs(date).keys.toSet -- (processedQueues + queue)
-    val minDesksForRemainingQueuesByMinute = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs(date), minuteMillis, remainingQueues).values.toList
-    val minimumPromisedStaffByMinute = if (minDesksForRemainingQueuesByMinute.nonEmpty) Crunch.reduceIterables[Int](minDesksForRemainingQueuesByMinute)(_ + _)
-    else List()
+    minDesksByQueue24Hrs(date).map { minDesksByQueue =>
+      val remainingQueues = minDesksByQueue.keys.toSet -- (processedQueues + queue)
+      val minDesksForRemainingQueuesByMinute = DeskRecs.desksByMinuteForQueues(minDesksByQueue, minuteMillis, remainingQueues).values.toList
+      val minimumPromisedStaffByMinute = if (minDesksForRemainingQueuesByMinute.nonEmpty) Crunch.reduceIterables[Int](minDesksForRemainingQueuesByMinute)(_ + _)
+      else List()
 
-    Crunch
-      .reduceIterables[Int](List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute))(_ - _)
-      .map(Math.max(_, 0))
+      Crunch
+        .reduceIterables[Int](List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute))(_ - _)
+        .map(Math.max(_, 0))
+    }
   }
 }

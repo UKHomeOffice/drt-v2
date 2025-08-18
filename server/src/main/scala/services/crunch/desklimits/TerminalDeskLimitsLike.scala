@@ -33,20 +33,22 @@ case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates
 }
 
 trait TerminalDeskLimitsLike {
-  val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]]
+  val minDesksByQueue24Hrs: LocalDate => Future[Map[Queue, IndexedSeq[Int]]]
 
   def deskLimitsForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]])
                           (implicit ec: ExecutionContext): Future[(Iterable[Int], WorkloadProcessorsProvider)] = {
     val date = SDate(minuteMillis.min).toLocalDate
 
-    maxDesksForMinutes(minuteMillis, queue, allocatedDesks).map { processorProvider =>
-      val minDesks = DeskRecs
-        .desksForMillis(minuteMillis, minDesksByQueue24Hrs(date).getOrElse(queue, IndexedSeq.fill(24)(0)))
-        .toList.zip(processorProvider.processorsByMinute)
-        .map { case (min, max) =>
-          Math.min(min, max.maxCapacity)
-        }
-      (minDesks, processorProvider)
+    maxDesksForMinutes(minuteMillis, queue, allocatedDesks).flatMap { processorProvider =>
+      minDesksByQueue24Hrs(date).map { minDesksByQueue =>
+        val minDesks = DeskRecs
+          .desksForMillis(minuteMillis, minDesksByQueue.getOrElse(queue, IndexedSeq.fill(24)(0)))
+          .toList.zip(processorProvider.processorsByMinute)
+          .map { case (min, max) =>
+            Math.min(min, max.maxCapacity)
+          }
+        (minDesks, processorProvider)
+      }
     }
   }
 

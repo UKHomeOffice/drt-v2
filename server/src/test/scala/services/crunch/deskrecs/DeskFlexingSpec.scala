@@ -34,12 +34,12 @@ class DeskFlexingSpec extends CrunchTestLike {
   val egateMinDesks24: List[Int] = List.fill(24)(egateMinDesks)
   val egateMaxDesks24: List[Int] = List.fill(24)(egateMaxDesks)
 
-  val minDesks: Map[Queue, IndexedSeq[Int]] = Map(
+  val minDesks: Future[Map[Queue, IndexedSeq[Int]]] = Future.successful(Map(
     FastTrack -> ftMinDesks24.toIndexedSeq,
     NonEeaDesk -> roWMinDesks24.toIndexedSeq,
     EeaDesk -> eeaMinDesks24.toIndexedSeq,
     EGate -> egateMinDesks24.toIndexedSeq
-  )
+  ))
 
   val maxDesks: Map[Queue, IndexedSeq[Int]] = Map(EGate -> egateMaxDesks24.toIndexedSeq)
 

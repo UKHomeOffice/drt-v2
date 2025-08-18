@@ -92,11 +92,11 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
   }
 
   object MockTerminalDeskLimits extends TerminalDeskLimitsLike {
-    override val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]] = _ => Map(
+    override val minDesksByQueue24Hrs: LocalDate => Future[Map[Queue, IndexedSeq[Int]]] = _ => Future.successful(Map(
       EeaDesk -> IndexedSeq.fill(24)(10),
       EGate -> IndexedSeq.fill(24)(10),
       NonEeaDesk -> IndexedSeq.fill(24)(10),
-    )
+    ))
 
     override def maxDesksForMinutes(minuteMillis: NumericRange[MillisSinceEpoch], queue: Queue, existingAllocations: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] =
       Future.successful(WorkloadProcessorsProvider(DeskRecs.desksForMillis(minuteMillis, IndexedSeq.fill(24)(10)).map(x => WorkloadProcessors(Seq.fill(x)(Desk)))))

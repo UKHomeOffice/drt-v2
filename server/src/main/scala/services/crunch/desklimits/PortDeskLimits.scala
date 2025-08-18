@@ -22,7 +22,7 @@ object PortDeskLimits {
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
       } yield {
         val queuesForDate = (date: LocalDate) => QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)(date, terminal)
-        val minDatesForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
+        val minDatesForDate = (date: LocalDate) => Future.successful(minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) })
 
         (terminal, FixedTerminalDeskLimits(minDatesForDate, capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal))))
       }
@@ -44,7 +44,7 @@ object PortDeskLimits {
           minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
           maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
         } yield {
-          val minDatesForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
+          val minDatesForDate = (date: LocalDate) => Future.successful(minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) })
           val limits = FlexedTerminalDeskLimits(
             terminalDesks,
             airportConfig.flexedQueues,
@@ -65,7 +65,7 @@ object PortDeskLimits {
       maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
       terminalDesks <- airportConfig.desksByTerminal.get(terminal)
     } yield {
-      val minDatesForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
+      val minDatesForDate = (date: LocalDate) => Future.successful(minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) })
       FlexedTerminalDeskLimitsFromAvailableStaff(
         terminalStaffByMinute,
         terminalDesks,

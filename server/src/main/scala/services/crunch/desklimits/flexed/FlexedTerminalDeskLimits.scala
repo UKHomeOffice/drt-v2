@@ -11,29 +11,34 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val terminalDesks: Int
   val flexedQueues: Set[Queue]
-  val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]]
+  val minDesksByQueue24Hrs: LocalDate => Future[Map[Queue, IndexedSeq[Int]]]
   val capacityByQueue: Map[Queue, QueueCapacityProvider]
 
   def maxProcessors(minuteMillis: NumericRange[Long],
                     queue: Queue,
-                    allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] =
+                    allocatedDesks: Map[Queue, List[Int]],
+                   )
+                   (implicit ec: ExecutionContext): Future[WorkloadProcessorsProvider] =
     if (flexedQueues.contains(queue)) {
       val date = SDate(minuteMillis.min).toLocalDate
       val deployedByQueue = allocatedDesks.values.toList
       val totalDeployed = if (deployedByQueue.nonEmpty) reduceIterables[Int](deployedByQueue)(_ + _) else List()
       val processedQueues = allocatedDesks.keys.toSet
       val remainingFlexedQueues = flexedQueues -- (processedQueues + queue)
-      val remainingMinDesks = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs(date), minuteMillis, remainingFlexedQueues).values.toList
-      val terminalDesksForPeriod: immutable.Seq[Int] = List.fill(minuteMillis.length)(terminalDesks)
-      val desksByMinute: Iterable[Int] = reduceIterables[Int](terminalDesksForPeriod :: totalDeployed :: remainingMinDesks)(_ - _)
-      Future.successful(WorkloadProcessorsProvider(desksByMinute.map(d => Seq.fill(d)(Desk))))
+      minDesksByQueue24Hrs(date).map { minDesksByQueue =>
+        log.info(s"FlexedTerminalDeskLimits: $queue, $date, $remainingFlexedQueues, $minDesksByQueue")
+        val remainingMinDesks = DeskRecs.desksByMinuteForQueues(minDesksByQueue, minuteMillis, remainingFlexedQueues).values.toList
+        val terminalDesksForPeriod: immutable.Seq[Int] = List.fill(minuteMillis.length)(terminalDesks)
+        val desksByMinute: Iterable[Int] = reduceIterables[Int](terminalDesksForPeriod :: totalDeployed :: remainingMinDesks)(_ - _)
+        WorkloadProcessorsProvider(desksByMinute.map(d => Seq.fill(d)(Desk)))
+      }
     } else {
       capacityByQueue.getOrElse(queue, {
         log.error(s"Didn't find a cap provider for $queue. Using an empty one...")
@@ -44,9 +49,10 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
 
 case class FlexedTerminalDeskLimits(terminalDesks: Int,
                                     flexedQueues: Set[Queue],
-                                    minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
+                                    minDesksByQueue24Hrs: LocalDate => Future[Map[Queue, IndexedSeq[Int]]],
                                     capacityByQueue: Map[Queue, QueueCapacityProvider]
-                                   ) extends FlexedTerminalDeskLimitsLike {
+                                   )
+                                   (implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                                   queue: Queue,
                                   allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {
