@@ -48,7 +48,7 @@ object PortDashboardPage {
                                        )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("PortDashboard")
-    .render_P(p => {
+    .render_P { p =>
       val selectedPeriod = Try {
         p.dashboardPage.period.getOrElse(1)
       }.getOrElse(1)
@@ -64,25 +64,32 @@ object PortDashboardPage {
 
       val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder, rm.userPreferences))
 
+      def isNoneTerminal(userPreferences: UserPreferences, portName: String): Boolean =
+        userPreferences.portDashboardTerminals.get(portName).exists(terminals => terminals.size == 1 && terminals.head == "none")
+
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
         val portDashboardModel: PortDashboardModel = modelMP()
         <.div(^.className := "terminal-summary-dashboard",
-          MuiTypography(variant = "h1")(s"Dashboard: ${p.dashboardPage.portCodeStr} (${getAirportByCode(p.dashboardPage.portCodeStr)
-            .getOrElse(p.dashboardPage.portConfig.portName)})"),
-          portDashboardModel.airportConfig.renderReady(portConfig => {
+          MuiTypography(variant = "h1")(s"Dashboard: ${p.dashboardPage.portCodeStr} (${
+            getAirportByCode(p.dashboardPage.portCodeStr)
+              .getOrElse(p.dashboardPage.portConfig.portName)
+          })"),
+          portDashboardModel.airportConfig.renderReady { portConfig =>
             val portName = portConfig.portCode.iata.toLowerCase
-            portDashboardModel.userPreferences.renderReady(userPreferences => {
+            portDashboardModel.userPreferences.renderReady { userPreferences =>
               val selectedPeriodLengthMinutes = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 180)).getOrElse(180)
-
               val userHasTerminalPreference: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
-
               val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
               val terminals = portConfig.terminals(SDate.now().toLocalDate)
 
               val selectedTerminals: List[String] = if (!userHasTerminalPreference) {
                 terminals.map(t => s"${t.toString}").toList
               } else {
-                userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
+                userPreferences.portDashboardTerminals.get(portName) match {
+                  case Some(dbTerminals) if dbTerminals.size == 1 && dbTerminals.head == "none" =>
+                    List.empty[String]
+                  case _ => userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
+                }
               }
 
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now(), selectedPeriodLengthMinutes)
@@ -139,7 +146,8 @@ object PortDashboardPage {
                 case _ => s"$selectedPeriodLengthMinutes minutes"
               }
 
-              <.div(<.h3(s"Filter upcoming arrivals"),
+              <.div(
+                <.h3(s"Filter upcoming arrivals"),
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
@@ -192,67 +200,75 @@ object PortDashboardPage {
                     <.span(s"Time period: $displayPeriodDisplay (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
                     if (terminals.size > 1) {
                       <.span(^.className := "selection-separator")
-                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sorted.mkString(", ")}")
+                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).filterNot(_ == "none").sorted.mkString(", ")}")
                     } else ""
                   )
                 ),
-
-                terminals.filter(t => selectedTerminals.map(Terminal(_)).contains(t)).map { terminalName =>
-                  val terminal: Terminal = terminalName
-                  <.div(
-                    <.h3(
-                      <.a(
-                        ^.href := s"/#terminal/${terminal.toString}/current/arrivals/",
-                        ^.className := "terminal-link",
-                        s"Terminal ${Terminal.numberString(terminal)}"
-                      )
-                    ),
-                    portDashboardModel.portState.renderReady { portState =>
-                      portDashboardModel.featureFlags.renderReady { _ =>
-                        val portStateForDashboard = portState.windowWithTerminalFilter(
-                          displayPeriod.start,
-                          displayPeriod.start.addMinutes(selectedPeriodLengthMinutes),
-                          QueueConfig.terminalsForDateRange(portConfig.queuesByTerminal),
-                          QueueConfig.queuesForDateRangeAndTerminal(portConfig.queuesByTerminal),
-                          portDashboardModel.paxFeedSourceOrder,
-                        )
-                        val scheduledFlightsInTerminal = portStateForDashboard
-                          .flights
-                          .filter(_._2.apiFlight.Terminal == terminal)
-                          .values
-                          .filterNot(_.apiFlight.isCancelled)
-                          .toList
-
-                        val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.filter(_._1.terminal == terminal).values.toList
-                        val terminalStaffMinutes = portStateForDashboard.staffMinutes.filter(_._1.terminal == terminal).values.toList
-                        val terminalQueuesInOrder = queuesForDateAndTerminal(displayPeriod.start.toLocalDate, terminal)
-                        portDashboardModel.featureFlags.renderReady { _ =>
-                          val queues = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)(displayPeriod.start.toLocalDate, terminalName)
-                          DashboardTerminalSummary(
-                            DashboardTerminalSummary.Props(
-                              flights = scheduledFlightsInTerminal,
-                              crunchMinutes = terminalCrunchMinutes,
-                              staffMinutes = terminalStaffMinutes,
-                              terminal = terminal,
-                              paxTypeAndQueues = paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
-                              queues = terminalQueuesInOrder,
-                              timeWindowStart = displayPeriod.start,
-                              paxFeedSourceOrder = portDashboardModel.paxFeedSourceOrder,
-                              periodLengthMinutes = selectedPeriodLengthMinutes / 3,
-                              terminalHasSingleDeskQueue = queues.contains(QueueDesk),
-                            )
+                <.div(
+                  if (isNoneTerminal(userPreferences, portName)) {
+                    <.div(
+                      <.h3("No terminal selected"),
+                      <.p("Select all that apply to filter the dashboard by terminal.")
+                    )
+                  } else {
+                    terminals.filter(t => selectedTerminals.map(Terminal(_)).contains(t)).map { terminalName =>
+                      val terminal: Terminal = terminalName
+                      <.div(
+                        <.h3(
+                          <.a(
+                            ^.href := s"/#terminal/${terminal.toString}/current/arrivals/",
+                            ^.className := "terminal-link",
+                            s"Terminal ${Terminal.numberString(terminal)}"
                           )
+                        ),
+                        portDashboardModel.portState.renderReady { portState =>
+                          portDashboardModel.featureFlags.renderReady { _ =>
+                            val portStateForDashboard = portState.windowWithTerminalFilter(
+                              displayPeriod.start,
+                              displayPeriod.start.addMinutes(selectedPeriodLengthMinutes),
+                              QueueConfig.terminalsForDateRange(portConfig.queuesByTerminal),
+                              QueueConfig.queuesForDateRangeAndTerminal(portConfig.queuesByTerminal),
+                              portDashboardModel.paxFeedSourceOrder,
+                            )
+                            val scheduledFlightsInTerminal = portStateForDashboard
+                              .flights
+                              .filter(_._2.apiFlight.Terminal == terminal)
+                              .values
+                              .filterNot(_.apiFlight.isCancelled)
+                              .toList
+
+                            val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.filter(_._1.terminal == terminal).values.toList
+                            val terminalStaffMinutes = portStateForDashboard.staffMinutes.filter(_._1.terminal == terminal).values.toList
+                            val terminalQueuesInOrder = queuesForDateAndTerminal(displayPeriod.start.toLocalDate, terminal)
+                            portDashboardModel.featureFlags.renderReady { _ =>
+                              val queues = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)(displayPeriod.start.toLocalDate, terminalName)
+                              DashboardTerminalSummary(
+                                DashboardTerminalSummary.Props(
+                                  flights = scheduledFlightsInTerminal,
+                                  crunchMinutes = terminalCrunchMinutes,
+                                  staffMinutes = terminalStaffMinutes,
+                                  terminal = terminal,
+                                  paxTypeAndQueues = paxTypeAndQueueOrder(terminal).splits.map(_.paxType),
+                                  queues = terminalQueuesInOrder,
+                                  timeWindowStart = displayPeriod.start,
+                                  paxFeedSourceOrder = portDashboardModel.paxFeedSourceOrder,
+                                  periodLengthMinutes = selectedPeriodLengthMinutes / 3,
+                                  terminalHasSingleDeskQueue = queues.contains(QueueDesk),
+                                )
+                              )
+                            }
+                          }
                         }
-                      }
-                    }
-                  )
-                }.toTagMod
+                      )
+                    }.toTagMod
+                  }
+                )
               )
-            })
-          }))
+            }
+          }
+        )
       }
-    })
-    .build
+    }.build
 
   def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None)): VdomElement = component(Props(router, dashboardPage))
 }
