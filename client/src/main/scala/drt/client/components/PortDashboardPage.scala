@@ -64,7 +64,7 @@ object PortDashboardPage {
 
       val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder, rm.userPreferences))
 
-      def isNoneTerminal(userPreferences: UserPreferences, portName: String): Boolean =
+      def isOnlyNoneTerminal(userPreferences: UserPreferences, portName: String): Boolean =
         userPreferences.portDashboardTerminals.get(portName).exists(terminals => terminals.size == 1 && terminals.head == "none")
 
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
@@ -205,7 +205,7 @@ object PortDashboardPage {
                   )
                 ),
                 <.div(
-                  if (isNoneTerminal(userPreferences, portName)) {
+                  if (isOnlyNoneTerminal(userPreferences, portName)) {
                     <.div(
                       <.h3("No terminal selected"),
                       <.p("Select all that apply to filter the dashboard by terminal.")
