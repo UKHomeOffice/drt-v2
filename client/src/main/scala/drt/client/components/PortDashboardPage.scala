@@ -65,7 +65,7 @@ object PortDashboardPage {
       val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder, rm.userPreferences))
 
       def isOnlyNoneTerminal(userPreferences: UserPreferences, portName: String): Boolean =
-        userPreferences.portDashboardTerminals.get(portName).exists(terminals => terminals.size == 1 && terminals.head == "none")
+        userPreferences.portDashboardTerminals.get(portName).exists(terminals => terminals.size == 1 && terminals.head == "")
 
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
         val portDashboardModel: PortDashboardModel = modelMP()
@@ -81,15 +81,12 @@ object PortDashboardPage {
               val userHasTerminalPreference: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
               val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
               val terminals = portConfig.terminals(SDate.now().toLocalDate)
+              val unselectedAllTerminals = isOnlyNoneTerminal(userPreferences, portName)
 
-              val selectedTerminals: List[String] = if (!userHasTerminalPreference) {
+              val selectedTerminals: List[String] = if (!userHasTerminalPreference && !unselectedAllTerminals) {
                 terminals.map(t => s"${t.toString}").toList
               } else {
-                userPreferences.portDashboardTerminals.get(portName) match {
-                  case Some(dbTerminals) if dbTerminals.size == 1 && dbTerminals.head == "none" =>
-                    List.empty[String]
-                  case _ => userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
-                }
+                userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
               }
 
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now(), selectedPeriodLengthMinutes)
@@ -125,6 +122,7 @@ object PortDashboardPage {
 
                 val preferenceTerminals: Set[String] = Try(
                   userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String])).getOrElse(Set.empty[String])
+
                 val updatedQueryParams: Set[String] = if (!userHasTerminalPreference)
                   selectedTerminals.filterNot(_ == terminal.toString).toSet
                 else {
@@ -200,7 +198,7 @@ object PortDashboardPage {
                     <.span(s"Time period: $displayPeriodDisplay (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
                     if (terminals.size > 1) {
                       <.span(^.className := "selection-separator")
-                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).filterNot(_ == "none").sorted.mkString(", ")}")
+                      <.span(s"Terminals: ${selectedTerminals.filter(_.nonEmpty).sorted.mkString(", ")}")
                     } else ""
                   )
                 ),
