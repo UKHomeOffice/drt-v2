@@ -258,7 +258,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       modelThresholds = enabledPredictionModelNamesWithUpperThresholds,
       minimumImprovementPctThreshold = 15,
       now = now,
-      24.hours,
+      params.stalePredictionHours,
     ).addPredictions
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)

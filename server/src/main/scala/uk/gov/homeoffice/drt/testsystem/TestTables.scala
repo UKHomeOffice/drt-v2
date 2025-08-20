@@ -17,7 +17,7 @@ import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.sql.Timestamp
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class MockManifestLookupService() extends ManifestLookupLike {
@@ -136,6 +136,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val isTestEnvironment: Boolean = true
   override val enableShiftPlanningChange: Boolean = true
   override val disableDeploymentFairXmax: Boolean = true
+  override val stalePredictionHours: FiniteDuration = 24.hours
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
