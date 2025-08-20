@@ -64,8 +64,8 @@ object PortDashboardPage {
 
       val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder, rm.userPreferences))
 
-      def isOnlyNoneTerminal(userPreferences: UserPreferences, portName: String): Boolean =
-        userPreferences.portDashboardTerminals.get(portName).exists(terminals => terminals.size == 1 && terminals.head == "")
+      def noTerminalSelected(userHasTerminalPreference: Option[Set[String]]): Boolean =
+        userHasTerminalPreference.contains(Set.empty[String])
 
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
         val portDashboardModel: PortDashboardModel = modelMP()
@@ -78,12 +78,11 @@ object PortDashboardPage {
             val portName = portConfig.portCode.iata.toLowerCase
             portDashboardModel.userPreferences.renderReady { userPreferences =>
               val selectedPeriodLengthMinutes = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 180)).getOrElse(180)
-              val userHasTerminalPreference: Boolean = userPreferences.portDashboardTerminals.get(portName).exists(_.nonEmpty)
+              val userHasTerminalPreference: Option[Set[String]] = userPreferences.portDashboardTerminals.get(portName)
               val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
               val terminals = portConfig.terminals(SDate.now().toLocalDate)
-              val unselectedAllTerminals = isOnlyNoneTerminal(userPreferences, portName)
 
-              val selectedTerminals: List[String] = if (!userHasTerminalPreference && !unselectedAllTerminals) {
+              val selectedTerminals: List[String] = if (userHasTerminalPreference.isEmpty) {
                 terminals.map(t => s"${t.toString}").toList
               } else {
                 userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String]).toList
@@ -123,7 +122,7 @@ object PortDashboardPage {
                 val preferenceTerminals: Set[String] = Try(
                   userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String])).getOrElse(Set.empty[String])
 
-                val updatedQueryParams: Set[String] = if (!userHasTerminalPreference)
+                val updatedQueryParams: Set[String] = if (userHasTerminalPreference.isEmpty)
                   selectedTerminals.filterNot(_ == terminal.toString).toSet
                 else {
                   if (isChecked)
@@ -203,7 +202,7 @@ object PortDashboardPage {
                   )
                 ),
                 <.div(
-                  if (isOnlyNoneTerminal(userPreferences, portName)) {
+                  if (noTerminalSelected(userHasTerminalPreference)) {
                     <.div(
                       <.h3("No terminal selected"),
                       <.p("Select all that apply to filter the dashboard by terminal.")
