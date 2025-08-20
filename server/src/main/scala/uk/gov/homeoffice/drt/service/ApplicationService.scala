@@ -47,7 +47,7 @@ import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeP
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
-import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
+import uk.gov.homeoffice.drt.db.dao.{ApiManifestProvider, FlightDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey, VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -162,9 +162,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)
 
-  private val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] =
-    (d: UtcDate) => flightsProvider.allTerminalsDateScheduledOrPcp(d).map(_._2).runWith(Sink.fold(Seq.empty[ApiFlightWithSplits])(_ ++ _))
-
+  private val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] = {
+    val getFlights = FlightDao().getForUtcDate(airportConfig.portCode)
+    (d: UtcDate) => aggregatedDb.run(getFlights(d))
+  }
 
   val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = feedService.activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
     case Some((_, _, _, actor)) =>
