@@ -4,7 +4,6 @@ import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, GetStat
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
 import drt.shared.TM
 import manifests.ManifestLookupLike
-import manifests.passengers.ManifestPaxCount
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
@@ -55,25 +54,6 @@ object OptimisationProviders {
         }
       }
       .collect { case Some(bam) => bam }
-
-  def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                                  (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = arrival =>
-    manifestLookupService
-      .maybeHistoricManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-      .map { case (_, maybeManifest) => maybeManifest }
-      .recover {
-        case t =>
-          log.warn(s"Failed to get historic manifest for ${arrival.unique}: ${t.getMessage}")
-          None
-      }
-
-  def arrivalsProvider(arrivalsActor: ActorRef)
-                      (processingRequest: TerminalUpdateRequest)
-                      (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[Arrival], NotUsed]] =
-    arrivalsActor
-      .ask(GetFlightsForTerminalDateRange(processingRequest.start.millisSinceEpoch, processingRequest.end.millisSinceEpoch, processingRequest.terminal))
-      .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-      .map(_.map(_._2.flights.map(_._2.apiFlight).toList))
 
   def flightsWithSplitsProvider(arrivalsActor: ActorRef)
                                (processingRequest: TerminalUpdateRequest)

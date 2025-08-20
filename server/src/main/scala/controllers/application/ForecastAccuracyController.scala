@@ -107,9 +107,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       .mapAsync(1) { localDate =>
         getModels(Some(SDate(localDate).addDays(-daysAhead).millisSinceEpoch)).flatMap { models =>
           val sortedModels = models.models.toList.sortBy(_._1)
-          val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
+          val isHistoricDate = localDate < ctrl.now().toLocalDate
 
-          val futureMaybeModels: Future[Option[(Actuals, Forecast, List[ModelForecast])]] = if (!isNonHistoricDate) {
+          val futureMaybeModels: Future[Option[(Actuals, Forecast, List[ModelForecast])]] = if (isHistoricDate) {
             modelsFromCache(terminalName, daysAhead, localDate, sortedModels)
           } else {
             Future.successful(None)
@@ -124,7 +124,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                 log.info(s"Calculating stats for $localDate")
                 terminalFlights(localDate, None)
                   .flatMap { actualArrivals =>
-                    val actuals = actualsStats(localDate, isNonHistoricDate, actualArrivals)
+                    val actuals = actualsStats(localDate, !isHistoricDate, actualArrivals)
                     if (localDate <= ctrl.now().toLocalDate) {
                       val pointInTime = SDate(localDate).addDays(-daysAhead)
                       terminalFlights(localDate, Option(pointInTime.millisSinceEpoch))
@@ -136,14 +136,17 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                     case (localDate, sortedModels, actuals, forecastArrivals) =>
                       val (fcst, modelFcsts) = generateForecastStats(localDate, sortedModels, forecastArrivals)
 
-                      updateCachedStats(terminalName, daysAhead, localDate, actuals, fcst, modelFcsts)
+                      if (isHistoricDate) {
+                        log.info(s"Updating cached stats for $terminalName on historic date $localDate")
+                        updateCachedStats(terminalName, daysAhead, localDate, actuals, fcst, modelFcsts)
+                      }
 
                       (actuals, fcst, modelFcsts)
                   }
             }
             .map {
               case (actuals, fcst, modelFcsts) =>
-                csvRow(isNonHistoricDate, actuals, fcst, modelFcsts, expectedModelCount)
+                csvRow(!isHistoricDate, actuals, fcst, modelFcsts, expectedModelCount)
             }
         }
       }
