@@ -58,7 +58,6 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
         .filter { arrival =>
           val sinceLastCheck = (now().millisSinceEpoch - arrival.Predictions.lastUpdated).millis
           sinceLastCheck >= staleFrom
-          true
         }
         .map { arrival =>
           models.models.values.foldLeft(arrival) {
