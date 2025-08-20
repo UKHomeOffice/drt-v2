@@ -33,8 +33,8 @@ class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) exten
       _.map { case (key, values) => s"$key:${values.mkString(",")}" }.mkString(";"),
       s => if (s.isEmpty) Map.empty[String, Set[String]]
       else s.split(";").map(_.split(":") match {
-        case Array(key, values) if key.nonEmpty && value.nonEmpty => key -> values.split(",").toSet
-        case Array(key) => key -> Set("")
+        case Array(key) if value.isEmpty  => key -> Set("")
+        case Array(key, values) => key -> values.split(",").toSet.filter(_.nonEmpty)
       }).toMap
     )
 
