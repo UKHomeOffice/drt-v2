@@ -267,7 +267,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
     OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor)
 
   val paxForQueue: Terminal => (NumericRange[Long], Queue) => Future[Seq[Int]] = DeskRecs.paxForQueue(paxProvider)
-//    _ => (millis, _) => Future.successful(Seq.fill(millis.size)(0))
 
   val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
     PortDeskLimits.flexed(airportConfig, terminalEgatesProvider, paxForQueue)
