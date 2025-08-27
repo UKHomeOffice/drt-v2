@@ -15,7 +15,7 @@ import scala.concurrent.{Await, Future}
 class DeskRecsTest extends AnyWordSpec with Matchers {
   "minDesksByWorkload" should {
     "give all zeros when there are no passengers and zero min desks" in {
-      val mins = DeskRecs.minDesksByWorkload(
+      val mins = DeskRecs.minDesksForWorkload(
         minDesks = Seq.fill(60)(0),
         pax = Seq.fill(60)(0)
       )
@@ -23,7 +23,7 @@ class DeskRecsTest extends AnyWordSpec with Matchers {
     }
 
     "give ones for 15 minute periods where there are any passengers and zero min desks" in {
-      val mins = DeskRecs.minDesksByWorkload(
+      val mins = DeskRecs.minDesksForWorkload(
         minDesks = Seq.fill(60)(0),
         pax = Seq.fill(15)(0) ++ Seq.fill(7)(0) ++ Seq(1) ++ Seq.fill(7)(0) ++ Seq.fill(15)(0) ++ Seq.fill(15)(1)
       )
@@ -31,7 +31,7 @@ class DeskRecsTest extends AnyWordSpec with Matchers {
     }
 
     "give max of min desks for 15 minute periods where there are passengers and min desks greater than 1" in {
-      val mins = DeskRecs.minDesksByWorkload(
+      val mins = DeskRecs.minDesksForWorkload(
         minDesks = Seq.fill(60)(3),
         pax = Seq.fill(15)(0) ++ Seq.fill(7)(0) ++ Seq(1) ++ Seq.fill(7)(0) ++ Seq.fill(15)(0) ++ Seq.fill(15)(1)
       )

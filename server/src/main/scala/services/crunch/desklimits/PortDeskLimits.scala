@@ -26,18 +26,11 @@ object PortDeskLimits {
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
       } yield {
         val queuesForDate = (date: LocalDate) => QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)(date, terminal)
-        val minDatesForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
+        val minDesksForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
 
-        (terminal, FixedTerminalDeskLimits(minDatesForDate, capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)), paxForQueue(terminal)))
+        (terminal, FixedTerminalDeskLimits(minDesksForDate, capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)), paxForQueue(terminal)))
       }
       ).toMap
-
-  private def capacityProviders(maxDesks: Map[Queues.Queue, IndexedSeq[Int]], egatesProvider: () => Future[EgateBanksUpdates])
-                               (implicit ec: ExecutionContext): Map[Queues.Queue, QueueCapacityProvider] =
-    maxDesks.map {
-      case (EGate, _) => (EGate, EgatesCapacityProvider(egatesProvider))
-      case (nonEgateQueue, max) => (nonEgateQueue, DeskCapacityProvider(max))
-    }
 
   def flexed(airportConfig: AirportConfig,
              egatesProvider: Terminal => Future[EgateBanksUpdates],
@@ -51,11 +44,11 @@ object PortDeskLimits {
           minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
           maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
         } yield {
-          val minDatesForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
+          val minDesksForDate = (date: LocalDate) => minDesksByQueue24Hrs.filter { case (queue, _) => queuesForDate(date).contains(queue) }
           val limits = FlexedTerminalDeskLimits(
             terminalDesks,
             airportConfig.flexedQueues,
-            minDatesForDate,
+            minDesksForDate,
             capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)), paxForQueue(terminal))
           (terminal, limits)
         }
@@ -86,4 +79,11 @@ object PortDeskLimits {
 
     maybeLimits.getOrElse(throw new Exception("Failed to create FlexedTerminalDeskLimitsFromAvailableStaff"))
   }
+
+  private def capacityProviders(maxDesks: Map[Queues.Queue, IndexedSeq[Int]], egatesProvider: () => Future[EgateBanksUpdates])
+                               (implicit ec: ExecutionContext): Map[Queues.Queue, QueueCapacityProvider] =
+    maxDesks.map {
+      case (EGate, _) => (EGate, EgatesCapacityProvider(egatesProvider))
+      case (nonEgateQueue, max) => (nonEgateQueue, DeskCapacityProvider(max))
+    }
 }

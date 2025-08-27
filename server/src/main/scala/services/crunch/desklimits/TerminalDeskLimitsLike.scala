@@ -45,9 +45,9 @@ trait TerminalDeskLimitsLike {
         val minDesksByMinute = DeskRecs
           .desksForMillis(minuteMillis, minDesksByQueue24Hrs(date).getOrElse(queue, IndexedSeq.fill(24)(0)))
 
-        val minDesksByWorkload = DeskRecs.minDesksByWorkload(minDesksByMinute, paxByMinute)
+        val minDesksForWorkload = DeskRecs.minDesksForWorkload(minDesksByMinute, paxByMinute)
 
-        val minDesks = minDesksByWorkload
+        val minDesks = minDesksForWorkload
           .toList.zip(processorProvider.processorsByMinute)
           .map { case (min, max) =>
             Math.min(min, max.maxCapacity)

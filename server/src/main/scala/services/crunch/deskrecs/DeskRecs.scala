@@ -7,8 +7,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +30,7 @@ object DeskRecs {
   def desksForMillis(millisRange: NumericRange[Long], desks24Hrs: IndexedSeq[Int]): IndexedSeq[Int] = millisRange
     .map(m => DeskRecs.desksForHourOfDayInUKLocalTime(m, desks24Hrs))
 
-  def minDesksByWorkload(minDesks: Seq[Int], pax: Seq[Int]): Seq[Int] =
+  def minDesksForWorkload(minDesks: Seq[Int], pax: Seq[Int]): Seq[Int] =
     minDesks
       .zip(pax)
       .map {
@@ -45,7 +45,14 @@ object DeskRecs {
                  (implicit ec: ExecutionContext): Terminal => (NumericRange[Long], Queue) => Future[Seq[Int]] =
     terminal => (millis, queue) => {
       paxProvider(SDate(millis.start), SDate(millis.end), terminal)
-        .map(_.values.filter(_.key.queue == queue).toSeq.sortBy(_.minute).map(_.passengers.size))
+        .map { minutes =>
+          millis.map { ms =>
+            minutes.get(TQM(terminal, queue, ms)) match {
+              case Some(pm) => pm.passengers.size
+              case None => 0
+            }
+          }
+        }
     }
 
 }
