@@ -116,7 +116,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         val start = viewDay
         val end = viewDay.getLocalNextMidnight.addMinutes(-1)
         val stream = exportStreamFn(Option(pit.millisSinceEpoch), start, end, periodMinutes(request))
-        val terminals = ctrl.airportConfig.terminals(ld).toSeq
+        val terminals = ctrl.airportConfig.terminalsForDate(ld).toSeq
         streamExport(ctrl.airportConfig.portCode, terminals, ld, ld, stream, s"desks-and-queues-$exportName-at-${pit.toISOString}-for")
       case _ =>
         BadRequest(write(ErrorResponse("Invalid date format")))

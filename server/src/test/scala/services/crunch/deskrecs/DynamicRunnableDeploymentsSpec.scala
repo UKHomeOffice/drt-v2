@@ -7,6 +7,7 @@ import org.apache.pekko.actor.{Actor, Props}
 import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import services.TryCrunchWholePax
+import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
@@ -36,10 +37,10 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
 
   val egatesProvider: Terminal => Future[EgateBanksUpdates] = MockEgatesProvider.terminalProvider(airportConfig)
 
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, egatesProvider)
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, egatesProvider, _ => dummyPaxForQueue)
   val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
-  val staffToDeskLimits: (Terminal, List[Int]) => FlexedTerminalDeskLimitsFromAvailableStaff = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
+  val staffToDeskLimits: (Terminal, List[Int]) => FlexedTerminalDeskLimitsFromAvailableStaff = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider, _ => dummyPaxForQueue)
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)))
 
   def setupGraphAndCheckQueuePax(minutes: MinutesContainer[PassengersMinute, TQM],
