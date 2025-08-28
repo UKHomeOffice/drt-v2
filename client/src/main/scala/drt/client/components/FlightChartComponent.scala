@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes
 import scala.scalajs.js
 
 object FlightChartComponent {
-  case class Props(manifestSummary: FlightManifestSummary, maybeLivePcpPax: Option[(Int, Double)])
+  case class Props(manifestSummary: FlightManifestSummary, maybeMissingPaxCount: Option[Int])
 
   case class State(showAllNationalities: Boolean)
 
@@ -24,8 +24,9 @@ object FlightChartComponent {
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
     .initialState(State(false))
     .renderPS { (scope, props, state) =>
-      val maybeWarning = props.maybeLivePcpPax.collect {
-        case (missingPaxCount, missingPaxPct) if missingPaxPct > 0.05 =>
+
+      val maybeWarning = props.maybeMissingPaxCount.collect {
+        case missingPaxCount if missingPaxCount > 0 =>
           val apiPaxCount = props.manifestSummary.passengerCount
           val totalPax = apiPaxCount + missingPaxCount
           f"DRT has received $apiPaxCount out of $totalPax passenger records for this flight."
