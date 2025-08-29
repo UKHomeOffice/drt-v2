@@ -6,7 +6,8 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 
 class CrunchMinuteSpec extends CrunchTestLike {
-  val dateMillis = 1525222800000L
+  val sdate = SDate("2020-08-31")
+  val dateMillis = sdate.millisSinceEpoch
   val date: LocalDate = SDate(dateMillis).toLocalDate
 
   "Unique keys " >> {
