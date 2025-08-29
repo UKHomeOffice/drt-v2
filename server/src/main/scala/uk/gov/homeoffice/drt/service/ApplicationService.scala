@@ -10,6 +10,7 @@ import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
+import drt.shared.CrunchApi
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
@@ -49,7 +50,7 @@ import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateAct
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.{ApiManifestProvider, FlightDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, UniqueArrivalKey, VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey, VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -62,7 +63,7 @@ import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
-import scala.collection.immutable.SortedMap
+import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -100,7 +101,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val optimiserDeployments: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeployment)
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
-    (date: LocalDate) => airportConfig.terminals(date).map(TerminalUpdateRequest(_, date))
+    (date: LocalDate) => airportConfig.terminalsForDate(date).map(TerminalUpdateRequest(_, date))
 
   val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestsProvider, maxDaysToConsider)(
     emptyProvider = new EmptyConfig[Map[Queue, Int], SlaConfigs] {
@@ -167,7 +168,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     (d: UtcDate) => aggregatedDb.run(getFlights(d))
   }
 
-  val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = feedService.activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
+  private val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = feedService.activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
     case Some((_, _, _, actor)) =>
       log.info(s"Using ACL feed actor: $actor")
       (date: UtcDate) =>
@@ -262,11 +263,15 @@ case class ApplicationService(journalType: StreamingJournalLike,
     ).addPredictions
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
+  val paxProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]] =
+    OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor)
+
+  val paxForQueue: Terminal => (NumericRange[Long], Queue) => Future[Seq[Int]] = DeskRecs.paxForQueue(paxProvider)
 
   val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
-    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
+    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider, paxForQueue)
   else
-    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
+    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider, paxForQueue)
 
   val startUpdateGraphs: (
     PersistentStateActors,
@@ -277,7 +282,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       SortedSet[TerminalUpdateRequest],
     ) => () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]) =
     (actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffQueue) => () => {
-      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider, paxForQueue) _
 
       implicit val timeout: Timeout = new Timeout(10.seconds)
 
@@ -343,7 +348,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
         deskRecsQueueActor = actors.deskRecsQueueActor,
         deskRecsQueue = deskRecsQueue,
-        paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        paxProvider = paxProvider,
         deskLimitsProvider = deskLimitsProviders,
         terminalLoadsToQueueMinutes = portDeskRecs.terminalLoadsToDesks,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
@@ -358,7 +363,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         deploymentQueueActor = actors.deploymentQueueActor,
         deploymentQueue = deploymentQueue,
         staffToDeskLimits = staffToDeskLimits,
-        paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        paxProvider = paxProvider,
         staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor),
         loadsToDeployments = portDeployments.loadsToSimulations,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,

@@ -73,7 +73,7 @@ object PortConfigDetails {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigDetails")
     .render_P { props =>
       <.div(
-        props.airportConfig.terminals(SDate.now().toLocalDate).map(tn => {
+        props.airportConfig.terminalsForDate(SDate.now().toLocalDate).map(tn => {
           val maybeUpdate = props.updatesByTerminal.get(tn).flatMap(_.updatesForDate(SDate.now().millisSinceEpoch))
           <.div(
             <.h2(tn.toString),

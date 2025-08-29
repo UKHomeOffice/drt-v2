@@ -80,7 +80,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     updateFlightsLiveView,
   )
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
-  override val manifestLookups: ManifestLookupsLike = ManifestLookups(system, airportConfig.terminals)
+  override val manifestLookups: ManifestLookupsLike = ManifestLookups(system, airportConfig.terminalsForDate)
   lazy override val actorService: ActorsServiceLike = TestActorService(journalType,
     airportConfig,
     now,
@@ -94,7 +94,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     airportConfig.minutesToCrunch,
     airportConfig.crunchOffsetMinutes,
     manifestLookups,
-    airportConfig.terminals,
+    airportConfig.terminalsForDate,
   )
 
   lazy val feedService: FeedService = TestFeedService(

@@ -10,6 +10,7 @@ import scala.concurrent.Future
 
 case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
                                    maxDesksByQueue24Hrs: Map[Queue, QueueCapacityProvider],
+                                   paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]],
                                   ) extends TerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                                   queue: Queue,

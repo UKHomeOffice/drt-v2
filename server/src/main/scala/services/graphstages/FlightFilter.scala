@@ -38,7 +38,7 @@ object FlightFilter {
     validTerminalFilter(validTerminals.toList) + notDivertedFilter + notCancelledFilter + outsideCtaFilter
 
   def forPortConfig(config: AirportConfig): FlightFilter = {
-    val terminals = regular(config.terminals(SDate.now().toLocalDate))
+    val terminals = regular(config.terminalsForDate(SDate.now().toLocalDate))
     config.portCode match {
       case PortCode("LHR") => terminals + lhrRedListFilter
       case _ => terminals

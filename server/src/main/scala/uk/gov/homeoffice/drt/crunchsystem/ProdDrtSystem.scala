@@ -49,7 +49,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(aggregatedDb)
 
-  override val manifestLookups: ManifestLookups = ManifestLookups(system, airportConfig.terminals)
+  override val manifestLookups: ManifestLookups = ManifestLookups(system, airportConfig.terminalsForDate)
 
   override val userService: UserTableLike = UserTable(aggregatedDb)
 
@@ -96,7 +96,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     system,
     now,
     manifestLookups,
-    airportConfig.terminals,
+    airportConfig.terminalsForDate,
   )
 
   override def run(): Unit = applicationService.run()

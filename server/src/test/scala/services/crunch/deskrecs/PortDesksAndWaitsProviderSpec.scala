@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, PassengersMinute}
 import drt.shared.{ArrivalGenerator, CrunchApi}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
 import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
@@ -97,6 +98,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       EGate -> IndexedSeq.fill(24)(10),
       NonEeaDesk -> IndexedSeq.fill(24)(10),
     )
+
+    override val paxForQueue: (NumericRange[MillisSinceEpoch], Queue) => Future[Seq[Int]] = dummyPaxForQueue
 
     override def maxDesksForMinutes(minuteMillis: NumericRange[MillisSinceEpoch], queue: Queue, existingAllocations: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] =
       Future.successful(WorkloadProcessorsProvider(DeskRecs.desksForMillis(minuteMillis, IndexedSeq.fill(24)(10)).map(x => WorkloadProcessors(Seq.fill(x)(Desk)))))

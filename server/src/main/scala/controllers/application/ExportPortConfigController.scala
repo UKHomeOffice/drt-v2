@@ -160,7 +160,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
   def exportConfig: Action[AnyContent] = Action.async { _ =>
     val aConfigAndDeskByTerminal = Future.sequence {
-      airportConfig.terminals(SDate.now().toLocalDate).map { tn =>
+      airportConfig.terminalsForDate(SDate.now().toLocalDate).map { tn =>
         val terminal = tn.toString
         val slaConfig: Future[String] = getSlaConfig(tn)
         val airportConfigString = getAirportConfig(tn)

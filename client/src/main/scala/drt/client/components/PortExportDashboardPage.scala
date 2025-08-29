@@ -17,7 +17,7 @@ object PortExportDashboardPage {
 
       airportConfigRCP(airportConfigMP => {
         <.div(^.className := "terminal-export-dashboard", airportConfigMP().renderReady(config => {
-          val terminals = config.terminals(SDate.now().toLocalDate)
+          val terminals = config.terminalsForDate(SDate.now().toLocalDate)
           <.div(terminals.map(tn => {
             <.div(
               <.h3(s"Terminal $tn"),

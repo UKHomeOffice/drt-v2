@@ -1,7 +1,7 @@
 package services.crunch.desklimits
 
-import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.deskrecs.DeskRecs
+import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
@@ -34,19 +34,26 @@ case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates
 
 trait TerminalDeskLimitsLike {
   val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]]
+  val paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]]
 
   def deskLimitsForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]])
                           (implicit ec: ExecutionContext): Future[(Iterable[Int], WorkloadProcessorsProvider)] = {
     val date = SDate(minuteMillis.min).toLocalDate
 
-    maxDesksForMinutes(minuteMillis, queue, allocatedDesks).map { processorProvider =>
-      val minDesks = DeskRecs
-        .desksForMillis(minuteMillis, minDesksByQueue24Hrs(date).getOrElse(queue, IndexedSeq.fill(24)(0)))
-        .toList.zip(processorProvider.processorsByMinute)
-        .map { case (min, max) =>
-          Math.min(min, max.maxCapacity)
-        }
-      (minDesks, processorProvider)
+    maxDesksForMinutes(minuteMillis, queue, allocatedDesks).flatMap { processorProvider =>
+      paxForQueue(minuteMillis, queue).map { paxByMinute =>
+        val minDesksByMinute = DeskRecs
+          .desksForMillis(minuteMillis, minDesksByQueue24Hrs(date).getOrElse(queue, IndexedSeq.fill(24)(0)))
+
+        val minDesksForWorkload = DeskRecs.minDesksForWorkload(minDesksByMinute, paxByMinute)
+
+        val minDesks = minDesksForWorkload
+          .toList.zip(processorProvider.processorsByMinute)
+          .map { case (min, max) =>
+            Math.min(min, max.maxCapacity)
+          }
+        (minDesks, processorProvider)
+      }
     }
   }
 

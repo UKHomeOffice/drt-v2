@@ -80,7 +80,7 @@ object PortDashboardPage {
               val selectedPeriodLengthMinutes = Try(userPreferences.portDashboardIntervalMinutes.getOrElse(portName, 180)).getOrElse(180)
               val userHasTerminalPreference: Option[Set[String]] = userPreferences.portDashboardTerminals.get(portName)
               val paxTypeAndQueueOrder = portConfig.terminalPaxSplits
-              val terminals = portConfig.terminals(SDate.now().toLocalDate)
+              val terminals = portConfig.terminalsForDate(SDate.now().toLocalDate)
 
               val selectedTerminals: List[String] = if (userHasTerminalPreference.isEmpty) {
                 terminals.map(t => s"${t.toString}").toList
