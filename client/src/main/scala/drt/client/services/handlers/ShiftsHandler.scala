@@ -31,12 +31,11 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetShifts(terminal, dateOption , dayRangeOption) =>
       val dayRange = dayRangeOption.getOrElse("monthly")
-//      val currentDate = dateOption.getOrElse(uk.gov.homeoffice.drt.util.ShiftUtil.currentLocalDate().toString)
       val url = dateOption match {
         case Some(date) =>
           s"shifts/$terminal/$dayRange/$date"
         case None =>
-          s"shifts/$terminal/$dayRange/''"
+          s"shifts/$terminal/$dayRange"
       }
       val apiCallEffect = Effect(DrtApi.get(url).map { r =>
         log.info(msg = s"Received shifts for $terminal")

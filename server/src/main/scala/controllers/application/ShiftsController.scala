@@ -125,6 +125,11 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
+  def getActiveShiftsForCurrentViewRange(terminal: String, dayRange: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getActiveShiftsForViewRange(ctrl.airportConfig.portCode.iata, terminal, Option(dayRange), None).map { shifts =>
+      Ok(shifts.toJson.compactPrint)
+    }
+  }
 
   def getActiveShifts(terminal: String): Action[AnyContent] = Action.async {
     ctrl.shiftsService.getActiveShifts(ctrl.airportConfig.portCode.iata, terminal, None).map { shifts =>

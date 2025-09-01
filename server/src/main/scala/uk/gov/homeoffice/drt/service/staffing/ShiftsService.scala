@@ -1,5 +1,6 @@
 package uk.gov.homeoffice.drt.service.staffing
 
+import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
@@ -16,7 +17,7 @@ trait ShiftsService {
 
   def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]]
 
-  def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]] = getActiveShifts(port, terminal, date)
+  def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]]
 
   def saveShift(shifts: Seq[Shift]): Future[Int]
 
@@ -58,21 +59,19 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]] =
     getShifts(port, terminal).map { shifts =>
       val viewDate: LocalDate = localDateFromString(date)
-      dayRange match {
+      dayRange.map(_.toLowerCase) match {
         case Some("weekly") =>
           val viewingSDate = SDate(viewDate.toISOString)
           val startOfWeek = SDate.firstDayOfWeek(viewingSDate)
           val endOfWeek = SDate.lastDayOfWeek(viewingSDate)
           val weekStart = LocalDate(startOfWeek.getFullYear, startOfWeek.getMonth, startOfWeek.getDate)
           val weekEnd = LocalDate(endOfWeek.getFullYear, endOfWeek.getMonth, endOfWeek.getDate)
-          shifts.filter(shift => (shift.startDate.compare(weekStart) <=0 ) ||
-            (shift.endDate.exists(ed => ed.compare(weekStart) >= 0 && ed.compare(weekEnd) <= 0)) ||
-            (shift.startDate.compare(weekStart) < 0 && shift.endDate.exists(ed => ed.compare(weekEnd) > 0)))
-
+          shifts.filter(shift => (shift.startDate.compare(weekEnd) <= 0 ) &&
+            (shift.endDate.exists(ed => ed.compare(weekStart) >= 0) || shift.endDate.isEmpty))
         case Some("daily") => shifts.filter(shift => shift.startDate.compare(localDateFromString(date)) <= 0 &&
           (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDateFromString(date)) >= 0)))
-        case _ => shifts.filter(shift => shift.startDate.compare(LocalDate(year = viewDate.year, month = viewDate.month, day = 1)) <= 0 &&
-          (shift.endDate.isEmpty || shift.endDate.exists(ed => ed.compare(LocalDate(year = viewDate.year, month = viewDate.month + 1, day = 1)) < 0)))
+        case _ => shifts.filter(shift => shift.startDate.compare(LocalDate(year = viewDate.year, month = viewDate.month + 1, day = 1)) < 0 &&
+          (shift.endDate.isEmpty || shift.endDate.exists(ed => ed.compare(LocalDate(year = viewDate.year, month = viewDate.month, day = 1)) >= 0)))
       }
   }
 

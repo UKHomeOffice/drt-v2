@@ -289,7 +289,9 @@ object TerminalComponent {
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
     .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString, p.props.terminalPageTab.queryParams.get("date")))))
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString,
+        p.props.terminalPageTab.queryParams.get("date"),
+        p.props.terminalPageTab.queryParams.get("dayRange")))))
     .build
 
   private def terminalTabs(props: Props,
