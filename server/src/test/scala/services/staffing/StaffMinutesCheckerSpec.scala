@@ -20,7 +20,7 @@ class StaffMinutesCheckerSpec extends Specification {
 
       val expected = for {
         date <- Seq(LocalDate(2023, 1, 9), LocalDate(2023, 1, 10))
-        terminal <- Lhr.config.terminals(date)
+        terminal <- Lhr.config.terminalsForDate(date)
       } yield {
         TerminalUpdateRequest(terminal, date)
       }

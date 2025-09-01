@@ -11,6 +11,7 @@ import queueus.{ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllo
 import services.crunch.CrunchTestLike
 import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.PortDeskLimits
+import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
@@ -75,7 +76,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       egateBanksProvider = egateBanksProvider,
       paxFeedSourceOrder = paxFeedSourceOrder,
-      deskLimitsProviders = PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
+      deskLimitsProviders = PortDeskLimits.flexed(airportConfig, terminalEgatesProvider, _ => dummyPaxForQueue)
     )
 
     val result = Await.result(futureResult, 1.second)

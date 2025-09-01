@@ -45,7 +45,8 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
 case class FlexedTerminalDeskLimits(terminalDesks: Int,
                                     flexedQueues: Set[Queue],
                                     minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
-                                    capacityByQueue: Map[Queue, QueueCapacityProvider]
+                                    capacityByQueue: Map[Queue, QueueCapacityProvider],
+                                    paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]],
                                    ) extends FlexedTerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                                   queue: Queue,

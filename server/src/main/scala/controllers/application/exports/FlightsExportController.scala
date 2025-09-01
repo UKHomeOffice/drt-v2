@@ -30,7 +30,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
   def exportFlightsWithSplitsTerminalsForDayAtPointInTimeCSV(localDateString: String,
                                                     pointInTime: MillisSinceEpoch): Action[AnyContent] = {
-    val terminals = ctrl.airportConfig.terminals(LocalDate.parse(localDateString).getOrElse(throw new Exception(s"Could not parse local date '$localDateString''")))
+    val terminals = ctrl.airportConfig.terminalsForDate(LocalDate.parse(localDateString).getOrElse(throw new Exception(s"Could not parse local date '$localDateString''")))
     doExportForPointInTime(localDateString, pointInTime, terminals.toSeq, exportForUser)
   }
 

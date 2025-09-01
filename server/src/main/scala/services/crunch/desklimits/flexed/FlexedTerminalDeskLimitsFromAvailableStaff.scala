@@ -15,6 +15,7 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
                                                       flexedQueues: Set[Queue],
                                                       minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
                                                       capacityByQueue: Map[Queue, QueueCapacityProvider],
+                                                      paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]],
                                                      )
                                                      (implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {

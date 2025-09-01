@@ -379,7 +379,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         simulationParams.applyPassengerWeighting(fws, ctrl.paxFeedSourceOrder),
       ))
       val portStateActor = actorSystem.actorOf(props)
-      val deskLimits = PortDeskLimits.flexed(simulationConfig, terminalEgateBanksFromParams(simulationParams))
+      val deskLimits = PortDeskLimits.flexed(simulationConfig, terminalEgateBanksFromParams(simulationParams), ctrl.applicationService.paxForQueue)
       Scenarios.simulationResult(
         simulationParams = simulationParams,
         simulationAirportConfig = simulationConfig,

@@ -11,6 +11,7 @@ import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
+import drt.shared.CrunchApi
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.ManifestLookupLike
@@ -50,6 +51,7 @@ import uk.gov.homeoffice.drt.testsystem.TestActors.TestShiftsActor
 import uk.gov.homeoffice.drt.time._
 
 import scala.collection.SortedSet
+import scala.collection.immutable.NumericRange
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -193,7 +195,7 @@ class TestDrtActor extends Actor {
       val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
         tc.now, time48HoursAgo(tc.now), requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
-      val manifestLookups = ManifestLookups(system, airportConfig.terminals)
+      val manifestLookups = ManifestLookups(system, airportConfig.terminalsForDate)
 
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
 
@@ -258,12 +260,17 @@ class TestDrtActor extends Actor {
 
       val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)))
 
-      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
-        PortDeskLimits.flexed(tc.airportConfig, terminalEgatesProvider)
-      else
-        PortDeskLimits.fixed(tc.airportConfig, terminalEgatesProvider)
+      val paxProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]] =
+        OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor)
 
-      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider) _
+      val paxForQueue: Terminal => (NumericRange[Long], Queue) => Future[Seq[Int]] = DeskRecs.paxForQueue(paxProvider)
+
+      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
+        PortDeskLimits.flexed(tc.airportConfig, terminalEgatesProvider, paxForQueue)
+      else
+        PortDeskLimits.fixed(tc.airportConfig, terminalEgatesProvider, paxForQueue)
+
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider, paxForQueue) _
 
       val ptqa = paxTypeQueueAllocator(tc.airportConfig.hasTransfer, TerminalQueueAllocator(tc.airportConfig.terminalPaxTypeQueueAllocation))
       val splitAdjustments = AdjustmentsNoop

@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import services.WorkloadProcessorsProvider
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.DeskCapacityProvider
+import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
 import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneHourMillis
@@ -36,7 +37,7 @@ class FlexedTerminalDeskLimitsSpec extends CrunchTestLike {
     "When I ask for max desks at each hour from midnight to midnight outside BST " >> {
       "Then I should get 10 for every hour" >> {
         val terminalDesks = 10
-        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk), _ => minDesksByQueue, Map())
+        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk), _ => minDesksByQueue, Map(), dummyPaxForQueue)
         val result: Future[WorkloadProcessorsProvider] = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(10, 24)
 
@@ -49,7 +50,7 @@ class FlexedTerminalDeskLimitsSpec extends CrunchTestLike {
     "When I ask for max desks for Eee for 24 hours, with no existing allocations for Non-EEA " >> {
       "Then I should get 9 for every hour (10 minus 1 minimum Non-EEA desk)" >> {
         val terminalDesks = 10
-        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksByQueue, Map())
+        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksByQueue, Map(), dummyPaxForQueue)
         val noExistingAllocations = Map[Queue, List[Int]]()
         val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, noExistingAllocations)
         val expected = uniformDesksForHours(9, 24)
@@ -63,7 +64,7 @@ class FlexedTerminalDeskLimitsSpec extends CrunchTestLike {
     "When I ask for max desks for Eee for 24 hours, with existing allocations for Non-EEA of 4 desks " >> {
       "Then I should get 6 for every hour (10 minus 4 allocated Non-EEA desks)" >> {
         val terminalDesks = 10
-        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksByQueue, Map())
+        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksByQueue, Map(), dummyPaxForQueue)
         val existingNonEeaAllocations = Map[Queue, List[Int]](NonEeaDesk -> List.fill(24)(4))
         val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, existingNonEeaAllocations)
         val expected = uniformDesksForHours(6, 24)
@@ -77,7 +78,7 @@ class FlexedTerminalDeskLimitsSpec extends CrunchTestLike {
     "When I ask for max desks for EGates for 24 hours, with existing allocations for the flexed desks " >> {
       "Then I should get 3 for every hour - the max for EGates regardless of the existing allocations" >> {
         val terminalDesks = 10
-        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksByQueue, Map(EGate -> DeskCapacityProvider(IndexedSeq.fill(24)(3))))
+        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksByQueue, Map(EGate -> DeskCapacityProvider(IndexedSeq.fill(24)(3))), dummyPaxForQueue)
         val existingFlexedAllocations = Map[Queue, List[Int]](
           EeaDesk -> List.fill(24)(5),
           NonEeaDesk -> List.fill(24)(5)

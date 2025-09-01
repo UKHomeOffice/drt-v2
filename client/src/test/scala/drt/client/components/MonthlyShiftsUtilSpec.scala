@@ -6,6 +6,7 @@ import drt.shared._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import drt.client.services.JSDateConversions.SDate
+import uk.gov.homeoffice.drt.Shift
 
 object MonthlyShiftsUtilSpec extends TestSuite {
   val tests: Tests = Tests {

@@ -3,6 +3,7 @@ package services.crunch.desklimits.flexed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.EgatesCapacityProvider
+import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
 import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
 import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank, EgateBanksUpdate, EgateBanksUpdates}
@@ -44,7 +45,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
       "Then I should get 5 for every hour - the available staff" >> {
         val terminalDesks = 10
         val availableStaff = List.fill(24)(5)
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => Map(), Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => Map(), Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(5, 24)
 
@@ -58,7 +59,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
       "Then I should get 10 for every hour - the terminal desks" >> {
         val terminalDesks = 10
         val availableStaff = List.fill(24)(20)
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => Map(), Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => Map(), Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(10, 24)
 
@@ -73,7 +74,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
         val terminalDesks = 10
         val availableStaff = List.fill(24)(5)
         val minDesksForEeaAndNonEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> minDesks)
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(4, 24)
 
@@ -88,7 +89,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
         val terminalDesks = 10
         val availableStaff = List.fill(24)(15)
         val minDesksForEeaAndNonEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> minDesks)
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = uniformDesksForHours(9, 24)
 
@@ -104,7 +105,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
         val availableStaff = List.fill(24)(15)
         val minDesksForEeaAndNonEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> minDesks)
         val existingNonEeaAllocation: Map[Queue, List[Int]] = Map(NonEeaDesk -> List.fill(24)(2))
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, existingNonEeaAllocation)
         val expected = uniformDesksForHours(8, 24)
 
@@ -120,7 +121,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
         val availableStaff = List.fill(24)(5)
         val minDesksForEeaAndNonEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> minDesks)
         val existingNonEeaAllocation: Map[Queue, List[Int]] = Map(NonEeaDesk -> List.fill(24)(2))
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, existingNonEeaAllocation)
         val expected = uniformDesksForHours(3, 24)
 
@@ -136,7 +137,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
         val availableStaff = List.fill(24)(5)
         val minDesksForEeaAndNonEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> minDesks, EGate -> minDesks)
         val existingNonEeaAllocation: Map[Queue, List[Int]] = Map(NonEeaDesk -> List.fill(24)(2))
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, existingNonEeaAllocation)
         val expected = uniformDesksForHours(2, 24)
 
@@ -152,7 +153,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
         val availableStaff = List.fill(24)(15)
         val minDesksForEeaAndNonEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> minDesks, EGate -> minDesks)
         val existingNonEeaAllocation: Map[Queue, List[Int]] = Map(NonEeaDesk -> List.fill(24)(2))
-        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map())
+        val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk, NonEeaDesk), _ => minDesksForEeaAndNonEea, Map(), dummyPaxForQueue)
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, existingNonEeaAllocation)
         val expected = uniformDesksForHours(8, 24)
 
@@ -168,7 +169,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
           val terminalDesks = 10
           val availableStaff = List.fill(24)(0)
           val minDesksForEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks)
-          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => minDesksForEea, Map())
+          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => minDesksForEea, Map(), dummyPaxForQueue)
           val result: Future[(Iterable[Int], WorkloadProcessorsProvider)] = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
           val expected = (List.fill(24)(0), uniformDesksForHours(0, 24))
 
@@ -183,7 +184,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
           val terminalDesks = 10
           val availableStaff = List.fill(24)(1)
           val minDesksForEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> IndexedSeq.fill(24)(4))
-          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => minDesksForEea, Map())
+          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), _ => minDesksForEea, Map(), dummyPaxForQueue)
           val result = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
           val expected = (List.fill(24)(0), uniformDesksForHours(0, 24))
 
@@ -199,7 +200,7 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
           val availableStaff = List.fill(24)(2)
           val minDesksForEea: Map[Queue, IndexedSeq[Int]] = Map(EGate -> minDesks)
           val egatesCapProvider = EgatesCapacityProvider(() => Future.successful(EgateBanksUpdates(List(EgateBanksUpdate(0L, IndexedSeq.fill(3)(EgateBank(IndexedSeq())))))))
-          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(), _ => minDesksForEea, Map(EGate -> egatesCapProvider))
+          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(), _ => minDesksForEea, Map(EGate -> egatesCapProvider), dummyPaxForQueue)
           val result = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EGate, Map())
           val expected = (List.fill(24)(0), WorkloadProcessorsProvider(IndexedSeq.fill(24)(WorkloadProcessors(Seq.fill(2)(EgateBank(IndexedSeq()))))))
 

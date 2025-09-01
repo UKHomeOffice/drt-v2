@@ -168,7 +168,7 @@ object FlightTableRow {
           if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05)) {
             val cls = if (props.showHighLighted) "arrivals__table__flight-code__info-highlighted" else "arrivals__table__flight-code__info"
             <.div(^.className := cls,
-              FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
+              FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct.map(_._1))))
           } else EmptyVdom
         case _ => EmptyVdom
       }

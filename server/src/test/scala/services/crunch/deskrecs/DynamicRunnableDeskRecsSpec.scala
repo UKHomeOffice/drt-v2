@@ -14,6 +14,7 @@ import manifests.ManifestLookupLike
 import queueus._
 import services.TryCrunchWholePax
 import services.crunch.desklimits.PortDeskLimits
+import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -89,7 +90,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
     val minute = SDate(flight.apiFlight.Scheduled).millisSinceEpoch
-    val maxDeskProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
+    val maxDeskProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig), _ => dummyPaxForQueue)
     val queueMinutesProducer = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
       loadsProvider = (_, _, _) => {
         Future.successful(Map(TQM(T1, EeaDesk, minute) -> PassengersMinute(T1, EeaDesk, minute, Seq(50, 50, 50), None)))

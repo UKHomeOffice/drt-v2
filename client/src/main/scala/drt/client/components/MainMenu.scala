@@ -19,8 +19,6 @@ import uk.gov.homeoffice.drt.auth.Roles._
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, PortRegion}
 
-import scala.scalajs.js
-
 object MainMenu {
   case class Props(router: RouterCtl[Loc],
                    currentLoc: Loc,
@@ -54,9 +52,9 @@ object MainMenu {
         List((PortFeedUpload, forecastUploadFile))
       else List.empty
 
-    val terminals = airportConfig.terminals(SDate.now().toLocalDate)
+    val terminals = airportConfig.terminalsForDate(SDate.now().toLocalDate)
 
-    def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = terminals.map { tn =>
+    def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = terminals.toList.map { tn =>
       val terminalName = tn.toString
       val targetLoc = currentLoc match {
         case tptl: TerminalPageTabLoc if tptl.mode == Dashboard =>
@@ -70,7 +68,7 @@ object MainMenu {
       }
       (BorderForceStaff, (offset: Int) =>
         MenuItem(offset, terminalName, Icon.calculator, targetLoc, linkClasses = Seq(s"terminal-${terminalName.toLowerCase}")))
-    }.toList
+    }
 
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
 

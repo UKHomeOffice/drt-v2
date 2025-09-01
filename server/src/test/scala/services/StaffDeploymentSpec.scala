@@ -2,11 +2,13 @@ package services
 
 import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
+import controllers.ArrivalGenerator.live
+import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import services.graphstages.StaffDeploymentCalculator._
 import services.graphstages.{StaffAssignmentService, StaffSources}
+import services.graphstages.StaffDeploymentCalculator._
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import uk.gov.homeoffice.drt.ports.Queues
@@ -48,6 +50,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
   import SDate.implicits.sdateFromMillisLocal
 
   private val staffAvailable = 25
+
   "Given a set of CrunchMinutes representing a single terminal with 3 queues at one minute " +
   "When I ask to add deployments to them " +
   "Then I see the staff available distributed to the appropriate queues" >> {
@@ -163,6 +166,9 @@ class StaffDeploymentSpec extends CrunchTestLike {
       val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
       val initialFixedPoints = SetFixedPoints(Seq(assignment2))
 
+      val liveFlight = live(iata = "BAW001", schDt = scheduled, totalPax = Option(20), actChoxDt = "2017-01-01T00:30Z")
+      val liveFlights = List(liveFlight)
+
       val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           terminalPaxSplits = Map(T1 -> SplitRatios(
@@ -188,6 +194,8 @@ class StaffDeploymentSpec extends CrunchTestLike {
           ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
       }
       offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
+
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
