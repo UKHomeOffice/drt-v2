@@ -157,7 +157,7 @@ Cypress.Commands.add('selectAdditionalReason', (reason) => {
 });
 
 Cypress.Commands.add('staffMovementsAtRow', (row) => {
-  const selector = `td.total-deployed:nth(${row * 2 + 1})`
+  const selector = `td.total-deployed:nth(${row * 5 + 1})`
   cy.get(selector);
 });
 
