@@ -139,8 +139,8 @@ object TerminalDesksAndQueuesRow {
       val plus: TagMod = adjustmentLink(props, "+")
 
       val pcpTds: Seq[VdomTagOf[TableCell]] = List(
-        <.td(^.className := s"non-pcp", fixedPoints),
-        <.td(^.className := s"non-pcp", movements),
+        <.td(^.className := s"total-deployed", fixedPoints),
+        <.td(^.className := s"total-deployed", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed", totalDeployed),
         if (allowAdjustments)

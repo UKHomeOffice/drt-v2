@@ -149,8 +149,8 @@ object TerminalDesksAndQueues {
         }.toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "non-pcp", <.div("Misc", miscTooltip)),
-          <.th(^.className := "non-pcp", <.div("Moves", movesTooltip)),
+          <.th(^.className := "total-deployed", <.div("Misc", miscTooltip)),
+          <.th(^.className := "total-deployed", <.div("Moves", movesTooltip)),
           <.th(^.className := "total-deployed", <.div("Rec", recToolTip)),
           <.th(^.className := "total-deployed", "Dep"),
           <.th(^.className := "total-deployed", <.div("Avail", availTooltip), ^.colSpan := 2))
@@ -169,8 +169,7 @@ object TerminalDesksAndQueues {
       }).toList
 
       val headings: List[TagMod] = queueHeadings ++ List(
-        <.th(^.className := "non-pcp", ^.colSpan := 2, ""),
-        <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
+        <.th(^.className := "total-deployed", ^.colSpan := 6, "Staffing")
       )
 
       def toggleDeskType(newDeskType: DeskType) = (e: ReactEventFromInput) => {
