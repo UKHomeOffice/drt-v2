@@ -13,7 +13,7 @@ import upickle.default._
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class GetShifts(terminal: String, viewDate: Option[String] = None)
+case class GetShifts(terminal: String, viewDate: Option[String] = None , dayRange: Option[String] = None)
 
 case class GetShift(terminal: String, shiftName: String, startDate: Option[String])
 
@@ -29,12 +29,14 @@ case class SetShifts(staffShifts: Seq[Shift])
 class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActionHandler(modelRW) {
 
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetShifts(terminal, dateOption) =>
+    case GetShifts(terminal, dateOption , dayRangeOption) =>
+      val dayRange = dayRangeOption.getOrElse("monthly")
+//      val currentDate = dateOption.getOrElse(uk.gov.homeoffice.drt.util.ShiftUtil.currentLocalDate().toString)
       val url = dateOption match {
         case Some(date) =>
-          s"shifts/$terminal/$date"
+          s"shifts/$terminal/$dayRange/$date"
         case None =>
-          s"shifts/$terminal"
+          s"shifts/$terminal/$dayRange/''"
       }
       val apiCallEffect = Effect(DrtApi.get(url).map { r =>
         log.info(msg = s"Received shifts for $terminal")

@@ -43,16 +43,16 @@ object EditShiftsComponent {
       }
     }
 
-    private def startDateInLocalDate(month: Int): uk.gov.homeoffice.drt.time.LocalDate = {
-      val today: SDateLike = SDate.now()
-      val year = if (today.getMonth > month + 1) today.getFullYear + 1 else today.getFullYear
-      uk.gov.homeoffice.drt.time.LocalDate(year, month, 1)
+    private def startDateInLocalDate(startDate: ShiftDate): uk.gov.homeoffice.drt.time.LocalDate = {
+//      val today: SDateLike = SDate.now()
+//      val year = if (today.getMonth > month + 1) today.getFullYear + 1 else today.getFullYear
+      uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
     }
 
     def render(props: Props): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
         val staffShifts = shifts.map { s =>
-          val startDate: LocalDate = startDateInLocalDate(s.editStartMonth)
+          val startDate: LocalDate = startDateInLocalDate(s.startDate)
           Shift(
             port = props.portCode,
             terminal = props.terminal.toString,
@@ -80,9 +80,9 @@ object EditShiftsComponent {
               name = s.shiftName,
               startTime = s.startTime,
               endTime = s.endTime,
-              startDate = ShiftDate(s.startDate.year, s.startDate.month, s.startDate.day),
+              startDate = ShiftDate(year = s.startDate.year, month = s.startDate.month, day = s.startDate.day),
               defaultStaffNumber = s.staffNumber,
-              startMonth = getMonthOnStartDateCheck(props.viewDate)
+//              startMonth = getMonthOnStartDateCheck(props.viewDate)
             )
           }
 
