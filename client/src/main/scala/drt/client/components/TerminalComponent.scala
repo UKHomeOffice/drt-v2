@@ -255,6 +255,7 @@ object TerminalComponent {
                         props.terminalPageTab.portCodeStr,
                         terminalModel.shiftsPot,
                         props.terminalPageTab.queryParams("shiftName"),
+                        props.terminalPageTab.queryParams.get("shiftDate"),
                         props.terminalPageTab.queryParams.get("date"),
                         props.router))
 

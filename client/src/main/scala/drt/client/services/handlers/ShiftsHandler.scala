@@ -60,9 +60,9 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
     case GetShift(terminal, shiftName, startDateOption) =>
       val url = startDateOption match {
         case Some(date) =>
-          s"shifts/$terminal/$shiftName/$date"
+          s"shift/$terminal/$shiftName/$date"
         case None =>
-          s"shifts/$terminal/$shiftName"
+          s"shift/$terminal/$shiftName"
       }
       val apiCallEffect = Effect(DrtApi.get(url)
         .map(r => SetShifts(read[Seq[Shift]](r.responseText)))

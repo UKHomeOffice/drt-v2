@@ -59,12 +59,17 @@ object MonthlyShiftsUtil {
                               shiftDetails: ShiftDetails,
                               assignmentsByDate: Map[LocalDate, Seq[StaffAssignmentLike]],
                              ): Seq[StaffTableEntry] = {
+
+    val startDay = if (startDate.getMonth == shiftDetails.shift.startDate.month && startDate.getFullYear == shiftDetails.shift.startDate.year)
+      shiftDetails.shift.startDate.day else 1;
+    val daysInMonth = shiftDetails.shift.endDate.map(_.day).getOrElse(daysCount)
+
     val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
 
     val shiftEndsAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
     //For all the days in the period, create the staff table entries for the shift
-    (1 to daysCount).flatMap { day =>
+    (startDay to daysInMonth).flatMap { day =>
       val currentDay = startDate.addDays(day - 1)
       val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
       val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
@@ -177,8 +182,9 @@ object MonthlyShiftsUtil {
       )
       ShiftSummaryStaffing(
         index = index,
-        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime ,
-          startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year)
+        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime,
+          startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year),
+          endDate = shift.endDate.map(d => ShiftDate(day = d.day, month = d.month, year = d.year))
         ),
         staffTableEntries = tableEntries
       )
