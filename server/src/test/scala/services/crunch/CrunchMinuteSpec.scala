@@ -6,8 +6,8 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 
 class CrunchMinuteSpec extends CrunchTestLike {
-  val dateMillis = 1525222800000L
-  val date: LocalDate = SDate(dateMillis).toLocalDate
+  val date: LocalDate = LocalDate(2025, 9, 1)
+  val dateMillis: Long = SDate(date).millisSinceEpoch
 
   "Unique keys " >> {
     "Given a range of terminals, queues and minutes " +
