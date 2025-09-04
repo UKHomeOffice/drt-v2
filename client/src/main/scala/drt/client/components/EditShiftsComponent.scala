@@ -11,7 +11,7 @@ import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{VdomTagOf, _}
-import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -49,10 +49,14 @@ object EditShiftsComponent {
       }
     }
 
+    private def startDateInLocalDate(startDate: ShiftDate): uk.gov.homeoffice.drt.time.LocalDate = {
+      uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
+    }
+
     def render(props: Props): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
         val staffShifts = shifts.map { s =>
-          val startDate: LocalDate = uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
+          val startDate: LocalDate = startDateInLocalDate(s.startDate)
           Shift(
             port = props.portCode,
             terminal = props.terminal.toString,
