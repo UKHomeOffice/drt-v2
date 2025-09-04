@@ -11,7 +11,7 @@ import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{VdomTagOf, _}
-import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -30,13 +30,13 @@ object EditShiftsComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
 
-  class Backend(scope: BackendScope[Props, Unit]) {
+  class Backend {
 
     import upickle.default.{macroRW, ReadWriter => RW}
 
     implicit val rw: RW[Shift] = macroRW
 
-    private def shiftDateToShiftDate(shiftDate: Option[String]): LocalDate = {
+    private def dateStringToLocalDate(shiftDate: Option[String]): LocalDate = {
       val parts = shiftDate.map(_.split("-")).getOrElse(Array())
       if (parts.length == 3) {
         val year = parts(0).toInt
@@ -49,14 +49,10 @@ object EditShiftsComponent {
       }
     }
 
-    private def startDateInLocalDate(startDate: ShiftDate): uk.gov.homeoffice.drt.time.LocalDate = {
-      uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
-    }
-
     def render(props: Props): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
         val staffShifts = shifts.map { s =>
-          val startDate: LocalDate = startDateInLocalDate(s.startDate)
+          val startDate: LocalDate = uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
           Shift(
             port = props.portCode,
             terminal = props.terminal.toString,
@@ -79,7 +75,7 @@ object EditShiftsComponent {
       <.div(
         props.shiftsPot.renderReady { shifts =>
           val shiftForms: Seq[ShiftForm] = shifts
-            .filter(s => s.shiftName == props.shiftName && s.startDate == shiftDateToShiftDate(props.shiftDate))
+            .filter(s => s.shiftName == props.shiftName && s.startDate == dateStringToLocalDate(props.shiftDate))
             .zipWithIndex.map { case (s, index) =>
               ShiftForm(
                 id = index + 1,
