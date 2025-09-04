@@ -60,15 +60,7 @@ object MonthlyShiftsUtil {
                               shiftAssignments: ShiftAssignments
                              ): Seq[StaffTableEntry] = {
 
-    val startDay: Int = if (startDate.getMonth == shiftDetails.shift.startDate.month &&
-      startDate.getFullYear == shiftDetails.shift.startDate.year &&
-      shiftDetails.shift.startDate.day > startDate.getDate)
-      shiftDetails.shift.startDate.day - (startDate.getDate - 1)
-    else 1
-    val daysInMonth: Int =
-      if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day > startDate.getDate))
-        shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.getDate) - (startDate.getDate - 1)
-      else daysCount
+    val (startDay: Int, daysInMonth: Int) = dayRangeForView(startDate, daysCount, shiftDetails)
 
     val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
@@ -114,6 +106,19 @@ object MonthlyShiftsUtil {
 
       beforeMidnightEntries ++ fromMidNightDateStartTime
     }
+  }
+
+  private def dayRangeForView(startDate: SDateLike, daysCount: Int, shiftDetails: ShiftDetails) = {
+    val startDay: Int = if (startDate.getMonth == shiftDetails.shift.startDate.month &&
+      startDate.getFullYear == shiftDetails.shift.startDate.year &&
+      shiftDetails.shift.startDate.day > startDate.getDate)
+      shiftDetails.shift.startDate.day - (startDate.getDate - 1)
+    else 1
+    val daysInMonth: Int =
+      if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day > startDate.getDate))
+        shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.getDate) - (startDate.getDate - 1)
+      else daysCount
+    (startDay, daysInMonth)
   }
 
   def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails, assignments: Seq[StaffAssignmentLike]): Seq[StaffTableEntry] = {
