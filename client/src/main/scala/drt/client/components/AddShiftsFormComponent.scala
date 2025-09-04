@@ -16,7 +16,6 @@ trait ShiftForm extends js.Object {
   var endTime: String = js.native
   var defaultStaffNumber: Int = js.native
   var startDate: ShiftDate = js.native
-//  var editStartMonth: Int = js.native
 }
 
 object ShiftForm {

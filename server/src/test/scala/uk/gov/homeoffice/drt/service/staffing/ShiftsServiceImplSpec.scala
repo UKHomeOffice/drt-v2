@@ -30,8 +30,8 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
   val liveProbe: TestProbe = TestProbe("live")
   val writeProbe: TestProbe = TestProbe("write")
   val pitProbe: TestProbe = TestProbe("pit")
-  val systemTime = System.currentTimeMillis()
-  val shift = Shift(port = "LHR",
+  private val systemTime = System.currentTimeMillis()
+  private val shift = Shift(port = "LHR",
     terminal = "T2",
     shiftName = "TEST1",
     startDate = LocalDate(2024, 7, 1),
@@ -44,9 +44,10 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
     createdAt = systemTime)
 
 
-  "A ShiftsServiceImpl" should {
+  "getActiveShifts" should {
     val service = LegacyShiftAssignmentsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
-    val assignments = ShiftAssignments(Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None)))
+    val assignments = ShiftAssignments(Seq(
+      StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None)))
     "return a list of staff assignments for a given date" in {
       MockActor.response = assignments
       val result = service.shiftAssignmentsForDate(LocalDate(2024, 7, 1), None)
@@ -87,9 +88,81 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
         .thenReturn(Future.successful(testShifts))
 
       val result = Await.result(service.getActiveShifts("LHR", "T2", Some("2024-08-02")), 1.seconds)
-      val expectedShift = testShifts.filter(s => s.shiftName== "TEST2").sortBy(_.startDate)
+      val expectedShift = testShifts.filter(s => s.shiftName == "TEST2").sortBy(_.startDate)
       result should contain theSameElementsAs expectedShift
     }
+  }
+
+  "getActiveShiftsForViewRange" should {
+
+    "filter shifts for daily view" in {
+      val mockDao = mock[StaffShiftsDao]
+      val service = ShiftsServiceImpl(mockDao)
+      val shift1 = shift.copy(startDate = LocalDate(2024, 6, 1), endDate = Option(LocalDate(2024, 6, 10)),
+        shiftName = "TEST1", startTime = "09:00", endTime = "15:00")
+      val shift2 = shift.copy(startDate = LocalDate(2024, 5, 25), endDate = Option(LocalDate(2024, 6, 4)),
+        shiftName = "TEST2", startTime = "14:00", endTime = "18:00")
+      val shifts = Seq(shift1, shift2)
+
+      when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2")).thenReturn(Future.successful(shifts))
+
+      val result = Await.result(service.getActiveShiftsForViewRange("LHR", "T2", Some("daily"), Some("2024-06-05")), 1.seconds)
+      result should contain allElementsOf Seq(shift1)
+
+    }
+
+    "filter shifts for weekly view" in {
+      val mockDao = mock[StaffShiftsDao]
+      val service = ShiftsServiceImpl(mockDao)
+      val shift1 = shift.copy(startDate = LocalDate(2024, 6, 1),
+        endDate = Option(LocalDate(2024, 6, 10)), shiftName = "TEST1", startTime = "09:00", endTime = "15:00")
+      val shift2 = shift.copy(startDate = LocalDate(2024, 5, 25),
+        endDate = Option(LocalDate(2024, 6, 5)), shiftName = "TEST2", startTime = "14:00", endTime = "18:00")
+      val shifts = Seq(shift1, shift2)
+
+      when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2")).thenReturn(Future.successful(shifts))
+
+      val result = Await.result(service.getActiveShiftsForViewRange("LHR", "T2", Some("weekly"), Some("2024-06-05")), 1.seconds)
+
+      result should contain allElementsOf Seq(shift1, shift2)
+
+    }
+
+    "filter shifts that has start of week for viewDate not before endDate of shift" in {
+      val mockDao = mock[StaffShiftsDao]
+      val service = ShiftsServiceImpl(mockDao)
+      val endDateBeforeStartOfWeek = LocalDate(2024, 6, 2) // week starts on 3rd June
+      val shift1 = shift.copy(startDate = LocalDate(2024, 6, 1),
+        endDate = Option(LocalDate(2024, 6, 10)), shiftName = "TEST1", startTime = "09:00", endTime = "15:00")
+      val shift2 = shift.copy(startDate = LocalDate(2024, 5, 25),
+        endDate = Option(endDateBeforeStartOfWeek), shiftName = "TEST2", startTime = "14:00", endTime = "18:00")
+      val shifts = Seq(shift1, shift2)
+
+      when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2")).thenReturn(Future.successful(shifts))
+
+      val result = Await.result(service.getActiveShiftsForViewRange("LHR", "T2", Some("weekly"), Some("2024-06-05")), 1.seconds)
+      result should contain allElementsOf Seq(shift1)
+
+    }
+
+    "filter shifts for month view" in {
+      val mockDao = mock[StaffShiftsDao]
+      val service = ShiftsServiceImpl(mockDao)
+      val shift1 = shift.copy(startDate = LocalDate(2024, 6, 1),
+        endDate = Option(LocalDate(2024, 6, 10)), shiftName = "TEST1", startTime = "09:00", endTime = "15:00")
+      val shift2 = shift.copy(startDate = LocalDate(2024, 5, 25),
+        endDate = Option(LocalDate(2024, 6, 5)), shiftName = "TEST2", startTime = "14:00", endTime = "18:00")
+      val shift3 = shift.copy(startDate = LocalDate(2024, 7, 1),
+        endDate = Option(LocalDate(2024, 7, 10)), shiftName = "TEST3", startTime = "10:00", endTime = "16:00")
+      val shifts = Seq(shift1, shift2, shift3)
+
+      when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2")).thenReturn(Future.successful(shifts))
+
+      val result = Await.result(service.getActiveShiftsForViewRange("LHR", "T2", None, Some("2024-06-05")), 1.seconds)
+      result should contain allElementsOf Seq(shift1, shift2)
+    }
+
+
   }
 
 }

@@ -1,6 +1,5 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}

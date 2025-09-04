@@ -36,19 +36,6 @@ object EditShiftsComponent {
 
     implicit val rw: RW[Shift] = macroRW
 
-    private def getMonthOnStartDateCheck(viewDate: Option[String]): Int = {
-      val today: SDateLike = SDate.now()
-      viewDate match {
-        case Some(date) =>
-          val viewMonth = date.split("-")(1).toInt match {
-            case month if month < 1 || month > 12 => today.getMonth
-            case month => month
-          }
-          viewMonth
-        case _ => today.getMonth
-      }
-    }
-
     private def shiftDateToShiftDate(shiftDate: Option[String]): LocalDate = {
       val parts = shiftDate.map(_.split("-")).getOrElse(Array())
       if (parts.length == 3) {

@@ -15,7 +15,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 case class GetShifts(terminal: String, viewDate: Option[String] = None , dayRange: Option[String] = None)
 
-case class GetShift(terminal: String, shiftName: String, startDate: Option[String])
+case class GetShift(terminal: String, shiftName: String, viewDate: Option[String])
 
 case class SaveShifts(staffShifts: Seq[Shift])
 
@@ -31,12 +31,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetShifts(terminal, dateOption , dayRangeOption) =>
       val dayRange = dayRangeOption.getOrElse("monthly")
-      val url = dateOption match {
-        case Some(date) =>
-          s"shifts/$terminal/$dayRange/$date"
-        case None =>
-          s"shifts/$terminal/$dayRange"
-      }
+      val url: String = shiftsUrl(terminal, dateOption, dayRange)
       val apiCallEffect = Effect(DrtApi.get(url).map { r =>
         log.info(msg = s"Received shifts for $terminal")
         val arr = ujson.read(r.responseText).arr
@@ -57,13 +52,8 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       })
       updated(Pot.empty, apiCallEffect)
 
-    case GetShift(terminal, shiftName, startDateOption) =>
-      val url = startDateOption match {
-        case Some(date) =>
-          s"shift/$terminal/$shiftName/$date"
-        case None =>
-          s"shift/$terminal/$shiftName"
-      }
+    case GetShift(terminal, shiftName, viewDateOption) =>
+      val url: String = shiftUrl(terminal, shiftName, viewDateOption)
       val apiCallEffect = Effect(DrtApi.get(url)
         .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
         .recoverWith {
@@ -110,5 +100,25 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
 
     case SetShifts(staffShifts) =>
       updated(Ready(staffShifts))
+  }
+
+  private def shiftUrl(terminal: String, shiftName: String, viewDateOption: Option[String]) = {
+    val url = viewDateOption match {
+      case Some(date) =>
+        s"shift/$terminal/$shiftName/$date"
+      case None =>
+        s"shift/$terminal/$shiftName"
+    }
+    url
+  }
+
+  private def shiftsUrl(terminal: String, dateOption: Option[String], dayRange: String) = {
+    val url = dateOption match {
+      case Some(date) =>
+        s"shifts/$terminal/$dayRange/$date"
+      case None =>
+        s"shifts/$terminal/$dayRange"
+    }
+    url
   }
 }
