@@ -115,7 +115,7 @@ object MonthlyShiftsUtil {
       shiftDetails.shift.startDate.day - (startDate.getDate - 1)
     else 1
     val daysInMonth: Int =
-      if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day > startDate.getDate))
+      if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day >= startDate.getDate))
         shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.getDate) - (startDate.getDate - 1)
       else daysCount
     (startDay, daysInMonth)
