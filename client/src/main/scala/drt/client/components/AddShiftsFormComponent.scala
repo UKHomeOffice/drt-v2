@@ -16,11 +16,10 @@ trait ShiftForm extends js.Object {
   var endTime: String = js.native
   var defaultStaffNumber: Int = js.native
   var startDate: ShiftDate = js.native
-  var editStartMonth: Int = js.native
 }
 
 object ShiftForm {
-  def apply(id: Int, name: String, startTime: String, endTime: String, defaultStaffNumber: Int, startDate: ShiftDate, startMonth: Int): ShiftForm = {
+  def apply(id: Int, name: String, startTime: String, endTime: String, defaultStaffNumber: Int, startDate: ShiftDate): ShiftForm = {
     val p = (new js.Object).asInstanceOf[ShiftForm]
     p.id = id
     p.name = name
@@ -28,7 +27,6 @@ object ShiftForm {
     p.endTime = endTime
     p.defaultStaffNumber = defaultStaffNumber
     p.startDate = startDate
-    p.editStartMonth = startMonth
     p
   }
 }

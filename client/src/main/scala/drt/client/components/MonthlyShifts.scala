@@ -204,7 +204,8 @@ object MonthlyShifts {
                     },
                     handleEditShift = (index: Int, shiftSummary: ShiftSummary) => {
                       props.router.set(props.terminalPageTab.copy(subMode = "editShifts",
-                        queryParams = props.terminalPageTab.queryParams + ("shiftName" -> s"${shiftSummary.name}"))
+                        queryParams = props.terminalPageTab.queryParams + ("shiftName" -> s"${shiftSummary.name}",
+                          "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"))
                       ).runNow()
                     }
                   ))

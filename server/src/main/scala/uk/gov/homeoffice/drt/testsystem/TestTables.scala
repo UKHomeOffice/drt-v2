@@ -211,4 +211,6 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
 
   override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] =
     Future.successful((shiftRow, None))
+
+  override def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 }
