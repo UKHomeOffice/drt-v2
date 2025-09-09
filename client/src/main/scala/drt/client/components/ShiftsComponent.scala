@@ -15,6 +15,7 @@ import org.scalajs.dom.html.Div
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object ShiftsComponent {
 
@@ -28,8 +29,9 @@ object ShiftsComponent {
 
     implicit val rw: RW[Shift] = macroRW
 
-    private def startDateInLocalDate(shiftDate: ShiftDate): uk.gov.homeoffice.drt.time.LocalDate = {
-      uk.gov.homeoffice.drt.time.LocalDate(year = shiftDate.year, month = shiftDate.month, day = shiftDate.day)
+    private def startDateInLocalDate: uk.gov.homeoffice.drt.time.LocalDate = {
+      val today: SDateLike = SDate.now()
+      uk.gov.homeoffice.drt.time.LocalDate(today.getFullYear, today.getMonth, 1)
     }
 
     def render(props: Props): VdomTagOf[Div] = {
@@ -38,7 +40,7 @@ object ShiftsComponent {
           port = props.portCode,
           terminal = props.terminal.toString,
           shiftName = s.name,
-          startDate = startDateInLocalDate(s.startDate),
+          startDate = startDateInLocalDate,
           startTime = s.startTime,
           endTime = s.endTime,
           endDate = None,
