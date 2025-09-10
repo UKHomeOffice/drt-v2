@@ -118,13 +118,17 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
         endDate = Option(LocalDate(2024, 6, 10)), shiftName = "TEST1", startTime = "09:00", endTime = "15:00")
       val shift2 = shift.copy(startDate = LocalDate(2024, 5, 25),
         endDate = Option(LocalDate(2024, 6, 5)), shiftName = "TEST2", startTime = "14:00", endTime = "18:00")
-      val shifts = Seq(shift1, shift2)
+      val shift3 = shift.copy(startDate = LocalDate(2024, 6, 15),
+        endDate = Option(LocalDate(2024, 6, 20)), shiftName = "TEST3", startTime = "10:00", endTime = "16:00") // Should be filtered out
+
+      val shifts = Seq(shift1, shift2, shift3)
 
       when(mockDao.getStaffShiftsByPortAndTerminal("LHR", "T2")).thenReturn(Future.successful(shifts))
 
       val result = Await.result(service.getActiveShiftsForViewRange("LHR", "T2", Some("weekly"), Some("2024-06-05")), 1.seconds)
 
       result should contain allElementsOf Seq(shift1, shift2)
+      result should not contain shift3
 
     }
 

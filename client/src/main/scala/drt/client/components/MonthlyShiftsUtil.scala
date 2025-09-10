@@ -60,14 +60,14 @@ object MonthlyShiftsUtil {
                               shiftAssignments: ShiftAssignments
                              ): Seq[StaffTableEntry] = {
 
-    val (startDay: Int, daysInMonth: Int) = dayRangeForView(startDate, daysCount, shiftDetails)
+    val dayRange = dayRangeForView(startDate, daysCount, shiftDetails)
 
     val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
 
     val shiftEndsAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
     //For all the days in the period, create the staff table entries for the shift
-    (startDay to daysInMonth).flatMap { day =>
+    (dayRange.start to dayRange.end).flatMap { day =>
       val currentDay = startDate.addDays(day - 1)
       val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
       val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
@@ -118,7 +118,7 @@ object MonthlyShiftsUtil {
       if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day >= startDate.getDate))
         shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.getDate) - (startDate.getDate - 1)
       else daysCount
-    (startDay, daysInMonth)
+    startDay to daysInMonth
   }
 
   def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails, assignments: Seq[StaffAssignmentLike]): Seq[StaffTableEntry] = {
