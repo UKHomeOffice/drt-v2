@@ -63,7 +63,10 @@ object FlightTableRow {
       a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
         a.maybeManifestSummary == b.maybeManifestSummary &&
         a.flaggedNationalities == b.flaggedNationalities &&
-        a.flaggedAgeGroups == b.flaggedAgeGroups
+        a.flaggedAgeGroups == b.flaggedAgeGroups &&
+        a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
+        a.showHighlightedRows == b.showHighlightedRows &&
+        a.showRequireAllSelected == b.showRequireAllSelected
   }
 
   class Backend {
