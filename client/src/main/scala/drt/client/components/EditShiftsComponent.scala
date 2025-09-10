@@ -36,6 +36,18 @@ object EditShiftsComponent {
 
     implicit val rw: RW[Shift] = macroRW
 
+    private def dateStringToLocalDate(shiftDate: Option[String]): LocalDate = {
+      shiftDate.flatMap { dateStr =>
+        val parts = dateStr.split("-")
+        if (parts.length == 3) {
+          Some(uk.gov.homeoffice.drt.time.LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt))
+        } else None
+      }.getOrElse {
+        val today: SDateLike = SDate.now()
+        uk.gov.homeoffice.drt.time.LocalDate(today.getFullYear, today.getMonth, today.getDate)
+      }
+    }
+
     private def startDateInLocalDate(startDate: ShiftDate): uk.gov.homeoffice.drt.time.LocalDate = {
       uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
     }
@@ -66,7 +78,7 @@ object EditShiftsComponent {
       <.div(
         props.shiftsPot.renderReady { shifts =>
           val shiftForms: Seq[ShiftForm] = shifts
-            .filter(s => s.shiftName == props.shiftName && s.startDate == props.shiftDate.map(LocalDate.parse).getOrElse(SDate.now().toLocalDate))
+            .filter(s => s.shiftName == props.shiftName && s.startDate == dateStringToLocalDate(props.shiftDate))
             .zipWithIndex.map { case (s, index) =>
               ShiftForm(
                 id = index + 1,
