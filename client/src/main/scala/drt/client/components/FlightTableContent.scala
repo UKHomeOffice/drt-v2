@@ -178,7 +178,7 @@ object FlightTableContent {
           }
           else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
             if (flights.isEmpty) {
-              <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
+              <.div(^.style := js.Dictionary(),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
                 (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
             } else {
