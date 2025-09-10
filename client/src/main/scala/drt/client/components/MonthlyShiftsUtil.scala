@@ -57,20 +57,21 @@ object MonthlyShiftsUtil {
                               daysCount: Int,
                               interval: Int,
                               shiftDetails: ShiftDetails,
-                              assignmentsByDate: Map[LocalDate, Seq[StaffAssignmentLike]],
+                              shiftAssignments: ShiftAssignments
                              ): Seq[StaffTableEntry] = {
+
+    val dayRange = dayRangeForView(startDate, daysCount, shiftDetails)
+
     val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
 
     val shiftEndsAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
     //For all the days in the period, create the staff table entries for the shift
-    (1 to daysCount).flatMap { day =>
+    (dayRange.start to dayRange.end).flatMap { day =>
       val currentDay = startDate.addDays(day - 1)
       val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
       val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
       val midnightNextDay = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0).addDays(1)
-
-      val assignments = assignmentsByDate.getOrElse(currentDay.toLocalDate, Seq.empty)
 
       val beforeMidnightPeriod = ShiftPeriod(
         start = shiftStartTime,
@@ -85,7 +86,7 @@ object MonthlyShiftsUtil {
       )
 
 
-      val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails, assignments)
+      val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails, shiftAssignments.assignments)
 
       val isFirstNightShiftForMonth = day == 1 && shiftEndsAfterMidnight && daysCount > 7
 
@@ -100,11 +101,24 @@ object MonthlyShiftsUtil {
           addToIndex = beforeMidnightEntries.size
         )
 
-        staffTableEntriesForShift(firstDayMidnightToStartTimePeriod, shiftDetails, assignments)
+        staffTableEntriesForShift(firstDayMidnightToStartTimePeriod, shiftDetails, shiftAssignments.assignments)
       } else Seq.empty
 
       beforeMidnightEntries ++ fromMidNightDateStartTime
     }
+  }
+
+  private def dayRangeForView(startDate: SDateLike, daysCount: Int, shiftDetails: ShiftDetails) = {
+    val startDay: Int = if (startDate.getMonth == shiftDetails.shift.startDate.month &&
+      startDate.getFullYear == shiftDetails.shift.startDate.year &&
+      shiftDetails.shift.startDate.day > startDate.getDate)
+      shiftDetails.shift.startDate.day - (startDate.getDate - 1)
+    else 1
+    val daysInMonth: Int =
+      if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day >= startDate.getDate))
+        shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.getDate) - (startDate.getDate - 1)
+      else daysCount
+    startDay to daysInMonth
   }
 
   def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails, assignments: Seq[StaffAssignmentLike]): Seq[StaffTableEntry] = {
@@ -165,7 +179,6 @@ object MonthlyShiftsUtil {
                              shifts: Seq[Shift],
                              shiftAssignments: ShiftAssignments,
                              interval: Int): Seq[ShiftSummaryStaffing] = {
-    val assignmentsByDate: Map[LocalDate, Seq[StaffAssignmentLike]] = shiftAssignments.assignments.groupBy(sa => SDate(sa.start).toLocalDate)
 
     shifts.sortBy(_.startTime).zipWithIndex.map { case (shift, index) =>
       val tableEntries = createStaffTableEntries(
@@ -173,12 +186,13 @@ object MonthlyShiftsUtil {
         daysCountByDayRange(dayRange, viewingDate),
         interval,
         ShiftDetails(shift, terminal, shiftAssignments),
-        assignmentsByDate,
+        shiftAssignments,
       )
       ShiftSummaryStaffing(
         index = index,
-        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime ,
-          startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year)
+        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime,
+          startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year),
+          endDate = shift.endDate.map(d => ShiftDate(day = d.day, month = d.month, year = d.year))
         ),
         staffTableEntries = tableEntries
       )

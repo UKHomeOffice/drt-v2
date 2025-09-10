@@ -20,39 +20,42 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 object EditShiftsComponent {
 
 
-  case class Props(terminal: Terminal, portCode: String, shiftsPot: Pot[Seq[Shift]], shiftName: String, viewDate: Option[String], router: RouterCtl[Loc])
+  case class Props(terminal: Terminal,
+                   portCode: String,
+                   shiftsPot: Pot[Seq[Shift]],
+                   shiftName: String,
+                   shiftDate: Option[String],
+                   viewDate: Option[String],
+                   router: RouterCtl[Loc])
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
 
-  class Backend(scope: BackendScope[Props, Unit]) {
+  class Backend {
 
     import upickle.default.{macroRW, ReadWriter => RW}
 
     implicit val rw: RW[Shift] = macroRW
 
-    private def getMonthOnStartDateCheck(viewDate: Option[String]): Int = {
-      val today: SDateLike = SDate.now()
-      viewDate match {
-        case Some(date) =>
-          val viewMonth = date.split("-")(1).toInt match {
-            case month if month < 1 || month > 12 => today.getMonth
-            case month => month
-          }
-          viewMonth
-        case _ => today.getMonth
+    private def dateStringToLocalDate(shiftDate: Option[String]): LocalDate = {
+      shiftDate.flatMap { dateStr =>
+        val parts = dateStr.split("-")
+        if (parts.length == 3) {
+          Some(uk.gov.homeoffice.drt.time.LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt))
+        } else None
+      }.getOrElse {
+        val today: SDateLike = SDate.now()
+        uk.gov.homeoffice.drt.time.LocalDate(today.getFullYear, today.getMonth, today.getDate)
       }
     }
 
-    private def startDateInLocalDate(month: Int): uk.gov.homeoffice.drt.time.LocalDate = {
-      val today: SDateLike = SDate.now()
-      val year = if (today.getMonth > month + 1) today.getFullYear + 1 else today.getFullYear
-      uk.gov.homeoffice.drt.time.LocalDate(year, month, 1)
+    private def startDateInLocalDate(startDate: ShiftDate): uk.gov.homeoffice.drt.time.LocalDate = {
+      uk.gov.homeoffice.drt.time.LocalDate(year = startDate.year, month = startDate.month, day = startDate.day)
     }
 
     def render(props: Props): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
         val staffShifts = shifts.map { s =>
-          val startDate: LocalDate = startDateInLocalDate(s.editStartMonth)
+          val startDate: LocalDate = startDateInLocalDate(s.startDate)
           Shift(
             port = props.portCode,
             terminal = props.terminal.toString,
@@ -74,17 +77,18 @@ object EditShiftsComponent {
 
       <.div(
         props.shiftsPot.renderReady { shifts =>
-          val shiftForms: Seq[ShiftForm] = shifts.filter(s => s.shiftName == props.shiftName).zipWithIndex.map { case (s, index) =>
-            ShiftForm(
-              id = index + 1,
-              name = s.shiftName,
-              startTime = s.startTime,
-              endTime = s.endTime,
-              startDate = ShiftDate(s.startDate.year, s.startDate.month, s.startDate.day),
-              defaultStaffNumber = s.staffNumber,
-              startMonth = getMonthOnStartDateCheck(props.viewDate)
-            )
-          }
+          val shiftForms: Seq[ShiftForm] = shifts
+            .filter(s => s.shiftName == props.shiftName && s.startDate == dateStringToLocalDate(props.shiftDate))
+            .zipWithIndex.map { case (s, index) =>
+              ShiftForm(
+                id = index + 1,
+                name = s.shiftName,
+                startTime = s.startTime,
+                endTime = s.endTime,
+                startDate = ShiftDate(year = s.startDate.year, month = s.startDate.month, day = s.startDate.day),
+                defaultStaffNumber = s.staffNumber,
+              )
+            }
 
           AddShiftsFormComponent(
             ShiftFormProps(port = props.portCode,
@@ -109,6 +113,7 @@ object EditShiftsComponent {
             portCode: String,
             shifts: Pot[Seq[Shift]],
             shiftName: String,
+            shiftDate: Option[String],
             viewDate: Option[String],
-            router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, shifts, shiftName, viewDate, router))
+            router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, shifts, shiftName, shiftDate, viewDate, router))
 }

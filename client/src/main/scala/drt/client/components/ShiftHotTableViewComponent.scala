@@ -69,16 +69,18 @@ trait ShiftSummary extends js.Object {
   var startTime: String
   var endTime: String
   var startDate: ShiftDate
+  var endDate: js.UndefOr[ShiftDate]
 }
 
 object ShiftSummary {
-  def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String, startDate: ShiftDate): ShiftSummary = {
+  def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String, startDate: ShiftDate, endDate: Option[ShiftDate]): ShiftSummary = {
     val p = (new js.Object).asInstanceOf[ShiftSummary]
     p.name = name
     p.defaultStaffNumber = defaultStaffNumber
     p.startTime = startTime
     p.endTime = endTime
     p.startDate = startDate
+    p.endDate = endDate.orUndefined
     p
   }
 }
