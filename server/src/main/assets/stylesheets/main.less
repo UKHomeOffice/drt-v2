@@ -714,8 +714,10 @@ table.headlines tr:nth-child(odd) {
 .exports {
   display: flex;
   gap: 8px;
-  align-items: flex-start
+  align-items: flex-start;
+  margin-bottom: 10px;
 }
+
 
 .export-button-wrapper {
   display: inline-flex;
@@ -1293,7 +1295,7 @@ p {
   flex-grow: 2;
   border-radius: 5px;
   //margin-top: 15px;
-  padding: 10px;
+  padding: 20px;
   background-color: #E6E9F1;
 }
 
@@ -2540,11 +2542,20 @@ a i.fa.fa-remove {
 }
 
 .topbar {
-  height: 70px;
   width: 96%;
   margin: auto;
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap
+}
+
+.topbar .contact {
+  margin-left: auto;
+}
+
+#alerts {
+  order: -1;
+  width: 100%;
+  margin-top: 5px;
 }
 
 .has-alerts {
@@ -2614,7 +2625,6 @@ div.access-restricted {
 
 .terminal-dashboard-queues {
   width: 73%;
-  padding-top: 3%;
   display: flex;
   flex-direction: column;
   gap: 25px;
@@ -2925,8 +2935,4 @@ div.access-restricted {
 
 .btn:focus {
   outline: none !important;
-}
-
-.MuiSvgIcon-root  {
-  font-size: 1em !important;
 }
