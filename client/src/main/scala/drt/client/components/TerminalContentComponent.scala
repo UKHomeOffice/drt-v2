@@ -177,10 +177,9 @@ object TerminalContentComponent {
                 props.terminalPageTab.dateFromUrlOrNow,
                 props.loggedInUser,
                 props.viewMode),
-              MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-                MuiIcons(GetApp)(fontSize = "large"),
+              MuiButton(color = Color.primary, variant = "outlined")(
+                MuiIcons(GetApp)(fontSize = "small"),
                 "Advanced Downloads",
-                ^.className := "btn btn-default",
                 ^.onClick ==> handleMenuOpen
               ),
               <.div(^.className := "advanced-downloads-menu",
@@ -342,11 +341,10 @@ object TerminalContentComponent {
     val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
     <.div(
       ^.key := keyValue,
-      MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-        MuiIcons(GetApp)(fontSize = "large"),
+      MuiButton(color = Color.primary, variant = "outlined", sx = SxProps(Map("fontWeight" -> "normal")))(
+        MuiIcons(GetApp)(),
         s" ${exportType.linkLabel}",
         maybeExtraIcon.getOrElse(EmptyVdom),
-        ^.className := "btn btn-default",
         ^.href := exportUrl,
         ^.target := "_blank",
         ^.id := s"export-day-${exportType.toUrlString}",

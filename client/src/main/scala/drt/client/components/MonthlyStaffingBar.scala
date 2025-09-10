@@ -103,10 +103,10 @@ object MonthlyStaffingBar {
   private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
     <.div(
       MuiButton(color = Color.primary, variant = "outlined",
-        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronLeft)(fontSize = "medium"),
+        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronLeft)(fontSize = "small"),
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly))))),
       MuiButton(color = Color.primary, variant = "outlined",
-        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronRight)(fontSize = "medium"),
+        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronRight)(fontSize = "small"),
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))))
     )
   }
@@ -207,7 +207,7 @@ object MonthlyStaffingBar {
               variant = "outlined",
               size = "small",
               sx = SxProps(Map("backgroundColor" -> "white")))
-            (MuiIcons(Groups)(fontSize = "large"),
+            (MuiIcons(Groups)(fontSize = "small"),
               <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
               VdomAttr("data-cy") := "edit-staff-button",
               ^.onClick ==> props.handleShiftEditForm),

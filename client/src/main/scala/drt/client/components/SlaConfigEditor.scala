@@ -117,8 +117,8 @@ object SlaConfigEditor {
                     )
                   ),
                   MuiDialogActions()(
-                    MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Cancel", ^.onClick --> cancelEdit),
-                    MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Save", ^.onClick --> saveEdit, ^.disabled := s.errors.nonEmpty),
+                    MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> cancelEdit),
+                    MuiButton(color = Color.primary, variant = "outlined")("Save", ^.onClick --> saveEdit, ^.disabled := s.errors.nonEmpty),
                   )
                 )
               case None => EmptyVdom
@@ -128,8 +128,8 @@ object SlaConfigEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Effective from")),
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("SLAs (minutes)")),
                 MuiGrid(item = true, xs = 4)(
-                  MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                    MuiIcons(Add)(fontSize = "large"),
+                  MuiButton(color = Color.primary, variant = "outlined")(
+                    MuiIcons(Add)(fontSize = "small"),
                     "Add SLA change",
                     ^.onClick --> scope.modState(_.copy(editing = Option(Editing(SlasUpdate(today, newUpdatesTemplate, None))))))
                 ),
@@ -148,11 +148,11 @@ object SlaConfigEditor {
                   MuiGrid(item = true, xs = 4)(
                     <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
                       MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Edit)(fontSize = "large"),
+                        MuiIcons(Edit)(fontSize = "small"),
                         ^.onClick --> scope.modState(_.copy(editing = Option(Editing(SlasUpdate(effectiveFrom, config, Option(effectiveFrom))))))
                       ),
                       MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Delete)(fontSize = "large"),
+                        MuiIcons(Delete)(fontSize = "small"),
                         ^.onClick --> deleteUpdates(effectiveFrom))
                     )
                   ),
