@@ -59,7 +59,7 @@ object DataQualityIndicator {
               ^.onClick ==> {
                 handleOnClick
               },
-              MuiIcons(Info)(fontSize = "large")
+              MuiIcons(Info)(fontSize = "small")
             )),
           )
         }

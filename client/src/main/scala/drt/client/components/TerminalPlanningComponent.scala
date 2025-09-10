@@ -235,17 +235,16 @@ object TerminalPlanningComponent {
     if (isPreparing)
       Seq(MuiCircularProgress(size = "28px")(), "Preparing... please wait")
     else
-      Seq(MuiIcons(GetApp)(fontSize = "large"), labelText)
+      Seq(MuiIcons(GetApp)(), labelText)
 
   private def buttonWithProgress(url: String,
                                  label: Seq[TagMod],
                                  createDownload: String => Event => CallbackTo[Unit],
                                  disabled: Boolean,
                                 ): WithPropsAndTagsMods =
-    MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+    MuiButton(color = Color.primary, variant = "outlined")(
       ^.disabled := disabled,
       <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "15px"), label.toTagMod),
-      ^.className := "btn btn-link muiButton",
       ^.href := SPAMain.absoluteUrl(url),
       ^.target := "_blank",
       ^.onClick ==> createDownload(url)

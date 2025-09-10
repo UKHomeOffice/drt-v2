@@ -335,7 +335,7 @@ object TerminalDesksAndQueues {
       variant = "outlined",
       size = "medium",
       color = Color.primary,
-    )(MuiIcons(RefreshOutlined)(fontSize = "large"),
+    )(MuiIcons(RefreshOutlined)(),
       ^.onClick --> requestRecalc(),
       label)
     )
