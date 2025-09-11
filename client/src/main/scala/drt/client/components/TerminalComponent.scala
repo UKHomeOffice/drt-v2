@@ -5,7 +5,7 @@ import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain._
-import drt.client.components.TerminalDesksAndQueues.Ideal
+import drt.client.components.TerminalDesksAndQueues.Recommended
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
@@ -313,7 +313,7 @@ object TerminalComponent {
 
     def viewTypeQueryParam: SPAMain.UrlParameter =
       if (airportConfig.idealStaffAsDefault)
-        UrlViewType(Option(Ideal))
+        UrlViewType(Option(Recommended))
       else
         UrlViewType(None)
 

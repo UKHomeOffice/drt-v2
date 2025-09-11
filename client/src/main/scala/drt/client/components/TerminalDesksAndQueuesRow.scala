@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
-import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Ideal, queueActualsColour, queueColour}
+import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Recommended, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
@@ -100,7 +100,7 @@ object TerminalDesksAndQueuesRow {
                 )
               else List(paxLoadTd, deployRecsDeskTd)
 
-            case Ideal =>
+            case Recommended =>
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,

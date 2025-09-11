@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.components.ChartJSComponent._
-import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Ideal}
+import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Recommended}
 import drt.client.services.JSDateConversions.SDate
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
@@ -27,7 +27,7 @@ object QueueChartComponent {
         label = "Pax in queue",
         data = props.queueSummaries.map {
           case (_, queuesAndMinutes) =>
-            if (props.deskType == Ideal)
+            if (props.deskType == Recommended)
               queuesAndMinutes(props.queue).maybePaxInQueue.getOrElse(0).toDouble
             else
               queuesAndMinutes(props.queue).maybeDeployedPaxInQueue.getOrElse(0).toDouble
@@ -48,10 +48,10 @@ object QueueChartComponent {
         yAxisID = Option("y"),
       )
       val desks: ChartJsDataSet = ChartJsDataSet.bar(
-        label = if (props.deskType == Ideal) "Ideal Staff" else "Staff from available",
+        label = if (props.deskType == Recommended) "Recommended Staff" else "Staff from available",
         data = props.queueSummaries.map {
           case (_, queuesAndMinutes) => props.deskType match {
-            case Ideal => queuesAndMinutes(props.queue).deskRec.toDouble
+            case Recommended => queuesAndMinutes(props.queue).deskRec.toDouble
             case Deployments => queuesAndMinutes(props.queue).deployedDesks.getOrElse(0).toDouble
           }
         },
@@ -63,7 +63,7 @@ object QueueChartComponent {
         label = "Wait times",
         data = props.queueSummaries.map {
           case (_, queuesAndMinutes) => props.deskType match {
-            case Ideal => queuesAndMinutes(props.queue).waitTime.toDouble
+            case Recommended => queuesAndMinutes(props.queue).waitTime.toDouble
             case Deployments => queuesAndMinutes(props.queue).deployedWait.getOrElse(0).toDouble
           }
         },
