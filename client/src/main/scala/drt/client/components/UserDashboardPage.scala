@@ -7,7 +7,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, PortOperatorStaff}
+import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 
 object UserDashboardPage {
 
@@ -20,9 +20,7 @@ object UserDashboardPage {
         val loggedInUser = loggedInUserMP()
 
         <.div(loggedInUser.renderReady(user => {
-          if (user.hasRole(PortOperatorStaff))
-            PortExportDashboardPage(user)
-          else if (user.hasRole(BorderForceStaff))
+          if (user.hasRole(BorderForceStaff))
             PortDashboardPage(p.router, PortDashboardLoc(Some(1)))
           else
             <.div("You have successfully logged into DRT but your account has not been configured correctly. Please contact us for assistance.")
