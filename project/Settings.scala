@@ -74,7 +74,7 @@ object Settings {
     val rtVersion = "4.0.3"
     val jakartaXmlWsApi = "4.0.2"
     val scalatestplusPlay = "7.0.1"
-    val nettyAll = "4.1.119.Final"
+    val nettyAll = "4.1.127.Final"
     val jwtCore = "9.4.6"
     val logback = "1.5.17"
     val logbackContrib = "0.1.5"
