@@ -139,21 +139,33 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
   }
 
   def staffPeriodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, slotMinutes: List[StaffMinute]): StaffMinute = {
-    if (slotMinutes.nonEmpty) StaffMinute(
-      terminal = terminal,
-      minute = periodStart,
-      shifts = slotMinutes.map(_.shifts).min,
-      fixedPoints = slotMinutes.map(_.fixedPoints).max,
-      movements = slotMinutes.map(_.movements).max,
-      lastUpdated = slotMinutes.map(_.lastUpdated).max,
-    )
-    else StaffMinute(
-      terminal = terminal,
-      minute = periodStart,
-      shifts = 0,
-      fixedPoints = 0,
-      movements = 0
-    )
+    val timeWeighting = for {
+      first <- slotMinutes.map(_.minute).headOption
+      last <- slotMinutes.map(_.minute).lastOption
+    } yield last - first + 60000
+
+    timeWeighting match {
+      case Some(tw) =>
+        val maxAvailableMin = slotMinutes.sortBy(m => m.shifts + m.movements + (m.minute.toDouble / tw)).reverse.head
+        StaffMinute(
+          terminal = terminal,
+          minute = periodStart,
+          shifts = maxAvailableMin.shifts,
+          fixedPoints = maxAvailableMin.fixedPoints,
+          movements = maxAvailableMin.movements,
+          lastUpdated = maxAvailableMin.lastUpdated,
+        )
+      case None =>
+        StaffMinute(
+          terminal = terminal,
+          minute = periodStart,
+          shifts = 0,
+          fixedPoints = 0,
+          movements = 0
+        )
+
+    }
+
   }
 }
 
