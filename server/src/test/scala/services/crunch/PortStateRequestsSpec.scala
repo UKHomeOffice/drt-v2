@@ -34,7 +34,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
   val terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
   val terminalsForDate: LocalDate => Seq[Terminal] = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
-  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, terminalsForDateRange, (_, _) => Seq(EeaDesk, EGate, NonEeaDesk), _ => (_, _, _) => Future.successful(()))
+  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, terminalsForDateRange, (_, _) => Seq(EeaDesk, EGate, NonEeaDesk), _ => (_, _) => Future.successful(()))
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 

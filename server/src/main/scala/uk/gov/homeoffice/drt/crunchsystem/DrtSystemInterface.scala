@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
@@ -81,12 +81,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
       doUpdate(updates, removals)
   }
 
-  lazy val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit] = {
-    val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
-    terminal => (date, updates, removals) =>
-      doUpdate(terminal)(date, updates, removals).map(_ => ())
-  }
-
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     if (params.isSuperUserMode) {
       Roles.availableRoles
@@ -108,6 +102,21 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val persistentActors: PersistentStateActors
 
   val feedService: FeedService
+
+//  lazy val crunchMinutesForDate: Terminal => UtcDate => Future[Seq[CrunchMinute]] =
+//    terminal => date => {
+//      val sdate = SDate(date)
+//      val request = GetStateForTerminalDateRange(sdate.millisSinceEpoch, sdate.addDays(1).addMinutes(-1).millisSinceEpoch, terminal)
+//      minuteLookups.queueMinutesRouterActor
+//        .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
+//        .map(_.minutes.map(_.toMinute).toSeq)
+//    }
+
+  lazy val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
+    val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
+    terminal => (date, state) =>
+      doUpdate(terminal)(date, state).map(_ => ())
+  }
 
   lazy val splitsCalculator: SplitsCalculator = {
     val queueAdjustments: QueueAdjustments =

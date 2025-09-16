@@ -15,7 +15,7 @@ import scala.concurrent.Future
 
 
 object TerminalDayQueuesActor {
-  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit]],
+  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
             queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
            )
            (terminal: Terminal,
@@ -37,7 +37,7 @@ class TerminalDayQueuesActor(utcDate: UtcDate,
                              queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                              val now: () => SDateLike,
                              maybePointInTime: Option[MillisSinceEpoch],
-                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit]],
+                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
                             ) extends
   TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage, CrunchMinuteRemovalMessage](utcDate, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"

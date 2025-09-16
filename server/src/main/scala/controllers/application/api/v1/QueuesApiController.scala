@@ -31,7 +31,7 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                   Future.sequence(cms.groupBy(_.terminal)
                     .map {
                       case (terminal, minutes) =>
-                        ctrl.update15MinuteQueueSlotsLiveView(terminal)(date, minutes, Seq.empty)
+                        ctrl.update15MinuteQueueSlotsLiveView(terminal)(date, minutes)
                           .map(_ => log.info(s"Updated queue slots for $date"))
                     })
                 }
