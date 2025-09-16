@@ -94,12 +94,6 @@ object QueueChartComponent {
               responsive = true,
               aspectRatio = 5,
               scales = js.Dictionary[js.Any](
-                "xAxes" ->
-                  js.Dictionary(
-                    "ticks" -> js.Dictionary(
-                      "autoSkip" -> false,
-                    )
-                  ),
                 "y" ->
                   js.Dictionary(
                     "type" -> "linear",
