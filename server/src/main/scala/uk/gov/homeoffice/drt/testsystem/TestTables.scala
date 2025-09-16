@@ -7,13 +7,13 @@ import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
-import uk.gov.homeoffice.drt.Shift
+import uk.gov.homeoffice.drt.{Shift, ShiftMeta}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.service.staffing.ShiftsService
+import uk.gov.homeoffice.drt.service.staffing.{ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -159,6 +159,28 @@ case class MockAbFeatureDao() extends IABFeatureDao {
   override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 }
 
+case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends ShiftMetaInfoService {
+
+  override def insertShiftMetaInfo(port: String,
+                                   terminal: String,
+                                   shiftAssignmentsMigratedAt: Option[Timestamp],
+                                   latestShiftAppliedAt: Option[Timestamp])(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def getShiftMetaInfo(port: String,
+                                terminal: String)(implicit ex: ExecutionContext): Future[Option[ShiftMeta]] =
+    Future(Option(ShiftMeta(port, terminal, None, None)))(ec)
+
+  override def updateShiftAssignmentsMigratedAt(port: String,
+                                                terminal: String,
+                                                shiftAssignmentsMigratedAt: Option[Timestamp])(implicit ex: ExecutionContext): Future[Option[ShiftMeta]] =
+    Future(Option(ShiftMeta(port, terminal, shiftAssignmentsMigratedAt, None)))(ec)
+
+  override def updateLastShiftAppliedAt(port: String,
+                                        terminal: String,
+                                        latestShiftAppliedAt: Timestamp)(implicit ex: ExecutionContext): Future[Option[ShiftMeta]] =
+    Future(Option(ShiftMeta(port, terminal, None, Option(latestShiftAppliedAt))))(ec)
+}
+
 case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
   var shiftSeq = Seq.empty[Shift]
   var shiftRowSeq = Seq.empty[Shift]
@@ -212,5 +234,8 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
   override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] =
     Future.successful((shiftRow, None))
 
-  override def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+  override def getActiveShiftsForViewRange(port: String,
+                                           terminal: String,
+                                           dayRange: Option[String],
+                                           date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 }
