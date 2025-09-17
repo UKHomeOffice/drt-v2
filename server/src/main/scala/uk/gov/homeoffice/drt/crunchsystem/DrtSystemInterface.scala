@@ -103,19 +103,9 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
-//  lazy val crunchMinutesForDate: Terminal => UtcDate => Future[Seq[CrunchMinute]] =
-//    terminal => date => {
-//      val sdate = SDate(date)
-//      val request = GetStateForTerminalDateRange(sdate.millisSinceEpoch, sdate.addDays(1).addMinutes(-1).millisSinceEpoch, terminal)
-//      minuteLookups.queueMinutesRouterActor
-//        .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-//        .map(_.minutes.map(_.toMinute).toSeq)
-//    }
-
-  lazy val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
+  lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
     val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
-    terminal => (date, state) =>
-      doUpdate(terminal)(date, state).map(_ => ())
+    (date, state) => doUpdate(date, state).map(_ => ())
   }
 
   lazy val splitsCalculator: SplitsCalculator = {

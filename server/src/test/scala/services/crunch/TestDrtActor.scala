@@ -210,14 +210,14 @@ class TestDrtActor extends Actor {
               doUpdate(updates, removals)
           }
 
-          val update15MinuteQueues: Terminal => (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
+          val update15MinuteQueues: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
             val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
-            terminal => (date, state) => doUpdate(terminal)(date, state).map(_ => ())
+            (date, state) => doUpdate(date, state).map(_ => ())
           }
           (updateFlightsLiveView, update15MinuteQueues)
 
         case None =>
-          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: Terminal) => (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
+          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
       }
 
       val terminalsForDateRange = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)

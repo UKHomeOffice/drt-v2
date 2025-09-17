@@ -18,14 +18,14 @@ case class TestMinuteLookups(system: ActorSystem,
                              expireAfterMillis: Int,
                              terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminal],
                              queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
-                             updateLiveView: Terminal => (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
+                             updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
                             )
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
   private val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val onUpdates: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] =
-      (date, state) => updateLiveView(terminal)(date, state)
+      (date, state) => updateLiveView(date, state)
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(SDate(millis).toUtcDate, terminal, queuesForDateAndTerminal, now, Option(onUpdates))))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }

@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.db.dao.QueueSlotDao
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues, Terminals}
+import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -25,7 +25,7 @@ class QueuesLiveViewSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
   val dao: QueueSlotDao = QueueSlotDao()
   val aggDb: AggregateDbH2.type = AggregateDbH2
   val portCode: PortCode = PortCode("LHR")
-  val updateQueuesLiveView: Terminals.Terminal => (UtcDate, Iterable[CrunchMinute]) => Future[Int] =
+  val updateQueuesLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Int] =
     QueuesLiveView.updateQueuesLiveView(dao, aggDb, portCode)
 
   before {
@@ -42,7 +42,7 @@ class QueuesLiveViewSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
         CrunchMinute(T1, NonEeaDesk, startDate.millisSinceEpoch, 2, 40, 10, 10, Option(5), None, None),
       )
 
-      Await.result(updateQueuesLiveView(T1)(date, minutesToUpdate), 1.second)
+      Await.result(updateQueuesLiveView(date, minutesToUpdate), 1.second)
 
       val queues = queuesForPortAndDate(dao, aggDb, portCode, date)
 

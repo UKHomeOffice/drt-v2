@@ -1,15 +1,13 @@
 package controllers.application.api.v1
 
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import com.google.inject.Inject
 import controllers.application.AuthController
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import play.api.mvc._
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.time.{DateRange, UtcDate}
-
-import scala.concurrent.Future
 
 
 class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
@@ -28,12 +26,8 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                 .map(_._2)
                 .runWith(Sink.fold(Seq.empty[CrunchMinute])(_ ++ _))
                 .flatMap { cms =>
-                  Future.sequence(cms.groupBy(_.terminal)
-                    .map {
-                      case (terminal, minutes) =>
-                        ctrl.update15MinuteQueueSlotsLiveView(terminal)(date, minutes)
-                          .map(_ => log.info(s"Updated queue slots for $date"))
-                    })
+                  ctrl.update15MinuteQueueSlotsLiveView(date, cms)
+                    .map(_ => log.info(s"Updated queue slots for $date"))
                 }
           }
           .runWith(Sink.ignore)

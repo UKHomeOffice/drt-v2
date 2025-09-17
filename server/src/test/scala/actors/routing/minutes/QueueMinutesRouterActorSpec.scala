@@ -1,8 +1,10 @@
 package actors.routing.minutes
 
 import actors.MinuteLookups
+import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
+import org.apache.pekko.actor.{ActorRef, Props}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
@@ -13,7 +15,7 @@ import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 class QueueMinutesRouterActorSpec extends CrunchTestLike {
@@ -31,83 +33,83 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(Set())
 
-//  "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
-//    "I should see only the latest the passenger minutes sent" >> {
-//      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), _ => (_, _) => Future.successful(()))
-//      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
-//      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
-//      val result = lookups.queueLoadsMinutesActor
-//        .ask(MinutesContainer(Seq(passengers1, passengers2)))
-//        .flatMap { _ =>
-//          lookups.queueLoadsMinutesActor
-//            .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(1).millisSinceEpoch, terminal))
-//            .mapTo[MinutesContainer[PassengersMinute, TQM]]
-//        }
-//
-//      Await.result(result, 1.second).minutes.toSet === Set(passengers1, passengers2)
-//    }
-//  }
+  "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
+    "I should see only the latest the passenger minutes sent" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), (_, _) => Future.successful(()))
+      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
+      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
+      val result = lookups.queueLoadsMinutesActor
+        .ask(MinutesContainer(Seq(passengers1, passengers2)))
+        .flatMap { _ =>
+          lookups.queueLoadsMinutesActor
+            .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(1).millisSinceEpoch, terminal))
+            .mapTo[MinutesContainer[PassengersMinute, TQM]]
+        }
 
-  //  "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
-  //    "I should see only the latest the passenger minutes sent" >> {
-  //      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), _ => (_, _, _) => Future.successful(()))
-  //      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
-  //      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
-  //      val result = lookups.queueLoadsMinutesActor
-  //        .ask(MinutesContainer(Seq(passengers1, passengers2)))
-  //        .flatMap { _ =>
-  //          lookups.queueLoadsMinutesActor
-  //            .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(1).millisSinceEpoch, terminal))
-  //            .mapTo[MinutesContainer[PassengersMinute, TQM]]
-  //        }
-  //
-  //      Await.result(result, 1.second).minutes.toSet === Set(passengers1, passengers2)
-  //    }
-  //  }
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, passengers2)
+    }
+  }
+
+  "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
+    "I should see only the latest the passenger minutes sent" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), (_, _) => Future.successful(()))
+      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
+      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
+      val result = lookups.queueLoadsMinutesActor
+        .ask(MinutesContainer(Seq(passengers1, passengers2)))
+        .flatMap { _ =>
+          lookups.queueLoadsMinutesActor
+            .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(1).millisSinceEpoch, terminal))
+            .mapTo[MinutesContainer[PassengersMinute, TQM]]
+        }
+
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, passengers2)
+    }
+  }
 
   "When I send two sets of PassengerMinutes to a QueueMinutesActor and query it" >> {
-    //    "I should see all minutes sent" >> {
-    //      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), _ => (_, _, _) => Future.successful(()))
-    //      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
-    //      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
-    //      val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)
-    //      val passengers3 = PassengersMinute(terminal, queue, date.addMinutes(2).millisSinceEpoch, Seq(5, 5, 4, 4), None)
-    //
-    //      val result = lookups.queueLoadsMinutesActor
-    //        .ask(MinutesContainer(Seq(passengers1, passengers2)))
-    //        .flatMap { _ =>
-    //          lookups.queueLoadsMinutesActor
-    //            .ask(MinutesContainer(Seq(newPassengers2, passengers3)))
-    //            .flatMap { _ =>
-    //              lookups.queueLoadsMinutesActor
-    //                .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(2).millisSinceEpoch, terminal))
-    //                .mapTo[MinutesContainer[PassengersMinute, TQM]]
-    //            }
-    //        }
-    //
-    //      Await.result(result, 1.second).minutes.toSet === Set(passengers1, newPassengers2, passengers3)
-    //    }
+    "I should see all minutes sent" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), (_, _) => Future.successful(()))
+      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
+      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
+      val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)
+      val passengers3 = PassengersMinute(terminal, queue, date.addMinutes(2).millisSinceEpoch, Seq(5, 5, 4, 4), None)
+
+      val result = lookups.queueLoadsMinutesActor
+        .ask(MinutesContainer(Seq(passengers1, passengers2)))
+        .flatMap { _ =>
+          lookups.queueLoadsMinutesActor
+            .ask(MinutesContainer(Seq(newPassengers2, passengers3)))
+            .flatMap { _ =>
+              lookups.queueLoadsMinutesActor
+                .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(2).millisSinceEpoch, terminal))
+                .mapTo[MinutesContainer[PassengersMinute, TQM]]
+            }
+        }
+
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, newPassengers2, passengers3)
+    }
     "I should see all minutes in the updates callback" >> {
       val probe = TestProbe("updates-probe")
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), _ => (_, minutes) => {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, (_, _) => Seq(terminal), (_, _) => Seq(queue), (_, minutes) => {
         probe.ref ! minutes
         Future.successful(())
       })
-      val passengers1 = CrunchMinute(terminal, queue, date.millisSinceEpoch, 3, 3, 1, 1, None, None, None, None, None, None, None)
-      val passengers2 = CrunchMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, 4, 3, 1, 1, None, None, None, None, None, None, None)
-      val newPassengers2 = CrunchMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, 5, 3, 1, 1, None, None, None, None, None, None, None)
-      val passengers3 = CrunchMinute(terminal, queue, date.addMinutes(2).millisSinceEpoch, 6, 3, 1, 1, None, None, None, None, None, None, None)
+      val crunchMinute1 = CrunchMinute(terminal, queue, date.millisSinceEpoch, 3, 3, 1, 1, None, None, None, None, None, None, None)
+      val crunchMinute2 = CrunchMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, 4, 3, 1, 1, None, None, None, None, None, None, None)
+      val newCrunchMinute2 = CrunchMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, 5, 3, 1, 1, None, None, None, None, None, None, None)
+      val crunchMinute3 = CrunchMinute(terminal, queue, date.addMinutes(2).millisSinceEpoch, 6, 3, 1, 1, None, None, None, None, None, None, None)
 
       lookups.queueMinutesRouterActor
-        .ask(MinutesContainer(Seq(passengers1, passengers2)))
+        .ask(MinutesContainer(Seq(crunchMinute1, crunchMinute2)))
       lookups.queueMinutesRouterActor
-        .ask(MinutesContainer(Seq(newPassengers2, passengers3)))
+        .ask(MinutesContainer(Seq(newCrunchMinute2, crunchMinute3)))
 
       probe.fishForMessage(1.second, "Looking for second update") {
         case minutes: Iterable[CrunchMinute] =>
-          val m1Exists = minuteExists(minutes, passengers1.paxLoad, passengers1.minute)
-          val m2Exists = minuteExists(minutes, newPassengers2.paxLoad, newPassengers2.minute)
-          val m3Exists = minuteExists(minutes, passengers3.paxLoad, passengers3.minute)
+          val m1Exists = minuteExists(minutes, crunchMinute1.paxLoad, crunchMinute1.minute)
+          val m2Exists = minuteExists(minutes, newCrunchMinute2.paxLoad, newCrunchMinute2.minute)
+          val m3Exists = minuteExists(minutes, crunchMinute3.paxLoad, crunchMinute3.minute)
           m1Exists && m2Exists && m3Exists
         case _ => false
       }
@@ -118,46 +120,46 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   private def minuteExists(minutes: Iterable[CrunchMinute], paxLoad: Double, minute: MillisSinceEpoch): Boolean =
     minutes.toSet.exists(cm => cm.paxLoad == paxLoad && cm.minute == minute)
 
-  //  "When I ask for CrunchMinutes" >> {
-  //    "Given a lookups with no data" >> {
-  //      "I should get None" >> {
-  //        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor((_, _) => Seq(terminal), lookupWithData(minutesContainer), noopUpdates)))
-  //        val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-  //        val result = Await.result(eventualResult, 1.second)
-  //
-  //        result === minutesContainer
-  //      }
-  //    }
-  //
-  //    "Given a lookup with some data" >> {
-  //      "I should get the data from the source" >> {
-  //        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor((_, _) => Seq(terminal), lookupWithData(minutesContainer), noopUpdates)))
-  //        val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-  //        val result = Await.result(eventualResult, 1.second)
-  //
-  //        result === minutesContainer
-  //      }
-  //    }
-  //  }
-  //
-  //  "When I ask for crunch minutes in the range 10:00 to 10:59" >> {
-  //    val startMinute = SDate("2020-01-01T10:00")
-  //    val endMinute = SDate("2020-01-01T10:59")
-  //    "Given a lookup with minutes 09:59 and 10:00 & " >> {
-  //      val crunchMinuteOutSideRange1: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T09:59").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-  //      val crunchMinuteOutSideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T11:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-  //      val crunchMinuteInsideRange1: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-  //      val crunchMinuteInsideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:59").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-  //      val minutes = Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2, crunchMinuteOutSideRange1, crunchMinuteOutSideRange2)
-  //      val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
-  //
-  //      "I should get the one minute back" >> {
-  //        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor((_, _) => Seq(terminal), lookupWithData(minutesState), noopUpdates)))
-  //        val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-  //        val result = Await.result(eventualResult, 1.second)
-  //
-  //        result === MinutesContainer(Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
-  //      }
-  //    }
-  //  }
+  "When I ask for CrunchMinutes" >> {
+    "Given a lookups with no data" >> {
+      "I should get None" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor((_, _) => Seq(terminal), lookupWithData(minutesContainer), noopUpdates)))
+        val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val result = Await.result(eventualResult, 1.second)
+
+        result === minutesContainer
+      }
+    }
+
+    "Given a lookup with some data" >> {
+      "I should get the data from the source" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor((_, _) => Seq(terminal), lookupWithData(minutesContainer), noopUpdates)))
+        val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val result = Await.result(eventualResult, 1.second)
+
+        result === minutesContainer
+      }
+    }
+  }
+
+  "When I ask for crunch minutes in the range 10:00 to 10:59" >> {
+    val startMinute = SDate("2020-01-01T10:00")
+    val endMinute = SDate("2020-01-01T10:59")
+    "Given a lookup with minutes 09:59 and 10:00 & " >> {
+      val crunchMinuteOutSideRange1: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T09:59").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
+      val crunchMinuteOutSideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T11:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
+      val crunchMinuteInsideRange1: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
+      val crunchMinuteInsideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:59").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
+      val minutes = Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2, crunchMinuteOutSideRange1, crunchMinuteOutSideRange2)
+      val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
+
+      "I should get the one minute back" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor((_, _) => Seq(terminal), lookupWithData(minutesState), noopUpdates)))
+        val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val result = Await.result(eventualResult, 1.second)
+
+        result === MinutesContainer(Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
+      }
+    }
+  }
 }
