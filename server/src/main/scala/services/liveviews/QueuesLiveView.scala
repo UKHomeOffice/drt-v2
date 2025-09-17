@@ -25,7 +25,7 @@ object QueuesLiveView {
       val slotsToInsert = CrunchMinutes.groupByMinutes(slotSizeMinutes, minutes.toSeq, date)(d => SDate(d).millisSinceEpoch)
 
       aggregatedDb
-        .run(insertOrUpdate(slotsToInsert, Seq.empty))
+        .run(insertOrUpdate(slotsToInsert))
         .recover { case e: Throwable =>
           log.error(s"Error updating QueuesLiveView for $portCode on $date: ${e.getMessage}")
           0
