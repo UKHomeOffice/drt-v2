@@ -72,8 +72,5 @@ case class LegacyShiftAssignmentsServiceImpl(liveShiftAssignmentsActor: ActorRef
     shiftAssignmentsSequentialWriteActor
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
-//      .map { a =>
-//        println(s"Updated shift assignments: ${a.assignments.sortBy(_.start).map(a => s"${SDate(a.start).toISOString}: ${a.numberOfStaff}").mkString("\n")}")
-//        a
-//      }
+
 }
