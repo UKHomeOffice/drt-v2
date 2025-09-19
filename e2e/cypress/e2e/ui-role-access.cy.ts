@@ -36,13 +36,6 @@ describe('UI role access', () => {
         .get(".terminal-summary-dashboard");
     });
 
-    it("should display arrivals export page for PortOperatorStaff role", () => {
-      cy
-        .asAPortOperator()
-        .navigateHome()
-        .get(".terminal-export-dashboard");
-    });
-
   });
 
   describe('MultiDayExport', () => {

@@ -148,7 +148,7 @@ object PortDashboardPage {
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
-                      <.label(^.htmlFor := "period-select", <.strong("Time window:")),
+                      <.label(^.htmlFor := "period-select", <.strong("Time period:")),
                       <.div(^.className := "port-dashboard-select",
                         <.select(
                           ^.className := "form-control dynamic-width",
