@@ -2,7 +2,8 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.DrtParameters
 import com.google.inject.Inject
-import drt.shared.DropIn
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.{DropIn, ShiftAssignments, StaffAssignmentLike}
 import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
@@ -13,7 +14,7 @@ import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.service.staffing.{ShiftMetaInfoService, ShiftsService}
+import uk.gov.homeoffice.drt.service.staffing.{LegacyShiftAssignmentsService, ShiftAssignmentsService, ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -160,25 +161,37 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 }
 
 case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends ShiftMetaInfoService {
+    var mockShiftMetaSeq: Seq[ShiftMeta] = Seq.empty[ShiftMeta]
 
-  override def insertShiftMetaInfo(port: String,
-                                   terminal: String,
-                                   shiftAssignmentsMigratedAt: Option[Timestamp],
-                                   latestShiftAppliedAt: Option[Timestamp])(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+  override def insertShiftMetaInfo(shiftMeta: ShiftMeta): Future[Int] = {
+    mockShiftMetaSeq = mockShiftMetaSeq :+ shiftMeta
+    Future.successful(mockShiftMetaSeq).map(_.size)
+  }
 
-  override def getShiftMetaInfo(port: String,
-                                terminal: String)(implicit ex: ExecutionContext): Future[Option[ShiftMeta]] =
-    Future(Option(ShiftMeta(port, terminal, None, None)))(ec)
+  override def getShiftMetaInfo(port: String, terminal: String): Future[Option[ShiftMeta]] = {
+    Future(mockShiftMetaSeq.find(s => port == s.port && terminal == s.terminal))
+  }
 
-  override def updateShiftAssignmentsMigratedAt(port: String,
-                                                terminal: String,
-                                                shiftAssignmentsMigratedAt: Option[Timestamp])(implicit ex: ExecutionContext): Future[Option[ShiftMeta]] =
-    Future(Option(ShiftMeta(port, terminal, shiftAssignmentsMigratedAt, None)))(ec)
+  override def updateShiftAssignmentsMigratedAt(port: String, terminal: String, shiftAssignmentsMigratedAt: Option[Timestamp]): Future[Option[ShiftMeta]] =
+    Future.successful(mockShiftMetaSeq.find(s => port == s.port && terminal == s.terminal).map { sm =>
+      val updatedShiftMeta = sm.copy(shiftAssignmentsMigratedAt = shiftAssignmentsMigratedAt.map(_.getTime))
+      mockShiftMetaSeq = mockShiftMetaSeq.filterNot(s => port == s.port && terminal == s.terminal) :+ updatedShiftMeta
+      updatedShiftMeta
+    })
+}
 
-  override def updateLastShiftAppliedAt(port: String,
-                                        terminal: String,
-                                        latestShiftAppliedAt: Timestamp)(implicit ex: ExecutionContext): Future[Option[ShiftMeta]] =
-    Future(Option(ShiftMeta(port, terminal, None, Option(latestShiftAppliedAt))))(ec)
+case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyShiftAssignmentsService {
+  var shiftsAssignments: Seq[StaffAssignmentLike] = shifts
+  override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(shiftsAssignments))
+
+  override def allShiftAssignments: Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(shiftsAssignments))
+
+  override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = {
+    shiftsAssignments = shiftsAssignments ++ shiftAssignments
+    Future.successful(ShiftAssignments(shiftsAssignments))
+  }
 }
 
 case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
