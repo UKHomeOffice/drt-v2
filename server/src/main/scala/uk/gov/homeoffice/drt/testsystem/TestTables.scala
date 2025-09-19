@@ -172,9 +172,9 @@ case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends Shi
     Future(mockShiftMetaSeq.find(s => port == s.port && terminal == s.terminal))
   }
 
-  override def updateShiftAssignmentsMigratedAt(port: String, terminal: String, shiftAssignmentsMigratedAt: Option[Timestamp]): Future[Option[ShiftMeta]] =
+  override def updateShiftAssignmentsMigratedAt(port: String, terminal: String, shiftAssignmentsMigratedAt: Option[Long]): Future[Option[ShiftMeta]] =
     Future.successful(mockShiftMetaSeq.find(s => port == s.port && terminal == s.terminal).map { sm =>
-      val updatedShiftMeta = sm.copy(shiftAssignmentsMigratedAt = shiftAssignmentsMigratedAt.map(_.getTime))
+      val updatedShiftMeta = sm.copy(shiftAssignmentsMigratedAt = shiftAssignmentsMigratedAt)
       mockShiftMetaSeq = mockShiftMetaSeq.filterNot(s => port == s.port && terminal == s.terminal) :+ updatedShiftMeta
       updatedShiftMeta
     })

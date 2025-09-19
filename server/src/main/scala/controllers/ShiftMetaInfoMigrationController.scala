@@ -28,30 +28,30 @@ trait IShiftMetaInfoMigration {
     legacyShiftAssignmentsService.allShiftAssignments.flatMap { shiftAssignments =>
       shiftAssignmentsService.updateShiftAssignments(shiftAssignments.assignments).map { _ =>
         log.info(s"Successfully transferred legacy shift assignments for $port $terminal")
-      }.recoverWith {
+      }.recover {
         case ex: Exception =>
           log.error(s"Failed to update last shift applied at for $port $terminal: ${ex.getMessage}", ex)
-          scala.concurrent.Future.failed(ex)
+          ex
       }
-    }.recoverWith {
+    }.recover {
       case ex: Exception =>
         log.error(s"Failed to transfer legacy shift assignments for $port $terminal: ${ex.getMessage}", ex)
-        scala.concurrent.Future.failed(ex)
+        ex
     }
   }
 
-  private def markMigrationRecord(port: String, terminal: Terminal, now: Timestamp, shiftMetaInfoService : ShiftMetaInfoService): Future[Any] = {
-      shiftMetaInfoService.insertShiftMetaInfo(ShiftMeta(port, terminal.toString, Some(now.getTime))).map { _ =>
-        log.info(s"Marked shift meta info for $port $terminal")
-      }.recoverWith {
-        case ex: Exception =>
-          log.error(s"Failed to insert shift meta info for $port $terminal: ${ex.getMessage}", ex)
-          scala.concurrent.Future.failed(ex)
-      }
+  private def markMigrationRecord(port: String, terminal: Terminal, now: Timestamp, shiftMetaInfoService: ShiftMetaInfoService): Future[Any] = {
+    shiftMetaInfoService.insertShiftMetaInfo(ShiftMeta(port, terminal.toString, Some(now.getTime))).map { _ =>
+      log.info(s"Marked shift meta info for $port $terminal")
+    }.recover {
+      case ex: Exception =>
+        log.error(s"Failed to insert shift meta info for $port $terminal: ${ex.getMessage}", ex)
+        ex
     }
+  }
 
 
-  def checkAndMarkShiftAssignmentsMigration(dateTime: Long, shiftMetaInfoService : ShiftMetaInfoService): Future[Seq[Any]] = {
+  def checkAndMarkShiftAssignmentsMigration(dateTime: Long, shiftMetaInfoService: ShiftMetaInfoService): Future[Seq[Any]] = {
     val now = new java.sql.Timestamp(dateTime)
     val port = ctrl.airportConfig.portCode.iata
     val terminals: Seq[Terminal] = ctrl.airportConfig.terminalsForDate(SDate(dateTime).toLocalDate).toSeq
@@ -64,24 +64,21 @@ trait IShiftMetaInfoMigration {
           case _ =>
             log.info(s"No existing shift meta info for $port $terminal, creating new entry and marking as migrated")
             migrateStaffAssignments(port, terminal.toString, now).map { _ =>
-              markMigrationRecord(port, terminal, now , shiftMetaInfoService).map { _ =>
+              markMigrationRecord(port, terminal, now, shiftMetaInfoService).map { _ =>
                   log.info(s"Marked shift assignments as migrated for $port $terminal")
                   Future.successful("Migration completed")
                 }
-                .recoverWith {
+                .recover {
                   case ex: Exception =>
                     log.error(s"Failed to mark shift assignments as migrated for $port $terminal: ${ex.getMessage}", ex)
-                    scala.concurrent.Future.failed(ex)
                 }
-            }.recoverWith {
+            }.recover {
               case ex: Exception =>
                 log.error(s"Failed to migrate shift assignments for $port $terminal: ${ex.getMessage}", ex)
-                scala.concurrent.Future.failed(ex)
             }
-        }.recoverWith {
+        }.recover {
           case ex: Exception =>
             log.error(s"Failed to get shift meta info for $port $terminal: ${ex.getMessage}", ex)
-            scala.concurrent.Future.failed(ex)
         }
       } else {
         log.info(s"enableShiftPlanningChange for $port $terminal is disabled, no needed to migrate shift assignments")
@@ -98,5 +95,5 @@ class ShiftMetaInfoMigrationController @Inject()(
                                                   override val shiftAssignmentsService: ShiftAssignmentsService)(implicit val ec: ExecutionContext)
   extends InjectedController with IShiftMetaInfoMigration {
 
-  checkAndMarkShiftAssignmentsMigration(System.currentTimeMillis() , ctrl.shiftMetaInfoService)
+  checkAndMarkShiftAssignmentsMigration(System.currentTimeMillis(), ctrl.shiftMetaInfoService)
 }

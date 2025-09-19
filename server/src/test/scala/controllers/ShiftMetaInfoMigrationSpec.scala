@@ -34,24 +34,24 @@ class ShiftMetaInfoMigrationSpec extends PlaySpec {
   }
 
   "ShiftMetaInfoService" should {
-        "insert and retrieve ShiftMeta correctly" in {
-          val drtSystemInterface = moduleWithShiftPlanningFeatureEnabled(Seq.empty).provideDrtSystemInterface
-          val service = drtSystemInterface.shiftMetaInfoService
-          val port = "LHR"
-          val terminal: Terminal = uk.gov.homeoffice.drt.ports.Terminals.T1
-          val shiftAssignmentsMigratedAt = SDate("2021-07-01").millisSinceEpoch
-          val shiftMeta = ShiftMeta(port, terminal.toString, Some(shiftAssignmentsMigratedAt))
-          val initial = Await.result(service.getShiftMetaInfo(port, terminal.toString), 5.seconds)
-          initial mustBe None
-          initial.size mustBe 0
+    "insert and retrieve ShiftMeta correctly" in {
+      val drtSystemInterface = moduleWithShiftPlanningFeatureEnabled(Seq.empty).provideDrtSystemInterface
+      val service = drtSystemInterface.shiftMetaInfoService
+      val port = "LHR"
+      val terminal: Terminal = uk.gov.homeoffice.drt.ports.Terminals.T1
+      val shiftAssignmentsMigratedAt = SDate("2021-07-01").millisSinceEpoch
+      val shiftMeta = ShiftMeta(port, terminal.toString, Some(shiftAssignmentsMigratedAt))
+      val initial = Await.result(service.getShiftMetaInfo(port, terminal.toString), 5.seconds)
+      initial mustBe None
+      initial.size mustBe 0
 
-          val insertResult = Await.result(service.insertShiftMetaInfo(shiftMeta), 5.seconds)
-          insertResult mustBe 1
+      val insertResult = Await.result(service.insertShiftMetaInfo(shiftMeta), 5.seconds)
+      insertResult mustBe 1
 
-          val retrievedResult = Await.result(service.getShiftMetaInfo(port, terminal.toString), 5.seconds)
+      val retrievedResult = Await.result(service.getShiftMetaInfo(port, terminal.toString), 5.seconds)
 
-          retrievedResult mustBe Some(shiftMeta)
-        }
+      retrievedResult mustBe Some(shiftMeta)
+    }
 
     "check migration of shift assignments is done when feature flag is enabled" in {
       val shiftAssignments = Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T10:00").millisSinceEpoch, SDate("2024-07-01T10:15").millisSinceEpoch, 1, None))
@@ -63,13 +63,13 @@ class ShiftMetaInfoMigrationSpec extends PlaySpec {
       val service = drtSystemInterface.shiftMetaInfoService
       val port = "TEST"
       val terminal: Terminal = uk.gov.homeoffice.drt.ports.Terminals.T1
-      val shiftAssignmentsBefore : Future[ShiftAssignments] = module.shiftAssignmentsService.allShiftAssignments
+      val shiftAssignmentsBefore: Future[ShiftAssignments] = module.shiftAssignmentsService.allShiftAssignments
       Await.result(shiftAssignmentsBefore, 5.seconds).assignments mustBe Seq()
       val shiftAssignmentsMigratedAt = SDate("2024-07-01").millisSinceEpoch
       Await.result(controller.checkAndMarkShiftAssignmentsMigration(shiftAssignmentsMigratedAt, service), 5.seconds)
       val retrievedResult = Await.result(service.getShiftMetaInfo(port, terminal.toString), 5.seconds)
       retrievedResult.size mustBe 1
-      val shiftAssignmentsAfterMigration : Future[ShiftAssignments] = module.shiftAssignmentsService.allShiftAssignments
+      val shiftAssignmentsAfterMigration: Future[ShiftAssignments] = module.shiftAssignmentsService.allShiftAssignments
       Await.result(shiftAssignmentsAfterMigration, 5.seconds).assignments mustBe shiftAssignments
     }
 
@@ -83,7 +83,7 @@ class ShiftMetaInfoMigrationSpec extends PlaySpec {
       val service = drtSystemInterface.shiftMetaInfoService
       val port = "TEST"
       val terminal: Terminal = uk.gov.homeoffice.drt.ports.Terminals.T1
-      val shiftAssignmentsBefore : Future[ShiftAssignments] = moduleWithDisabledShiftPlanning.shiftAssignmentsService.allShiftAssignments
+      val shiftAssignmentsBefore: Future[ShiftAssignments] = moduleWithDisabledShiftPlanning.shiftAssignmentsService.allShiftAssignments
       Await.result(shiftAssignmentsBefore, 5.seconds).assignments mustBe Seq()
 
       val shiftAssignmentsMigratedAt = SDate("2024-07-01").millisSinceEpoch
@@ -91,7 +91,7 @@ class ShiftMetaInfoMigrationSpec extends PlaySpec {
       val retrievedResult = Await.result(service.getShiftMetaInfo(port, terminal.toString), 5.seconds)
       retrievedResult.size mustBe 0
 
-      val shiftAssignmentsAfterMigration : Future[ShiftAssignments] = moduleWithDisabledShiftPlanning.shiftAssignmentsService.allShiftAssignments
+      val shiftAssignmentsAfterMigration: Future[ShiftAssignments] = moduleWithDisabledShiftPlanning.shiftAssignmentsService.allShiftAssignments
       Await.result(shiftAssignmentsAfterMigration, 5.seconds).assignments mustBe Seq()
     }
   }

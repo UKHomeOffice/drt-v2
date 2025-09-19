@@ -12,7 +12,7 @@ trait ShiftMetaInfoService {
 
   def updateShiftAssignmentsMigratedAt(port: String,
                                        terminal: String,
-                                       shiftAssignmentsMigratedAt: Option[java.sql.Timestamp]): Future[Option[ShiftMeta]]
+                                       shiftAssignmentsMigratedAt: Option[Long]): Future[Option[ShiftMeta]]
 
 }
 
@@ -26,7 +26,7 @@ case class ShiftMetaInfoServiceImpl(shiftMetaInfoDao: ShiftMetaInfoDao)(implicit
 
   override def updateShiftAssignmentsMigratedAt(port: String,
                                                 terminal: String,
-                                                shiftAssignmentsMigratedAt: Option[java.sql.Timestamp]): Future[Option[ShiftMeta]] =
+                                                shiftAssignmentsMigratedAt: Option[Long]): Future[Option[ShiftMeta]] =
     shiftMetaInfoDao.updateShiftAssignmentsMigratedAt(port, terminal, shiftAssignmentsMigratedAt)
       .map(_.map(shiftMetaRow => ShiftMeta(shiftMetaRow.port, shiftMetaRow.terminal, shiftMetaRow.shiftAssignmentsMigratedAt)))
 
