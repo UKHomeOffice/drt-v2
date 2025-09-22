@@ -19,7 +19,7 @@ object QueuesLiveView {
                           )
                           (implicit ec: ExecutionContext): (UtcDate, Iterable[CrunchMinute]) => Future[Int] = {
     val slotSizeMinutes = 15
-    val insertOrUpdate = queueSlotDao.updateAndRemoveSlots(portCode, slotSizeMinutes)
+    val insertOrUpdate = queueSlotDao.updateSlots(portCode, slotSizeMinutes)
 
     (date, minutes) => {
       val slotsToInsert = CrunchMinutes.groupByMinutes(slotSizeMinutes, minutes.toSeq, date)(d => SDate(d).millisSinceEpoch)
