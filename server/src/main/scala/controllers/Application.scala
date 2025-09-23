@@ -22,10 +22,9 @@ import uk.gov.homeoffice.drt.jsonformats.UserPreferencesJsonFormat
 import uk.gov.homeoffice.drt.keycloak._
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.service.staffing.ShiftsService
+import uk.gov.homeoffice.drt.service.staffing.{ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
-
 import spray.json._
 import UserPreferencesJsonFormat._
 
@@ -82,6 +81,10 @@ trait ABFeatureProviderLike {
 
 trait ShiftsProviderLike {
   val shiftsService: ShiftsService
+}
+
+trait ShiftMetaInfoProviderLike {
+  val shiftMetaInfoService: ShiftMetaInfoService
 }
 
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)

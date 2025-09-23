@@ -4,7 +4,7 @@ import diode.Action
 import diode.data.Pot
 import diode.react.ReactConnectProxy
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Hourly, Ideal, Quarterly, TableView, TimeInterval}
+import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Hourly, Recommended, Quarterly, TableView, TimeInterval}
 import drt.client.components.styles._
 import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
@@ -180,7 +180,7 @@ object SPAMain {
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+:[0-9]+[ +1]*"))
 
     val deskType: DeskType = queryParams.get(UrlViewType.paramName)
-      .map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
+      .map(vt => if (Recommended.queryParamsValue == vt) Recommended else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName)
       .map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)

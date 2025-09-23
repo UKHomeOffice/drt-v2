@@ -5,7 +5,7 @@ import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
-import controllers.{AirportConfigProvider, Application}
+import controllers.{AirportConfigProvider, Application, ShiftMetaInfoMigrationController}
 import email.GovNotifyEmail
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
@@ -67,6 +67,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
     bind(classOf[SummariesController]).asEagerSingleton()
     bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()
+    bind(classOf[ShiftMetaInfoMigrationController]).asEagerSingleton()
   }
 
 

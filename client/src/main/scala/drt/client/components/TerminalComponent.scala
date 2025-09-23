@@ -5,7 +5,7 @@ import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain._
-import drt.client.components.TerminalDesksAndQueues.Ideal
+import drt.client.components.TerminalDesksAndQueues.Recommended
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
@@ -255,6 +255,7 @@ object TerminalComponent {
                         props.terminalPageTab.portCodeStr,
                         terminalModel.shiftsPot,
                         props.terminalPageTab.queryParams("shiftName"),
+                        props.terminalPageTab.queryParams.get("shiftDate"),
                         props.terminalPageTab.queryParams.get("date"),
                         props.router))
 
@@ -289,7 +290,9 @@ object TerminalComponent {
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
     .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString, p.props.terminalPageTab.queryParams.get("date")))))
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString,
+        p.props.terminalPageTab.queryParams.get("date"),
+        p.props.terminalPageTab.queryParams.get("dayRange")))))
     .build
 
   private def terminalTabs(props: Props,
@@ -310,7 +313,7 @@ object TerminalComponent {
 
     def viewTypeQueryParam: SPAMain.UrlParameter =
       if (airportConfig.idealStaffAsDefault)
-        UrlViewType(Option(Ideal))
+        UrlViewType(Option(Recommended))
       else
         UrlViewType(None)
 

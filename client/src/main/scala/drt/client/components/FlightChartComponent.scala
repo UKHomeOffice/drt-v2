@@ -120,7 +120,7 @@ object FlightChartComponent {
         height = Option(height),
         options = ChartJsOptions(title).copy(
           scales = js.Dictionary[js.Any](
-            "xAxes" -> js.Dictionary(
+            "x" -> js.Dictionary(
               "ticks" -> js.Dictionary(
                 "autoSkip" -> false,
               )

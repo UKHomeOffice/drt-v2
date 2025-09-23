@@ -65,7 +65,7 @@ object TerminalDesksAndQueues {
     val queryParamsValue: String
   }
 
-  case object Ideal extends DeskType {
+  case object Recommended extends DeskType {
     override val queryParamsValue: String = "ideal"
   }
 
@@ -128,7 +128,7 @@ object TerminalDesksAndQueues {
               h :+ <.th(<.div("Est wait", estWaitTooltip), ^.className := queueColumnClass)
             else
               h
-          case Ideal =>
+          case Recommended =>
             val h = List(<.th(s"Rec ${deskUnitLabel(queueName)} ", recBanksOrDesksTip(queueName), ^.className := queueColumnClass))
             if (showWaitColumn)
               h :+ <.th(<.div("Est wait", " ", estWaitTooltip), ^.className := queueColumnClass)
@@ -206,41 +206,41 @@ object TerminalDesksAndQueues {
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
         val deskTypeControls = List(
           <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.deskType == Ideal, ^.onChange ==> toggleDeskType(Ideal), ^.id := "show-recs"),
-            <.label(^.`for` := "show-recs", "Ideal staff", " ", recommendationsTooltip)
+            <.input.radio(^.checked := state.deskType == Recommended, ^.onChange ==> toggleDeskType(Recommended), ^.id := "show-recs"),
+            <.label(^.`for` := "show-recs", "Recommended", " ", recommendationsTooltip)
           ),
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.deskType == Deployments, ^.onChange ==> toggleDeskType(Deployments), ^.id := "show-deps"),
-            <.label(^.`for` := "show-deps", "Available staff", " ", availableStaffDeploymentsTooltip)
+            <.label(^.`for` := "show-deps", "Available", " ", availableStaffDeploymentsTooltip)
           ))
 
         val displayTypeControls = List(
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.displayType == TableView, ^.onChange ==> toggleDisplayType(TableView), ^.id := "display-table"),
-            <.label(^.`for` := "display-table", "Table view")
+            <.label(^.`for` := "display-table", "Table")
           ),
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.displayType == ChartsView, ^.onChange ==> toggleDisplayType(ChartsView), ^.id := "display-charts"),
-            <.label(^.`for` := "display-charts", "Charts view")
+            <.label(^.`for` := "display-charts", "Chart")
           ))
 
 
         val displayIntervalControls = List(
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.timeInterval == Quarterly, ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Quarterly)), ^.id := "display-quaterly-interval"),
-            <.label(^.`for` := "display-quaterly-interval", "Every 15 minutes")
+            <.label(^.`for` := "display-quaterly-interval", "15 minute")
           ),
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.timeInterval == Hourly, ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Hourly)), ^.id := "display-hourly-interval"),
-            <.label(^.`for` := "display-hourly-interval", "Hourly")
+            <.label(^.`for` := "display-hourly-interval", "Hour")
           ))
 
         <.div(^.className := "view-controls",
-          <.div(^.className := "view-controls-label", "Staff:", <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)),
+          <.div(^.className := "view-controls-label", "Staffing", <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)),
           <.span(^.className := "separator"),
-          <.div(^.className := "view-controls-label", "Format:", <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)),
+          <.div(^.className := "view-controls-label", "View", <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)),
           <.span(^.className := "separator"),
-          <.div(^.className := "view-controls-label", "Intervals:", <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)),
+          <.div(^.className := "view-controls-label", "Time interval", <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)),
         )
       }
 

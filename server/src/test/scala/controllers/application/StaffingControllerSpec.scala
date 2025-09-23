@@ -13,21 +13,11 @@ import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, LegacyShiftAssignmentsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, LegacyShiftAssignmentsService, ShiftAssignmentsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
 import scala.concurrent.Future
-
-case class MockLegacyShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyShiftAssignmentsService {
-  override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
-    Future.successful(ShiftAssignments(shifts))
-
-  override def allShiftAssignments: Future[ShiftAssignments] =
-    Future.successful(ShiftAssignments(shifts))
-
-  override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = Future.successful(ShiftAssignments(shifts))
-}
 
 case class MockFixedPointsService(fixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsService {
   override def fixedPoints(maybePointInTime: Option[MillisSinceEpoch]): Future[FixedPointAssignments] =

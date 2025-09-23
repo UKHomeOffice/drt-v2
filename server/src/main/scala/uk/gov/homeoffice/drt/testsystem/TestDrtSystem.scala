@@ -16,13 +16,13 @@ import uk.gov.homeoffice.drt.db.AggregateDbH2
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.tables.UserTableLike
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Terminals}
 import uk.gov.homeoffice.drt.service.{FeedService, QueueConfig}
-import uk.gov.homeoffice.drt.service.staffing.ShiftsService
+import uk.gov.homeoffice.drt.service.staffing.{ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.testsystem.db.AkkaDbH2
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDateLike}
 
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -59,7 +59,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
   override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
   override val shiftsService: ShiftsService = MockStaffShiftsService()
-
+  override val shiftMetaInfoService: ShiftMetaInfoService = MockShiftMetaInfoService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(
     system = system,
     now = now,
@@ -69,7 +69,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     updateLiveView = update15MinuteQueueSlotsLiveView,
   )
 
-  val terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
+  val terminalsForDateRange: (LocalDate, LocalDate) => Seq[Terminals.Terminal] = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal)
 
   override val flightLookups: FlightLookupsLike = TestFlightLookups(
     system,

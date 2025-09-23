@@ -33,7 +33,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   val state: mutable.Map[INDEX, VAL] = mutable.Map[INDEX, VAL]()
 
-  val onUpdate: Option[(UtcDate, Iterable[VAL], Iterable[INDEX]) => Future[Unit]] = None
+  val onUpdate: Option[(UtcDate, Iterable[VAL]) => Future[Unit]] = None
 
   override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d"
 
@@ -94,7 +94,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       case (noDifferences, noRemovals) if noDifferences.isEmpty && noRemovals.isEmpty => sender() ! Set.empty[Long]
       case (updates, removals) =>
         updateStateFromDiff(updates, removals)
-        onUpdate.foreach(_(utcDate, updates, removals))
+        onUpdate.foreach(_(utcDate, state.values))
         val messageToPersist = containerToMessage(updates, removals)
         val updateRequests = if (shouldSendEffectsToSubscriber(container))
           updates
