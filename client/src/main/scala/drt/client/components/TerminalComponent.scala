@@ -293,6 +293,13 @@ object TerminalComponent {
       SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString,
         p.props.terminalPageTab.queryParams.get("date"),
         p.props.terminalPageTab.queryParams.get("dayRange")))))
+    .componentDidUpdate(p => Callback {
+      if (p.currentProps.terminalPageTab != p.prevProps.terminalPageTab) {
+        SPACircuit.dispatch(GetShifts(p.currentProps.terminalPageTab.terminal.toString,
+          p.currentProps.terminalPageTab.queryParams.get("date"),
+          p.currentProps.terminalPageTab.queryParams.get("dayRange")))
+      }
+    })
     .build
 
   private def terminalTabs(props: Props,
