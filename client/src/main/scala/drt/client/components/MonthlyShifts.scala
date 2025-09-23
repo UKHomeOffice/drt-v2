@@ -9,7 +9,7 @@ import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.UpdateUserPreferences
+import drt.client.services.handlers.{GetShifts, UpdateUserPreferences}
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
