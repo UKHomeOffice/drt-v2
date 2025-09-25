@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode.AnyAction.aType
 import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, EffectSet, ModelRW, NoAction}
+import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions.SetAllShiftAssignments
 import drt.client.logger.log
 import drt.client.services.DrtApi
@@ -47,7 +47,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       val apiCallEffect = Effect(DrtApi.post("shifts/save", write(staffShifts))
         .map { r =>
           val assignments = read[ShiftAssignments](r.responseText)
-          log.info(s"Received shift assignments after saving shifts: $assignments")
+          log.info(s"Received shift assignments after saving shifts")
           SetAllShiftAssignments(assignments)
         }.recover {
           case t =>
@@ -56,13 +56,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         }
       )
 
-      val effects = new EffectSet(
-        Effect.action(SetShifts(staffShifts)),
-        Set(apiCallEffect),
-        queue
-      )
-
-      updated(Pot.empty, effects)
+      updated(Pot.empty, apiCallEffect)
 
 
     case UpdateShift(shift, shiftName) =>
