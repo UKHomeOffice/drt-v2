@@ -115,8 +115,11 @@ object TerminalPlanningComponent {
               MuiTypography(variant = "h3", sx = SxProps(Map("paddingTop" -> "0px")))("Headline Figures"),
               <.div(^.className := "terminal-content-header",
                 <.div(^.className := "staffing-controls-wrapper",
-                  <.div(^.className := "staffing-controls-row",
-                    <.label(^.className := "staffing-controls-label", "Select week start day"),
+                  <.div(^.className := "staffing-controls-row hstack",
+                    MuiFormLabel(sx = SxProps(Map("size" -> "16px",
+                      "paddingRight" -> "10px",
+                      "color" -> DrtReactTheme.palette.grey.`900`,
+                      "fontWeight" -> "bold")))(<.span("Week start")),
                     <.div(^.className := "staffing-controls-select",
                       drawSelect(
                         forecastWeeks.map(_.ddMMyyString),
@@ -130,12 +133,7 @@ object TerminalPlanningComponent {
                       buttonContent(state.downloadingHeadlines, "Export Headlines"),
                       createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b)),
                       state.downloadingHeadlines,
-                    ),
-                    buttonWithProgress(staffRecommendationsExportUrl,
-                      buttonContent(state.downloadingStaff, "Export Staff Requirements"),
-                      createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b)),
-                      state.downloadingStaff
-                    ),
+                    )
                   )
                 ),
               ),
@@ -169,20 +167,30 @@ object TerminalPlanningComponent {
                 )
               ),
               MuiTypography(variant = "h3")("Available and recommended staff"),
-              MuiFormControl()(
-                <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center"),
-                  MuiFormLabel(sx = SxProps(Map("size" -> "16px",
-                    "paddingRight" -> "10px",
-                    "color" -> DrtReactTheme.palette.grey.`900`,
-                    "fontWeight" -> "bold")))(<.span("Time Period")),
-                  MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
-                    scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
-                      Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
-                      Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt))) >>
-                      Callback(GoogleEventTracker.sendEvent(props.page.terminalName, "planning-time-period", e.target.value))
-                  }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
-                    MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
-                  ))
+              <.div(^.className := "terminal-content-header vstack",
+                MuiFormControl()(
+                  <.div(^.className := "hstack",
+                    MuiFormLabel(sx = SxProps(Map("size" -> "16px",
+                      "paddingRight" -> "10px",
+                      "color" -> DrtReactTheme.palette.grey.`900`,
+                      "fontWeight" -> "bold")))(<.span("Time Period")),
+                    MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
+                      scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
+                        Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
+                        Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt))) >>
+                        Callback(GoogleEventTracker.sendEvent(props.page.terminalName, "planning-time-period", e.target.value))
+                    }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
+                      MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
+                    ))
+                ),
+                MuiDivider()(),
+                <.div(^.className := "staffing-controls-row",
+                  buttonWithProgress(staffRecommendationsExportUrl,
+                    buttonContent(state.downloadingStaff, "Export Staff Requirements"),
+                    createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b)),
+                    state.downloadingStaff
+                  )
+                )
               ),
               <.table(^.className := "forecast",
                 <.thead(^.className := "sticky-top",
