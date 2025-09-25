@@ -118,6 +118,7 @@ object TerminalComponent {
             loggedInUser <- terminalModel.loggedInUserPot
             redListUpdates <- terminalModel.redListUpdatesPot
             userPreferences <- terminalModel.userPreferencesPot
+            shifts <- terminalModel.shiftsPot
           } yield {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -134,12 +135,11 @@ object TerminalComponent {
                     m.flightManifestSummaries,
                     m.arrivalSources,
                     m.simulationResult,
-                    m.flightHighlight,
-                    m.shifts
+                    m.flightHighlight
                   ))
 
                 rcp { mp =>
-                  val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl, sh) = mp()
+                  val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
 
                   props.terminalPageTab.mode match {
                     case Current =>
@@ -263,15 +263,15 @@ object TerminalComponent {
                       <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, sh.isEmpty))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, shifts.isEmpty))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && featureFlags.enableShiftPlanningChange =>
                       if (!userPreferences.showStaffingShiftView)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, sh.isEmpty))
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, shifts.isEmpty))
                       else
-                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences))
+                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences, props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created"))
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) && sh.isEmpty =>
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
                       <.div(^.className := "staffing-container-empty",
                         "No staff shifts are currently available. Please visit the ", <.strong("Staffing"), " tab to create new shifts or select a different tab." +
                           "If you have already created shifts, kindly refresh the page."
@@ -293,13 +293,6 @@ object TerminalComponent {
       SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString,
         p.props.terminalPageTab.queryParams.get("date"),
         p.props.terminalPageTab.queryParams.get("dayRange")))))
-    .componentDidUpdate(p => Callback {
-      if (p.currentProps.terminalPageTab != p.prevProps.terminalPageTab) {
-        SPACircuit.dispatch(GetShifts(p.currentProps.terminalPageTab.terminal.toString,
-          p.currentProps.terminalPageTab.queryParams.get("date"),
-          p.currentProps.terminalPageTab.queryParams.get("dayRange")))
-      }
-    })
     .build
 
   private def terminalTabs(props: Props,

@@ -72,7 +72,7 @@ object EditShiftsComponent {
         }
         SPACircuit.dispatch(UpdateShift(staffShifts.headOption, props.shiftName))
         Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "update")).runNow()
-        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map("shifts"->"created"))).runNow()
       }
 
       <.div(
