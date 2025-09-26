@@ -39,7 +39,7 @@ object MonthlyShifts {
                    addShiftForm: Boolean,
                    shifts: Seq[Shift],
                    shiftAssignments: ShiftAssignments,
-                   shiftsSummary: Seq[ShiftSummaryStaffing] = Seq.empty,
+                   shiftSummaries: Seq[ShiftSummaryStaffing] = Seq.empty,
                    changedAssignments: Seq[StaffTableEntry] = Seq.empty,
                   )
 
@@ -81,13 +81,13 @@ object MonthlyShifts {
         ConfirmAndSaveForMonthlyShifts(shiftsData, changedAssignments, props, state, scope)()
       }
 
-      case class Model(shiftAssignments: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
+      case class Model(shiftAssignmentsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
       val staffRCP = SPACircuit.connect(m => Model(m.allShiftAssignments, m.shifts))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
-          shiftAssignments <- model.shiftAssignments
+          shiftAssignments <- model.shiftAssignmentsPot
           staffShifts <- model.staffShiftsPot
         } yield {
           if (shiftAssignments != state.shiftAssignments || staffShifts != state.shifts) {
@@ -99,11 +99,11 @@ object MonthlyShifts {
               ShiftAssignments(shiftAssignments.forTerminal(props.terminalPageTab.terminal)),
               props.timeSlotMinutes)
             scope.modState(state => state.copy(shiftAssignments = shiftAssignments,
-              shiftsSummary = shiftSummaries, shifts = staffShifts)).runNow()
+              shiftSummaries = shiftSummaries, shifts = staffShifts)).runNow()
           }
           <.div()
         }
-        if (model.shiftAssignments.isReady && model.staffShiftsPot.isReady)
+        if (model.shiftAssignmentsPot.isReady && model.staffShiftsPot.isReady)
           <.div(content.render(identity))
         else
           <.div("loading...")
@@ -135,7 +135,7 @@ object MonthlyShifts {
                 )(^.onChange --> handleShiftViewToggle),
               ),
             )),
-          if (state.shiftsSummary.isEmpty)
+          if (state.shiftSummaries.isEmpty)
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
               props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
             })))
@@ -159,7 +159,7 @@ object MonthlyShifts {
                 airportConfig = props.airportConfig,
                 timeSlots = Seq.empty,
                 handleShiftEditForm = handleShiftEditForm,
-                confirmAndSave = ConfirmAndSaveForMonthlyShifts(state.shiftsSummary, state.changedAssignments, props, state, scope)
+                confirmAndSave = ConfirmAndSaveForMonthlyShifts(state.shiftSummaries, state.changedAssignments, props, state, scope)
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
                 anchor = "right",
@@ -196,12 +196,12 @@ object MonthlyShifts {
                     shiftDate = ShiftDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                     dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                     interval = props.timeSlotMinutes,
-                    initialShifts = state.shiftsSummary,
+                    initialShifts = state.shiftSummaries,
                     handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
                       val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                       val updateShifts = updateAssignments(shifts, updateChanges, 15)
                       scope.modState(state => state.copy(
-                        shiftsSummary = updateShifts,
+                        shiftSummaries = updateShifts,
                         changedAssignments = updateChanges
                       )).runNow()
                     },
@@ -218,7 +218,7 @@ object MonthlyShifts {
                 <.div(^.className := "terminal-staffing-content-header",
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSaveShifts(state.shiftsSummary, state.changedAssignments, props, state, scope))
+                    ^.onClick ==> confirmAndSaveShifts(state.shiftSummaries, state.changedAssignments, props, state, scope))
                 )
               )
             )
