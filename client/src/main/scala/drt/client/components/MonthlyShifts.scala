@@ -9,7 +9,7 @@ import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.UpdateUserPreferences
+import drt.client.services.handlers.{GetShifts, UpdateUserPreferences}
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
@@ -37,8 +37,9 @@ object MonthlyShifts {
   case class State(showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
                    addShiftForm: Boolean,
-                   shifts: ShiftAssignments,
-                   shiftsData: Seq[ShiftSummaryStaffing] = Seq.empty,
+                   shifts: Seq[Shift],
+                   shiftAssignments: ShiftAssignments,
+                   shiftSummaries: Seq[ShiftSummaryStaffing] = Seq.empty,
                    changedAssignments: Seq[StaffTableEntry] = Seq.empty,
                   )
 
@@ -47,7 +48,9 @@ object MonthlyShifts {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   userPreferences: UserPreferences) {
+                   userPreferences: UserPreferences,
+                   shifts: Seq[Shift]
+                  ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
   }
 
@@ -78,29 +81,29 @@ object MonthlyShifts {
         ConfirmAndSaveForMonthlyShifts(shiftsData, changedAssignments, props, state, scope)()
       }
 
-      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
+      case class Model(shiftAssignmentsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
       val staffRCP = SPACircuit.connect(m => Model(m.allShiftAssignments, m.shifts))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
-          monthOfShifts <- model.monthOfStaffShiftsPot
+          shiftAssignments <- model.shiftAssignmentsPot
           staffShifts <- model.staffShiftsPot
         } yield {
-          if (monthOfShifts != state.shifts) {
+          if (shiftAssignments != state.shiftAssignments || staffShifts != state.shifts) {
             val shiftSummaries = MonthlyShiftsUtil.generateShiftSummaries(
               viewingDate,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
               staffShifts,
-              ShiftAssignments(monthOfShifts.forTerminal(props.terminalPageTab.terminal)),
+              ShiftAssignments(shiftAssignments.forTerminal(props.terminalPageTab.terminal)),
               props.timeSlotMinutes)
-            scope.modState(state => state.copy(shifts = monthOfShifts,
-              shiftsData = shiftSummaries)).runNow()
+            scope.modState(state => state.copy(shiftAssignments = shiftAssignments,
+              shiftSummaries = shiftSummaries, shifts = staffShifts)).runNow()
           }
           <.div()
         }
-        if (model.monthOfStaffShiftsPot.isReady && model.staffShiftsPot.isReady)
+        if (model.shiftAssignmentsPot.isReady && model.staffShiftsPot.isReady)
           <.div(content.render(identity))
         else
           <.div("loading...")
@@ -132,7 +135,7 @@ object MonthlyShifts {
                 )(^.onChange --> handleShiftViewToggle),
               ),
             )),
-          if (state.shiftsData.isEmpty)
+          if (state.shiftSummaries.isEmpty)
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
               props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
             })))
@@ -156,7 +159,7 @@ object MonthlyShifts {
                 airportConfig = props.airportConfig,
                 timeSlots = Seq.empty,
                 handleShiftEditForm = handleShiftEditForm,
-                confirmAndSave = ConfirmAndSaveForMonthlyShifts(state.shiftsData, state.changedAssignments, props, state, scope)
+                confirmAndSave = ConfirmAndSaveForMonthlyShifts(state.shiftSummaries, state.changedAssignments, props, state, scope)
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
                 anchor = "right",
@@ -193,12 +196,12 @@ object MonthlyShifts {
                     shiftDate = ShiftDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                     dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                     interval = props.timeSlotMinutes,
-                    initialShifts = state.shiftsData,
+                    initialShifts = state.shiftSummaries,
                     handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
                       val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                       val updateShifts = updateAssignments(shifts, updateChanges, 15)
                       scope.modState(state => state.copy(
-                        shiftsData = updateShifts,
+                        shiftSummaries = updateShifts,
                         changedAssignments = updateChanges
                       )).runNow()
                     },
@@ -215,7 +218,7 @@ object MonthlyShifts {
                 <.div(^.className := "terminal-staffing-content-header",
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSaveShifts(state.shiftsData, state.changedAssignments, props, state, scope))
+                    ^.onClick ==> confirmAndSaveShifts(state.shiftSummaries, state.changedAssignments, props, state, scope))
                 )
               )
             )
@@ -243,10 +246,11 @@ object MonthlyShifts {
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("ShiftStaffing")
-    .initialStateFromProps(_ => State(showEditStaffForm = false,
+    .initialStateFromProps(p => State(showEditStaffForm = false,
       showStaffSuccess = false,
       addShiftForm = false,
-      shifts = ShiftAssignments.empty))
+      shifts = p.shifts,
+      shiftAssignments = ShiftAssignments.empty))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
@@ -264,6 +268,14 @@ object MonthlyShifts {
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            userPreferences: UserPreferences
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, userPreferences))
+            userPreferences: UserPreferences,
+            shiftCreated : Boolean
+           ): Unmounted[Props, State, Backend] = {
+    if (shiftCreated) {
+      val newQueryParams = terminalPageTab.queryParams - "shifts"
+      Callback(SPACircuit.dispatch(GetShifts)).runNow()
+      router.set(terminalPageTab.copy(queryParams = newQueryParams)).runNow()
+    }
+    component(Props(terminalPageTab, router, airportConfig, userPreferences, Seq.empty))
+  }
 }
