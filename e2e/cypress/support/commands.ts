@@ -172,6 +172,11 @@ Cypress.Commands.add('clickShiftsGetStartedButton', () => {
     .click({force: true});
 });
 
+Cypress.Commands.add('toggleShiftView', () => {
+  cy.get('input[type="checkbox"][aria-label="primary checkbox"]')
+    .click({force: true});
+});
+
 Cypress.Commands.add('chooseDesksAndQueuesTab', () => {
   cy.get("#desksAndQueuesTab").click({force: true})
 });

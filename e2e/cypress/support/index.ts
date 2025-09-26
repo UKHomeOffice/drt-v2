@@ -49,6 +49,8 @@ declare global {
 
       clickShiftsGetStartedButton(): Chainable<Element>;
 
+      toggleShiftView() : Chainable<Element>;
+
       chooseDesksAndQueuesTab(): Chainable<Element>;
 
       chooseArrivalsTab(): Chainable<Element>;
