@@ -125,8 +125,8 @@ object MonthlyShifts {
           <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
             MuiTypography(variant = "h2")
             (s"Monthly staffing"),
-            <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center", "paddingTop" -> "15px"))(
-              MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))("Show shifts"),
+            <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
+              MuiTypography(sx = SxProps(Map("paddingRight" -> "10px", "marginBottom" -> "0")))("Show shifts"),
               MuiFormControl()(
                 MuiSwitch(
                   defaultChecked = props.userPreferences.showStaffingShiftView,
