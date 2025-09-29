@@ -341,8 +341,8 @@ object TerminalContentComponent {
     val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
     <.div(
       ^.key := keyValue,
-      MuiButton(color = Color.primary, variant = "outlined", sx = SxProps(Map("fontWeight" -> "normal")))(
-        MuiIcons(GetApp)(),
+      MuiButton(color = Color.secondary, size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
+        MuiIcons(GetApp),
         s" ${exportType.linkLabel}",
         maybeExtraIcon.getOrElse(EmptyVdom),
         ^.href := exportUrl,

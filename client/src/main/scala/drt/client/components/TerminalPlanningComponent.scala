@@ -242,7 +242,7 @@ object TerminalPlanningComponent {
                                  createDownload: String => Event => CallbackTo[Unit],
                                  disabled: Boolean,
                                 ): WithPropsAndTagsMods =
-    MuiButton(color = Color.primary, variant = "outlined")(
+    MuiButton(color = Color.secondary, variant = "outlined")(
       ^.disabled := disabled,
       <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "15px"), label.toTagMod),
       ^.href := SPAMain.absoluteUrl(url),

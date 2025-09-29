@@ -102,10 +102,10 @@ object MonthlyStaffingBar {
 
   private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
     <.div(
-      MuiButton(color = Color.primary, variant = "outlined",
+      MuiButton(color = Color.secondary, variant = "outlined",
         sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronLeft)(fontSize = "small"),
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly))))),
-      MuiButton(color = Color.primary, variant = "outlined",
+      MuiButton(color = Color.secondary, variant = "outlined",
         sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronRight)(fontSize = "small"),
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))))
     )
@@ -203,7 +203,7 @@ object MonthlyStaffingBar {
                   props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
               )
             ),
-            MuiButton(color = Color.primary,
+            MuiButton(color = Color.secondary,
               variant = "outlined",
               size = "small",
               sx = SxProps(Map("backgroundColor" -> "white")))
