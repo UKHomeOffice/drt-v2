@@ -45,7 +45,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.3.232"
+    val h2 = "2.4.240"
 
     val specs2 = "4.20.9"
     val react = "18.2.0"
