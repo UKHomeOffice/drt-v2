@@ -18,7 +18,7 @@ import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{VdomAttr, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import moment.Moment
 import org.scalajs.dom.html.Div
