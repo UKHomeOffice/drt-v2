@@ -47,7 +47,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "2.3.232"
 
-    val specs2 = "4.20.9"
+    val specs2 = "4.22.0"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
