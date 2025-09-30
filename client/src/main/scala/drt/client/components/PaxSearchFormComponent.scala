@@ -29,8 +29,7 @@ object IPaxSearchForm {
     val p = (new js.Object).asInstanceOf[IPaxSearchForm]
     p.day = day
     p.time = time
-    val date: Date = arrivalDate
-    p.arrivalDate = date
+    p.arrivalDate = arrivalDate
     p.fromDate = fromDate
     p.toDate = toDate
     p.timeMachine = timeMachine
@@ -50,5 +49,4 @@ object PaxSearchFormComponent {
   def apply(props: IPaxSearchForm): VdomElement = {
     component(props)
   }
-
 }
