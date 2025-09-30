@@ -144,7 +144,7 @@ object PortDashboardPage {
               }
 
               <.div(
-                <.h3(s"Filter upcoming arrivals"),
+                <.h2(s"Filter upcoming arrivals"),
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
@@ -191,7 +191,7 @@ object PortDashboardPage {
                     } else ""
                   )),
                 <.div(
-                  <.h3(s"Arrivals"),
+                  <.h2(s"Arrivals"),
                   <.div(^.className := "port-dashboard-selection",
                     <.span(<.strong("Filters applied:")),
                     <.span(s"Time period: $displayPeriodDisplay (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),
