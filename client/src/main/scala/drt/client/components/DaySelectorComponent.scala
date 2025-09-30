@@ -204,7 +204,15 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                   fromDate = searchFormForDate.fromTime,
                   toDate = searchFormForDate.toTime,
                   timeMachine = state.maybeTimeMachineDate.nonEmpty,
-                  onChange = (s: PaxSearchFormPayload) => updateUrlWithDate(s, state.maybeTimeMachineDate, props.terminalPageTab).runNow(),
+                  onChange = (s: PaxSearchFormPayload) => {
+                    val tm = if (s.timeMachine) {
+                      state.maybeTimeMachineDate match {
+                        case Some(tm) => Some(tm)
+                        case None => Some(TimeMachineDate(state.selectedDate, isNotValid = false))
+                      }
+                    } else None
+                    updateUrlWithDate(s, tm, props.terminalPageTab).runNow()
+                  },
                   key = "pax-search-form",
                 )
               ))
