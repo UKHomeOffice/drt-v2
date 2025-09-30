@@ -1,7 +1,10 @@
 package uk.gov.homeoffice.drt.service.staffing
 
+import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
+import uk.gov.homeoffice.drt.ports.Terminals
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.util.ShiftUtil.{fromStaffShiftRow, localDateFromString, toStaffShiftRow}
 
@@ -29,9 +32,12 @@ trait ShiftsService {
   def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]]
 
   def deleteShifts(): Future[Int]
+
+  def autoShiftRolling(port: String, terminals: Seq[String]): Future[Seq[Any]]
 }
 
 case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends ShiftsService {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
     Future.sequence(shifts.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
@@ -65,14 +71,14 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
           val endOfWeek = SDate.lastDayOfWeek(viewingSDate)
           val weekStart = LocalDate(startOfWeek.getFullYear, startOfWeek.getMonth, startOfWeek.getDate)
           val weekEnd = LocalDate(endOfWeek.getFullYear, endOfWeek.getMonth, endOfWeek.getDate)
-          shifts.filter(shift => (shift.startDate.compare(weekEnd) <= 0 ) &&
+          shifts.filter(shift => (shift.startDate.compare(weekEnd) <= 0) &&
             (shift.endDate.exists(ed => ed.compare(weekStart) >= 0) || shift.endDate.isEmpty))
         case Some("daily") => shifts.filter(shift => shift.startDate.compare(localDateFromString(date)) <= 0 &&
           (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDateFromString(date)) >= 0)))
         case _ => shifts.filter(shift => shift.startDate.compare(LocalDate(year = viewDate.year, month = viewDate.month + 1, day = 1)) < 0 &&
           (shift.endDate.isEmpty || shift.endDate.exists(ed => ed.compare(LocalDate(year = viewDate.year, month = viewDate.month, day = 1)) >= 0)))
       }
-  }
+    }
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = staffShiftsDao.updateStaffShift(previousShift, shift)
 
@@ -98,4 +104,15 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
                                         startTime: String)
                                        (implicit ec: ExecutionContext): Future[Option[Shift]] =
     staffShiftsDao.latestStaffShiftForADate(port, terminal, startDate, startTime)
+
+  override def autoShiftRolling(port: String, terminals: Seq[String]): Future[Seq[Any]] = {
+    log.info(s"AutoShiftStaffing Auto shift rolling for $port started at ${SDate.now().toISOString}")
+    Future.sequence(terminals.map { terminal =>
+      staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map { shifts =>
+         shifts.foreach { shift =>
+             log.info(s"AutoShiftStaffing Auto shift rolling for $port - $terminal: Created new shift ${shift.shiftName} from ${shift.startDate} to ${shift.endDate} with ${shift.staffNumber} staff" )
+           }
+         }
+       })
+    }
 }

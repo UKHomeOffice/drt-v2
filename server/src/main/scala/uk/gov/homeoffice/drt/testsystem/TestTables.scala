@@ -251,4 +251,6 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
                                            terminal: String,
                                            dayRange: Option[String],
                                            date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+
+  override def autoShiftRolling(port: String, terminals: Seq[String]): Future[Seq[Any]] = Future.successful(Seq(""))
 }
