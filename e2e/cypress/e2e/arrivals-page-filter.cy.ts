@@ -34,9 +34,9 @@ describe('Arrivals page filter', () => {
           .then(() => {
             cy.wait(5000);
             cy.get('div[role="combobox"]').eq(0).click({ force: true });
-            cy.get('li[data-value="00:00"]').click({ force: true });
+            cy.get('[data-cy="select-start-time-option-00:00"]').click({ force: true });
             cy.get('div[role="combobox"]').eq(1).click({ force: true });
-            cy.get('li[data-value="01:00"]').click({ force: true });
+            cy.get('[data-cy="select-start-time-option-01:00"]').click({ force: true });
             cy.get('#arrivals > div').contains('No flights to display');
             cy.get('div[role="combobox"]').eq(0).click({ force: true });
             cy.get(`li[data-value="${scheduledHour}:00"]`).click({ force: true });
