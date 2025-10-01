@@ -342,7 +342,7 @@ object TerminalContentComponent {
     <.div(
       ^.key := keyValue,
       MuiButton(color = Color.secondary, size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-        MuiIcons(GetApp),
+        MuiIcons(GetApp)(),
         s" ${exportType.linkLabel}",
         maybeExtraIcon.getOrElse(EmptyVdom),
         ^.href := exportUrl,
