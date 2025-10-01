@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 object StaffingUtil {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
+  def generateDailyAssignments(shift: Shift, months: Int): Seq[StaffAssignment] = {
     val (startHH, startMM) = shift.startTime.split(":") match {
       case Array(hh, mm) => (hh.toInt, mm.toInt)
     }
@@ -19,7 +19,7 @@ object StaffingUtil {
     }
 
     val startDate = SDate(shift.startDate.year, shift.startDate.month, shift.startDate.day, 0, 0, europeLondonTimeZone)
-    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(startDate.addMonths(6))
+    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(startDate.addMonths(months))
 
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
@@ -83,17 +83,17 @@ object StaffingUtil {
       isTimeChange = isTimeChange
     )
 
-        if (isTimeChange)
-          timeChangeMerge(
-            overridingShiftAssignments,
-            newShiftSplitDailyAssignments,
-            updatedNewShiftsAssignments,
-            existingAllAssignments,
-            previousShift,
-            newShift
-          )
-        else
-    updatedNewShiftsAssignments
+    if (isTimeChange)
+      timeChangeMerge(
+        overridingShiftAssignments,
+        newShiftSplitDailyAssignments,
+        updatedNewShiftsAssignments,
+        existingAllAssignments,
+        previousShift,
+        newShift
+      )
+    else
+      updatedNewShiftsAssignments
   }
 
   private def getOverridingAssignments(overridingShift: Seq[Shift],
@@ -129,7 +129,7 @@ object StaffingUtil {
           case Some(existing) =>
             findOverridingShift(assignment).map { overridingStaff =>
               findFutureExistingShift(assignment).map { futureExistingStaff =>
-//                println(s"Future exist , existing.numberOfStaff = ${existing.numberOfStaff} overridingStaff =  $overridingStaff futureExistingStaff = $futureExistingStaff")
+                //                println(s"Future exist , existing.numberOfStaff = ${existing.numberOfStaff} overridingStaff =  $overridingStaff futureExistingStaff = $futureExistingStaff")
                 if (existing.numberOfStaff == overridingStaff + futureExistingStaff)
                   assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
                 else if (existing.numberOfStaff == overridingStaff)
@@ -139,7 +139,7 @@ object StaffingUtil {
                 else
                   assignment
               }.getOrElse {
-//                println(s"No future , Override exists , existing.numberOfStaff = ${existing.numberOfStaff} overridingStaff = $overridingStaff newShift.staffNumber = ${newShift.staffNumber} previousShift.staffNumber = ${previousShift.staffNumber}")
+                //                println(s"No future , Override exists , existing.numberOfStaff = ${existing.numberOfStaff} overridingStaff = $overridingStaff newShift.staffNumber = ${newShift.staffNumber} previousShift.staffNumber = ${previousShift.staffNumber}")
                 if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber)
                   assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
                 else if (existing.numberOfStaff == previousShift.staffNumber)
@@ -153,13 +153,13 @@ object StaffingUtil {
               }
             }.getOrElse {
               findFutureExistingShift(assignment).map { futureExistingStaff =>
-//                println(s"Future exist ,No override, existing.numberOfStaff = ${existing.numberOfStaff} futureExistingStaff = $futureExistingStaff")
+                //                println(s"Future exist ,No override, existing.numberOfStaff = ${existing.numberOfStaff} futureExistingStaff = $futureExistingStaff")
                 if (existing.numberOfStaff == futureExistingStaff)
                   assignment.copy(numberOfStaff = newShift.staffNumber)
                 else
                   existing
               }.getOrElse {
-//                println(s"No future , No override, existing.numberOfStaff = ${existing.numberOfStaff} newShift.staffNumber = ${newShift.staffNumber} previousShift.staffNumber = ${previousShift.staffNumber}")
+                //                println(s"No future , No override, existing.numberOfStaff = ${existing.numberOfStaff} newShift.staffNumber = ${newShift.staffNumber} previousShift.staffNumber = ${previousShift.staffNumber}")
                 if (existing.numberOfStaff == previousShift.staffNumber || existing.numberOfStaff == 0)
                   assignment
                 else
@@ -210,10 +210,10 @@ object StaffingUtil {
     }
   }
 
-  def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments, months: Int): Seq[StaffAssignmentLike] = {
 
     val allShiftsStaff: Seq[StaffAssignment] = shifts.flatMap { shift =>
-      generateDailyAssignments(shift)
+      generateDailyAssignments(shift, months)
     }
 
     val splitDailyAssignmentsWithOverlap = staffAssignmentsSlotSummaries(allShiftsStaff)

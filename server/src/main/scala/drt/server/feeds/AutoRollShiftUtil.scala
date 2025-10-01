@@ -1,45 +1,53 @@
 package drt.server.feeds
 
+import actors.persistent.staffing.StaffingUtil
 import drt.server.feeds.AutoShiftStaffing.{getClass, log}
 import drt.shared.{ShiftAssignments, StaffAssignment, TM}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 object AutoRollShiftUtil {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)
 
   def updateShiftsStaffingToAssignments(drtSystemInterface: DrtSystemInterface, shiftAssignmentsService: ShiftAssignmentsService)(implicit ec: ExecutionContext): Unit = {
-    val currentDate = SDate.now()
-    val sixMonthsFromNow = currentDate.addMonths(6).toLocalDate
+    val currentDate: SDate.JodaSDate = SDate.now()
+//    val sixMonthsFromNow = currentDate.addMonths(6).toLocalDate
     val terminals: Iterable[Terminals.Terminal] = drtSystemInterface.airportConfig.terminalsForDate(currentDate.toLocalDate)
-    val firstDayOfSixthMonth = LocalDate(sixMonthsFromNow.year, sixMonthsFromNow.month, 1)
-    val firstDayOfSixthMonthInMillis = SDate(firstDayOfSixthMonth).millisSinceEpoch
-    val endOF6thMonthInMillis = SDate(firstDayOfSixthMonth).addMonths(1).addMinutes(-1).millisSinceEpoch
-    log.info(s"Running AutoShiftStaffing for ${drtSystemInterface.airportConfig.portCode.iata} for terminals ${terminals.mkString(", ")} up to $firstDayOfSixthMonth")
-    //        shiftAssignmentsService.allShiftAssignments.map(_.assignments.filter(_.start >= firstDayOfSixthMonth)
-    val nonZeroStaffing = shiftAssignmentsService.allShiftAssignments.map(_.assignments
-      .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
-      .filter(a => a.start > firstDayOfSixthMonthInMillis && a.numberOfStaff > 0))
+
+    val (startMillis, endMillis) = sixthMonthStartAndEnd(currentDate)
+    val nonZeroStaffing: Future[Boolean] = shiftAssignmentsService.allShiftAssignments.map { shiftAssignments =>
+      shiftAssignments.assignments
+        .filter(a => a.start >= startMillis && a.start <= endMillis)
+        .exists(_.numberOfStaff > 0)
+    }
+
 
     nonZeroStaffing.map {
-      case assignments if assignments.isEmpty =>
-        drtSystemInterface.shiftsService.autoShiftRolling(drtSystemInterface.airportConfig.portCode.iata, terminals.map(_.toString).toSeq)
+      case false =>
+//        StaffingUtil.updateWithShiftDefaultStaff()
+//        drtSystemInterface.shiftsService.autoShiftRolling(drtSystemInterface.airportConfig.portCode.iata, terminals.map(_.toString).toSeq)
         log.warn(s"No non-zero shift assignments found for ${drtSystemInterface.airportConfig.portCode.iata}, cannot auto-roll shifts")
-      case assignments =>
-        log.info(s"Found ${assignments.size} non-zero shift assignments for ${drtSystemInterface.airportConfig.portCode.iata}, proceeding with auto-roll")
+      case true =>
+        log.info(s"Found non-zero shift assignments for ${drtSystemInterface.airportConfig.portCode.iata}, dont need auto-roll")
     }
   }
 
 
+  def sixthMonthStartAndEnd(viewDate : SDateLike): (Long, Long) = {
+    val firstDayOfSixthMonth = viewDate.addMonths(6).startOfTheMonth.getUtcLastMidnight
+    val endOfSixMonthInMillis = firstDayOfSixthMonth.addMonths(1).addMinutes(-1).millisSinceEpoch
+    (firstDayOfSixthMonth.millisSinceEpoch, endOfSixMonthInMillis)
+  }
+
   def getShiftAssignmentsForDateRange(startMillis: Long, endMillis: Long, terminal: Terminal, shiftName:String): ShiftAssignments = {
 
     val periodLengthMinutes = ShiftAssignments.periodLengthMinutes
-    val periodLengthMillis = periodLengthMinutes * 60 * 1000L
+//    val periodLengthMillis = periodLengthMinutes * 60 * 1000L
     //   val slots: Seq[Long] = (startMillis to endMillis by periodLengthMillis).toList
     val shiftAssignments = Seq(StaffAssignment(
       name = shiftName,

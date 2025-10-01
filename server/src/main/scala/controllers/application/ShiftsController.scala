@@ -143,7 +143,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         val shifts = shiftsFromJson(text)
         ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
           shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-            val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
+            val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments ,6)
             shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
               Ok(write(s))
             }

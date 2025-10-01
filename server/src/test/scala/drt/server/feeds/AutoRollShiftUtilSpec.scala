@@ -24,4 +24,15 @@ class AutoRollShiftUtilSpec extends Specification {
     ))
   }
 
+  "sixthMonthStartAndEnd should return correct millis for the 6th month from viewDate" >> {
+    val viewDate = SDate("2025-09-15T12:00")
+    val (startMillis, endMillis) = AutoRollShiftUtil.sixthMonthStartAndEnd(viewDate)
+
+    val expectedStart = SDate("2026-03-01T00:00").millisSinceEpoch
+    val expectedEnd = SDate("2026-03-31T23:59").millisSinceEpoch
+
+    startMillis must beEqualTo(expectedStart)
+    endMillis must beEqualTo(expectedEnd)
+  }
+
 }
