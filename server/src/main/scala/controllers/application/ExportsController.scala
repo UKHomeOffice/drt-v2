@@ -84,7 +84,8 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
             rowHeaders.zip(rows).map { case (header, data) => s"$header,$data" }.mkString("\n")
           }
           .map { csvData =>
-            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+            val intervalDesc = if (minutesInSlot == 60) "hourly" else s"every-$minutesInSlot-minutes"
+            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-$intervalDesc-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }
       }

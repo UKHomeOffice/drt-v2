@@ -52,7 +52,7 @@ object ShiftsComponent {
         ))
         SPACircuit.dispatch(SaveShifts(staffShifts))
         Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "save")).runNow()
-        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map("shifts" -> "created"))).runNow()
       }
 
       <.div(AddShiftsFormComponent(ShiftFormProps(props.portCode, props.terminal.toString, 30, Seq.empty[ShiftForm], confirmHandler, isEdit = false)))

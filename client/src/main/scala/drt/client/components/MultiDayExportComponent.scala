@@ -130,9 +130,18 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                           else List(ExportArrivals(props.terminal))
                         exportLinksGroup(props, state, exports, "Arrivals")
                       } else EmptyVdom,
-                      if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                        exportLinksGroup(props, state, List(ExportDeskRecs(props.terminal), ExportDeployments(props.terminal)), "Desks and queues")
-                      else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView)) {
+                        val exports = if (props.terminals.size > 1)
+                          List(ExportDeskRecsSingleTerminal(props.terminal), ExportDeskRecsCombinedTerminals)
+                        else List(ExportDeskRecs(props.terminal))
+                        exportLinksGroup(props, state, exports, "Desks recommendations")
+                      } else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView)) {
+                        val exports = if (props.terminals.size > 1)
+                          List(ExportDeploymentsSingleTerminal(props.terminal), ExportDeploymentsCombinedTerminals)
+                        else List(ExportDeployments(props.terminal))
+                        exportLinksGroup(props, state, exports, "Available staff deployments")
+                      } else EmptyVdom,
                       if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
                         exportLinksGroup(props, state, List(ExportLiveArrivalsFeed(props.terminal)), "Feeds")
                       else EmptyVdom
