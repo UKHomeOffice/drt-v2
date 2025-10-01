@@ -64,7 +64,15 @@ object FlightTableContent {
 
     private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
       val searchFormForDate = searchForm(selectedDate, terminalPageTab)
-      s"${searchFormForDate.displayText} (${searchFormForDate.fromTime} - ${searchFormForDate.toTime})"
+
+      val fromSDate = SDate(searchFormForDate.fromTime.valueOf().toLong)
+      val toSDate = SDate(searchFormForDate.toTime.valueOf().toLong)
+      val from = fromSDate.toHoursAndMinutes
+      val to = toSDate.toHoursAndMinutes
+      if (fromSDate.toLocalDate != toSDate.toLocalDate)
+        s"${searchFormForDate.displayText} ($from ${fromSDate.toLocalDate.ddmmyyyy} to $to ${toSDate.toLocalDate.ddmmyyyy})"
+      else
+        s"${searchFormForDate.displayText} ($from to $to)"
     }
 
 

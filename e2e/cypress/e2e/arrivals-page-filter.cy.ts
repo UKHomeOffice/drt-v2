@@ -11,7 +11,9 @@ describe('Arrivals page filter', () => {
   it('Filters flights by any relevant time range intersecting the selected range', () => {
     const flightTime: moment.Moment = todayAtUtc(16, 55);
     const scheduledHour = flightTime.tz('Europe/London').format('HH');
-    let oneHourFromScheduled = (parseInt(scheduledHour) + 1)+':00'
+    const oneHourFromScheduled = (parseInt(scheduledHour) + 1)+':00'
+
+    const todayYYYYMMDD = flightTime.format('YYYY-MM-DD');
 
     cy.addFlight(
       {
@@ -32,18 +34,18 @@ describe('Arrivals page filter', () => {
           .should('be.visible')
           .click({ force: true })
           .then(() => {
-            cy.wait(5000);
-            cy.get('div[role="combobox"]').eq(0).click({ force: true });
-            cy.get('li[data-value="00:00"]').click({ force: true });
-            cy.get('div[role="combobox"]').eq(1).click({ force: true });
-            cy.get('li[data-value="01:00"]').click({ force: true });
-            cy.get('#arrivals > div').contains('No flights to display');
-            cy.get('div[role="combobox"]').eq(0).click({ force: true });
-            cy.get(`li[data-value="${scheduledHour}:00"]`).click({ force: true });
-            cy.get('.arrivals__table__flight-code').contains('TS0123');
-            cy.get('div[role="combobox"]').eq(0).click({ force: true });
-            cy.get(`li[data-value="${oneHourFromScheduled}"]`).click();
-            cy.get('.arrivals__table__flight-code').contains('TS0123');
+            cy.wait(1000)
+            .get('div[role="combobox"]').eq(0).click()
+            .get(`[data-cy="select-start-time-option-${todayYYYYMMDD}_00:00"]`).click()
+            .get('div[role="combobox"]').eq(1).click()
+            .get(`[data-cy="select-end-time-option-${todayYYYYMMDD}_02:00"]`).click()
+            .get('#arrivals > div').contains('No flights to display')
+            .get('div[role="combobox"]').eq(0).click()
+            .get(`li[data-cy="select-start-time-option-${todayYYYYMMDD}_${scheduledHour}:00"]`).click()
+            .get('.arrivals__table__flight-code').contains('TS0123')
+            .get('div[role="combobox"]').eq(0).click()
+            .get(`li[data-cy="select-start-time-option-${todayYYYYMMDD}_${oneHourFromScheduled}"]`).click()
+            .get('.arrivals__table__flight-code').contains('TS0123')
           });
       });
   });
