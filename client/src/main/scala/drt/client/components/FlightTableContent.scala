@@ -113,12 +113,12 @@ object FlightTableContent {
                   MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
                 },
                 <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
-                  MuiTypography()("Show pax data descriptions"),
+                  MuiTypography(sx = SxProps(Map("marginBottom" -> "0")))("Show pax data descriptions"),
                   MuiFormControl()(
                     MuiSwitch(defaultChecked = !props.userPreferences.hidePaxDataSourceDescription)
                     (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e, props.userPreferences)))
                   ),
-                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
+                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px", "marginBottom" -> "0")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
                 )
               ),
               <.div(
