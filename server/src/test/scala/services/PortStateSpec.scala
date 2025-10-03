@@ -21,12 +21,43 @@ class PortStateSpec extends CrunchTestLike {
       ps.staffPeriodSummary(T1, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m1
     }
     "Given 2 staff minutes where the second has the highest available staff" >> {
+      val m1 = StaffMinute(T1, SDate("2025-09-16T10:00").millisSinceEpoch, 3, 1, 1)
+      val m2 = StaffMinute(T1, SDate("2025-09-16T10:15").millisSinceEpoch, 5, 1, 1)
+      val ps = PortState(List(), List(), List(m1, m2))
+      ps.staffPeriodSummary(T1, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m2
+    }
+    "Given 2 staff minutes where the second has higher shifts but higher negative movements" >> {
       val m1 = StaffMinute(T1, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 1, -4)
       val m2 = StaffMinute(T1, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 1, 1)
       val ps = PortState(List(), List(), List(m1, m2))
       ps.staffPeriodSummary(T1, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m2
     }
   }
+
+//  "crunchPeriodSummary should use the highest total of desks from each period, not the sum of the highest desks" >> {
+//    "Given 2 crunch minutes where the first has the highest desks" >> {
+//      val m1e = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 10, 5, 1, None)
+//      val m1n = CrunchMinute(T1, NonEeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 10, 6, 1, None)
+//      val m2e = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 10, 7, 1, None)
+//      val m2n = CrunchMinute(T1, NonEeaDesk, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 10, 1, 1, None)
+//      val ps = PortState(List(), List(m1e, m1n, m2e, m2n), List())
+//      ps.crunchSummary(SDate("2025-09-16T10:00"), 1, 30, T1, Seq(EeaDesk, NonEeaDesk)) === SortedMap(
+//        SDate("2025-09-16T10:00").millisSinceEpoch -> m1e,
+//      )
+//    }
+
+    //    "Given 2 crunch minutes where the second has the highest desks" >> {
+//      val m1 = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 3, 10, 1, 1, None)
+//      val m2 = CrunchMinute(T1, NonEeaDesk, SDate("2025-09-16T10:15").millisSinceEpoch, 5, 10, 1, 1, None)
+//      val ps = PortState(List(), List(m1, m2), List())
+//      ps.crunchSummary(T1, EeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m2
+//    }
+//    "Given 2 crunch minutes where the second has higher pax load but lower desks" >> {
+//      val m1 = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 10, 1, 1, None)
+//      val m2 = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 20, 1, 1, None)
+//      val ps = PortState(List(), List(m1, m2), List())
+//      ps
+//  }
 //  "Given an initial PortState with some pax loads " +
 //    "When I pass in some staffing affecting the same date " +
 //    "I should see the pax loads are unaffected" >> {
