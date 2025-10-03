@@ -16,6 +16,7 @@ import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.service.staffing.{LegacyShiftAssignmentsService, ShiftAssignmentsService, ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.util.ShiftUtil.localDateFromString
 
 import java.sql.Timestamp
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -161,7 +162,7 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 }
 
 case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends ShiftMetaInfoService {
-    var mockShiftMetaSeq: Seq[ShiftMeta] = Seq.empty[ShiftMeta]
+  var mockShiftMetaSeq: Seq[ShiftMeta] = Seq.empty[ShiftMeta]
 
   override def insertShiftMetaInfo(shiftMeta: ShiftMeta): Future[Int] = {
     mockShiftMetaSeq = mockShiftMetaSeq :+ shiftMeta
@@ -220,7 +221,13 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
 
-  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful {
+    val localDate: LocalDate = localDateFromString(date)
+    shiftSeq.filter { shift =>
+      shift.startDate.compare(localDate) <= 0 &&
+        (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDate) >= 0))
+    }
+  }
 
   override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
     val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
@@ -252,5 +259,4 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
                                            dayRange: Option[String],
                                            date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 
-  override def autoShiftRolling(port: String, terminals: Seq[String]): Future[Seq[Any]] = Future.successful(Seq(""))
 }

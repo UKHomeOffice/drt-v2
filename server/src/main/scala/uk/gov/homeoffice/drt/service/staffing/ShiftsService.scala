@@ -3,8 +3,6 @@ package uk.gov.homeoffice.drt.service.staffing
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
-import uk.gov.homeoffice.drt.ports.Terminals
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.util.ShiftUtil.{fromStaffShiftRow, localDateFromString, toStaffShiftRow}
 
@@ -33,7 +31,6 @@ trait ShiftsService {
 
   def deleteShifts(): Future[Int]
 
-  def autoShiftRolling(port: String, terminals: Seq[String]): Future[Seq[Any]]
 }
 
 case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends ShiftsService {
@@ -104,15 +101,4 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
                                         startTime: String)
                                        (implicit ec: ExecutionContext): Future[Option[Shift]] =
     staffShiftsDao.latestStaffShiftForADate(port, terminal, startDate, startTime)
-
-  override def autoShiftRolling(port: String, terminals: Seq[String]): Future[Seq[Any]] = {
-    log.info(s"AutoShiftStaffing Auto shift rolling for $port started at ${SDate.now().toISOString}")
-    Future.sequence(terminals.map { terminal =>
-      staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal).map { shifts =>
-         shifts.foreach { shift =>
-             log.info(s"AutoShiftStaffing Auto shift rolling for $port - $terminal: Created new shift ${shift.shiftName} from ${shift.startDate} to ${shift.endDate} with ${shift.staffNumber} staff" )
-           }
-         }
-       })
-    }
 }

@@ -54,7 +54,7 @@ class StaffingUtilSpec extends Specification {
           SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15)
       )
 
-      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts,6)
+      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
       updatedAssignments must have size 8
       updatedAssignments.head.numberOfStaff must beEqualTo(5)

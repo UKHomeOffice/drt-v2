@@ -107,7 +107,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
   @Singleton
   val autoShiftStaffing: ActorRef[AutoShiftStaffing.Command] = provideActorSystem
-    .spawn(AutoShiftStaffing(10.seconds, provideDrtSystemInterface , shiftAssignmentsService), "autoShiftStaffing")
+    .spawn(AutoShiftStaffing(10.minutes, provideDrtSystemInterface , shiftAssignmentsService), "autoShiftStaffing")
 
   @Provides
   @Singleton

@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 object StaffingUtil {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def generateDailyAssignments(shift: Shift, months: Int): Seq[StaffAssignment] = {
+  def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
     val (startHH, startMM) = shift.startTime.split(":") match {
       case Array(hh, mm) => (hh.toInt, mm.toInt)
     }
@@ -19,7 +19,7 @@ object StaffingUtil {
     }
 
     val startDate = SDate(shift.startDate.year, shift.startDate.month, shift.startDate.day, 0, 0, europeLondonTimeZone)
-    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(startDate.addMonths(months))
+    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(startDate.addMonths(6))
 
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
@@ -210,10 +210,10 @@ object StaffingUtil {
     }
   }
 
-  def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments, months: Int): Seq[StaffAssignmentLike] = {
+  def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
 
     val allShiftsStaff: Seq[StaffAssignment] = shifts.flatMap { shift =>
-      generateDailyAssignments(shift, months)
+      generateDailyAssignments(shift)
     }
 
     val splitDailyAssignmentsWithOverlap = staffAssignmentsSlotSummaries(allShiftsStaff)

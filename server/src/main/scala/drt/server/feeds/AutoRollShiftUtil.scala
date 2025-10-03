@@ -2,11 +2,12 @@ package drt.server.feeds
 
 import actors.persistent.staffing.StaffingUtil
 import drt.server.feeds.AutoShiftStaffing.{getClass, log}
-import drt.shared.{ShiftAssignments, StaffAssignment, TM}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
+import uk.gov.homeoffice.drt.service.staffing.{ShiftAssignmentsService, ShiftsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -14,62 +15,58 @@ import scala.concurrent.{ExecutionContext, Future}
 object AutoRollShiftUtil {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)
 
-  def updateShiftsStaffingToAssignments(drtSystemInterface: DrtSystemInterface, shiftAssignmentsService: ShiftAssignmentsService)(implicit ec: ExecutionContext): Unit = {
-    val currentDate: SDate.JodaSDate = SDate.now()
-//    val sixMonthsFromNow = currentDate.addMonths(6).toLocalDate
-    val terminals: Iterable[Terminals.Terminal] = drtSystemInterface.airportConfig.terminalsForDate(currentDate.toLocalDate)
+  def updateShiftsStaffingToAssignments(port: String,
+                                        terminals: Seq[Terminal],
+                                        rollingDate : SDateLike,
+                                        monthsToAdd : Int,
+                                        shiftService: ShiftsService,
+                                        shiftAssignmentsService: ShiftAssignmentsService)
+                                       (implicit ec: ExecutionContext): Future[Seq[ShiftAssignments]] = {
+    val assignmentsF: Future[ShiftAssignments] = shiftAssignmentsService.allShiftAssignments
 
-    val (startMillis, endMillis) = sixthMonthStartAndEnd(currentDate)
-    val nonZeroStaffing: Future[Boolean] = shiftAssignmentsService.allShiftAssignments.map { shiftAssignments =>
-      shiftAssignments.assignments
-        .filter(a => a.start >= startMillis && a.start <= endMillis)
-        .exists(_.numberOfStaff > 0)
-    }
-
-
-    nonZeroStaffing.map {
-      case false =>
-//        StaffingUtil.updateWithShiftDefaultStaff()
-//        drtSystemInterface.shiftsService.autoShiftRolling(drtSystemInterface.airportConfig.portCode.iata, terminals.map(_.toString).toSeq)
-        log.warn(s"No non-zero shift assignments found for ${drtSystemInterface.airportConfig.portCode.iata}, cannot auto-roll shifts")
-      case true =>
-        log.info(s"Found non-zero shift assignments for ${drtSystemInterface.airportConfig.portCode.iata}, dont need auto-roll")
+    Future.sequence(terminals.map { terminal =>
+      rollingAssignmentForTerminal(port, rollingDate, terminal, shiftService, assignmentsF,monthsToAdd).flatMap(as =>
+        shiftAssignmentsService.updateShiftAssignments(as))
+    }).recover {
+      case e: Throwable =>
+        log.error(s"AutoRollShiftUtil failed to update shifts: ${e.getMessage}")
+        Seq()
     }
   }
 
+  def rollingAssignmentForTerminal(port: String,
+                                   rollingDate: SDateLike,
+                                   terminal: Terminal,
+                                   shiftService: ShiftsService,
+                                   ShiftAssignments: Future[ShiftAssignments],
+                                   monthsToAdd : Int
+                                  )
+                                  (implicit ec: ExecutionContext): Future[Seq[StaffAssignmentLike]] = {
 
-  def sixthMonthStartAndEnd(viewDate : SDateLike): (Long, Long) = {
-    val firstDayOfSixthMonth = viewDate.addMonths(6).startOfTheMonth.getUtcLastMidnight
-    val endOfSixMonthInMillis = firstDayOfSixthMonth.addMonths(1).addMinutes(-1).millisSinceEpoch
-    (firstDayOfSixthMonth.millisSinceEpoch, endOfSixMonthInMillis)
+    val (startMillis, endMillis) = StartAndEndForMonthsGiven(rollingDate, monthsToAdd)
+
+    val shiftsF: Future[Seq[Shift]] = shiftService.getActiveShifts(port, terminal.toString, None)
+
+    for {
+      shifts <- shiftsF
+      assignments <- ShiftAssignments
+      updatedShifts = updateShiftDateForRolling(shifts, startMillis, endMillis)
+      withDefaultStaff = StaffingUtil.updateWithShiftDefaultStaff(updatedShifts, assignments)
+    } yield withDefaultStaff
   }
 
-  def getShiftAssignmentsForDateRange(startMillis: Long, endMillis: Long, terminal: Terminal, shiftName:String): ShiftAssignments = {
+  def updateShiftDateForRolling(shifts: Seq[Shift], startDate: SDateLike, endDate: SDateLike): Seq[Shift] = {
+    shifts.map { s =>
+      s.copy(
+        startDate = LocalDate(startDate.getFullYear, startDate.getMonth, startDate.getDate),
+        endDate = Some(LocalDate(endDate.getFullYear, endDate.getMonth, endDate.getDate)))
+    }
+  }
 
-    val periodLengthMinutes = ShiftAssignments.periodLengthMinutes
-//    val periodLengthMillis = periodLengthMinutes * 60 * 1000L
-    //   val slots: Seq[Long] = (startMillis to endMillis by periodLengthMillis).toList
-    val shiftAssignments = Seq(StaffAssignment(
-      name = shiftName,
-      terminal = terminal,
-      start = startMillis,
-      end = endMillis,
-      numberOfStaff = 0,
-      createdBy = None
-    ))
-
-    val assignments = shiftAssignments
-      .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
-      .groupBy(a => TM(a.terminal, a.start))
-      .map { case (tm, assignments) =>
-        val combinedAssignment = assignments.reduce { (a1, a2) =>
-          a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
-        }
-        tm -> combinedAssignment
-      }
-
-
-    ShiftAssignments(assignments)
+  def StartAndEndForMonthsGiven(viewDate: SDateLike, monthToAdd:Int): (SDateLike, SDateLike) = {
+    val firstDayOfSixthMonth = viewDate.addMonths(0).startOfTheMonth
+    val endOfSixMonthInMillis = firstDayOfSixthMonth.addMonths(monthToAdd).addMinutes(-1)
+    (firstDayOfSixthMonth, endOfSixMonthInMillis)
   }
 
 }
