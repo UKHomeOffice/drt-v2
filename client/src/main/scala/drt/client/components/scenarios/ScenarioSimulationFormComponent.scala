@@ -236,7 +236,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
           MuiAccordion(expanded = isOpen("passengerWeighting"))(
             onChange --> togglePanel("passengerWeighting"),
-            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "large")())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "small")())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_passenger_numbers",
                 "Adjust Passenger Numbers"
@@ -246,7 +246,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           ),
           MuiAccordion(expanded = isOpen("processingTimes"))(
             onChange --> togglePanel("processingTimes"),
-            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "large")())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "small")())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_processing_times",
                 "Adjust Processing Times"
@@ -256,7 +256,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           ),
           MuiAccordion(expanded = isOpen("slaFields"))(
             onChange --> togglePanel("slaFields"),
-            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "large")())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "small")())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_queue_slas",
                 "Adjust Queue SLAs"
@@ -266,7 +266,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           ),
           MuiAccordion(expanded = isOpen("minMaxDesksFields"))(
             onChange --> togglePanel("minMaxDesksFields"),
-            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "large")())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "small")())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_available_desks",
                 if (terminalHasEgates) "Adjust Desks & Egate banks" else "Adjust Desks"
@@ -277,7 +277,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           if (terminalHasEgates)
             MuiAccordion(expanded = isOpen("configureEGatesFields"))(
               onChange --> togglePanel("configureEGatesFields"),
-              MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "large")())(
+              MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)(fontSize = "small")())(
                 MuiTypography(variant = MuiTypography.Variant.inherit)(
                   ^.id := "adjust_egate_open_times",
                   "Adjust eGate Open Times"

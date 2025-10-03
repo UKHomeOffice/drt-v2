@@ -147,10 +147,7 @@ object FlightTable {
         <.div(
           ^.style := js.Dictionary(
             "backgroundColor" -> "#E6E9F1",
-            "paddingLeft" -> "24px",
-            "paddingTop" -> "36px",
-            "paddingBottom" -> "24px",
-            "paddingRight" -> "24px"
+            "paddingLeft" -> "15px",
           ),
           if (props.showFlagger) {
             val initialState = js.Dynamic.literal(
