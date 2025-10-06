@@ -184,7 +184,7 @@ object Settings {
 
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-    "org.webjars" %% "webjars-play" % "3.0.2",
+    "org.webjars" %% "webjars-play" % "3.0.9",
     "org.webjars" % "webjars-locator" % "0.52",
 
     "io.netty" % "netty-all" % nettyAll,
