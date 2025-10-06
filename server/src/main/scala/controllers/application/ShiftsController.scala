@@ -4,10 +4,10 @@ import actors.persistent.staffing.StaffingUtil
 import actors.persistent.staffing.StaffingUtil.updateWithShiftDefaultStaff
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.Shift
+import uk.gov.homeoffice.drt.{Shift, ShiftStaffRolling}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
-import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.util.ShiftUtil.{currentLocalDate, localDateFromString}
 import upickle.default.write
 
@@ -145,6 +145,15 @@ class ShiftsController @Inject()(cc: ControllerComponents,
           shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
             val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
             shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+              val startDate = shifts.headOption.map(s => SDate(s.startDate))
+              startDate.map(sd => ctrl.shiftStaffRollingService.upsertShiftStaffRolling(ShiftStaffRolling(
+                port = ctrl.airportConfig.portCode.iata,
+                terminal = shifts.headOption.map(_.terminal).getOrElse(""),
+                rollingStartedDate = sd.millisSinceEpoch,
+                rollingEndedDate = sd.addMonths(6).millisSinceEpoch,
+                updatedAt = SDate.now().millisSinceEpoch,
+                appliedBy = "shift-creation"
+              )))
               Ok(write(s))
             }
           }.recoverWith {
@@ -168,6 +177,16 @@ class ShiftsController @Inject()(cc: ControllerComponents,
             updatedNewShift,
             allShiftAssignments)
           shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+            val startDate = SDate(updatedNewShift.startDate)
+            val endDate =  updatedNewShift.endDate.map(ed => SDate(ed)).getOrElse(startDate.addMonths(6))
+            ctrl.shiftStaffRollingService.upsertShiftStaffRolling(ShiftStaffRolling(
+              port = ctrl.airportConfig.portCode.iata,
+              terminal = updatedNewShift.terminal,
+              rollingStartedDate = startDate.millisSinceEpoch,
+              rollingEndedDate = endDate.millisSinceEpoch,
+              updatedAt = SDate.now().millisSinceEpoch,
+              appliedBy = "shift-updated"
+            ))
             Ok(write(s))
           }.recoverWith {
             case e: Exception =>

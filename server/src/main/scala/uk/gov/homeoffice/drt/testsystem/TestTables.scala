@@ -8,13 +8,14 @@ import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
-import uk.gov.homeoffice.drt.{Shift, ShiftMeta}
+import uk.gov.homeoffice.drt.{Shift, ShiftMeta, ShiftStaffRolling}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.service.staffing.{LegacyShiftAssignmentsService, ShiftAssignmentsService, ShiftMetaInfoService, ShiftsService}
+import uk.gov.homeoffice.drt.service.staffing.{IShiftStaffRollingService,
+  LegacyShiftAssignmentsService, ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import uk.gov.homeoffice.drt.util.ShiftUtil.localDateFromString
 
@@ -258,5 +259,19 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
                                            terminal: String,
                                            dayRange: Option[String],
                                            date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+
+}
+
+case class MockShiftStaffRollingService()(implicit ec: ExecutionContext) extends IShiftStaffRollingService {
+  var shiftStaffRollingSeq = Seq.empty[ShiftStaffRolling]
+
+  override def upsertShiftStaffRolling(shiftStaffRolling: ShiftStaffRolling): Future[Int] = {
+    shiftStaffRollingSeq = shiftStaffRollingSeq :+ shiftStaffRolling
+    Future.successful(shiftStaffRollingSeq).map(_.size)
+  }
+
+  override def getShiftStaffRolling(port: String, terminal: String): Future[Seq[ShiftStaffRolling]] =
+    Future.successful(shiftStaffRollingSeq.filter(s => s.port == port && s.terminal == terminal))
+
 
 }

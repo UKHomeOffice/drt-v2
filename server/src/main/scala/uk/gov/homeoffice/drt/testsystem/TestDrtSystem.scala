@@ -18,7 +18,7 @@ import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.tables.UserTableLike
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Terminals}
 import uk.gov.homeoffice.drt.service.{FeedService, QueueConfig}
-import uk.gov.homeoffice.drt.service.staffing.{ShiftMetaInfoService, ShiftsService}
+import uk.gov.homeoffice.drt.service.staffing.{IShiftStaffRollingService, ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.testsystem.db.AkkaDbH2
@@ -60,6 +60,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
   override val shiftsService: ShiftsService = MockStaffShiftsService()
   override val shiftMetaInfoService: ShiftMetaInfoService = MockShiftMetaInfoService()
+  override val shiftStaffRollingService: IShiftStaffRollingService = MockShiftStaffRollingService()
+
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(
     system = system,
     now = now,
