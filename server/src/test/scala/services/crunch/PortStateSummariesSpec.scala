@@ -97,8 +97,8 @@ class PortStateSummariesSpec extends Specification {
     val summary: Map[MillisSinceEpoch, StaffMinute] = portState.staffSummary(SDate(0L), periods, periodSize, terminal)
 
     val expected = Map(
-      0L -> StaffMinute(terminal, 0, 0, 14, 14),
-      15L * 60000 -> StaffMinute(terminal, 15 * 60000, 15, 29, 29),
+      0L * 60000 -> StaffMinute(terminal, 0, 14, 14, 14),
+      15L * 60000 -> StaffMinute(terminal, 15 * 60000, 29, 29, 29),
       30L * 60000 -> StaffMinute(terminal, 30 * 60000, 0, 0, 0),
       45L * 60000 -> StaffMinute(terminal, 45 * 60000, 0, 0, 0)
     )
