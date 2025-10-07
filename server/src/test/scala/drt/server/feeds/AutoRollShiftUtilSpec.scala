@@ -6,7 +6,7 @@ import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
 import uk.gov.homeoffice.drt.testsystem.{MockShiftAssignmentsService, MockShiftStaffRollingService, MockStaffShiftsService}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.concurrent.{Await, Future}
@@ -17,7 +17,7 @@ class AutoRollShiftUtilSpec extends Specification {
 
   "sixthMonthStartAndEnd should return correct millis for the 6th month from viewDate" >> {
     val viewDate = SDate("2025-09-15T12:00")
-    val (startMillis, endMillis) = AutoRollShiftUtil.StartAndEndForMonthsGiven(viewDate, 6)
+    val (startMillis, endMillis) = AutoRollShiftUtil.startAndEndForMonthsGiven(viewDate, 6)
 
     val expectedStart = SDate("2025-09-01T00:00", europeLondonTimeZone)
     val expectedEnd = SDate("2026-02-28T23:59", europeLondonTimeZone)
@@ -52,14 +52,14 @@ class AutoRollShiftUtilSpec extends Specification {
         port = "XYZ",
         frequency = None)
     )
-    val newStart = SDate("2024-08-01T00:00", europeLondonTimeZone)
-    val newEnd = SDate("2024-08-31T23:59", europeLondonTimeZone)
+    val newStart = LocalDate(2024, 8, 1)
+    val newEnd =  LocalDate(2024, 8, 31)
 
     val rollingShifts = AutoRollShiftUtil.updateShiftDateForRolling(originalShifts, newStart, newEnd)
 
     rollingShifts must haveSize(2)
-    rollingShifts.forall(_.startDate == newStart.toLocalDate) must beTrue
-    rollingShifts.forall(_.endDate.contains(newEnd.toLocalDate)) must beTrue
+    rollingShifts.forall(_.startDate == newStart) must beTrue
+    rollingShifts.forall(_.endDate.contains(newEnd)) must beTrue
   }
 
   def getShift(shiftName: String, staffNumber: Int, startDate: Long, endDate: Option[Long]) = Shift(
@@ -86,7 +86,7 @@ class AutoRollShiftUtilSpec extends Specification {
     val shiftAssignmentsService: ShiftAssignmentsService = MockShiftAssignmentsService(existingShiftAssignments.assignments)
     val previousViewDate = SDate("2024-07-15T08:00")
     val currentDate = SDate("2024-07-26T12:00")
-    val monthsToAdd = AutoRollShiftUtil.monthToBased(Some(previousViewDate), currentDate)
+    val monthsToAdd = AutoRollShiftUtil.numberOfMonthsToFill(Some(previousViewDate), currentDate)
     shiftService.saveShift(Seq())
 
     val resultF = AutoRollShiftUtil.existingCheckAndUpdate(
@@ -118,7 +118,7 @@ class AutoRollShiftUtilSpec extends Specification {
     val shiftAssignmentsService: ShiftAssignmentsService = MockShiftAssignmentsService(existingShiftAssignments.assignments)
     val previousEndDate = SDate("2024-07-15T08:00")
     val currentDate = SDate("2024-06-26T12:00")
-    val monthsToAdd = AutoRollShiftUtil.monthToBased(Some(previousEndDate), currentDate)
+    val monthsToAdd = AutoRollShiftUtil.numberOfMonthsToFill(Some(previousEndDate), currentDate)
 
     shiftService.saveShift(Seq(shiftWithNoEndDate))
 
@@ -156,54 +156,54 @@ class AutoRollShiftUtilSpec extends Specification {
   "monthToBased" should {
     val currentDate = SDate.now()
     "return 6 when previousDate is None" in {
-      AutoRollShiftUtil.monthToBased(None, currentDate) mustEqual 6
+      AutoRollShiftUtil.numberOfMonthsToFill(None, currentDate) mustEqual 6
     }
     "return correct months left when previousDate is 3 months ago" in {
       val threeMonthsAgo = currentDate.addMonths(-3)
-      AutoRollShiftUtil.monthToBased(Some(threeMonthsAgo), currentDate) mustEqual 6
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(threeMonthsAgo), currentDate) mustEqual 6
     }
     "return 0 when previousDate is 6 months ago" in {
       val sixMonthsAgo = currentDate.addMonths(-6)
-      AutoRollShiftUtil.monthToBased(Some(sixMonthsAgo), currentDate) mustEqual 6
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(sixMonthsAgo), currentDate) mustEqual 6
     }
     "return negative when previousDate is more than 6 months ago" in {
       val sevenMonthsAgo = currentDate.addMonths(-7)
-      AutoRollShiftUtil.monthToBased(Some(sevenMonthsAgo), currentDate) mustEqual 6
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(sevenMonthsAgo), currentDate) mustEqual 6
     }
 
     "return 6 when previousDate is current months" in {
       val currentMonth = SDate.now()
-      AutoRollShiftUtil.monthToBased(Some(currentMonth), currentDate) mustEqual 6
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(currentMonth), currentDate) mustEqual 6
     }
 
     "return 1 when previousDate is one months ahead" in {
       val aMonthAhead = currentDate.addMonths(1)
-      AutoRollShiftUtil.monthToBased(Some(aMonthAhead), currentDate) mustEqual 5
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(aMonthAhead), currentDate) mustEqual 5
     }
 
     "return 4 when previousDate is 2 months ahead" in {
       val twoMonthsAhead = SDate.now().addMonths(2)
-      AutoRollShiftUtil.monthToBased(Some(twoMonthsAhead), currentDate) mustEqual 4
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(twoMonthsAhead), currentDate) mustEqual 4
     }
 
     "return 3 when previousDate is 3 months ahead" in {
       val threeMonthAhead = SDate.now().addMonths(3)
-      AutoRollShiftUtil.monthToBased(Some(threeMonthAhead), currentDate) mustEqual 3
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(threeMonthAhead), currentDate) mustEqual 3
     }
 
     "return 2 when previousDate is 5 months ago" in {
       val fourMonthAhead = SDate.now().addMonths(4)
-      AutoRollShiftUtil.monthToBased(Some(fourMonthAhead), currentDate) mustEqual 2
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(fourMonthAhead), currentDate) mustEqual 2
     }
 
     "return 1 when previousDate is 5 months ago" in {
       val fiveMonthAhead = SDate.now().addMonths(5)
-      AutoRollShiftUtil.monthToBased(Some(fiveMonthAhead), currentDate) mustEqual 1
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(fiveMonthAhead), currentDate) mustEqual 1
     }
 
     "return 0 when previousDate is 5 months ago" in {
       val sixMonthAhead = SDate.now().addMonths(6)
-      AutoRollShiftUtil.monthToBased(Some(sixMonthAhead), currentDate) mustEqual 0
+      AutoRollShiftUtil.numberOfMonthsToFill(Some(sixMonthAhead), currentDate) mustEqual 0
     }
   }
 

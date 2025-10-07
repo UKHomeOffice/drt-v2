@@ -129,7 +129,6 @@ object StaffingUtil {
           case Some(existing) =>
             findOverridingShift(assignment).map { overridingStaff =>
               findFutureExistingShift(assignment).map { futureExistingStaff =>
-                //                println(s"Future exist , existing.numberOfStaff = ${existing.numberOfStaff} overridingStaff =  $overridingStaff futureExistingStaff = $futureExistingStaff")
                 if (existing.numberOfStaff == overridingStaff + futureExistingStaff)
                   assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
                 else if (existing.numberOfStaff == overridingStaff)
@@ -139,7 +138,6 @@ object StaffingUtil {
                 else
                   assignment
               }.getOrElse {
-                //                println(s"No future , Override exists , existing.numberOfStaff = ${existing.numberOfStaff} overridingStaff = $overridingStaff newShift.staffNumber = ${newShift.staffNumber} previousShift.staffNumber = ${previousShift.staffNumber}")
                 if (existing.numberOfStaff == overridingStaff + previousShift.staffNumber)
                   assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
                 else if (existing.numberOfStaff == previousShift.staffNumber)
@@ -153,13 +151,11 @@ object StaffingUtil {
               }
             }.getOrElse {
               findFutureExistingShift(assignment).map { futureExistingStaff =>
-                //                println(s"Future exist ,No override, existing.numberOfStaff = ${existing.numberOfStaff} futureExistingStaff = $futureExistingStaff")
                 if (existing.numberOfStaff == futureExistingStaff)
                   assignment.copy(numberOfStaff = newShift.staffNumber)
                 else
                   existing
               }.getOrElse {
-                //                println(s"No future , No override, existing.numberOfStaff = ${existing.numberOfStaff} newShift.staffNumber = ${newShift.staffNumber} previousShift.staffNumber = ${previousShift.staffNumber}")
                 if (existing.numberOfStaff == previousShift.staffNumber || existing.numberOfStaff == 0)
                   assignment
                 else

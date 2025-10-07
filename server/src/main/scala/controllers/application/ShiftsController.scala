@@ -137,6 +137,32 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
+  private def shiftStaffRollingCreating(shifts: Seq[Shift]): ShiftStaffRolling = {
+    val startDate = shifts.headOption.map(s => SDate(s.startDate))
+    val endDate = shifts.lastOption.flatMap(_.endDate).map(ed => SDate(ed)).getOrElse(startDate.get.addMonths(6))
+    ShiftStaffRolling(
+      port = ctrl.airportConfig.portCode.iata,
+      terminal = shifts.headOption.map(_.terminal).getOrElse(""),
+      rollingStartDate = startDate.map(_.millisSinceEpoch).getOrElse(0L),
+      rollingEndDate = endDate.millisSinceEpoch,
+      updatedAt = SDate.now().millisSinceEpoch,
+      triggeredBy = "shift-creation"
+    )
+  }
+
+  private def shiftStaffingRollingWhileEditing(updatedNewShift: Shift): ShiftStaffRolling = {
+    val startDate = SDate(updatedNewShift.startDate)
+    val endDate = updatedNewShift.endDate.map(ed => SDate(ed)).getOrElse(startDate.addMonths(6))
+    ShiftStaffRolling(
+      port = ctrl.airportConfig.portCode.iata,
+      terminal = updatedNewShift.terminal,
+      rollingStartDate = startDate.millisSinceEpoch,
+      rollingEndDate = endDate.millisSinceEpoch,
+      updatedAt = SDate.now().millisSinceEpoch,
+      triggeredBy = "shift-updated"
+    )
+  }
+
   def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
@@ -145,15 +171,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
           shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
             val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
             shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-              val startDate = shifts.headOption.map(s => SDate(s.startDate))
-              startDate.map(sd => ctrl.shiftStaffRollingService.upsertShiftStaffRolling(ShiftStaffRolling(
-                port = ctrl.airportConfig.portCode.iata,
-                terminal = shifts.headOption.map(_.terminal).getOrElse(""),
-                rollingStartedDate = sd.millisSinceEpoch,
-                rollingEndedDate = sd.addMonths(6).millisSinceEpoch,
-                updatedAt = SDate.now().millisSinceEpoch,
-                appliedBy = "shift-creation"
-              )))
+              ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffRollingCreating(shifts))
               Ok(write(s))
             }
           }.recoverWith {
@@ -177,16 +195,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
             updatedNewShift,
             allShiftAssignments)
           shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-            val startDate = SDate(updatedNewShift.startDate)
-            val endDate =  updatedNewShift.endDate.map(ed => SDate(ed)).getOrElse(startDate.addMonths(6))
-            ctrl.shiftStaffRollingService.upsertShiftStaffRolling(ShiftStaffRolling(
-              port = ctrl.airportConfig.portCode.iata,
-              terminal = updatedNewShift.terminal,
-              rollingStartedDate = startDate.millisSinceEpoch,
-              rollingEndedDate = endDate.millisSinceEpoch,
-              updatedAt = SDate.now().millisSinceEpoch,
-              appliedBy = "shift-updated"
-            ))
+            ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffingRollingWhileEditing(updatedNewShift))
             Ok(write(s))
           }.recoverWith {
             case e: Exception =>

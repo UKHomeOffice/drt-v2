@@ -71,7 +71,6 @@ GET           /shifts/:terminal/:dayRange                                       
 GET           /shifts/:terminal                                                       controllers.application.ShiftsController.getActiveShifts(terminal: String)
 GET           /shift/:terminal/:shiftName/:startDate                                  controllers.application.ShiftsController.getAShift(terminal: String, shiftName: String, startDate: String)
 GET           /shift/:terminal/:shiftName                                             controllers.application.ShiftsController.getShift(terminal: String, shiftName: String)
-#POST          /shifts/auto-roll/:viewDate                                             controllers.application.ShiftsController.autoShiftRoll(viewDate: String)
 POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveShiftAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllShiftAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftAssignmentsController.getShiftAssignmentsForDate(localDate: String)
