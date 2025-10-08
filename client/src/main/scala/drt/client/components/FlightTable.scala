@@ -144,7 +144,7 @@ object FlightTable {
             )
           case _ => <.div()
         },
-        <.div(),
+        <.div(
           if (props.showFlagger) {
             val initialState = js.Dynamic.literal(
               showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
