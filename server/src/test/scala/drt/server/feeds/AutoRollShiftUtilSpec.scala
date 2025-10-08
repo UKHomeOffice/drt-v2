@@ -19,8 +19,8 @@ class AutoRollShiftUtilSpec extends Specification {
     val previousEndDate = SDate("2025-09-15T12:00")
     val (startDate, endDate) = AutoRollShiftUtil.startAndEndForMonthsGiven(previousEndDate, 6)
 
-    val expectedStart = SDate(2025, 9, 1, 0, 0).toLocalDate
-    val expectedEnd = SDate(2026, 2, 28, 23, 59).toLocalDate
+    val expectedStart = SDate(2025, 10, 1, 0, 0).toLocalDate
+    val expectedEnd = SDate(2026, 3, 31, 0, 0).toLocalDate
 
     startDate must beEqualTo(expectedStart)
     endDate must beEqualTo(expectedEnd)
@@ -102,19 +102,19 @@ class AutoRollShiftUtilSpec extends Specification {
     Await.result(resultF, 5.seconds) === ShiftAssignments(Seq.empty[StaffAssignmentLike])
   }
 
-  "return assignment to rolls when there are shifts for given view date present and not assignments present in" in {
+  "return assignment to rolls when there are shifts for given previous end date present and not assignments present in" in {
     val existingShiftAssignments = ShiftAssignments(Map(
-      drt.shared.TM(T1, SDate("2024-07-01T08:00", europeLondonTimeZone).millisSinceEpoch) ->
+      drt.shared.TM(T1, SDate("2024-07-01T08:00").millisSinceEpoch) ->
         StaffAssignment("shift",
           T1,
-          SDate("2024-07-01T08:00", europeLondonTimeZone).millisSinceEpoch,
-          SDate("2024-07-01T08:15", europeLondonTimeZone).millisSinceEpoch,
+          SDate("2024-07-01T08:00").millisSinceEpoch,
+          SDate("2024-07-01T08:15").millisSinceEpoch,
           1,
           None)
     ))
     val shiftService = MockStaffShiftsService()
     val shiftStaffRollingService = MockShiftStaffRollingService()
-    val shiftWithNoEndDate = getShift("shift", 1, SDate("2024-07-01T00:00", europeLondonTimeZone).millisSinceEpoch, None)
+    val shiftWithNoEndDate = getShift("shift", 1, SDate("2024-07-01T00:00").millisSinceEpoch, None)
     val shiftAssignmentsService: ShiftAssignmentsService = MockShiftAssignmentsService(existingShiftAssignments.assignments)
     val previousEndDate = SDate("2024-07-15T08:00")
     val currentDate = SDate("2024-06-26T12:00")
@@ -138,16 +138,16 @@ class AutoRollShiftUtilSpec extends Specification {
     sortedResult.head mustEqual
       StaffAssignment("shift",
         T1,
-        SDate("2024-07-01T08:00", europeLondonTimeZone).millisSinceEpoch,
-        SDate("2024-07-01T08:15", europeLondonTimeZone).millisSinceEpoch,
+        SDate("2024-07-01T08:00").millisSinceEpoch,
+        SDate("2024-07-01T08:15").millisSinceEpoch,
         1,
         None)
 
     sortedResult.reverse.head mustEqual
       StaffAssignment("shift",
         T1,
-        SDate("2024-11-30T08:45", europeLondonTimeZone).millisSinceEpoch,
-        SDate("2024-11-30T08:59", europeLondonTimeZone).millisSinceEpoch,
+        SDate("2024-12-31T08:45").millisSinceEpoch,
+        SDate("2024-12-31T08:59").millisSinceEpoch,
         1,
         None)
 

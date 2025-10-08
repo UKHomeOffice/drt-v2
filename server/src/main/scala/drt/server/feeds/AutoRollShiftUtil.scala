@@ -23,7 +23,7 @@ object AutoRollShiftUtil {
   }
 
   def startAndEndForMonthsGiven(previousRollingEndDate: SDateLike, monthsToAdd: Int): (LocalDate, LocalDate) = {
-    val firstDayOfSixthMonth = previousRollingEndDate.startOfTheMonth
+    val firstDayOfSixthMonth = previousRollingEndDate.addMonths(1).startOfTheMonth
     val endOfSixMonthInMillis = firstDayOfSixthMonth.addMonths(monthsToAdd).addMinutes(-1)
     (firstDayOfSixthMonth.toLocalDate, endOfSixMonthInMillis.toLocalDate)
   }
