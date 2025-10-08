@@ -130,9 +130,11 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
         val periodEnd = periodStart + periodMillis
         val deployedStaff = (periodStart until periodEnd by oneMinuteMillis)
           .map { minute =>
-            queues
+            val miscStaff = staffMinutes.get(TM(terminal, minute)).map(_.fixedPoints).getOrElse(0)
+            val queueStaff = queues
               .map(queue => crunchMinutes.get(TQM(terminal, queue, minute)))
               .map(_.flatMap(_.deployedDesks))
+            queueStaff :+ Option(miscStaff)
           }
         val maxStaff = staffDeployedSummary(deployedStaff)
 
