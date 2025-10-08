@@ -9,13 +9,21 @@ import uk.gov.homeoffice.drt.util.ShiftUtil.{fromStaffShiftRow, localDateFromStr
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ShiftsService {
+  implicit val ec: ExecutionContext
+
   def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]]
 
   def getShifts(port: String, terminal: String): Future[Seq[Shift]]
 
   def latestStaffShiftForADate(port: String, terminal: String, startDate: LocalDate, startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]]
 
-  def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]]
+  def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = getShifts(port, terminal).map { shifts =>
+    val localDate: LocalDate = localDateFromString(date)
+    shifts.filter { shift =>
+      shift.startDate.compare(localDate) <= 0 &&
+        (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDate) >= 0))
+    }
+  }
 
   def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]]
 
@@ -23,7 +31,7 @@ trait ShiftsService {
 
   def updateShift(previousShift: Shift, shift: Shift): Future[Shift]
 
-  def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])]
+  def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift): Future[(Shift, Option[Shift])]
 
   def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
 
@@ -33,7 +41,7 @@ trait ShiftsService {
 
 }
 
-case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends ShiftsService {
+case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit val ec: ExecutionContext) extends ShiftsService {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
@@ -50,13 +58,6 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal)
 
-  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = getShifts(port, terminal).map { shifts =>
-    val localDate: LocalDate = localDateFromString(date)
-    shifts.filter { shift =>
-      shift.startDate.compare(localDate) <= 0 &&
-        (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDate) >= 0))
-    }
-  }
 
   override def getActiveShiftsForViewRange(port: String, terminal: String, dayRange: Option[String], date: Option[String]): Future[Seq[Shift]] =
     getShifts(port, terminal).map { shifts =>
@@ -82,7 +83,7 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] =
     staffShiftsDao.getOverlappingStaffShifts(port, terminal, shift)
 
-  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] = {
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift): Future[(Shift, Option[Shift])] = {
     staffShiftsDao.latestShiftAfterStartDateExists(shiftRow).flatMap {
       case Some(existingFutureShift) =>
         staffShiftsDao.updateStaffShift(previousShift, existingFutureShift, shiftRow).map { updatedShift =>

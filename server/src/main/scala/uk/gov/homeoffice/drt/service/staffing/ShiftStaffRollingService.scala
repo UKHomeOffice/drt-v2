@@ -8,7 +8,8 @@ import scala.concurrent.{ExecutionContext, Future}
 trait IShiftStaffRollingService {
   def upsertShiftStaffRolling(shiftStaffRolling: ShiftStaffRolling): Future[Int]
 
-  def getShiftStaffRolling(port: String, terminal: String): Future[Seq[ShiftStaffRolling]]
+  def latestShiftStaffRolling(port: String, terminal: String): Future[Option[ShiftStaffRolling]]
+  
 }
 
 case class ShiftStaffRollingService(shiftStaffRollingDao : ShiftStaffRollingDao)(implicit ex: ExecutionContext) extends IShiftStaffRollingService {
@@ -16,6 +17,6 @@ case class ShiftStaffRollingService(shiftStaffRollingDao : ShiftStaffRollingDao)
   override def upsertShiftStaffRolling(shiftStaffRolling: ShiftStaffRolling): Future[Int] =
     shiftStaffRollingDao.upsertShiftStaffRolling(shiftStaffRolling)
 
-  override def getShiftStaffRolling(port: String, terminal: String): Future[Seq[ShiftStaffRolling]] =
-    shiftStaffRollingDao.getShiftStaffRolling(port, terminal)
+  override def latestShiftStaffRolling(port: String, terminal: String): Future[Option[ShiftStaffRolling]] =
+    shiftStaffRollingDao.getShiftStaffRolling(port, terminal).map(_.sortBy(_.updatedAt).headOption)
 }

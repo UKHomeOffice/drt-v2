@@ -17,13 +17,13 @@ class AutoRollShiftUtilSpec extends Specification {
 
   "sixthMonthStartAndEnd should return correct millis for the 6th month from viewDate" >> {
     val viewDate = SDate("2025-09-15T12:00")
-    val (startMillis, endMillis) = AutoRollShiftUtil.startAndEndForMonthsGiven(viewDate, 6)
+    val (startDate, endDate) = AutoRollShiftUtil.startAndEndForMonthsGiven(viewDate, 6)
 
-    val expectedStart = SDate("2025-09-01T00:00", europeLondonTimeZone)
-    val expectedEnd = SDate("2026-02-28T23:59", europeLondonTimeZone)
+    val expectedStart = SDate(2025, 10, 1, 0, 0).toLocalDate
+    val expectedEnd = SDate(2026, 2, 28, 23, 59).toLocalDate
 
-    startMillis must beEqualTo(expectedStart)
-    endMillis must beEqualTo(expectedEnd)
+    startDate must beEqualTo(expectedStart)
+    endDate must beEqualTo(expectedEnd)
   }
 
 
@@ -53,7 +53,7 @@ class AutoRollShiftUtilSpec extends Specification {
         frequency = None)
     )
     val newStart = LocalDate(2024, 8, 1)
-    val newEnd =  LocalDate(2024, 8, 31)
+    val newEnd = LocalDate(2024, 8, 31)
 
     val rollingShifts = AutoRollShiftUtil.updateShiftDateForRolling(originalShifts, newStart, newEnd)
 

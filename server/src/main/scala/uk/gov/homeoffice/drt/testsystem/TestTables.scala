@@ -199,7 +199,7 @@ case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends
   }
 }
 
-case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
+case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends ShiftsService {
   var shiftSeq = Seq.empty[Shift]
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = {
@@ -224,14 +224,6 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
 
-  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful {
-    val localDate: LocalDate = localDateFromString(date)
-    shiftSeq.filter { shift =>
-      shift.startDate.compare(localDate) <= 0 &&
-        (shift.endDate.isEmpty || shift.endDate.exists(_.compare(localDate) >= 0))
-    }
-  }
-
   override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
     val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
     Future.successful(shift)
@@ -253,7 +245,7 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
                                         startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]] =
     Future.successful(shiftSeq.filter(s => s.port == port && s.terminal == terminal && s.startDate == startDate && s.startTime == startTime).lastOption)
 
-  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] =
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift): Future[(Shift, Option[Shift])] =
     Future.successful((shiftRow, None))
 
   override def getActiveShiftsForViewRange(port: String,
@@ -271,8 +263,8 @@ case class MockShiftStaffRollingService()(implicit ec: ExecutionContext) extends
     Future.successful(shiftStaffRollingSeq).map(_.size)
   }
 
-  override def getShiftStaffRolling(port: String, terminal: String): Future[Seq[ShiftStaffRolling]] =
-    Future.successful(shiftStaffRollingSeq.filter(s => s.port == port && s.terminal == terminal))
+  override def latestShiftStaffRolling(port: String, terminal: String): Future[Option[ShiftStaffRolling]] =
+    Future.successful(shiftStaffRollingSeq.filter(s => s.port == port && s.terminal == terminal).sortBy(_.updatedAt).headOption)
 
 
 }

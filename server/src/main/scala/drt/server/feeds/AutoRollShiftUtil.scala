@@ -17,13 +17,14 @@ object AutoRollShiftUtil {
     previousDate match {
       case Some(d) => val now = currentDate
         val monthsDiff = (d.getFullYear - now.getFullYear) * 12 + (d.getMonth - now.getMonth)
+        println(s"monthsDiff is $monthsDiff")
         if (monthsDiff < 0) 6 else 6 - monthsDiff
       case None => 6
     }
   }
 
-  def startAndEndForMonthsGiven(viewDate: SDateLike, monthsToAdd: Int): (LocalDate, LocalDate) = {
-    val firstDayOfSixthMonth = viewDate.startOfTheMonth
+  def startAndEndForMonthsGiven(previousRollingEndDate: SDateLike, monthsToAdd: Int): (LocalDate, LocalDate) = {
+    val firstDayOfSixthMonth = previousRollingEndDate.addDays(1)
     val endOfSixMonthInMillis = firstDayOfSixthMonth.addMonths(monthsToAdd).addMinutes(-1)
     (firstDayOfSixthMonth.toLocalDate, endOfSixMonthInMillis.toLocalDate)
   }
@@ -38,7 +39,7 @@ object AutoRollShiftUtil {
                              shiftStaffRollingService: IShiftStaffRollingService
                             )(implicit ec: ExecutionContext): Future[ShiftAssignments] = {
 
-    shiftStaffRollingService.getShiftStaffRolling(port, terminal.toString).flatMap { _ =>
+    if (monthsToAdd > 0) shiftStaffRollingService.latestShiftStaffRolling(port, terminal.toString).flatMap { _ =>
 
       val (startRollingDate, endRollingDate) = startAndEndForMonthsGiven(previousRollingEndDate, monthsToAdd)
 
@@ -61,8 +62,8 @@ object AutoRollShiftUtil {
             ShiftStaffRolling(
               port = port,
               terminal = terminal.toString,
-              rollingStartDate = SDate(startRollingDate).millisSinceEpoch,
-              rollingEndDate = SDate(endRollingDate).millisSinceEpoch,
+              rollingStartDate = SDate(startRollingDate.year, startRollingDate.month, startRollingDate.day).millisSinceEpoch,
+              rollingEndDate = SDate(endRollingDate.year, endRollingDate.month, endRollingDate.day).millisSinceEpoch,
               updatedAt = SDate.now().millisSinceEpoch,
               triggeredBy = "auto-shift-staffing"
             )
@@ -71,6 +72,9 @@ object AutoRollShiftUtil {
         }
         updatedAssignments
       }
+    } else {
+      log.info(s"updateShiftsStaffingToAssignments :AutoShiftStaffing no update needed for $port for terminal $terminal as monthsToAdd is $monthsToAdd")
+      Future.successful(ShiftAssignments(Seq.empty[StaffAssignmentLike]))
     }
   }
 
