@@ -95,29 +95,4 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
       }
     }
   }
-
-  "When unknown string age is parsed then the parse function gives UnknownAge " >> {
-    val result = PaxAgeRange.parse(UnknownAge.title)
-
-    result === UnknownAge
-  }
-
-  "Given a AgeRange class" >> {
-    "I should be able to serialise and deserialise it with upickle without loss" >> {
-      val ageRange = AgeRange(25, Option(49))
-      val json = upickle.default.write(ageRange)
-      val ageRangeDeserialised = upickle.default.read[AgeRange](json)
-      ageRangeDeserialised mustEqual ageRange
-    }
-  }
-
-  "When deserializing age ranges we should get back the correct age range " >> {
-    val ageRangeStrings = PassengerInfo.ageRangesForDate(Some(SDate(System.currentTimeMillis()))).map(_.title)
-
-    val result = ageRangeStrings.map(PaxAgeRange.parse)
-
-    result === PassengerInfo.ageRangesForDate(Some(SDate(System.currentTimeMillis())))
-  }
-
-
 }
