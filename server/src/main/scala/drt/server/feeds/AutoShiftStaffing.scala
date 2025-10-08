@@ -49,9 +49,8 @@ object AutoShiftStaffing {
     }
   }
 
-  private def runShiftCheck(
-                             drtSystemInterface: DrtSystemInterface,
-                             shiftAssignmentsService: ShiftAssignmentsService
+  private def runShiftCheck(drtSystemInterface: DrtSystemInterface,
+                            shiftAssignmentsService: ShiftAssignmentsService
                            )(implicit ec: ExecutionContextExecutor): Unit = {
     val port = drtSystemInterface.airportConfig.portCode.iata
     val terminals = drtSystemInterface.airportConfig.terminalsForDate(SDate.now().toLocalDate).toSeq

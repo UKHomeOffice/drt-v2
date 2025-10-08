@@ -17,14 +17,13 @@ object AutoRollShiftUtil {
     previousDate match {
       case Some(d) => val now = currentDate
         val monthsDiff = (d.getFullYear - now.getFullYear) * 12 + (d.getMonth - now.getMonth)
-        println(s"monthsDiff is $monthsDiff")
         if (monthsDiff < 0) 6 else 6 - monthsDiff
       case None => 6
     }
   }
 
   def startAndEndForMonthsGiven(previousRollingEndDate: SDateLike, monthsToAdd: Int): (LocalDate, LocalDate) = {
-    val firstDayOfSixthMonth = previousRollingEndDate.addDays(1)
+    val firstDayOfSixthMonth = previousRollingEndDate.startOfTheMonth
     val endOfSixMonthInMillis = firstDayOfSixthMonth.addMonths(monthsToAdd).addMinutes(-1)
     (firstDayOfSixthMonth.toLocalDate, endOfSixMonthInMillis.toLocalDate)
   }

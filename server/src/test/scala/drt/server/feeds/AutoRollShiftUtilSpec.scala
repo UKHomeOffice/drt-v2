@@ -15,11 +15,11 @@ import scala.concurrent.duration.DurationInt
 
 class AutoRollShiftUtilSpec extends Specification {
 
-  "sixthMonthStartAndEnd should return correct millis for the 6th month from viewDate" >> {
-    val viewDate = SDate("2025-09-15T12:00")
-    val (startDate, endDate) = AutoRollShiftUtil.startAndEndForMonthsGiven(viewDate, 6)
+  "sixthMonthStartAndEnd should return correct millis for the 6th month from previousEndDate" >> {
+    val previousEndDate = SDate("2025-09-15T12:00")
+    val (startDate, endDate) = AutoRollShiftUtil.startAndEndForMonthsGiven(previousEndDate, 6)
 
-    val expectedStart = SDate(2025, 10, 1, 0, 0).toLocalDate
+    val expectedStart = SDate(2025, 9, 1, 0, 0).toLocalDate
     val expectedEnd = SDate(2026, 2, 28, 23, 59).toLocalDate
 
     startDate must beEqualTo(expectedStart)
