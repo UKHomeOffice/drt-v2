@@ -79,7 +79,7 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
     ISortedMap[TM, StaffMinute]() ++ staffMinuteRange(start.millisSinceEpoch, end.millisSinceEpoch)
       .filterKeys { tm => terminals(start.toLocalDate, end.toLocalDate).contains(tm.terminal) }
 
-  def crunchSummary(start: SDateLike, periods: Long, periodMinutes: Int, terminal: Terminal, queues: Seq[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] = {
+  def crunchSummary(start: SDateLike, periods: Int, periodMinutes: Int, terminal: Terminal, queues: Seq[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] = {
     val startMillis = start.roundToMinute().millisSinceEpoch
     val endMillis = startMillis + (periods * periodMinutes.minutes).toMillis
     val periodMillis = periodMinutes.minutes.toMillis
@@ -98,6 +98,66 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
         (periodStart, queueMinutes)
       }
       .toMap
+  }
+
+  def queueRecStaffSummary(start: SDateLike, periods: Int, periodMinutes: Int, terminal: Terminal, queues: Seq[Queue]): ISortedMap[Long, Int] = {
+    val startMillis = start.roundToMinute().millisSinceEpoch
+    val endMillis = startMillis + (periods * periodMinutes.minutes).toMillis
+    val periodMillis = periodMinutes.minutes.toMillis
+    ISortedMap[Long, Int]() ++ (startMillis until endMillis by periodMillis)
+      .map { periodStart =>
+        val periodEnd = periodStart + periodMillis
+        val maxStaff = (periodStart until periodEnd by oneMinuteMillis)
+          .map { minute =>
+            val miscStaff = staffMinutes.get(TM(terminal, minute)).map(_.fixedPoints).getOrElse(0)
+            val queueStaff = queues
+              .map(queue => crunchMinutes.get(TQM(terminal, queue, minute)))
+              .map(_.map(_.deskRec).getOrElse(0))
+              .sum
+            miscStaff + queueStaff
+          }
+          .max
+        (periodStart, maxStaff)
+      }
+      .toMap
+  }
+  def queueDepStaffSummary(start: SDateLike, periods: Int, periodMinutes: Int, terminal: Terminal, queues: Seq[Queue]): ISortedMap[Long, Option[Int]] = {
+    val startMillis = start.roundToMinute().millisSinceEpoch
+    val endMillis = startMillis + (periods * periodMinutes.minutes).toMillis
+    val periodMillis = periodMinutes.minutes.toMillis
+    ISortedMap[Long, Option[Int]]() ++ (startMillis until endMillis by periodMillis)
+      .map { periodStart =>
+        val periodEnd = periodStart + periodMillis
+        val deployedStaff = (periodStart until periodEnd by oneMinuteMillis)
+          .map { minute =>
+            queues
+              .map(queue => crunchMinutes.get(TQM(terminal, queue, minute)))
+              .map(_.flatMap(_.deployedDesks))
+          }
+        val maxStaff = staffDeployedSummary(deployedStaff)
+
+        (periodStart, maxStaff)
+      }
+      .toMap
+  }
+
+  def staffDeployedSummary(slots: Seq[Seq[Option[Int]]]): Option[Int] = {
+    val maxDeployed: Seq[Option[Int]] = slots
+      .collect { queues =>
+        if (queues.forall(_.isEmpty)) None
+        else Option(queues.map(_.getOrElse(0)).sum)
+      }
+
+    if (maxDeployed.forall(_.isEmpty))
+      None
+    else {
+      val staff = maxDeployed
+        .collect {
+          case Some(staff) => staff
+        }
+        .max
+      Option(staff)
+    }
   }
 
   def dailyCrunchSummary(start: SDateLike,
@@ -139,21 +199,33 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
   }
 
   def staffPeriodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, slotMinutes: List[StaffMinute]): StaffMinute = {
-    if (slotMinutes.nonEmpty) StaffMinute(
-      terminal = terminal,
-      minute = periodStart,
-      shifts = slotMinutes.map(_.shifts).min,
-      fixedPoints = slotMinutes.map(_.fixedPoints).max,
-      movements = slotMinutes.map(_.movements).max,
-      lastUpdated = slotMinutes.map(_.lastUpdated).max,
-    )
-    else StaffMinute(
-      terminal = terminal,
-      minute = periodStart,
-      shifts = 0,
-      fixedPoints = 0,
-      movements = 0
-    )
+    val timeWeighting = for {
+      first <- slotMinutes.map(_.minute).headOption
+      last <- slotMinutes.map(_.minute).lastOption
+    } yield last - first + 60000
+
+    timeWeighting match {
+      case Some(tw) =>
+        val maxAvailableMin = slotMinutes.sortBy(m => m.shifts + m.movements + (m.minute.toDouble / tw)).reverse.head
+        StaffMinute(
+          terminal = terminal,
+          minute = periodStart,
+          shifts = maxAvailableMin.shifts,
+          fixedPoints = maxAvailableMin.fixedPoints,
+          movements = maxAvailableMin.movements,
+          lastUpdated = maxAvailableMin.lastUpdated,
+        )
+      case None =>
+        StaffMinute(
+          terminal = terminal,
+          minute = periodStart,
+          shifts = 0,
+          fixedPoints = 0,
+          movements = 0
+        )
+
+    }
+
   }
 }
 
