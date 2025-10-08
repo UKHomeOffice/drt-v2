@@ -30,7 +30,7 @@ object AutoShiftStaffing {
         drtSystemInterface.config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
 
       Behaviors.withTimers { timers: TimerScheduler[Command] =>
-        timers.startTimerAtFixedRate("autoShift", ShiftCheck, timerInitialDelay, 5.minutes)
+        timers.startTimerAtFixedRate("autoShift", ShiftCheck, timerInitialDelay, 12.hours)
 
         Behaviors.receiveMessage {
           case ShiftCheck =>
