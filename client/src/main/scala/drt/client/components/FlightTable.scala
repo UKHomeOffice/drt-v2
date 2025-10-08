@@ -144,11 +144,7 @@ object FlightTable {
             )
           case _ => <.div()
         },
-        <.div(
-          ^.style := js.Dictionary(
-            "backgroundColor" -> "#E6E9F1",
-            "paddingLeft" -> "15px",
-          ),
+        <.div(),
           if (props.showFlagger) {
             val initialState = js.Dynamic.literal(
               showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
