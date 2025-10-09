@@ -8,14 +8,18 @@ import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
-import uk.gov.homeoffice.drt.{Shift, ShiftMeta}
+import uk.gov.homeoffice.drt.{Shift, ShiftMeta, ShiftStaffRolling}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.service.staffing.{LegacyShiftAssignmentsService, ShiftAssignmentsService, ShiftMetaInfoService, ShiftsService}
+import uk.gov.homeoffice.drt.service.staffing.{
+  IShiftStaffRollingService,
+  LegacyShiftAssignmentsService, ShiftMetaInfoService, ShiftsService
+}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.util.ShiftUtil.localDateFromString
 
 import java.sql.Timestamp
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -161,7 +165,7 @@ case class MockAbFeatureDao() extends IABFeatureDao {
 }
 
 case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends ShiftMetaInfoService {
-    var mockShiftMetaSeq: Seq[ShiftMeta] = Seq.empty[ShiftMeta]
+  var mockShiftMetaSeq: Seq[ShiftMeta] = Seq.empty[ShiftMeta]
 
   override def insertShiftMetaInfo(shiftMeta: ShiftMeta): Future[Int] = {
     mockShiftMetaSeq = mockShiftMetaSeq :+ shiftMeta
@@ -182,6 +186,7 @@ case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends Shi
 
 case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyShiftAssignmentsService {
   var shiftsAssignments: Seq[StaffAssignmentLike] = shifts
+
   override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shiftsAssignments))
 
@@ -194,9 +199,8 @@ case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends
   }
 }
 
-case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
+case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends ShiftsService {
   var shiftSeq = Seq.empty[Shift]
-  var shiftRowSeq = Seq.empty[Shift]
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = {
     Future.successful(shiftSeq)
@@ -220,21 +224,18 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
 
-  override def getActiveShifts(port: String, terminal: String, date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
-
   override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
     val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
     Future.successful(shift)
   }
 
   override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] = {
-    val overlappingShifts = shiftSeq.filter(s =>
-      s.port == port && s.terminal == terminal &&
-        (s.startDate.compare(shift.startDate) < 0 || s.startDate.compare(shift.startDate) == 0) &&
-        (s.endDate.isEmpty || s.endDate.exists(_.compare(shift.startDate) > 0) &&
-          (s.startTime <= shift.endTime && s.endTime >= shift.startTime)
-          )
-    )
+    val overlappingShifts = shiftSeq.filter { s =>
+      s.port == port &&
+        s.terminal == terminal &&
+        (s.endDate.isEmpty || s.endDate.exists(_ > shift.startDate))
+    }.sortBy(_.startDate)
+
     Future.successful(overlappingShifts)
   }
 
@@ -244,11 +245,26 @@ case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends Shift
                                         startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]] =
     Future.successful(shiftSeq.filter(s => s.port == port && s.terminal == terminal && s.startDate == startDate && s.startTime == startTime).lastOption)
 
-  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift)(implicit ec: ExecutionContext): Future[(Shift, Option[Shift])] =
+  override def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift): Future[(Shift, Option[Shift])] =
     Future.successful((shiftRow, None))
 
   override def getActiveShiftsForViewRange(port: String,
                                            terminal: String,
                                            dayRange: Option[String],
                                            date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
+
+}
+
+case class MockShiftStaffRollingService()(implicit ec: ExecutionContext) extends IShiftStaffRollingService {
+  var shiftStaffRollingSeq = Seq.empty[ShiftStaffRolling]
+
+  override def upsertShiftStaffRolling(shiftStaffRolling: ShiftStaffRolling): Future[Int] = {
+    shiftStaffRollingSeq = shiftStaffRollingSeq :+ shiftStaffRolling
+    Future.successful(shiftStaffRollingSeq).map(_.size)
+  }
+
+  override def latestShiftStaffRolling(port: String, terminal: String): Future[Option[ShiftStaffRolling]] =
+    Future.successful(shiftStaffRollingSeq.filter(s => s.port == port && s.terminal == terminal).sortBy(_.updatedAt).headOption)
+
+
 }
