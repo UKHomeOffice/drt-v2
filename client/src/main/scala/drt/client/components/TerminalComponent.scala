@@ -34,7 +34,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import scala.collection.immutable.HashSet
+import scala.collection.immutable.{HashSet, SortedMap}
 
 object TerminalComponent {
 
@@ -163,13 +163,15 @@ object TerminalComponent {
 
                       val terminal = props.terminalPageTab.terminal
                       val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
-                      val queues = terminalModel.airportConfigPot.map { ac =>
+                      val queuesPot = terminalModel.airportConfigPot.map { ac =>
                         QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal)
                           .filterNot(_ == Transfer)
                           .toList
                       }
-                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, q)))
-                      val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, q)))
+                      val windowCrunchSummaries = queuesPot.flatMap(queues => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, queues)))
+                      val windowStaffRecs: Pot[SortedMap[Long, Int]] = queuesPot.flatMap(queues => ps.map(ps => ps.queueRecStaffSummary(viewStart, hoursToView * 4, viewInterval, terminal, queues)))
+                      val windowStaffDeps: Pot[SortedMap[Long, Option[Int]]] = queuesPot.flatMap(queues => ps.map(ps => ps.queueDepStaffSummary(viewStart, hoursToView * 4, viewInterval, terminal, queues)))
+                      val dayCrunchSummaries = queuesPot.flatMap(queues => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, queues)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, viewInterval, terminal).toMap)
 
                       val hasStaff = windowStaffSummaries.exists(_.values.exists(_.available > 0))
@@ -214,6 +216,8 @@ object TerminalComponent {
                           viewStart = viewStart,
                           hoursToView = hoursToView,
                           windowCrunchSummaries = windowCrunchSummaries,
+                          windowStaffRecs = windowStaffRecs,
+                          windowStaffDeps = windowStaffDeps,
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
                           addedStaffMovementMinutes = terminalModel.addedStaffMovementMinutes,

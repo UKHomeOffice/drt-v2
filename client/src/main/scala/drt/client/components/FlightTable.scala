@@ -60,7 +60,8 @@ object FlightTable {
   val ageGroups: js.Array[String] =
     js.Array(
       AgeRange(0, 9).title,
-      AgeRange(10, 24).title,
+      AgeRange(10, 17).title,
+      AgeRange(18, 24).title,
       AgeRange(25, 49).title,
       AgeRange(50, 65).title,
       AgeRange(65, None).title,

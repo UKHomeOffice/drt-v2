@@ -1,13 +1,10 @@
 package services
 
 import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
-import org.apache.pekko.actor.Actor
-import org.apache.pekko.pattern.after
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -16,7 +13,7 @@ import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+
 
 class PortStateSpec extends CrunchTestLike {
   "Given an initial PortState with some pax loads " +
@@ -117,14 +114,3 @@ class PortStateSpec extends CrunchTestLike {
   }
 }
 
-class SlowCrunchStateActor(maybeState: Option[PortState], delay: FiniteDuration) extends Actor {
-  implicit val ec: ExecutionContextExecutor = context.dispatcher
-
-  override def receive: Receive = {
-    case GetState =>
-      val replyTo = sender()
-      after(delay, context.system.scheduler)(
-        Future(replyTo ! maybeState)
-      )
-  }
-}
