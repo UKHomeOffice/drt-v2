@@ -28,8 +28,11 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
           Map(
             AgeRange(0, Option(9)) -> 1,
+            AgeRange(10, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 1,
-            AgeRange(25, Option(49)) -> 1
+            AgeRange(25, Option(49)) -> 1,
+            AgeRange(50, Option(65)) -> 0,
+            AgeRange(66, None) -> 0,
           ),
           Map(Nationality("GBR") -> 3),
           Map(
@@ -56,7 +59,14 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(AgeRange(25, Option(49)) -> 1),
+          Map(
+            AgeRange(0, Option(9)) -> 0,
+            AgeRange(10, Option(17)) -> 0,
+            AgeRange(18, Option(24)) -> 0,
+            AgeRange(25, Option(49)) -> 1,
+            AgeRange(50, Option(65)) -> 0,
+            AgeRange(66, None) -> 0,
+          ),
           Map(Nationality("GBR") -> 1),
           Map(
             PaxTypes.GBRNational -> 1,
@@ -87,7 +97,14 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(AgeRange(25, Option(49)) -> 6),
+          Map(
+            AgeRange(0, Option(9)) -> 0,
+            AgeRange(10, Option(17)) -> 0,
+            AgeRange(18, Option(24)) -> 0,
+            AgeRange(25, Option(49)) -> 6,
+            AgeRange(50, Option(65)) -> 0,
+            AgeRange(66, None) -> 0,
+          ),
           Map(Nationality("GBR") -> 6),
           Map(
             PaxTypes.GBRNational -> 2,
