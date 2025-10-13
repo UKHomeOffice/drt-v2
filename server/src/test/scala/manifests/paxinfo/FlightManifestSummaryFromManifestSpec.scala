@@ -8,6 +8,8 @@ import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.{PaxTypes, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
+import scala.collection.SortedMap
+
 
 class FlightManifestSummaryFromManifestSpec extends Specification {
 
@@ -26,7 +28,7 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(
+          SortedMap(
             AgeRange(0, Option(9)) -> 1,
             AgeRange(10, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 1,
@@ -59,7 +61,7 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(
+          SortedMap(
             AgeRange(0, Option(9)) -> 0,
             AgeRange(10, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 0,
@@ -97,7 +99,7 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(
+          SortedMap(
             AgeRange(0, Option(9)) -> 0,
             AgeRange(10, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 0,
