@@ -9,14 +9,14 @@ trait IShiftStaffRollingService {
   def upsertShiftStaffRolling(shiftStaffRolling: ShiftStaffRolling): Future[Int]
 
   def latestShiftStaffRolling(port: String, terminal: String): Future[Option[ShiftStaffRolling]]
-  
+
 }
 
-case class ShiftStaffRollingService(shiftStaffRollingDao : ShiftStaffRollingDao)(implicit ex: ExecutionContext) extends IShiftStaffRollingService {
+case class ShiftStaffRollingService(shiftStaffRollingDao: ShiftStaffRollingDao)(implicit ex: ExecutionContext) extends IShiftStaffRollingService {
 
   override def upsertShiftStaffRolling(shiftStaffRolling: ShiftStaffRolling): Future[Int] =
     shiftStaffRollingDao.upsertShiftStaffRolling(shiftStaffRolling)
 
   override def latestShiftStaffRolling(port: String, terminal: String): Future[Option[ShiftStaffRolling]] =
-    shiftStaffRollingDao.getShiftStaffRolling(port, terminal).map(_.sortBy(_.updatedAt).headOption)
+    shiftStaffRollingDao.latestShiftStaffRolling(port, terminal)
 }
