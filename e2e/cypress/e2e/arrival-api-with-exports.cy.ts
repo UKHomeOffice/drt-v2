@@ -101,7 +101,7 @@ describe('Arrival API with exports', () => {
 
     it('Allows you to view API splits in the flights export for users with api:view permission', () => {
         const dataWithoutActApi = csvRow("12", "51", eGatePax);
-        const actApiData = "19.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:24,AUS:10,ZWE:10,MRU:7\",\"25 to 49:51\"";
+        const actApiData = "19.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:24,AUS:10,ZWE:10,MRU:7\",\"0 to 9:0,10 to 17:0,18 to 24:0,25 to 49:51,50 to 65:0,66 and over:0\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
@@ -135,7 +135,7 @@ describe('Arrival API with exports', () => {
 
     it('uses live port feed for passenger numbers even if API is within 5% of the port feed', () => {
         const dataWithoutActApi = csvRow("12", "51", "26", "13");
-        const actApiData = "18.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"25 to 49:50\"";
+        const actApiData = "18.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"0 to 9:0,10 to 17:0,18 to 24:0,25 to 49:50,50 to 65:0,66 and over:0\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
