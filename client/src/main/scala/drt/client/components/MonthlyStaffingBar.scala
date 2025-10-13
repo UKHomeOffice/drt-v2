@@ -18,7 +18,7 @@ import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
@@ -154,68 +154,67 @@ object MonthlyStaffingBar {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MonthlyStaffingBar")
     .render_P { props =>
-      <.div(^.className := "staffing-controls-save",
-        <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
-          <.span(^.className := "staffing-controls-title",
-            <.strong(props.terminalPageTab.dayRangeType match {
-              case Some("monthly") => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
-              case Some("weekly") =>
-                val firstDayOfWeek = SDate.firstDayOfWeek(props.viewingDate)
-                val lastDayOfWeek = SDate.lastDayOfWeek(props.viewingDate)
-                if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
-                  val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
-                  s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
-                } else
-                  s"${SDate.firstDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
-              case Some("daily") => s"${props.viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
-              case _ => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
-            })),
-          <.span(^.className := "staffing-controls-title-options",
-            <.div(^.className := "staffing-controls-select",
-              drawSelect(
-                values = Seq("monthly", "weekly", "daily"),
-                names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
-                defaultValue = s"${props.dayRangeType}",
-                callback = (e: ReactEventFromInput) =>
-                  props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
-              )
-            ),
-            if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+      <.div(^.className := "staffing-bar",
+        <.div(^.className := "staffing-controls-save",
+          <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
+            <.span(^.className := "staffing-controls-title",
+              <.strong(props.terminalPageTab.dayRangeType match {
+                case Some("monthly") => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
+                case Some("weekly") =>
+                  val firstDayOfWeek = SDate.firstDayOfWeek(props.viewingDate)
+                  val lastDayOfWeek = SDate.lastDayOfWeek(props.viewingDate)
+                  if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
+                    val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
+                    s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                  } else
+                    s"${SDate.firstDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                case Some("daily") => s"${props.viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
+                case _ => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
+              })),
+            <.span(^.className := "staffing-controls-title-options",
               <.div(^.className := "staffing-controls-select",
                 drawSelect(
-                  values = monthOptions.map(_.toISOString),
-                  names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                  defaultValue = SDate.firstDayOfMonth(props.viewingDate).toISOString,
-                  callback = (e: ReactEventFromInput) => {
-                    props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                  }
-                ))
-            } else EmptyVdom,
-            <.div(^.className := "staffing-controls-navigation ",
-              handleNavigation(props, props.viewingDate)
+                  values = Seq("monthly", "weekly", "daily"),
+                  names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
+                  defaultValue = s"${props.dayRangeType}",
+                  callback = (e: ReactEventFromInput) =>
+                    props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
+                )
+              ),
+              if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+                <.div(^.className := "staffing-controls-select",
+                  drawSelect(
+                    values = monthOptions.map(_.toISOString),
+                    names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                    defaultValue = SDate.firstDayOfMonth(props.viewingDate).toISOString,
+                    callback = (e: ReactEventFromInput) => {
+                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                    }
+                  ))
+              } else EmptyVdom,
+              <.div(^.className := "staffing-controls-navigation ",
+                handleNavigation(props, props.viewingDate)
+              ),
+              <.div(^.className := "staffing-controls-select",
+                drawSelect(
+                  values = Seq("15", "30", "60"),
+                  names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
+                  defaultValue = s"${props.timeSlotMinutes}",
+                  callback = (e: ReactEventFromInput) =>
+                    props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
+                )
+              ),
             ),
-            <.div(^.className := "staffing-controls-select",
-              drawSelect(
-                values = Seq("15", "30", "60"),
-                names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
-                defaultValue = s"${props.timeSlotMinutes}",
-                callback = (e: ReactEventFromInput) =>
-                  props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
-              )
-            ),
-            MuiButton(color = Color.primary,
-              variant = "outlined",
-              size = "small",
-              sx = SxProps(Map("backgroundColor" -> "white")))
-            (MuiIcons(Groups)(fontSize = "large"),
-              <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
-              VdomAttr("data-cy") := "edit-staff-button",
-              ^.onClick ==> props.handleShiftEditForm),
-            MuiButton(color = Color.primary, variant = "contained")
-            (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-              ^.onClick ==> props.confirmAndSave())
-          )),
-      )
+          ),
+        ), <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "align-items" -> "center"),
+          MuiButton(color = Color.secondary, variant = "contained")
+          (<.span("Edit staff"),
+            VdomAttr("data-cy") := "edit-staff-button",
+            ^.onClick ==> props.handleShiftEditForm),
+          MuiButton(color = Color.primary, variant = "contained")
+          (<.span("Save staff updates"),
+            ^.onClick ==> props.confirmAndSave())
+        ))
     }
     .configure(Reusability.shouldComponentUpdate)
     .build

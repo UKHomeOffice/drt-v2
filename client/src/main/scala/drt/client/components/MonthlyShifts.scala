@@ -217,7 +217,7 @@ object MonthlyShifts {
                 ),
                 <.div(^.className := "terminal-staffing-content-header",
                   MuiButton(color = Color.primary, variant = "contained")
-                  (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
+                  (<.span("Save staff updates"),
                     ^.onClick ==> confirmAndSaveShifts(state.shiftSummaries, state.changedAssignments, props, state, scope))
                 )
               )
