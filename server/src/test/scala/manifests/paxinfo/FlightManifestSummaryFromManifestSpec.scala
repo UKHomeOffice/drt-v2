@@ -8,6 +8,8 @@ import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.{PaxTypes, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
+import scala.collection.SortedMap
+
 
 class FlightManifestSummaryFromManifestSpec extends Specification {
 
@@ -26,10 +28,13 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(
+          SortedMap(
             AgeRange(0, Option(9)) -> 1,
+            AgeRange(10, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 1,
-            AgeRange(25, Option(49)) -> 1
+            AgeRange(25, Option(49)) -> 1,
+            AgeRange(50, Option(65)) -> 0,
+            AgeRange(66, None) -> 0,
           ),
           Map(Nationality("GBR") -> 3),
           Map(
@@ -56,7 +61,14 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(AgeRange(25, Option(49)) -> 1),
+          SortedMap(
+            AgeRange(0, Option(9)) -> 0,
+            AgeRange(10, Option(17)) -> 0,
+            AgeRange(18, Option(24)) -> 0,
+            AgeRange(25, Option(49)) -> 1,
+            AgeRange(50, Option(65)) -> 0,
+            AgeRange(66, None) -> 0,
+          ),
           Map(Nationality("GBR") -> 1),
           Map(
             PaxTypes.GBRNational -> 1,
@@ -87,7 +99,14 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ManifestKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
-          Map(AgeRange(25, Option(49)) -> 6),
+          SortedMap(
+            AgeRange(0, Option(9)) -> 0,
+            AgeRange(10, Option(17)) -> 0,
+            AgeRange(18, Option(24)) -> 0,
+            AgeRange(25, Option(49)) -> 6,
+            AgeRange(50, Option(65)) -> 0,
+            AgeRange(66, None) -> 0,
+          ),
           Map(Nationality("GBR") -> 6),
           Map(
             PaxTypes.GBRNational -> 2,
