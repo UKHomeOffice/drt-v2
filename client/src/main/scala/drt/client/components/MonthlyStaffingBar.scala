@@ -89,7 +89,7 @@ case class ConfirmAndSaveForMonthlyShifts(shiftsData: Seq[ShiftSummaryStaffing],
 
     if (confirm(s"You have updated staff for ${MonthlyStaffingBar.whatDayChanged(changedAssignments)} $updatedMonth - do you want to save these changes?")) {
       GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
-        "Save Monthly Staffing",
+        "Save monthly staffing",
         s"updated staff for ${MonthlyStaffingBar.whatDayChanged(changedAssignments)} $updatedMonth")
       SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
       scope.modState(state => state.copy(changedAssignments = Seq.empty[StaffTableEntry])).runNow()
@@ -233,12 +233,12 @@ object MonthlyStaffingBar {
             VdomAttr("data-cy") := "edit-staff-button",
             ^.onClick ==> props.handleShiftEditForm),
           if (props.isShiftsEmpty)
-            MuiButton(color = Color.primary, variant = "contained")
-            (<.span("Create Shift pattern"),
+            MuiButton(color = Color.secondary, variant = "contained")
+            (<.span("Create shift pattern"),
               ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
           else
-            MuiButton(color = Color.primary, variant = "contained")
-            (<.span("Add Shift"),
+            MuiButton(color = Color.secondary, variant = "contained")
+            (<.span("Add shift"),
               ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts"))),
           MuiButton(color = Color.primary, variant = "contained")
           (<.span("Save staff updates"),
