@@ -8,8 +8,9 @@ import drt.client.components.StaffingUtil.navigationDates
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.client.services.handlers.UpdateUserPreferences
 import drt.shared.StaffAssignment
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormControl, MuiSwitch, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -22,6 +23,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
+import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -127,7 +129,9 @@ object MonthlyStaffingBar {
                    airportConfig: AirportConfig,
                    timeSlots: Seq[Seq[Any]],
                    handleShiftEditForm: ReactEventFromInput => Callback,
-                   confirmAndSave: ConfirmAndSave
+                   confirmAndSave: ConfirmAndSave,
+                   isShiftsEmpty: Boolean,
+                   userPreferences: UserPreferences
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -154,6 +158,10 @@ object MonthlyStaffingBar {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MonthlyStaffingBar")
     .render_P { props =>
+      def handleShiftViewToggle(): Callback = {
+        Callback(SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView))))
+      }
+
       <.div(^.className := "staffing-bar",
         <.div(^.className := "staffing-controls-save",
           <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
@@ -204,6 +212,19 @@ object MonthlyStaffingBar {
                     props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
                 )
               ),
+              if (props.isShiftsEmpty)
+                EmptyVdom
+              else
+                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
+                  MuiTypography(sx = SxProps(Map("paddingTop" -> "5px")))("Show shifts"),
+                  MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
+                    MuiSwitch(
+                      defaultChecked = props.userPreferences.showStaffingShiftView,
+                      color = Color.primary,
+                      inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
+                    )(^.onChange --> handleShiftViewToggle),
+                  ),
+                )
             ),
           ),
         ), <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "align-items" -> "center"),
@@ -211,6 +232,14 @@ object MonthlyStaffingBar {
           (<.span("Edit staff"),
             VdomAttr("data-cy") := "edit-staff-button",
             ^.onClick ==> props.handleShiftEditForm),
+          if (props.isShiftsEmpty)
+            MuiButton(color = Color.primary, variant = "contained")
+            (<.span("Create Shift pattern"),
+              ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
+          else
+            MuiButton(color = Color.primary, variant = "contained")
+            (<.span("Add Shift"),
+              ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts"))),
           MuiButton(color = Color.primary, variant = "contained")
           (<.span("Save staff updates"),
             ^.onClick ==> props.confirmAndSave())
@@ -226,5 +255,7 @@ object MonthlyStaffingBar {
             timeSlots: Seq[Seq[Any]],
             handleShiftEditForm: ReactEventFromInput => Callback,
             confirmAndSave: ConfirmAndSave,
-           ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave))
+            isShiftsEmpty: Boolean,
+            userPreferences: UserPreferences
+           ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave, isShiftsEmpty, userPreferences))
 }
