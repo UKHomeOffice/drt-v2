@@ -332,13 +332,11 @@ object TerminalDesksAndQueues {
 
   private def adminRecalcButton(requestRecalc: () => Callback, label: String): VdomTagOf[Div] = {
     <.div(^.className := "re-crunch", MuiButton(
-      variant = "outlined",
+      variant = "contained",
       size = "medium",
-      color = Color.primary,
-    )(MuiIcons(RefreshOutlined)(),
-      ^.onClick --> requestRecalc(),
-      label)
-    )
+      color = Color.secondary,
+    )(^.onClick --> requestRecalc(),
+      label))
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")

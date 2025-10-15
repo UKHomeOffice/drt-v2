@@ -91,7 +91,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         <.div(
           ^.className := "export-button-wrapper",
           MuiButton(color = Color.secondary, variant = "contained", sx = SxProps(Map("fontWeight" -> "normal")))(
-            MuiIcons(GetApp)(fontSize = "small"),
             "Multi Day Export",
             VdomAttr("data-toggle") := "modal",
             VdomAttr("data-target") := "#multi-day-export",

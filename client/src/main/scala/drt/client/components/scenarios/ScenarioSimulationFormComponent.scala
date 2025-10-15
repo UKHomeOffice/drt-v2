@@ -291,7 +291,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             submitButton(showCharts, state.simulationFormFields),
             MuiButton(
               variant = MuiButton.Variant.contained,
-              color = MuiButton.Color.primary,
+              color = MuiButton.Color.secondary,
             )(
               ^.className := "button",
               ^.target := "_blank",
@@ -306,7 +306,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
   private def submitButton(showCharts: Callback, form: SimulationFormFields): WithPropsAndTagsMods = {
     val (colour, callback) = if (form.isValid)
-      (MuiButton.Color.primary, showCharts)
+      (MuiButton.Color.secondary, showCharts)
     else
       (MuiButton.Color.secondary, Callback.empty)
 

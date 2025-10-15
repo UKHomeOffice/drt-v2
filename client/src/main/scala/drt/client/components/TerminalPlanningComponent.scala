@@ -235,7 +235,7 @@ object TerminalPlanningComponent {
     if (isPreparing)
       Seq(MuiCircularProgress(size = "28px")(), "Preparing... please wait")
     else
-      Seq(MuiIcons(GetApp)(), labelText)
+      Seq(labelText)
 
   private def buttonWithProgress(url: String,
                                  label: Seq[TagMod],

@@ -177,8 +177,7 @@ object TerminalContentComponent {
                 props.terminalPageTab.dateFromUrlOrNow,
                 props.loggedInUser,
                 props.viewMode),
-              MuiButton(color = Color.primary, variant = "outlined")(
-                MuiIcons(GetApp)(fontSize = "small"),
+              MuiButton(color = Color.secondary, variant = "contained")(
                 "Advanced Downloads",
                 ^.onClick ==> handleMenuOpen
               ),
@@ -341,10 +340,8 @@ object TerminalContentComponent {
     val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
     <.div(
       ^.key := keyValue,
-      MuiButton(color = Color.secondary, size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-        MuiIcons(GetApp)(),
+      MuiButton(color = Color.secondary, variant = "contained", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
         s" ${exportType.linkLabel}",
-        maybeExtraIcon.getOrElse(EmptyVdom),
         ^.href := exportUrl,
         ^.target := "_blank",
         ^.id := s"export-day-${exportType.toUrlString}",
