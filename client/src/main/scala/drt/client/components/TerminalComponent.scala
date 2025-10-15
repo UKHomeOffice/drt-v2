@@ -263,8 +263,8 @@ object TerminalComponent {
                         props.terminalPageTab.queryParams.get("date"),
                         props.router))
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
-                      <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, userPreferences, props.router))
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" || props.terminalPageTab.subMode == "addShift" =>
+                      <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, userPreferences, props.terminalPageTab.subMode, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, shifts.isEmpty, false))

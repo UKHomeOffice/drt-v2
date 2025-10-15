@@ -64,6 +64,7 @@ GET           /logged-in                                                        
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
+POST          /shifts/add                                                             controllers.application.ShiftsController.addShift
 POST          /shifts/update/:previousName                                            controllers.application.ShiftsController.updateShift(previousName: String)
 #GET           /shifts/:terminal/:date                                                 controllers.application.ShiftsController.getActiveShiftsForDate(terminal: String, date: String)
 GET           /shifts/:terminal/:dayRange/:date                                       controllers.application.ShiftsController.getActiveShiftsForViewRange(terminal: String, dayRange: String, date: String)

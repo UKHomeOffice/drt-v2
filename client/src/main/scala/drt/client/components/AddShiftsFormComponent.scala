@@ -39,6 +39,7 @@ trait ShiftFormProps extends js.Object {
   var shiftForms: js.Array[ShiftForm] = js.native
   var confirmHandler: js.Function1[js.Array[ShiftForm], Unit] = js.native
   var isEditingPersistedShift: Boolean = js.native
+  var addSingleShift: Boolean = js.native
 }
 
 object ShiftFormProps {
@@ -46,7 +47,10 @@ object ShiftFormProps {
             terminal: String,
             interval: Int,
             initialShifts: Seq[ShiftForm],
-            confirmHandler: Seq[ShiftForm] => Unit, isEdit: Boolean): ShiftFormProps = {
+            confirmHandler: Seq[ShiftForm] => Unit,
+            isEdit: Boolean,
+            addSingleShift: Boolean
+           ): ShiftFormProps = {
     val p = (new js.Object).asInstanceOf[ShiftFormProps]
     p.port = port
     p.terminal = terminal
@@ -54,6 +58,7 @@ object ShiftFormProps {
     p.shiftForms = initialShifts.toJSArray
     p.confirmHandler = (shiftForms: js.Array[ShiftForm]) => confirmHandler(shiftForms.toSeq)
     p.isEditingPersistedShift = isEdit
+    p.addSingleShift = addSingleShift
     p
   }
 }

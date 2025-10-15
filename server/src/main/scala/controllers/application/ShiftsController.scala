@@ -238,4 +238,47 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       }
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
+
+  def addShift(): Action[AnyContent] = Action.async { request =>
+    request.body.asText.map { text =>
+      try {
+        val newShift = shiftFromJson(text)
+        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, newShift.startDate).flatMap {
+          case Some(_) =>
+            Future.successful(BadRequest(s"Shift with name ${newShift.shiftName} already exists on ${newShift.startDate}"))
+          case None =>
+            ctrl.shiftsService.saveShift(Seq(newShift)).flatMap { _ =>
+              shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+                ctrl.shiftsService.getOverlappingStaffShifts(newShift.port, newShift.terminal, newShift)
+                  .flatMap { overridingShifts =>
+                    val updatedAssignments = StaffingUtil.addAssignments(
+                      newShift = newShift,
+                      overridingShift = overridingShifts,
+                      allShifts = allShiftAssignments)
+                    shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+                      ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffingRollingWhileEditing(newShift))
+                      Ok(write(s))
+                    }.recoverWith {
+                      case e: Exception =>
+                        log.error(s"Failed to add new shift with assignments: ", e.printStackTrace())
+                        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+                    }
+                  }
+              }.recoverWith {
+                case e: Exception =>
+                  log.error(s"Failed to get all shifts assignments: ", e.printStackTrace())
+                  Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+              }
+            }.recoverWith {
+              case e: Exception =>
+                log.error(s"Failed to create new shift: ", e.printStackTrace())
+                Future.successful(BadRequest(s"Failed to create new shift: ${e.getMessage}"))
+            }
+        }
+      }
+      catch {
+        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+      }
+    }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
+  }
 }
