@@ -138,12 +138,12 @@ object EgatesScheduleEditor {
                         ^.defaultValue := SDate(editing.update.effectiveFrom).toLocalDateTimeString,
                         ^.onChange ==> setDate
                       ),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")("Add bank", ^.onClick ==> addBank()),
+                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank()),
                       editing.update.banks.zipWithIndex.map { case (egateBank, bankIdx) =>
                         MuiGrid(item = true, container = true, spacing = 1)(
                           <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px", "padding" -> "8px", "alignItems" -> "center"),
                             s"Bank ${bankIdx + 1}",
-                            MuiButton(color = Color.primary, variant = "outlined", size = "small")(^.onClick ==> removeBank(bankIdx))
+                            MuiButton(color = Color.secondary, variant = "contained", size = "small")(MuiIcons(Delete)(fontSize = "small"), ^.onClick ==> removeBank(bankIdx))
                           ),
                           MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
                             MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(

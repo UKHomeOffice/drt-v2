@@ -125,16 +125,16 @@ object FeedsStatusPage {
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
               ThemeProvider(DrtReactTheme)(
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())
                 ),
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Lookup missing historic splits", ^.onClick --> requestMissingHistoricSplitsLookup())
                 ),
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Lookup missing forecast pax nos", ^.onClick --> requestMissingPaxNos())
                 ),
               )

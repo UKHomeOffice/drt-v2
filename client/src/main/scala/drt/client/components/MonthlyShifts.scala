@@ -126,9 +126,9 @@ object MonthlyShifts {
             MuiTypography(variant = "h2")
             (s"Monthly staffing"),
             <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
-              MuiTypography(sx = SxProps(Map("paddingRight" -> "10px", "marginBottom" -> "0")))("Show shifts"),
               MuiFormControl()(
                 MuiSwitch(
+                  label = "Show shifts",
                   defaultChecked = props.userPreferences.showStaffingShiftView,
                   color = Color.primary,
                   inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
