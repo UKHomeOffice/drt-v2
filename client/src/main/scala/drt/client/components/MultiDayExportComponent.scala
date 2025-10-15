@@ -90,10 +90,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       if (props.loggedInUser.hasRole(BorderForceStaff))
         <.div(
           ^.className := "export-button-wrapper",
-          MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-            MuiIcons(GetApp)(fontSize = "large"),
+          MuiButton(color = Color.secondary, variant = "contained", sx = SxProps(Map("fontWeight" -> "normal")))(
             "Multi Day Export",
-            ^.className := "btn btn-default",
             VdomAttr("data-toggle") := "modal",
             VdomAttr("data-target") := "#multi-day-export",
             ^.href := "#",

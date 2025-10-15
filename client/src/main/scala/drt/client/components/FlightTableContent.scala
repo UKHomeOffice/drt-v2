@@ -113,12 +113,12 @@ object FlightTableContent {
                   MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
                 },
                 <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
-                  MuiTypography()("Show pax data descriptions"),
+                  MuiTypography(sx = SxProps(Map("marginBottom" -> "0 !important")))("Show pax data descriptions"),
                   MuiFormControl()(
                     MuiSwitch(defaultChecked = !props.userPreferences.hidePaxDataSourceDescription)
                     (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e, props.userPreferences)))
                   ),
-                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
+                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px", "marginBottom" -> "0 !important")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
                 )
               ),
               <.div(
@@ -178,7 +178,7 @@ object FlightTableContent {
           }
           else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
             if (flights.isEmpty) {
-              <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
+              <.div(^.style := js.Dictionary(),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
                 (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
             } else {

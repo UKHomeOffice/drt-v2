@@ -10,7 +10,7 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography, MuiGrid}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
@@ -52,12 +52,19 @@ object TerminalStaffing {
               .filter(sm => !props.removedStaffMovements.contains(sm.uUID))
             <.div(
               MuiTypography(variant = "h2")(s"Staff movements"),
-              <.div(^.className := "container",
-                <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
-                <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
+              MuiGrid(container = true, spacing = 2)(
+                MuiGrid(item = true, xs = 12, md = 3)(
+                  FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))
+                ),
+                MuiGrid(item = true, xs = 12, md = 4)(
+                  movementsEditor(movementsForTheDay, props.terminal)
+                )
               ),
-              <.div(^.className := "container",
-                <.div(^.className := "col-md-10", staffOverTheDay(props.viewMode.localDate, movementsForTheDay, legacyDayOfShiftAssignments, props.terminal)))
+              MuiGrid(container = true, spacing = 2)(
+                MuiGrid(item = true, xs = 12, md = 10)(
+                  staffOverTheDay(props.viewMode.localDate, movementsForTheDay, legacyDayOfShiftAssignments, props.terminal)
+                )
+              )
             )
           }
         }
