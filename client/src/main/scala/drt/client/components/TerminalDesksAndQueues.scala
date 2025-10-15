@@ -31,6 +31,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.immutable.SortedMap
 import scala.scalajs.js
 
 object TerminalDesksAndQueues {
@@ -54,6 +55,8 @@ object TerminalDesksAndQueues {
                    loggedInUser: LoggedInUser,
                    featureFlags: FeatureFlags,
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
+                   windowStaffRecs: Pot[Map[Long, Int]],
+                   windowStaffDeps: Pot[Map[Long, Option[Int]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
@@ -247,6 +250,8 @@ object TerminalDesksAndQueues {
       <.div {
         val renderPot = for {
           windowCrunchMinutes <- props.windowCrunchSummaries
+          windowStaffRecs <- props.windowStaffRecs
+          windowStaffDeps <- props.windowStaffDeps
           windowStaffMinutes <- props.windowStaffSummaries
           dayCrunchMinutes <- props.dayCrunchSummaries
           slaConfigs <- props.slaConfigs
@@ -298,6 +303,8 @@ object TerminalDesksAndQueues {
                       val rowProps = TerminalDesksAndQueuesRow.Props(
                         minuteMillis = millis,
                         queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
+                        staffRec = windowStaffRecs.getOrElse(millis, 0),
+                        staffDep = windowStaffDeps.getOrElse(millis, None),
                         staffMinute = staffMinutesWithLocalUpdates(props.addedStaffMovementMinutes, windowStaffMinutes.getOrElse(millis, StaffMinute.empty)),
                         maxPaxInQueues = maxPaxInQueues,
                         airportConfig = props.airportConfig,

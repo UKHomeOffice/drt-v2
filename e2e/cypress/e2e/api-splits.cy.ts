@@ -76,7 +76,14 @@ describe('API splits', () => {
           "voyageNumber": {"$type": "uk.gov.homeoffice.drt.arrivals.VoyageNumber", "numeric": 123},
           "scheduled": scheduledTime.unix() * 1000
         },
-        "ageRanges": [["25-49", 2]],
+        "ageRanges": [
+          ["0 to 9", 0],
+          ["10 to 17", 0],
+          ["18 to 24", 0],
+          ["25 to 49", 2],
+          ["50 to 65", 0],
+          ["66 and over", 0],
+        ],
         "nationalities": [[{"code": "GBR"}, 2]],
         "paxTypes": [["GBRNational", 2]]
       }]
@@ -118,8 +125,12 @@ describe('API splits', () => {
         },
 
         "ageRanges": [
-          ["0-9", 1],
-          ["25-49", 10]
+          ["0 to 9", 1],
+          ["10 to 17", 0],
+          ["18 to 24", 0],
+          ["25 to 49", 10],
+          ["50 to 65", 0],
+          ["66 and over", 0],
         ],
 
         "nationalities": [
@@ -168,4 +179,3 @@ describe('API splits', () => {
   });
 
 });
-

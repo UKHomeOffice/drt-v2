@@ -6,7 +6,7 @@ import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
-import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.{europeLondonTimeZone, utcTimeZone}
@@ -97,13 +97,53 @@ class PortStateSummariesSpec extends Specification {
     val summary: Map[MillisSinceEpoch, StaffMinute] = portState.staffSummary(SDate(0L), periods, periodSize, terminal)
 
     val expected = Map(
-      0L -> StaffMinute(terminal, 0, 0, 14, 14),
-      15L * 60000 -> StaffMinute(terminal, 15 * 60000, 15, 29, 29),
+      0L * 60000 -> StaffMinute(terminal, 0, 14, 14, 14),
+      15L * 60000 -> StaffMinute(terminal, 15 * 60000, 29, 29, 29),
       30L * 60000 -> StaffMinute(terminal, 30 * 60000, 0, 0, 0),
       45L * 60000 -> StaffMinute(terminal, 45 * 60000, 0, 0, 0)
     )
 
     summary === expected
+  }
+
+  "staffPeriodSummary should return the highest available staff using minute as a tie breaker to be deterministic" >> {
+    "Given 2 staff minutes where the first has the highest available staff" >> {
+      val m1 = StaffMinute(T1, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 1, 1)
+      val m2 = StaffMinute(T1, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 1, 1)
+      val ps = PortState(List(), List(), List(m1, m2))
+      ps.staffPeriodSummary(T1, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m1
+    }
+    "Given 2 staff minutes where the second has the highest available staff" >> {
+      val m1 = StaffMinute(T1, SDate("2025-09-16T10:00").millisSinceEpoch, 3, 1, 1)
+      val m2 = StaffMinute(T1, SDate("2025-09-16T10:15").millisSinceEpoch, 5, 1, 1)
+      val ps = PortState(List(), List(), List(m1, m2))
+      ps.staffPeriodSummary(T1, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m2.copy(minute = m1.minute)
+    }
+    "Given 2 staff minutes where the second has higher shifts but higher negative movements" >> {
+      val m1 = StaffMinute(T1, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 1, -4)
+      val m2 = StaffMinute(T1, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 1, 1)
+      val ps = PortState(List(), List(), List(m1, m2))
+      ps.staffPeriodSummary(T1, SDate("2025-09-16T10:00").millisSinceEpoch, List(m1, m2)) === m2.copy(minute = m1.minute)
+    }
+  }
+
+  "crunchPeriodSummary should use the highest total of desks from each period, not the sum of the highest desks" >> {
+    "Given 2 crunch minutes where the first has the highest desks" >> {
+      val m1e = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 10, 5, 1, None)
+      val m2e = CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 10, 7, 1, None)
+
+      val m1n = CrunchMinute(T1, NonEeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 5, 10, 6, 1, None)
+      val m2n = CrunchMinute(T1, NonEeaDesk, SDate("2025-09-16T10:15").millisSinceEpoch, 3, 10, 1, 1, None)
+
+      val ps = PortState(List(), List(m1e, m1n, m2e, m2n), List())
+
+      ps.crunchSummary(SDate("2025-09-16T10:00"), 1, 30, T1, Seq(EeaDesk, NonEeaDesk)) === SortedMap(
+        SDate("2025-09-16T10:00").millisSinceEpoch -> Map(
+          EeaDesk -> CrunchMinute(T1, EeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 8, 20, 7, 1, None),
+          NonEeaDesk -> CrunchMinute(T1, NonEeaDesk, SDate("2025-09-16T10:00").millisSinceEpoch, 8, 20, 6, 1, None),
+        )
+      )
+    }
   }
 
   "PortState " should {

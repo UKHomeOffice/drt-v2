@@ -38,7 +38,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   with UserFeedBackProviderLike
   with ABFeatureProviderLike
   with ShiftsProviderLike
-  with ShiftMetaInfoProviderLike {
+  with ShiftMetaInfoProviderLike
+  with ShiftStaffRollingProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
