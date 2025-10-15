@@ -159,6 +159,7 @@ object MonthlyStaffingBar {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MonthlyStaffingBar")
     .render_P { props =>
       def handleShiftViewToggle(): Callback = {
+        Callback(GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Shift View Toggle", s"${!props.userPreferences.showStaffingShiftView}"))
         Callback(SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView))))
       }
 

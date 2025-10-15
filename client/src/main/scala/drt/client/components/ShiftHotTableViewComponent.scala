@@ -156,6 +156,7 @@ trait ShiftHotTableViewProps extends js.Object {
   var shiftSummaries: js.Array[ShiftSummaryStaffing] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
   var handleEditShift: js.Function2[Int, ShiftSummary, Unit] = js.native
+  var sendEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
 }
 
 object ShiftHotTableViewProps {
@@ -164,7 +165,8 @@ object ShiftHotTableViewProps {
             interval: Int,
             initialShifts: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
-            handleEditShift: (Int, ShiftSummary) => Unit
+            handleEditShift: (Int, ShiftSummary) => Unit,
+            sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.shiftDate = shiftDate
@@ -174,6 +176,7 @@ object ShiftHotTableViewProps {
     p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)
+    p.sendEvent = sendEvent
     p
   }
 }

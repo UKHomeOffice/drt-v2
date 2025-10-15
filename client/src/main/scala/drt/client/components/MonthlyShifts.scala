@@ -7,6 +7,7 @@ import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyShiftsUtil.{updateAssignments, updateChangeAssignment}
 import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.{GetShifts, UpdateUserPreferences}
@@ -192,10 +193,18 @@ object MonthlyShifts {
                         "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"
                       )
                     )).runNow()
-                  }
+                  },
+                  sendEvent = GoogleEventTracker.sendEvent
                 ))
               ),
-              <.div(^.className := "terminal-staffing-content-header",
+              <.div(^.className := "terminal-staffing-content-footer",
+                MuiButton(color = Color.secondary, variant = "contained")
+                (<.span("Edit staff"),
+                  VdomAttr("data-cy") := "edit-staff-button",
+                  ^.onClick ==> handleShiftEditForm),
+                  MuiButton(color = Color.secondary, variant = "contained")
+                  (<.span("Add shift"),
+                    ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "addShift"))),
                 MuiButton(color = Color.primary, variant = "contained")
                 (<.span("Save staff updates"),
                   ^.onClick ==> confirmAndSaveShifts(state.shiftSummaries, state.changedAssignments, props, state, scope))
