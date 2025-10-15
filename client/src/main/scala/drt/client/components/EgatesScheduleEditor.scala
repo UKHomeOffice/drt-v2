@@ -201,9 +201,11 @@ object EgatesScheduleEditor {
                   ),
                   MuiGrid(item = true, xs = 4)(
                     <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(
+                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
+                        MuiIcons(Edit)(fontSize = "small"),
                         ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(
+                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
+                        MuiIcons(Delete)(fontSize = "small"),
                         ^.onClick --> deleteUpdates(updates.effectiveFrom)),
                     )
                   )
