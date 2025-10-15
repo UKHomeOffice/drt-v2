@@ -179,7 +179,7 @@ object EgatesScheduleEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Effective from")),
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Open gates per bank")),
                 MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
-                  MuiButton(color = Color.primary, variant = "outlined")(
+                  MuiButton(color = Color.secondary, variant = "contained")(
                     "Add e-Gates change",
                     ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today)))))),
               ),
