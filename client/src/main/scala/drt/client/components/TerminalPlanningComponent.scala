@@ -172,6 +172,7 @@ object TerminalPlanningComponent {
                   <.div(^.className := "hstack",
                     MuiFormLabel(sx = SxProps(Map("size" -> "16px",
                       "paddingRight" -> "10px",
+                      "marginBtotom" -> "0px !important",
                       "color" -> DrtReactTheme.palette.grey.`900`,
                       "fontWeight" -> "bold")))(<.span("Time Period")),
                     MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
