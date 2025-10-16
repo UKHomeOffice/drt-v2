@@ -16,8 +16,8 @@ object ConfirmDialog {
         MuiDialog(open = true)(
           MuiDialogTitle()(props.actionText),
           MuiDialogActions()(
-            MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Cancel", ^.onClick --> props.onCancel()),
-            MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Confirm", ^.onClick --> props.onConfirm()),
+            MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> props.onCancel()),
+            MuiButton(color = Color.primary, variant = "outlined")("Confirm", ^.onClick --> props.onConfirm()),
           )
         )
       }

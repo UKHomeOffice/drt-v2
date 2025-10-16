@@ -16,7 +16,14 @@ object AgeRangeDataFromManifestsSpec extends Specification {
 
       val result = PassengerInfo.manifestToAgeRangeCount(manifest)
 
-      val expected = Map(AgeRange(0, Option(9)) -> 1)
+      val expected = Map(
+        AgeRange(0, Option(9)) -> 1,
+        AgeRange(10, Option(17)) -> 0,
+        AgeRange(18, Option(24)) -> 0,
+        AgeRange(25, Option(49)) -> 0,
+        AgeRange(50, Option(65)) -> 0,
+        AgeRange(66, None) -> 0,
+      )
 
       result === expected
     }
@@ -32,7 +39,10 @@ object AgeRangeDataFromManifestsSpec extends Specification {
       val expected = Map(
         AgeRange(0, Option(9)) -> 1,
         AgeRange(10, Option(17)) -> 1,
-        AgeRange(25, Option(49)) -> 1
+        AgeRange(18, Option(24)) -> 0,
+        AgeRange(25, Option(49)) -> 1,
+        AgeRange(50, Option(65)) -> 0,
+        AgeRange(66, None) -> 0,
       )
 
       result === expected
@@ -52,8 +62,13 @@ object AgeRangeDataFromManifestsSpec extends Specification {
       val result = PassengerInfo.manifestToAgeRangeCount(apiSplit)
 
       val expected = Map(
+        AgeRange(0, Option(9)) -> 0,
+        AgeRange(10, Option(17)) -> 0,
+        AgeRange(18, Option(24)) -> 0,
+        AgeRange(25, Option(49)) -> 1,
+        AgeRange(50, Option(65)) -> 0,
+        AgeRange(66, None) -> 0,
         UnknownAge -> 2,
-        AgeRange(25, Option(49)) -> 1
       )
 
       result === expected
@@ -70,7 +85,14 @@ object AgeRangeDataFromManifestsSpec extends Specification {
 
       val result = PassengerInfo.manifestToAgeRangeCount(manifest)
 
-      val expected = Map(AgeRange(0, Option(11)) -> 1)
+      val expected = Map(
+        AgeRange(0, Option(11)) -> 1,
+        AgeRange(12, Option(17)) -> 0,
+        AgeRange(18, Option(24)) -> 0,
+        AgeRange(25, Option(49)) -> 0,
+        AgeRange(50, Option(65)) -> 0,
+        AgeRange(66, None) -> 0,
+      )
 
       result === expected
     }
@@ -86,7 +108,10 @@ object AgeRangeDataFromManifestsSpec extends Specification {
       val expected = Map(
         AgeRange(0, Option(11)) -> 1,
         AgeRange(12, Option(17)) -> 1,
-        AgeRange(25, Option(49)) -> 1
+        AgeRange(18, Option(24)) -> 0,
+        AgeRange(25, Option(49)) -> 1,
+        AgeRange(50, Option(65)) -> 0,
+        AgeRange(66, None) -> 0,
       )
 
       result === expected

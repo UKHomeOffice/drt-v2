@@ -79,7 +79,7 @@ object FeedsStatusPage {
               if (feed.feedSource.name == "API")
                 <.h3(<.div(^.className := "flex-horizontally", feed.feedSource.displayName, apiDataTooltip))
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.primary)(MuiIcons(RefreshOutlined)(fontSize = "large"), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "contained", size = "small", color = Color.secondary)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
                 <.h3("Live arrival")
               else
@@ -125,16 +125,16 @@ object FeedsStatusPage {
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
               ThemeProvider(DrtReactTheme)(
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())
                 ),
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Lookup missing historic splits", ^.onClick --> requestMissingHistoricSplitsLookup())
                 ),
-                MuiButton(variant = "outlined", color = Color.primary)(
+                MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Lookup missing forecast pax nos", ^.onClick --> requestMissingPaxNos())
                 ),
               )
