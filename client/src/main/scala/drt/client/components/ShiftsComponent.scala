@@ -52,11 +52,11 @@ object ShiftsComponent {
           createdAt = System.currentTimeMillis()
         ))
         props.shiftAction match {
-          case "createShifts" => // No action needed, we are editing existing shifts
+          case "createShifts" =>
             SPACircuit.dispatch(SaveShifts(staffShifts))
             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "save")).runNow()
 
-          case "addShift" => // Default action is to create new shifts, so we delete existing shifts for the terminal first
+          case "addShift" =>
             SPACircuit.dispatch(AddShift(staffShifts.headOption))
             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "added")).runNow()
 
