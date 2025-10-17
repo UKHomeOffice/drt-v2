@@ -67,14 +67,14 @@ object ShiftsComponent {
         props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map("shifts" -> "created"))).runNow()
       }
 
-      <.div(AddShiftsFormComponent(
+      <.div(ShiftsFormComponent(
         ShiftFormProps(props.portCode,
           props.terminal.toString,
           30,
           Seq.empty[ShiftForm],
           confirmHandler,
-          isEdit = false,
-          addSingleShift = props.shiftAction == "addShift")))
+          formMode = "add",
+          disableAdd = props.shiftAction == "addShift")))
     }
 
   }

@@ -90,14 +90,14 @@ object EditShiftsComponent {
               )
             }
 
-          AddShiftsFormComponent(
+          ShiftsFormComponent(
             ShiftFormProps(port = props.portCode,
               terminal = props.terminal.toString,
               interval = 30,
               initialShifts = shiftForms,
               confirmHandler = confirmHandler,
-              isEdit = true,
-              addSingleShift = false))
+              formMode = "edit",
+              disableAdd = false))
         })
     }
 

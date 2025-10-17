@@ -202,7 +202,7 @@ object MonthlyShifts {
                         )
                       )).runNow()
                     },
-                    sendEvent = GoogleEventTracker.sendEvent
+                    sendAnalyticsEvent = GoogleEventTracker.sendEvent
                   ))
                 ),
                 <.div(^.className := "terminal-staffing-content-footer",
