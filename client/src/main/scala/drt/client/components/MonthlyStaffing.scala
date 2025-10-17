@@ -58,7 +58,7 @@ object MonthlyStaffing {
                    isStaffShiftPage: Boolean,
                    userPreferences: UserPreferences,
                    isShiftsEmpty: Boolean,
-                   viewStaffingClicked: Boolean
+                   viewMode: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -109,7 +109,7 @@ object MonthlyStaffing {
       <.div(
         <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
           MuiTypography(variant = "h2")(s"Staffing")),
-        if (props.isStaffShiftPage && props.isShiftsEmpty && !props.viewStaffingClicked) {
+        if (props.isStaffShiftPage && props.isShiftsEmpty && !props.viewMode) {
           <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
             props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
           }, () => {
@@ -147,7 +147,7 @@ object MonthlyStaffing {
                     timeSlots = timeSlots,
                     handleShiftEditForm = handleShiftEditForm,
                     confirmAndSave = ConfirmAndSaveForMonthlyStaffing(viewingDate, timeSlots, props, state, scope),
-                    isShiftsEmpty = props.isShiftsEmpty,
+                    noExistingShifts = props.isShiftsEmpty,
                     userPreferences = props.userPreferences
                   ),
                   MuiSwipeableDrawer(open = state.showEditStaffForm,

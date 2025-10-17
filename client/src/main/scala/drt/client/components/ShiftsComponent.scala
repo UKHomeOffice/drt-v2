@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.components.ShiftAction.AddShiftAction
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -18,10 +19,24 @@ import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.time.LocalDate
+import ShiftAction._
+sealed trait ShiftAction
+
+object ShiftAction {
+  case object CreateShiftsAction extends ShiftAction
+  case object AddShiftAction extends ShiftAction
+  case object NoneAction extends ShiftAction
+
+  def fromString(s: String): ShiftAction = s match {
+    case "createShifts" => CreateShiftsAction
+    case "addShift"     => AddShiftAction
+    case _              => NoneAction
+  }
+}
 
 object ShiftsComponent {
 
-  case class Props(terminal: Terminal, portCode: String, userPreferences: UserPreferences, shiftAction: String, router: RouterCtl[Loc])
+  case class Props(terminal: Terminal, portCode: String, userPreferences: UserPreferences, shiftAction: ShiftAction, router: RouterCtl[Loc])
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
 
@@ -52,11 +67,11 @@ object ShiftsComponent {
           createdAt = System.currentTimeMillis()
         ))
         props.shiftAction match {
-          case "createShifts" =>
+          case CreateShiftsAction =>
             SPACircuit.dispatch(SaveShifts(staffShifts))
             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "save")).runNow()
 
-          case "addShift" =>
+          case AddShiftAction =>
             SPACircuit.dispatch(AddShift(staffShifts.headOption))
             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "added")).runNow()
 
@@ -74,7 +89,7 @@ object ShiftsComponent {
           Seq.empty[ShiftForm],
           confirmHandler,
           formMode = "add",
-          disableAdd = props.shiftAction == "addShift")))
+          disableAdd = props.shiftAction == AddShiftAction)))
     }
 
   }
@@ -84,5 +99,5 @@ object ShiftsComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, portCode: String, userPreferences: UserPreferences, shiftAction: String, router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, userPreferences, shiftAction, router))
+  def apply(terminal: Terminal, portCode: String, userPreferences: UserPreferences, shiftAction: String, router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, userPreferences, ShiftAction.fromString(shiftAction), router))
 }

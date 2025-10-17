@@ -256,7 +256,7 @@ object MonthlyStaffingBar {
             timeSlots: Seq[Seq[Any]],
             handleShiftEditForm: ReactEventFromInput => Callback,
             confirmAndSave: ConfirmAndSave,
-            isShiftsEmpty: Boolean,
+            noExistingShifts: Boolean,
             userPreferences: UserPreferences
-           ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave, isShiftsEmpty, userPreferences))
+           ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave, noExistingShifts, userPreferences))
 }

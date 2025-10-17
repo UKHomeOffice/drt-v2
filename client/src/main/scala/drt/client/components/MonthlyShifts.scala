@@ -121,11 +121,10 @@ object MonthlyShifts {
         <.div(^.className := "staffing-container",
           MuiTypography(variant = "h2")(s"Staffing"),
           if (state.shifts.isEmpty && !props.viewStaffingClicked) {
-            <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
-            }, () => {
-              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
-            })))
+            <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(
+              () => {props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()},
+              () => {props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()}
+            )))
           } else {
             <.div(^.className := "staffing-controls",
               maybeClockChangeDate(viewingDate).map { clockChangeDate =>
@@ -147,7 +146,7 @@ object MonthlyShifts {
                 timeSlots = Seq.empty,
                 handleShiftEditForm = handleShiftEditForm,
                 confirmAndSave = ConfirmAndSaveForMonthlyShifts(state.shiftSummaries, state.changedAssignments, props, state, scope),
-                isShiftsEmpty = state.shifts.isEmpty,
+                noExistingShifts = state.shifts.isEmpty,
                 userPreferences = props.userPreferences
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
@@ -272,13 +271,13 @@ object MonthlyShifts {
             airportConfig: AirportConfig,
             userPreferences: UserPreferences,
             shiftCreated: Boolean,
-            viewStaffingClicked: Boolean
+            viewMode: Boolean
            ): Unmounted[Props, State, Backend] = {
     if (shiftCreated) {
       val newQueryParams = terminalPageTab.queryParams - "shifts"
       Callback(SPACircuit.dispatch(GetShifts)).runNow()
       router.set(terminalPageTab.copy(queryParams = newQueryParams)).runNow()
     }
-    component(Props(terminalPageTab, router, airportConfig, userPreferences, Seq.empty, viewStaffingClicked))
+    component(Props(terminalPageTab, router, airportConfig, userPreferences, Seq.empty, viewMode))
   }
 }
