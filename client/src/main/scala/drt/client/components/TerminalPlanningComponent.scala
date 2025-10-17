@@ -172,6 +172,7 @@ object TerminalPlanningComponent {
                   <.div(^.className := "hstack",
                     MuiFormLabel(sx = SxProps(Map("size" -> "16px",
                       "paddingRight" -> "10px",
+                      "marginBtotom" -> "0px !important",
                       "color" -> DrtReactTheme.palette.grey.`900`,
                       "fontWeight" -> "bold")))(<.span("Time Period")),
                     MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
@@ -235,17 +236,16 @@ object TerminalPlanningComponent {
     if (isPreparing)
       Seq(MuiCircularProgress(size = "28px")(), "Preparing... please wait")
     else
-      Seq(MuiIcons(GetApp)(fontSize = "large"), labelText)
+      Seq(labelText)
 
   private def buttonWithProgress(url: String,
                                  label: Seq[TagMod],
                                  createDownload: String => Event => CallbackTo[Unit],
                                  disabled: Boolean,
                                 ): WithPropsAndTagsMods =
-    MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+    MuiButton(color = Color.secondary, variant = "contained")(
       ^.disabled := disabled,
       <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "15px"), label.toTagMod),
-      ^.className := "btn btn-link muiButton",
       ^.href := SPAMain.absoluteUrl(url),
       ^.target := "_blank",
       ^.onClick ==> createDownload(url)
