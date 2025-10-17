@@ -6,7 +6,7 @@ import drt.client.components.ShiftAction.AddShiftAction
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{AddShift, SaveShifts, UpdateUserPreferences}
+import drt.client.services.handlers.{SaveShifts, UpdateUserPreferences}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -72,7 +72,7 @@ object ShiftsComponent {
             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "save")).runNow()
 
           case AddShiftAction =>
-            SPACircuit.dispatch(AddShift(staffShifts.headOption))
+            SPACircuit.dispatch(SaveShifts(staffShifts))
             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "added")).runNow()
 
           case _ =>

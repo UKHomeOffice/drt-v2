@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode.AnyAction.aType
 import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, EffectSingle, ModelRW, NoAction}
+import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions.SetAllShiftAssignments
 import drt.client.logger.log
 import drt.client.services.DrtApi
@@ -18,8 +18,6 @@ case class GetShifts(terminal: String, viewDate: Option[String] = None, dayRange
 case class GetShift(terminal: String, shiftName: String, viewDate: Option[String])
 
 case class SaveShifts(staffShifts: Seq[Shift])
-
-case class AddShift(shiftOption: Option[Shift])
 
 case class UpdateShift(shift: Option[Shift], shiftName: String)
 
@@ -58,25 +56,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
             NoAction
         }
       )
-
       updated(Pot.empty, apiCallEffect)
-
-    case AddShift(shiftOption) =>
-      shiftOption.map { shift =>
-        val apiCallEffect = Effect(DrtApi.post("shifts/add", write(shift))
-          .map { r =>
-            val assignments = read[ShiftAssignments](r.responseText)
-            log.info(s"Received shift assignments after saving shifts")
-            SetAllShiftAssignments(assignments)
-          }.recover {
-            case t =>
-              log.error(msg = s"Failed to save shift: ${t.getMessage}")
-              NoAction
-          }
-        )
-        updated(Pot.empty, apiCallEffect)
-      }.getOrElse(noChange)
-
 
     case UpdateShift(shift, shiftName) =>
       shift match {
