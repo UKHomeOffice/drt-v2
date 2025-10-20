@@ -195,8 +195,9 @@ class FlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterab
       terminalsForDateRange(SDate(startMillis).toLocalDate, SDate(endMillis).toLocalDate).flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
   }
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[TerminalUpdateRequest]] =
+  override def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[TerminalUpdateRequest]] = {
     updateFlights(historicSplitsRequestActor, historicPaxRequestActor)(partition, updates)
+  }
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {
     case _: RedListCounts => true

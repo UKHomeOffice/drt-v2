@@ -1,11 +1,11 @@
 package actors.daily
 
-import org.apache.pekko.actor.{ActorRef, Props}
-import org.apache.pekko.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._
 import drt.shared._
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.persistence.SaveSnapshotSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -21,8 +21,8 @@ import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
-import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object TerminalDayFlightActor {
   def propsWithRemovalsCutoff(terminal: Terminal,
@@ -207,7 +207,12 @@ class TerminalDayFlightActor(year: Int,
 
     state = updatedState
 
-    maybeUpdateLiveView.foreach(_(updates, removals))
+    maybeUpdateLiveView.map { x =>
+      println(s"updating")
+      Await.ready(x(updates, removals), 10.seconds)
+//      x(updates, removals)
+      println("done")
+    }
 
     requestMissingPax()
     requestMissingHistoricSplits()
@@ -227,10 +232,14 @@ class TerminalDayFlightActor(year: Int,
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
+      println(s"got some changes")
       val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
-    } else sender() ! Set.empty
+    } else {
+      println(s"no changes...")
+      sender() ! Set.empty
+    }
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {

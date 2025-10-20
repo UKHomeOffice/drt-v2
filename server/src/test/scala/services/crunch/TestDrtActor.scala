@@ -328,7 +328,7 @@ class TestDrtActor extends Actor {
           queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
           queuesByTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal),
           paxFeedSourceOrder = paxFeedSourceOrder,
-          updateCapacity = _ => Future.successful(Done),
+//          updateCapacity = _ => Future.successful(Done),
           setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
           validTerminals = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
         )

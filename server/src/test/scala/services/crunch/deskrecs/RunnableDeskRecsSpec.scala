@@ -126,7 +126,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalc.terminalSplits,
-      updateCapacity = _ => Future.successful(Done),
+//      updateCapacity = _ => Future.successful(Done),
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
       validTerminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal)
     )
