@@ -159,19 +159,18 @@ class ShiftsController @Inject()(cc: ControllerComponents,
 
   def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
-      try {
-        val shifts = shiftsFromJson(text)
-        shifts.size match {
-          case 0 =>
-            Future.successful(BadRequest("No shifts to save"))
-          case 1 =>
-            val newShift = shifts.head
-            addAShift(newShift)
-          case c if c > 1 =>
-            createShifts(shifts)
-        }
-      } catch {
-        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+      val newShifts = shiftsFromJson(text)
+      ctrl.shiftsService.getActiveShifts(ctrl.airportConfig.portCode.iata, newShifts.head.terminal, None).flatMap { existingShifts =>
+        if (existingShifts.nonEmpty) {
+          if (newShifts.length > 1)
+            Future.successful(BadRequest("Can only add one shift at a time when existing shifts are present"))
+          else
+            addAShift(newShifts.head)
+        } else
+          createShifts(newShifts)
+      }.recover { case e: Exception =>
+        log.error(s"Failed to process shifts: ", e.printStackTrace())
+        BadRequest(s"Failed to process shifts: ${e.getMessage}")
       }
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
