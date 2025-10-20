@@ -122,8 +122,12 @@ object MonthlyShifts {
           MuiTypography(variant = "h2")(s"Staffing"),
           if (state.shifts.isEmpty && !props.viewStaffingClicked) {
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(
-              () => {props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()},
-              () => {props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()}
+              () => {
+                props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
+              },
+              () => {
+                props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
+              }
             )))
           } else {
             <.div(^.className := "staffing-controls",
@@ -214,9 +218,7 @@ object MonthlyShifts {
                     (<.span("Create shift pattern"),
                       ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
                   else
-                    MuiButton(color = Color.secondary, variant = "contained")
-                    (<.span("Add shift"),
-                      ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "addShift"))),
+                    EmptyVdom,
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span("Save staff updates"),
                     ^.onClick ==> confirmAndSaveShifts(state.shiftSummaries, state.changedAssignments, props, state, scope))

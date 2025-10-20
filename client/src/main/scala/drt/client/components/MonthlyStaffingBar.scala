@@ -238,9 +238,7 @@ object MonthlyStaffingBar {
             (<.span("Create shift pattern"),
               ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
           else
-            MuiButton(color = Color.secondary, variant = "contained")
-            (<.span("Add shift"),
-              ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "addShift"))),
+            EmptyVdom,
           MuiButton(color = Color.primary, variant = "contained")
           (<.span("Save staff updates"),
             ^.onClick ==> props.confirmAndSave())
