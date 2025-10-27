@@ -267,11 +267,11 @@ object TerminalComponent {
                       <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, userPreferences, props.terminalPageTab.subMode, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, shifts.isEmpty, false))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, shifts.isEmpty, false, featureFlags.enableShiftPlanningChange))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && featureFlags.enableShiftPlanningChange =>
                       if (!userPreferences.showStaffingShiftView)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, shifts.isEmpty, props.terminalPageTab.subMode == "viewShifts"))
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, shifts.isEmpty, props.terminalPageTab.subMode == "viewShifts", featureFlags.enableShiftPlanningChange))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences, props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created", props.terminalPageTab.subMode == "viewShifts"))
 

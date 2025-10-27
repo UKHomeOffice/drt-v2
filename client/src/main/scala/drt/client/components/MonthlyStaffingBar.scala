@@ -131,7 +131,8 @@ object MonthlyStaffingBar {
                    handleShiftEditForm: ReactEventFromInput => Callback,
                    confirmAndSave: ConfirmAndSave,
                    isShiftsEmpty: Boolean,
-                   userPreferences: UserPreferences
+                   userPreferences: UserPreferences,
+                   isShiftFeatureEnabled: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -165,72 +166,76 @@ object MonthlyStaffingBar {
 
       <.div(^.className := "staffing-bar",
         <.div(^.className := "staffing-controls-save",
-          <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
-            <.span(^.className := "staffing-controls-title",
-              <.strong(props.terminalPageTab.dayRangeType match {
-                case Some("monthly") => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
-                case Some("weekly") =>
-                  val firstDayOfWeek = SDate.firstDayOfWeek(props.viewingDate)
-                  val lastDayOfWeek = SDate.lastDayOfWeek(props.viewingDate)
-                  if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
-                    val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
-                    s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
-                  } else
-                    s"${SDate.firstDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
-                case Some("daily") => s"${props.viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
-                case _ => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
-              })),
-            <.span(^.className := "staffing-controls-title-options",
-              <.div(^.className := "staffing-controls-select",
-                drawSelect(
-                  values = Seq("monthly", "weekly", "daily"),
-                  names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
-                  defaultValue = s"${props.dayRangeType}",
-                  callback = (e: ReactEventFromInput) =>
-                    props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
-                )
-              ),
-              if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+          <.div(
+            <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
+              <.span(^.className := "staffing-controls-title",
+                <.strong(props.terminalPageTab.dayRangeType match {
+                  case Some("monthly") => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
+                  case Some("weekly") =>
+                    val firstDayOfWeek = SDate.firstDayOfWeek(props.viewingDate)
+                    val lastDayOfWeek = SDate.lastDayOfWeek(props.viewingDate)
+                    if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
+                      val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
+                      s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                    } else
+                      s"${SDate.firstDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                  case Some("daily") => s"${props.viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
+                  case _ => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
+                })),
+              <.span(^.className := "staffing-controls-title-options",
                 <.div(^.className := "staffing-controls-select",
                   drawSelect(
-                    values = monthOptions.map(_.toISOString),
-                    names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                    defaultValue = SDate.firstDayOfMonth(props.viewingDate).toISOString,
-                    callback = (e: ReactEventFromInput) => {
-                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                    }
-                  ))
-              } else EmptyVdom,
-              <.div(^.className := "staffing-controls-navigation ",
-                handleNavigation(props, props.viewingDate)
-              ),
-              <.div(^.className := "staffing-controls-select",
-                drawSelect(
-                  values = Seq("15", "30", "60"),
-                  names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
-                  defaultValue = s"${props.timeSlotMinutes}",
-                  callback = (e: ReactEventFromInput) =>
-                    props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
-                )
-              ),
-              <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
-                MuiTypography(sx = SxProps(Map("paddingTop" -> "5px")))("Show shifts"),
-                MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
-                  MuiSwitch(
-                    defaultChecked = props.userPreferences.showStaffingShiftView,
-                    color = Color.primary,
-                    inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
-                  )(^.onChange --> handleShiftViewToggle),
+                    values = Seq("monthly", "weekly", "daily"),
+                    names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
+                    defaultValue = s"${props.dayRangeType}",
+                    callback = (e: ReactEventFromInput) =>
+                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
+                  )
                 ),
-              )
-            ),
-          ),
-        ), <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "align-items" -> "center"),
+                if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+                  <.div(^.className := "staffing-controls-select",
+                    drawSelect(
+                      values = monthOptions.map(_.toISOString),
+                      names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                      defaultValue = SDate.firstDayOfMonth(props.viewingDate).toISOString,
+                      callback = (e: ReactEventFromInput) => {
+                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                      }
+                    ))
+                } else EmptyVdom,
+                <.div(^.className := "staffing-controls-navigation ",
+                  handleNavigation(props, props.viewingDate)
+                ),
+                <.div(^.className := "staffing-controls-select",
+                  drawSelect(
+                    values = Seq("15", "30", "60"),
+                    names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
+                    defaultValue = s"${props.timeSlotMinutes}",
+                    callback = (e: ReactEventFromInput) =>
+                      props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
+                  )
+                )),
+              if (props.isShiftFeatureEnabled) {
+                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center", "paddingTop" -> "10px"))(
+                  MuiTypography(sx = SxProps(Map("paddingLeft" -> "10px", "paddingTop" -> "5px")))("Show shifts"),
+                  MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
+                    MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
+                      MuiSwitch(
+                        defaultChecked = props.userPreferences.showStaffingShiftView,
+                        color = Color.primary,
+                        inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
+                      )(^.onChange --> handleShiftViewToggle),
+                    ),
+                  )
+                )
+              } else EmptyVdom),
+          )),
+        <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "align-items" -> "center"),
           MuiButton(color = Color.secondary, variant = "contained")
           (<.span("Edit staff"),
             VdomAttr("data-cy") := "edit-staff-button",
             ^.onClick ==> props.handleShiftEditForm),
-          if (props.isShiftsEmpty)
+          if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
             MuiButton(color = Color.secondary, variant = "contained")
             (<.span("Create shift pattern"),
               ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
@@ -252,6 +257,7 @@ object MonthlyStaffingBar {
             handleShiftEditForm: ReactEventFromInput => Callback,
             confirmAndSave: ConfirmAndSave,
             noExistingShifts: Boolean,
-            userPreferences: UserPreferences
-           ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave, noExistingShifts, userPreferences))
+            userPreferences: UserPreferences,
+            isShiftFeatureEnabled: Boolean
+           ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave, noExistingShifts, userPreferences, isShiftFeatureEnabled))
 }

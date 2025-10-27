@@ -58,7 +58,8 @@ object MonthlyStaffing {
                    isStaffShiftPage: Boolean,
                    userPreferences: UserPreferences,
                    isShiftsEmpty: Boolean,
-                   viewMode: Boolean
+                   viewMode: Boolean,
+                   isShiftFeatureEnabled: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -148,7 +149,8 @@ object MonthlyStaffing {
                     handleShiftEditForm = handleShiftEditForm,
                     confirmAndSave = ConfirmAndSaveForMonthlyStaffing(viewingDate, timeSlots, props, state, scope),
                     noExistingShifts = props.isShiftsEmpty,
-                    userPreferences = props.userPreferences
+                    userPreferences = props.userPreferences,
+                    isShiftFeatureEnabled = props.isShiftFeatureEnabled
                   ),
                   MuiSwipeableDrawer(open = state.showEditStaffForm,
                     anchor = "right",
@@ -199,7 +201,7 @@ object MonthlyStaffing {
                       (<.span("Edit staff"),
                         VdomAttr("data-cy") := "edit-staff-button",
                         ^.onClick ==> handleShiftEditForm),
-                      if (props.isShiftsEmpty)
+                      if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
                         MuiButton(color = Color.secondary, variant = "contained")
                         (<.span("Create shift pattern"),
                           ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
@@ -311,6 +313,7 @@ object MonthlyStaffing {
             showShiftsStaffing: Boolean,
             userPreferences: UserPreferences,
             isShiftsEmpty: Boolean,
-            viewStaffingClicked: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences, isShiftsEmpty, viewStaffingClicked))
+            viewStaffingClicked: Boolean,
+            isShiftFeatureEnabled : Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences, isShiftsEmpty, viewStaffingClicked , isShiftFeatureEnabled))
 }

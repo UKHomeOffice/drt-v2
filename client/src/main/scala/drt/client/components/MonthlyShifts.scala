@@ -149,7 +149,8 @@ object MonthlyShifts {
                 handleShiftEditForm = handleShiftEditForm,
                 confirmAndSave = ConfirmAndSaveForMonthlyShifts(state.shiftSummaries, state.changedAssignments, props, state, scope),
                 noExistingShifts = state.shifts.isEmpty,
-                userPreferences = props.userPreferences
+                userPreferences = props.userPreferences,
+                isShiftFeatureEnabled = true
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
                 anchor = "right",
