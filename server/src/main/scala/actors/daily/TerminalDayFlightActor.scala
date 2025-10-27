@@ -1,11 +1,11 @@
 package actors.daily
 
-import org.apache.pekko.actor.{ActorRef, Props}
-import org.apache.pekko.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._
 import drt.shared._
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.persistence.SaveSnapshotSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -202,42 +202,46 @@ class TerminalDayFlightActor(year: Int,
   }
 
   private def applyDiffAndRequestMissingData(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits], Iterable[UniqueArrival])
-                                            ): Set[TerminalUpdateRequest] = {
+                                            ): (Set[TerminalUpdateRequest], Option[() => Future[Unit]]) = {
     val (updatedState, minutesToUpdate, updates, removals) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
 
-    maybeUpdateLiveView.foreach(_(updates, removals))
-
     requestMissingPax()
     requestMissingHistoricSplits()
 
-    minutesToUpdate
+    val updateRequests = minutesToUpdate
       .map(SDate(_).toLocalDate)
       .map(TerminalUpdateRequest(terminal, _))
+
+    val postPersist = maybeUpdateLiveView.map(f => () => f(updates, removals))
+
+    (updateRequests, postPersist)
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
+      val (updateRequests, postPersist) = applyDiffAndRequestMissingData(diff.applyTo)
       val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)), postPersist)
     }
     else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
+      val (updateRequests, postPersist) = applyDiffAndRequestMissingData(diff.applyTo)
       val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
-    } else sender() ! Set.empty
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)), postPersist)
+    } else {
+      sender() ! Set.empty
+    }
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
       val timestamp = now().millisSinceEpoch
-      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
+      val (updateRequests, postPersist) = applyDiffAndRequestMissingData(diff.applyTo)
       val message = splitsForArrivalsToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)), postPersist)
     } else sender() ! Set.empty
 
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {

@@ -21,8 +21,8 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
-import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
@@ -68,6 +68,34 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         result === flights
+      }
+    }
+
+    "Given a slow live view update, I shouldn't receive the ack until it has finished" >> {
+      val fws = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-22T01:00Z"), T1, LiveFeedSource)
+
+      val from = SDate("2020-09-22T00:00Z")
+      val to = from.addDays(1).addMinutes(-1)
+
+      val mockLookup = MockFlightsLookup()
+      var liveViewUpdateFinished = false
+
+      "Then I should get that flight back" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
+          (_, _) => Seq(T1),
+          mockLookup.lookup(),
+          updateFlights = (_, _) => (_, _) => {
+            Thread.sleep(1000)
+            liveViewUpdateFinished = true
+            Future.successful(Set.empty[TerminalUpdateRequest])
+          },
+          paxFeedSourceOrder = paxFeedSourceOrder,
+        )))
+        val eventualLiveUpdateIsFinished = cmActor
+          .ask(ArrivalsDiff(Seq(fws.apiFlight), Seq.empty))
+          .map(_ => liveViewUpdateFinished)
+
+        Await.result(eventualLiveUpdateIsFinished, 5.seconds) === true
       }
     }
 

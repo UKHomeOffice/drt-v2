@@ -4,7 +4,6 @@ import actors.CrunchManagerActor._
 import actors._
 import actors.daily.PassengersActor
 import actors.persistent._
-import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
@@ -43,14 +42,13 @@ import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, Termin
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.serialisation.{ConfigDeserialiser, ConfigSerialiser, EmptyConfig}
-import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
-import uk.gov.homeoffice.drt.db.dao.{ApiManifestProvider, FlightDao}
+import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey, VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -163,33 +161,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)
 
-  private val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] = {
-    val getFlights = FlightDao().getForUtcDate(airportConfig.portCode)
-    (d: UtcDate) => aggregatedDb.run(getFlights(d))
-  }
-
-  private val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = feedService.activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
-    case Some((_, _, _, actor)) =>
-      log.info(s"Using ACL feed actor: $actor")
-      (date: UtcDate) =>
-        actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(date, date))
-          .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
-          .flatMap(_.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
-          .map(f => ArrivalsState.empty(AclFeedSource) ++ f.map(_.toArrival(AclFeedSource)))
-    case None =>
-      (_: UtcDate) => Future.successful(ArrivalsState.empty(AclFeedSource))
-  }
-
-  private lazy val uniqueFlightsForDate = PassengersLiveView.uniqueFlightsForDate(
-    flights = flightsForDate,
-    baseArrivals = aclArrivalsForDate,
-    paxFeedSourceOrder = feedService.paxFeedSourceOrder,
-  )
-  private lazy val getCapacities = PassengersLiveView.capacityForDate(uniqueFlightsForDate)
-  private lazy val persistCapacity = PassengersLiveView.persistCapacityForDate(aggregatedDb, airportConfig.portCode)
-
-  lazy val updateAndPersistCapacity: UtcDate => Future[Done] =
-    PassengersLiveView.updateAndPersistCapacityForDate(getCapacities, persistCapacity)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
@@ -337,7 +308,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         queuesByTerminal = queuesForDateAndTerminal,
         validTerminals = validTerminalsForDate,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
-        updateCapacity = updateAndPersistCapacity,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
           airportConfig.portCode,
           aggregatedDb,

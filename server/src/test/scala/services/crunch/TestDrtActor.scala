@@ -140,6 +140,7 @@ class TestDrtActor extends Actor {
       val nowMillis = () => tc.now().millisSinceEpoch
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
       val terminals: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
+
       def feedArrivalsRouter(source: FeedSource,
                              partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              name: String): ActorRef =
@@ -204,11 +205,8 @@ class TestDrtActor extends Actor {
           val flightDao = FlightDao()
           val queueSlotDao = QueueSlotDao()
 
-          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
-            val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, dbTables, airportConfig.portCode)
-            (updates, removals) =>
-              doUpdate(updates, removals)
-          }
+          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] =
+            FlightsLiveView.updateAndRemove(flightDao, dbTables, airportConfig.portCode)
 
           val update15MinuteQueues: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
             val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
@@ -328,7 +326,6 @@ class TestDrtActor extends Actor {
           queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
           queuesByTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal),
           paxFeedSourceOrder = paxFeedSourceOrder,
-          updateCapacity = _ => Future.successful(Done),
           setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
           validTerminals = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
         )

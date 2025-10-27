@@ -69,10 +69,6 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None),
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EGate, 50, None, None),
       ), TerminalAverage, None, Percentage)),
-      updateCapacity = _ => {
-        updatesProbe.ref ! "Capacity updated"
-        Future.successful(Done)
-      },
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
       validTerminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal),
     )
@@ -95,7 +91,6 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         tqPax == expectedQueuePax
     }
 
-    updatesProbe.expectMsg("Capacity updated")
     updatesProbe.expectMsg("Live view updated")
   }
 

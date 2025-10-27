@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,7 +37,6 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             queuesByTerminal: (LocalDate, Terminal) => Seq[Queue],
             validTerminals: LocalDate => Seq[Terminal],
             paxFeedSourceOrder: List[FeedSource],
-            updateCapacity: UtcDate => Future[Done],
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
            (implicit ec: ExecutionContext, mat: Materializer): ActorRef = {
@@ -52,7 +51,6 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         updateLiveView = updateLivePaxView,
         paxFeedSourceOrder = paxFeedSourceOrder,
         terminalSplits = terminalSplits,
-        updateCapacity = updateCapacity,
         setUpdatedAtForDay = setUpdatedAtForDay,
       )
 
@@ -76,7 +74,6 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                    updateLiveView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
                                    paxFeedSourceOrder: List[FeedSource],
                                    terminalSplits: Terminal => Option[Splits],
-                                   updateCapacity: UtcDate => Future[Done],
                                    setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                   )
                                   (implicit
@@ -89,13 +86,9 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal, terminalSplits))
-      .wireTap { crWithPax =>
-        log.info(s"${crWithPax._1} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
-        val datesToUpdate = Set(crWithPax._1.start.toUtcDate, crWithPax._1.end.toUtcDate)
-        datesToUpdate.foreach { d =>
-          updateCapacity(d)
-          updateLiveView(crWithPax._2)
-        }
+      .wireTap { updateRequestWithMinutes =>
+        log.info(s"${updateRequestWithMinutes._1} crunch request - ${updateRequestWithMinutes._2.minutes.size} minutes of passenger loads with ${updateRequestWithMinutes._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
+        updateLiveView(updateRequestWithMinutes._2)
       }
       .via(Flow[(TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM])].map {
         case (pr, paxMinutes) =>
