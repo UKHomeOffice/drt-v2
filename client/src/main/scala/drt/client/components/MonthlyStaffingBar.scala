@@ -160,7 +160,7 @@ object MonthlyStaffingBar {
     .render_P { props =>
       def handleShiftViewToggle(): Callback = {
         Callback(GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Shift View Toggle", s"${!props.userPreferences.showStaffingShiftView}")) >>
-        Callback(SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView))))
+          Callback(SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView))))
       }
 
       <.div(^.className := "staffing-bar",
@@ -213,19 +213,16 @@ object MonthlyStaffingBar {
                     props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
                 )
               ),
-              if (props.isShiftsEmpty)
-                EmptyVdom
-              else
-                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
-                  MuiTypography(sx = SxProps(Map("paddingTop" -> "5px")))("Show shifts"),
-                  MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
-                    MuiSwitch(
-                      defaultChecked = props.userPreferences.showStaffingShiftView,
-                      color = Color.primary,
-                      inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
-                    )(^.onChange --> handleShiftViewToggle),
-                  ),
-                )
+              <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
+                MuiTypography(sx = SxProps(Map("paddingTop" -> "5px")))("Show shifts"),
+                MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
+                  MuiSwitch(
+                    defaultChecked = props.userPreferences.showStaffingShiftView,
+                    color = Color.primary,
+                    inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
+                  )(^.onChange --> handleShiftViewToggle),
+                ),
+              )
             ),
           ),
         ), <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "align-items" -> "center"),
