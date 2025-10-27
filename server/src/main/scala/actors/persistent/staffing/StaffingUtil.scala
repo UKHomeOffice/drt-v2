@@ -96,25 +96,6 @@ object StaffingUtil {
       updatedNewShiftsAssignments
   }
 
-  def addAssignments(newShift: Shift,
-                     overridingShift: Seq[Shift],
-                     allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
-
-    val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
-    val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(newShiftsStaff)
-    val overridingAssignments: Seq[StaffAssignment] = getOverridingAssignments(overridingShift, newShift)
-    val overridingShiftAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(overridingAssignments)
-    val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
-    val updatedNewShiftsAssignments = getUpdatedNewShiftAssignments(
-      newShiftSplitDailyAssignments = newShiftSplitDailyAssignments,
-      existingAllAssignments = existingAllAssignments,
-      overridingShiftAssignments = overridingShiftAssignments,
-      newShift = newShift
-    )
-
-    updatedNewShiftsAssignments
-  }
-
   private def getOverridingAssignments(overridingShift: Seq[Shift],
                                        newShift: Shift
                                       ): Seq[StaffAssignment] = {
@@ -126,34 +107,6 @@ object StaffingUtil {
           s.startDate == newShift.startDate
       )
       .flatMap(os => generateDailyAssignments(os))
-  }
-
-  private def getUpdatedNewShiftAssignments(newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
-                                            existingAllAssignments: Map[TM, StaffAssignmentLike],
-                                            overridingShiftAssignments: Map[TM, StaffAssignment],
-                                            newShift: Shift,
-                                           ): Seq[StaffAssignmentLike] = {
-    def findOverridingShift(assignment: StaffAssignment): Option[Int] =
-      overridingShiftAssignments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff)
-
-    newShiftSplitDailyAssignments.map {
-      case (tm, assignment) =>
-        existingAllAssignments.get(tm) match {
-          case Some(existing) =>
-            findOverridingShift(assignment).map { overridingStaff =>
-              if (existing.numberOfStaff == overridingStaff)
-                assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
-              else
-                assignment
-            }.getOrElse {
-              if (existing.numberOfStaff == 0)
-                assignment
-              else
-                existing
-            }
-          case None => assignment
-        }
-    }.toSeq.sortBy(_.start)
   }
 
   private def getUpdatedNewShiftsAssignments(newShiftSplitDailyAssignments: Map[TM, StaffAssignment],

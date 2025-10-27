@@ -5,6 +5,7 @@ import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyShiftsUtil.{updateAssignments, updateChangeAssignment}
+import drt.client.components.MonthlyStaffing.Props
 import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -42,6 +43,7 @@ object MonthlyShifts {
                    shiftAssignments: ShiftAssignments,
                    shiftSummaries: Seq[ShiftSummaryStaffing] = Seq.empty,
                    changedAssignments: Seq[StaffTableEntry] = Seq.empty,
+                   userPreferences: UserPreferences
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -51,7 +53,7 @@ object MonthlyShifts {
                    airportConfig: AirportConfig,
                    userPreferences: UserPreferences,
                    shifts: Seq[Shift],
-                   viewStaffingClicked: Boolean
+                   viewMode: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
   }
@@ -78,8 +80,8 @@ object MonthlyShifts {
         ConfirmAndSaveForMonthlyShifts(shiftsData, changedAssignments, props, state, scope)()
       }
 
-      case class Model(shiftAssignmentsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
-      val staffRCP = SPACircuit.connect(m => Model(m.allShiftAssignments, m.shifts))
+      case class Model(shiftAssignmentsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]], userPreferences: Pot[UserPreferences])
+      val staffRCP = SPACircuit.connect(m => Model(m.allShiftAssignments, m.shifts, m.userPreferences))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
@@ -120,14 +122,10 @@ object MonthlyShifts {
         ),
         <.div(^.className := "staffing-container",
           MuiTypography(variant = "h2")(s"Staffing"),
-          if (state.shifts.isEmpty && !props.viewStaffingClicked) {
+          if (state.shifts.isEmpty && !props.viewMode) {
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(
-              () => {
-                props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
-              },
-              () => {
-                props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
-              }
+              gotToCreateShifts(props),
+              goToViewShifts(props),
             )))
           } else {
             <.div(^.className := "staffing-controls",
@@ -231,6 +229,19 @@ object MonthlyShifts {
     }
   }
 
+  private def goToViewShifts(props: Props) = {
+    () => {
+      if (props.userPreferences.showStaffingShiftView) {
+        SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView)))
+      }
+      props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
+    }
+  }
+
+  private def gotToCreateShifts(props: Props) =
+    () => props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
+
+
   private def staffAssignmentsFromForm(ssf: IUpdateStaffForTimeRangeData, terminal: Terminal): Seq[StaffAssignment] = {
     val startDayLocal = LocalDate(ssf.startDayAt.year(), ssf.startDayAt.month() + 1, ssf.startDayAt.date())
     val endDayLocal = LocalDate(ssf.endDayAt.year(), ssf.endDayAt.month() + 1, ssf.endDayAt.date())
@@ -253,7 +264,9 @@ object MonthlyShifts {
       showStaffSuccess = false,
       addShiftForm = false,
       shifts = p.shifts,
-      shiftAssignments = ShiftAssignments.empty))
+      shiftAssignments = ShiftAssignments.empty,
+      userPreferences = p.userPreferences
+    ))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build

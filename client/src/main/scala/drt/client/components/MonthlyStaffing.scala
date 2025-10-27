@@ -14,7 +14,6 @@ import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -48,6 +47,7 @@ object MonthlyStaffing {
                    addShiftForm: Boolean,
                    shiftAssignments: ShiftAssignments,
                    shiftsLastLoaded: Option[Long] = None,
+                   userPreferences: UserPreferences
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -110,11 +110,11 @@ object MonthlyStaffing {
         <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
           MuiTypography(variant = "h2")(s"Staffing")),
         if (props.isStaffShiftPage && props.isShiftsEmpty && !props.viewMode) {
-          <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-            props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
-          }, () => {
-            props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
-          })))
+          <.div(^.style := js.Dictionary("padding-top" -> "10px"),
+            AddShiftBarComponent(IAddShiftBarComponentProps(
+              gotToCreateShifts(props),
+              goToViewShifts(props)
+            )))
         } else {
           <.div(s"shift is empty or not shift page ${props.isShiftsEmpty}")
           <.div(
@@ -218,6 +218,19 @@ object MonthlyStaffing {
     }
   }
 
+  private def goToViewShifts(props: Props)  = {
+    () => {
+      if (props.userPreferences.showStaffingShiftView) {
+        SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView)))
+    }
+      props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
+    }
+  }
+
+  private def gotToCreateShifts(props: Props) =
+    () => props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
+
+
   private def staffAssignmentsFromForm(ssf: IUpdateStaffForTimeRangeData, terminal: Terminal): Seq[StaffAssignment] = {
     val startDayLocal = LocalDate(ssf.startDayAt.year(), ssf.startDayAt.month() + 1, ssf.startDayAt.date())
     val endDayLocal = LocalDate(ssf.endDayAt.year(), ssf.endDayAt.month() + 1, ssf.endDayAt.date())
@@ -288,7 +301,8 @@ object MonthlyStaffing {
       showStaffSuccess = false,
       addShiftForm = false,
       ShiftAssignments.empty,
-      None)
+      None,
+      props.userPreferences)
   }
 
   def apply(terminalPageTab: TerminalPageTabLoc,

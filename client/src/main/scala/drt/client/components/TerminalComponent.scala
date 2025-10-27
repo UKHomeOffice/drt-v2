@@ -270,7 +270,7 @@ object TerminalComponent {
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, shifts.isEmpty, false))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && featureFlags.enableShiftPlanningChange =>
-                      if (!userPreferences.showStaffingShiftView || props.terminalPageTab.subMode == "viewShifts")
+                      if (!userPreferences.showStaffingShiftView)
                         <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, shifts.isEmpty, props.terminalPageTab.subMode == "viewShifts"))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences, props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created", props.terminalPageTab.subMode == "viewShifts"))

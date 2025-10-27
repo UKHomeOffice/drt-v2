@@ -45,7 +45,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       updated(Pot.empty, apiCallEffect)
 
     case SaveShifts(staffShifts) =>
-      val apiCallEffect = Effect(DrtApi.post("shifts/save", write(staffShifts))
+      val apiCallEffect = Effect(DrtApi.post("shifts", write(staffShifts))
         .map { r =>
           val assignments = read[ShiftAssignments](r.responseText)
           log.info(s"Received shift assignments after saving shifts")
@@ -61,7 +61,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
     case UpdateShift(shift, shiftName) =>
       shift match {
         case Some(s) =>
-          val apiCallEffect = Effect(DrtApi.post(s"shifts/update/$shiftName", write(s))
+          val apiCallEffect = Effect(DrtApi.put(s"shifts/$shiftName", write(s))
             .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
             .recoverWith {
               case t =>
