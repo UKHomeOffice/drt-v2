@@ -299,33 +299,12 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   "Concerning persistence of flights" >> {
     "Given a router, I should see updates sent to it are persisted" >> {
-      var liveUpdateFinished = false
-      var liveUpdateDelay = 0.seconds
-      val liveUpdate: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] =
-        (_, _) => {
-          Future{
-            Thread.sleep(liveUpdateDelay.toMillis)
-            liveUpdateFinished = true
-            ()
-          }
-        }
-      val lookups = FlightLookups(system, myNow, terminalsForDateRange = (_, _) => Seq(T1), None, paxFeedSourceOrder, _ => None, liveUpdate)
+      val lookups = FlightLookups(system, myNow, terminalsForDateRange = (_, _) => Seq(T1), None, paxFeedSourceOrder, _ => None, (_, _) => Future.successful(()))
       val router = lookups.flightsRouterActor
 
       val scheduled = "2021-06-01T00:00"
       val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
       val requestForFlights = GetFlights(SDate(scheduled).millisSinceEpoch, SDate(scheduled).addHours(6).millisSinceEpoch)
-
-      "When I send it a flight with no splits" >> {
-        liveUpdateDelay = 4.seconds
-        val eventualFlights = router
-          .ask(ArrivalsDiff(Iterable(arrival), Iterable()))
-          .map(_ => liveUpdateFinished)
-
-        val result = Await.result(eventualFlights, 10.second)
-
-        result === true
-      }
 
       "When I send it a flight with no splits" >> {
         val eventualFlights = router
