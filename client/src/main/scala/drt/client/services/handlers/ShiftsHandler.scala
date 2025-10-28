@@ -9,6 +9,7 @@ import drt.client.services.DrtApi
 import drt.shared.ShiftAssignments
 import uk.gov.homeoffice.drt.Shift
 import upickle.default._
+
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
@@ -44,7 +45,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       updated(Pot.empty, apiCallEffect)
 
     case SaveShifts(staffShifts) =>
-      val apiCallEffect = Effect(DrtApi.post("shifts/save", write(staffShifts))
+      val apiCallEffect = Effect(DrtApi.post("shifts", write(staffShifts))
         .map { r =>
           val assignments = read[ShiftAssignments](r.responseText)
           log.info(s"Received shift assignments after saving shifts")
@@ -55,14 +56,12 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
             NoAction
         }
       )
-
       updated(Pot.empty, apiCallEffect)
-
 
     case UpdateShift(shift, shiftName) =>
       shift match {
         case Some(s) =>
-          val apiCallEffect = Effect(DrtApi.post(s"shifts/update/$shiftName", write(s))
+          val apiCallEffect = Effect(DrtApi.put(s"shifts/$shiftName", write(s))
             .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
             .recoverWith {
               case t =>

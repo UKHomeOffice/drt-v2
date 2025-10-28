@@ -1265,13 +1265,14 @@ p {
 }
 
 
-.terminal-staffing-content-header {
+.terminal-staffing-content-footer {
+  display: flex;
   gap: 15px;
-  justify-content: space-between;
-  flex-grow: 1;
   border-radius: 5px;
   margin-top: 15px;
-  padding: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 15px;
   background-color: #eeeff0;
 }
 
@@ -1514,16 +1515,20 @@ p {
   margin-left: 20px;
 }
 
-.staffing-controls-save {
+.staffing-bar {
   position: sticky;
   top: 0;
   z-index: 101;
+  padding-bottom: 10px;
+  background-color: #E6E9F1;
+}
+
+.staffing-controls-save {
   padding-top: 10px;
   padding-right: 10px;
   padding-bottom: 10px;
   display: flex;
   gap: 15px;
-  background-color: #E6E9F1;
 }
 
 .staffing-controls-save > div {
