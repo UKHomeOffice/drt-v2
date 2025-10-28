@@ -38,7 +38,8 @@ trait ShiftFormProps extends js.Object {
   var interval: Int = js.native
   var shiftForms: js.Array[ShiftForm] = js.native
   var confirmHandler: js.Function1[js.Array[ShiftForm], Unit] = js.native
-  var isEditingPersistedShift: Boolean = js.native
+  var formMode: String = js.native
+  var disableAdd: Boolean = js.native
 }
 
 object ShiftFormProps {
@@ -46,21 +47,25 @@ object ShiftFormProps {
             terminal: String,
             interval: Int,
             initialShifts: Seq[ShiftForm],
-            confirmHandler: Seq[ShiftForm] => Unit, isEdit: Boolean): ShiftFormProps = {
+            confirmHandler: Seq[ShiftForm] => Unit,
+            formMode: String,
+            disableAdd: Boolean
+           ): ShiftFormProps = {
     val p = (new js.Object).asInstanceOf[ShiftFormProps]
     p.port = port
     p.terminal = terminal
     p.interval = interval
     p.shiftForms = initialShifts.toJSArray
     p.confirmHandler = (shiftForms: js.Array[ShiftForm]) => confirmHandler(shiftForms.toSeq)
-    p.isEditingPersistedShift = isEdit
+    p.formMode = formMode
+    p.disableAdd = disableAdd
     p
   }
 }
 
-object AddShiftsFormComponent {
+object ShiftsFormComponent {
   @js.native
-  @JSImport("@drt/drt-react", "AddShiftsForm")
+  @JSImport("@drt/drt-react", "ShiftsForm")
   object RawComponent extends js.Object
 
   val component: Component[ShiftFormProps, CtorType.Props] = JsFnComponent[ShiftFormProps, Children.None](RawComponent)
