@@ -226,8 +226,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
 
       val shiftDetails = ShiftDetails(staffShift, terminal, shifts)
 
-      val assignmentsByDate: Map[LocalDate, Seq[StaffAssignmentLike]] = Map.empty
-      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22), 1, interval, shiftDetails, assignmentsByDate)
+      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22), 1, interval, shiftDetails, ShiftAssignments.empty)
 
       val expected = Seq(
         StaffTableEntry(1, 0, "Night", 5, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),

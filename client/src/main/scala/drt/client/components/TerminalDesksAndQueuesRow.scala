@@ -8,7 +8,6 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
@@ -38,6 +37,8 @@ object TerminalDesksAndQueuesRow {
 
   case class Props(minuteMillis: MillisSinceEpoch,
                    queueMinutes: Seq[CrunchMinute],
+                   staffRec: Int,
+                   staffDep: Option[Int],
                    staffMinute: StaffMinute,
                    maxPaxInQueues: Map[Queue, Int],
                    airportConfig: AirportConfig,
@@ -127,9 +128,8 @@ object TerminalDesksAndQueuesRow {
       val fixedPoints = props.staffMinute.fixedPoints
       val movements = props.staffMinute.movements
       val available = props.staffMinute.available
-      val crunchMinutes = crunchMinutesByQueue.values.toList
-      val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
-      val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
+      val totalRequired = props.staffRec
+      val totalDeployed = props.staffDep.getOrElse(0)
       val ragClass = ragStatus(totalRequired, available)
 
       def allowAdjustments: Boolean = props.loggedInUser.hasRole(StaffMovementsEdit) &&

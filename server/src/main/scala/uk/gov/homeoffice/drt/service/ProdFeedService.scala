@@ -42,6 +42,7 @@ import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.{Retry, RetryDelays, StreamSupervision}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
+import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -191,6 +192,17 @@ trait FeedService {
     .collect {
       case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) => (fs, isPrimary, maybeFuzzyThreshold, actor)
     }
+
+  lazy val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
+    case Some((_, _, _, actor)) =>
+      (date: UtcDate) =>
+        actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(date, date))
+          .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
+          .flatMap(_.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
+          .map(f => ArrivalsState.empty(AclFeedSource) ++ f.map(_.toArrival(AclFeedSource)))
+    case None =>
+      (_: UtcDate) => Future.successful(ArrivalsState.empty(AclFeedSource))
+  }
 
   lazy val feedActors: Map[FeedSource, ActorRef] = Map(
     AclFeedSource -> forecastBaseFeedArrivalsActor,

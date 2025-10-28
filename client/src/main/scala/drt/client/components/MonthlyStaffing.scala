@@ -14,6 +14,7 @@ import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -113,7 +114,7 @@ object MonthlyStaffing {
           if (props.isStaffShiftPage) {
             <.div(^.className := "staffing-controls-toggle",
               <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center", "paddingTop" -> "15px"))(
-                MuiTypography()("Show shifts"),
+                MuiTypography(variant = "body1", sx = SxProps(Map("paddingRight" -> "10px", "marginBottom" -> "0 !important")))("Show shifts"),
                 MuiFormControl()(
                   MuiSwitch(
                     defaultChecked = props.userPreferences.showStaffingShiftView,

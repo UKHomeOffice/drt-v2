@@ -66,6 +66,8 @@ object TerminalContentComponent {
                    viewStart: SDateLike,
                    hoursToView: Int,
                    windowCrunchSummaries: Pot[SortedMap[Long, Map[Queue, CrunchMinute]]],
+                   windowStaffRecs: Pot[SortedMap[Long, Int]],
+                   windowStaffDeps: Pot[SortedMap[Long, Option[Int]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
@@ -177,10 +179,8 @@ object TerminalContentComponent {
                 props.terminalPageTab.dateFromUrlOrNow,
                 props.loggedInUser,
                 props.viewMode),
-              MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-                MuiIcons(GetApp)(fontSize = "large"),
+              MuiButton(color = Color.secondary, variant = "contained")(
                 "Advanced Downloads",
-                ^.className := "btn btn-default",
                 ^.onClick ==> handleMenuOpen
               ),
               <.div(^.className := "advanced-downloads-menu",
@@ -246,6 +246,8 @@ object TerminalContentComponent {
                       loggedInUser = props.loggedInUser,
                       featureFlags = features,
                       windowCrunchSummaries = props.windowCrunchSummaries,
+                      windowStaffRecs = props.windowStaffRecs,
+                      windowStaffDeps = props.windowStaffDeps,
                       dayCrunchSummaries = props.dayCrunchSummaries,
                       windowStaffSummaries = props.windowStaffSummaries,
                       addedStaffMovementMinutes = props.addedStaffMovementMinutes,
@@ -342,11 +344,8 @@ object TerminalContentComponent {
     val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
     <.div(
       ^.key := keyValue,
-      MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-        MuiIcons(GetApp)(fontSize = "large"),
+      MuiButton(color = Color.secondary, variant = "contained", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
         s" ${exportType.linkLabel}",
-        maybeExtraIcon.getOrElse(EmptyVdom),
-        ^.className := "btn btn-default",
         ^.href := exportUrl,
         ^.target := "_blank",
         ^.id := s"export-day-${exportType.toUrlString}",

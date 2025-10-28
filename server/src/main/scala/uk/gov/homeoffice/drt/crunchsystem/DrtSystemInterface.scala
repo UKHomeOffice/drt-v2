@@ -5,11 +5,11 @@ import com.typesafe.config.ConfigFactory
 import controllers._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
-import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, NotUsed}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments, TerminalQueueAllocator}
@@ -38,7 +38,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   with UserFeedBackProviderLike
   with ABFeatureProviderLike
   with ShiftsProviderLike
-  with ShiftMetaInfoProviderLike {
+  with ShiftMetaInfoProviderLike
+  with ShiftStaffRollingProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
@@ -76,12 +77,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
   lazy val flightsForPcpDateRange: (DateLike, DateLike, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightDao.flightsForPcpDateRange(airportConfig.portCode, paxFeedSourceOrder, aggregatedDb.run)
 
-  lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
-    val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
-    (updates, removals) =>
-      doUpdate(updates, removals)
-  }
-
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     if (params.isSuperUserMode) {
       Roles.availableRoles
@@ -116,6 +111,18 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
     val paxQueueAllocator = paxTypeQueueAllocator(airportConfig.hasTransfer, TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
     SplitsCalculator(paxQueueAllocator, airportConfig.terminalPaxSplits, queueAdjustments)
+  }
+
+  private lazy val updateAndRemoveFlights = FlightsLiveView.updateAndRemove(flightDao, aggregatedDb, airportConfig.portCode)
+  lazy val updateCapacityForDate: UtcDate => Future[Done] = FlightsLiveView.updateCapacityForDate(airportConfig, aggregatedDb, feedService)
+
+  lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
+    (updates, removals) =>
+      updateAndRemoveFlights(updates, removals)
+        .flatMap { _ =>
+          val datesAffected = updates.map(f => SDate(f.apiFlight.Scheduled).toUtcDate).toSet ++ removals.map(r => SDate(r.scheduled).toUtcDate).toSet
+          Future.sequence(datesAffected.map(updateCapacityForDate)).map(_ => Done)
+        }
   }
 
   lazy val applicationService: ApplicationService = ApplicationService(

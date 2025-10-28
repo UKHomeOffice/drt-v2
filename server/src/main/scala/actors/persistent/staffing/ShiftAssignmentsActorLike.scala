@@ -2,17 +2,14 @@ package actors.persistent.staffing
 
 import actors.DrtStaticParameters.startOfTheMonth
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.LegacyShiftAssignmentsActor.{ReplaceAllShifts, UpdateShifts}
 import actors.persistent.staffing.ShiftAssignmentsMessageParser.shiftMessagesToShiftAssignments
-import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, Scheduler}
-import org.apache.pekko.pattern.{StatusReply, ask}
-import org.apache.pekko.persistence._
-import org.apache.pekko.util.Timeout
 import drt.shared._
+import org.apache.pekko.actor.{ActorRef, Props, Scheduler}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.persistence._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
@@ -20,12 +17,10 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
-import scala.util.Try
 
 
 case object GetFeedStatuses

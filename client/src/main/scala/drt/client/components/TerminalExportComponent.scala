@@ -62,10 +62,8 @@ object TerminalExportComponent extends WithScalaCssImplicits {
 
       <.div(
         ^.className := "export-button-wrapper",
-        MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-          MuiIcons(GetApp)(fontSize = "large"),
+        MuiButton(color = Color.secondary, variant = "contained", sx = SxProps(Map("fontWeight" -> "normal")))(
           s"Export ${props.exportName} (.csv)",
-          ^.className := "btn btn-default",
           ^.href := "#",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#terminals-export",
