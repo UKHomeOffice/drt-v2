@@ -61,8 +61,7 @@ object MonthlyStaffing {
                    viewMode: Boolean,
                    isShiftFeatureEnabled: Boolean
                   ) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
-
+    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
@@ -220,11 +219,11 @@ object MonthlyStaffing {
     }
   }
 
-  private def goToViewShifts(props: Props)  = {
+  private def goToViewShifts(props: Props) = {
     () => {
       if (props.userPreferences.showStaffingShiftView) {
         SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView)))
-    }
+      }
       props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "viewShifts")).runNow()
     }
   }
@@ -314,6 +313,6 @@ object MonthlyStaffing {
             userPreferences: UserPreferences,
             isShiftsEmpty: Boolean,
             viewStaffingClicked: Boolean,
-            isShiftFeatureEnabled : Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences, isShiftsEmpty, viewStaffingClicked , isShiftFeatureEnabled))
+            isShiftFeatureEnabled: Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences, isShiftsEmpty, viewStaffingClicked, isShiftFeatureEnabled))
 }
