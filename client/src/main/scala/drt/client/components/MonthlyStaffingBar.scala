@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.AnyAction.aType
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType, UrlTimeInterval}
 import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.navigationDates
@@ -134,7 +134,7 @@ object MonthlyStaffingBar {
                    userPreferences: UserPreferences,
                    isShiftFeatureEnabled: Boolean
                   ) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
+    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
 
     def dayRangeType: String = terminalPageTab.dayRangeType match {
       case Some(dayRange) => dayRange
@@ -212,7 +212,7 @@ object MonthlyStaffingBar {
                     names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
                     defaultValue = s"${props.timeSlotMinutes}",
                     callback = (e: ReactEventFromInput) =>
-                      props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
+                      props.router.set(props.terminalPageTab.withUrlParameters(UrlTimeInterval(Some(s"${e.target.value}"))))
                   )
                 )),
               if (props.isShiftFeatureEnabled) {

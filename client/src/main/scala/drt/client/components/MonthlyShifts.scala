@@ -55,7 +55,7 @@ object MonthlyShifts {
                    shifts: Seq[Shift],
                    viewMode: Boolean
                   ) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
+    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
