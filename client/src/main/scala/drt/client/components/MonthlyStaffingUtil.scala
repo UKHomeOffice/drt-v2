@@ -114,7 +114,8 @@ object MonthlyStaffingUtil {
       slots.map(Option(_))
   }
 
-  private def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = slots.size < slotsInRegularDay
+  private def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean =
+    slots.size < slotsInRegularDay
 
   private def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean =
     slots.head.getMonth == 10 && slots.size == slotsInRegularDay

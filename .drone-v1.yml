@@ -124,6 +124,7 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test
+      - sbt --error client/test
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
