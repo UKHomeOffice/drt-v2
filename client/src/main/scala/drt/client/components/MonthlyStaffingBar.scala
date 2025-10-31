@@ -134,7 +134,9 @@ object MonthlyStaffingBar {
                    userPreferences: UserPreferences,
                    isShiftFeatureEnabled: Boolean
                   ) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
+    private val defaultTimeSlotMinutes: Int = if (isShiftFeatureEnabled) 60 else 15
+
+    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(defaultTimeSlotMinutes)
 
     def dayRangeType: String = terminalPageTab.dayRangeType match {
       case Some(dayRange) => dayRange
