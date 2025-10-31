@@ -61,7 +61,10 @@ object MonthlyStaffing {
                    viewMode: Boolean,
                    isShiftFeatureEnabled: Boolean
                   ) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
+
+    private val defaultTimeSlotMinutes: Int = if (isShiftFeatureEnabled) 60 else 15
+
+    def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(defaultTimeSlotMinutes)
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)

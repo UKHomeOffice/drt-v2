@@ -5,7 +5,6 @@ import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyShiftsUtil.{updateAssignments, updateChangeAssignment}
-import drt.client.components.MonthlyStaffing.Props
 import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -15,7 +14,6 @@ import drt.client.services.handlers.{GetShifts, UpdateUserPreferences}
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
