@@ -16,6 +16,7 @@ steps:
       - sbt "client/fullLinkJS"
       - cd client
       - npm install
+      - cat package-lock.json
       - npm run build
     environment:
       ARTIFACTORY_PASSWORD:
