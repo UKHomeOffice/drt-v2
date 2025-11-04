@@ -10,7 +10,7 @@ platform:
 steps:
   - name: Build scalajs app
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - npm --prefix client ci
@@ -46,7 +46,7 @@ steps:
 
   - name: Build scala app
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt --error compile playCompileEverything
@@ -65,7 +65,7 @@ steps:
 
   - name: Build docker image
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt --error "Docker / stage"
@@ -139,7 +139,7 @@ steps:
 
   - name: Unit tests
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test
@@ -156,7 +156,7 @@ steps:
 
   - name: Code coverage report
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error clean coverage test coverageReport
@@ -175,7 +175,7 @@ steps:
 
   - name: Scapegoat
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt scapegoat | true
@@ -195,7 +195,7 @@ steps:
 
   - name: Dependency check
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt -Dlog4j2.level=info dependencyCheck
