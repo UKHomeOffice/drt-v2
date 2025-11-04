@@ -13,28 +13,29 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - sbt "client/fullLinkJS"
-#      - cd client
       - npm --prefix client ci
+      - sbt --error client/test
+      - sbt "client/fullLinkJS"
       - npm --prefix client run build
-      - cd client
-      - node -v
-      - npm -v
-      - npm config get legacy-peer-deps
-      - echo "$NODE_OPTIONS"
 
-      - # Full dependency tree for parse5
-      - npm ls parse5 --all
-
-      - # What YOUR app would import:
-      - node -p "require.resolve('parse5/package.json')"
-
-      - # What JSDOM would import *relative to itself* (this is key):
-      - node -p "require.resolve('jsdom/node_modules/parse5/package.json')"
-
-      - # Print the version at each resolved path:
-      - node -p "require('fs').readFileSync(require.resolve('parse5/package.json'),'utf8')"
-      - node -p "require('fs').readFileSync(require.resolve('jsdom/node_modules/parse5/package.json'),'utf8')"
+#      - cd client
+#      - node -v
+#      - npm -v
+#      - npm config get legacy-peer-deps
+#      - echo "$NODE_OPTIONS"
+#
+#      - # Full dependency tree for parse5
+#      - npm ls parse5 --all
+#
+#      - # What YOUR app would import:
+#      - node -p "require.resolve('parse5/package.json')"
+#
+#      - # What JSDOM would import *relative to itself* (this is key):
+#      - node -p "require.resolve('jsdom/node_modules/parse5/package.json')"
+#
+#      - # Print the version at each resolved path:
+#      - node -p "require('fs').readFileSync(require.resolve('parse5/package.json'),'utf8')"
+#      - node -p "require('fs').readFileSync(require.resolve('jsdom/node_modules/parse5/package.json'),'utf8')"
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -142,7 +143,6 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test
-      - sbt --error client/test
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD

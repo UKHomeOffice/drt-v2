@@ -34,6 +34,9 @@
     "react-markdown": "9.0.1",
     "resize-observer-polyfill": "^1.5.1"
   },
+  "overrides": {
+    "parse5": "7.1.2"
+  },
   "devDependencies": {
     "@scala-js/vite-plugin-scalajs": "^1.0.0",
     "esbuild": "0.25.0",
