@@ -21,7 +21,7 @@ steps:
       - npm -v
       - npm config get legacy-peer-deps
       - node -p "require('jsdom/package.json').version"
-      - node -p "require('parse5/package.json').version"
+      - npm ls parse5
       - node -p "require('jest-environment-jsdom/package.json').version" || true
       - npm --prefix client run build
     environment:
