@@ -16,9 +16,10 @@ steps:
       - sbt "client/fullLinkJS"
 #      - cd client
       - npm --prefix client ci
+      - cd client
       - node -v
       - npm -v
-      - npm -prefix client config get legacy-peer-deps
+      - npm config get legacy-peer-deps
       - node -p "require('jsdom/package.json').version"
       - node -p "require('parse5/package.json').version"
       - node -p "require('jest-environment-jsdom/package.json').version" || true
