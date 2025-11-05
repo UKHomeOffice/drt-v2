@@ -1,4 +1,3 @@
-// client/src/test/resources/dom-setup.js
 /* eslint-disable */
 let jsdomMod = require("jsdom");
 
@@ -10,25 +9,11 @@ function setupWithModern() {
   global.window = dom.window;
   global.document = dom.window.document;
   global.navigator = dom.window.navigator;
+
   return true;
 }
 
-function setupWithLegacy() {
-  // Legacy API: jsdomMod.jsdom(html, options) -> Document
-  if (typeof jsdomMod.jsdom !== "function") return false;
-
-  const document = jsdomMod.jsdom("<!doctype html><html><body></body></html>", {
-    url: "http://localhost/",
-  });
-  const window = document.defaultView;
-
-  global.window = window;
-  global.document = document;
-  global.navigator = window.navigator;
-  return true;
-}
-
-if (!setupWithModern() && !setupWithLegacy()) {
+if (!setupWithModern()) {
   console.error("[dom-setup] jsdom module keys:", Object.keys(jsdomMod || {}));
   throw new TypeError("Could not obtain a JSDOM constructor or legacy jsdom() function");
 }
