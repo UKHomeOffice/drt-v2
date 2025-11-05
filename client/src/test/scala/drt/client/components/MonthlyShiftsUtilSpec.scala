@@ -18,37 +18,37 @@ object MonthlyShiftsUtilSpec extends TestSuite {
 
     test("daysCount should return correct number of days for monthly dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
-      val result = MonthlyShiftsUtil.daysCountByDayRange("monthly", viewingDate)
+      val result = MonthlyShiftsUtil.daysCountByViewPeriod("monthly", viewingDate)
       assert(result == 31)
     }
 
     test("daysCount should return correct number of days for weekly dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
-      val result = MonthlyShiftsUtil.daysCountByDayRange("weekly", viewingDate)
+      val result = MonthlyShiftsUtil.daysCountByViewPeriod("weekly", viewingDate)
       assert(result == 7)
     }
 
     test("daysCount should return correct number of days for daily dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
-      val result = MonthlyShiftsUtil.daysCountByDayRange("daily", viewingDate)
+      val result = MonthlyShiftsUtil.daysCountByViewPeriod("daily", viewingDate)
       assert(result == 1)
     }
 
     test("firstDay should return correct first day for monthly dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
-      val result = MonthlyShiftsUtil.firstDayByDayRange("monthly", viewingDate)
+      val result = MonthlyShiftsUtil.firstDayByViewPeriod("monthly", viewingDate)
       assert(result == SDate(2023, 10, 1))
     }
 
     test("firstDay should return correct first day for weekly dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
-      val result = MonthlyShiftsUtil.firstDayByDayRange("weekly", viewingDate)
+      val result = MonthlyShiftsUtil.firstDayByViewPeriod("weekly", viewingDate)
       assert(result == SDate(2023, 10, 9, 1)) // Assuming the week starts on Monday
     }
 
     test("firstDay should return correct first day for daily dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
-      val result = MonthlyShiftsUtil.firstDayByDayRange("daily", viewingDate)
+      val result = MonthlyShiftsUtil.firstDayByViewPeriod("daily", viewingDate)
       assert(result == viewingDate)
     }
 
@@ -140,14 +140,14 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         end = SDate(2023, 10, 1, 9),
         endHour = 9,
         endMinute = 0,
-        interval = interval,
+        intervalMinutes = interval,
         day = 1,
-        isShiftEndAfterMidnight = false,
-        isFirstDayForShiftEndAfterMidnight = false,
+        endsAfterMidnight = false,
+        firstDayEndsAfterMidnight = false,
         addToIndex = 0
       )
       val shiftDetails = ShiftDetails(shift, terminal, shiftAssignments)
-      val result = MonthlyShiftsUtil.staffTableEntriesForShift(shiftPeriod, shiftDetails, shiftAssignments.assignments)
+      val result = MonthlyShiftsUtil.staffTableEntriesForShift(shiftPeriod, shiftDetails)
 
       assert(result.nonEmpty)
       assert(result.head.name == "Morning")
@@ -226,7 +226,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
 
       val shiftDetails = ShiftDetails(staffShift, terminal, shifts)
 
-      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22), 1, interval, shiftDetails, ShiftAssignments.empty)
+      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22), 1, interval, shiftDetails)
 
       val expected = Seq(
         StaffTableEntry(1, 0, "Night", 5, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),

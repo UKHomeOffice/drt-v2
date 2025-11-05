@@ -63,8 +63,8 @@ object DashboardTerminalSummary {
     }
 
   def periodSummaries(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike, periodLengthMinutes: Int): Seq[DashboardSummary] = {
-    val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByPeriod(flights, start, periodLengthMinutes).toMap
-    val groupedCrunchMinutes: Map[MillisSinceEpoch, List[CrunchMinute]] = groupCrunchMinutesByPeriod(cms, start, periodLengthMinutes).toMap
+    val groupedFlights = groupFlightsByPeriod(flights, start, periodLengthMinutes).toMap
+    val groupedCrunchMinutes = groupCrunchMinutesByPeriod(cms, start, periodLengthMinutes).toMap
     periodStartTimes(start, periodLengthMinutes).map(h => DashboardSummary(
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,

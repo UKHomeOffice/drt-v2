@@ -10,13 +10,13 @@ platform:
 steps:
   - name: Build scalajs app
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
+      - npm --prefix client ci
       - sbt "client/fullLinkJS"
-      - cd client
-      - npm install
-      - npm run build
+      - npm --prefix client run build
+
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -27,7 +27,7 @@ steps:
 
   - name: Build scala app
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt --error compile playCompileEverything
@@ -46,7 +46,7 @@ steps:
 
   - name: Build docker image
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt --error "Docker / stage"
@@ -118,9 +118,26 @@ steps:
     depends_on:
       - ECR login
 
-  - name: Unit tests
+  - name: Client-side unit tests
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error client/test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+    depends_on:
+      - Publish app
+
+  - name: Server-side unit tests
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test
@@ -133,11 +150,11 @@ steps:
       event:
         - push
     depends_on:
-      - Publish app
+      - Client-side unit tests
 
   - name: Code coverage report
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error clean coverage test coverageReport
@@ -152,11 +169,11 @@ steps:
       branch:
         - master
     depends_on:
-      - Unit tests
+      - Server-side unit tests
 
   - name: Scapegoat
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt scapegoat | true
@@ -176,7 +193,7 @@ steps:
 
   - name: Dependency check
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
       - sbt -Dlog4j2.level=info dependencyCheck
@@ -256,7 +273,7 @@ steps:
       event:
         - push
     depends_on:
-      - Unit tests
+      - Server-side unit tests
       - End to end test
 
 services:

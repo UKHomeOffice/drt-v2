@@ -2,6 +2,8 @@
 import Settings.versions.scalajsReact
 import com.typesafe.config.ConfigFactory
 import net.nmoncho.sbt.dependencycheck.settings.NvdApiSettings
+import org.scalajs.jsenv.Input
+import org.scalajs.jsenv.nodejs.NodeJSEnv
 import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
 import sbt.Keys.credentials
@@ -62,9 +64,33 @@ lazy val client: Project = (project in file("client"))
           ModuleSplitStyle.SmallModulesFor(List("drt.client")))
     },
 
-    zonesFilter := {(z: String) => z == "Europe/London"},
+    zonesFilter := { (z: String) => z == "Europe/London" },
 
     Test / scalaJSStage := FastOptStage,
+
+    Test / scalaJSLinkerConfig ~= { cfg =>
+      cfg
+        .withModuleKind(ModuleKind.CommonJSModule)
+        .withModuleSplitStyle(ModuleSplitStyle.FewestModules)
+        .withSourceMap(true)
+    },
+
+    // Make Node see client/node_modules while running tests
+    Test / jsEnv := {
+      val cfg = NodeJSEnv.Config()
+        .withArgs(List("--trace-uncaught", "--unhandled-rejections=strict"))
+        .withEnv(Map("NODE_PATH" -> (baseDirectory.value / "node_modules").getAbsolutePath))
+      new NodeJSEnv(cfg)
+    },
+
+    /* **Prepend** dom-setup.js so it runs before the linked test module
+       Gives us a DOM for tests & modules that need it, eg handsontable
+     */
+    Test / jsEnvInput := {
+      val base = (Test / jsEnvInput).value
+      val domSetup = Input.Script(((Test / resourceDirectory).value / "dom-setup.js").toPath)
+      domSetup +: base
+    },
 
     resolvers += Resolver.defaultLocal,
     resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
