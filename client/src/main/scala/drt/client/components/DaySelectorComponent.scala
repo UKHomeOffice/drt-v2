@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain._
+import drt.client.components.MultiDayExportComponent.today.getLocalLastMidnight
 import drt.client.components.styles.{DrtReactTheme, ILocalDateProvider, LocalDateProvider}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -17,10 +18,14 @@ import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.scalajs.js
+import scala.util.Try
 
-case class SearchForm(displayText: String, timeText: String, arrivalDate: js.Date, fromTime: String, toTime: String)
+case class SearchForm(displayText: String, timeText: String, arrivalDate: js.Date, fromTime: js.Date, toTime: js.Date)
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
+
+  val extractHour: String => Int = hhmm => hhmm.split(":").headOption.flatMap(s => Try(s.toInt).toOption).getOrElse(0)
+  val extractDay: String => Int = hhmm => hhmm.split("\\+").drop(1).headOption.flatMap(s => Try(s.toInt).toOption).getOrElse(0)
 
   def searchForm(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): SearchForm = {
 
@@ -37,6 +42,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       terminalPageTab.timeRangeEnd.getOrElse(defaultTimeHHMMRangeWindow.end)
     )
 
+    val fromTime = selectedDate.getLocalLastMidnight.addHours(extractHour(selectedWindow.start))
+    val toTime = selectedDate.getLocalLastMidnight.addHours(extractHour(selectedWindow.end)).addDays(extractDay(selectedWindow.end))
+
     val selectedDateJs = new scala.scalajs.js.Date(selectedDate.millisSinceEpoch)
     val dayDisplayText = if (isYesterday) "yesterday" else if (isTomorrow) "tomorrow" else if (isToday) "today" else selectedDate.`DD-Month-YYYY`
     val timeText = terminalPageTab.timeSelectString
@@ -45,8 +53,8 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       displayText = dayDisplayText,
       timeText = timeText.getOrElse("now"),
       arrivalDate = selectedDateJs,
-      fromTime = selectedWindow.start,
-      toTime = selectedWindow.end
+      fromTime = new js.Date(fromTime.millisSinceEpoch),
+      toTime = new js.Date(toTime.millisSinceEpoch),
     )
   }
 
@@ -79,11 +87,16 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       }
 
       val currentWindow = CurrentWindow()
-      State(DisplayDate(date = viewMode.localDate, "now",
-        startTime = currentWindow.start,
-        endTime = currentWindow.end,
-        isNotValid = false),
-        tm.map(t => TimeMachineDate(t, isNotValid = false)))
+      State(
+        DisplayDate(
+          date = viewMode.localDate,
+          timeText = "now",
+          startTime = currentWindow.start,
+          endTime = currentWindow.end,
+          isNotValid = false
+        ),
+        tm.map(t => TimeMachineDate(t, isNotValid = false))
+      )
     }
     .renderPS { (scope, props, state) =>
 
@@ -109,18 +122,18 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       }
 
       def updateUrlWithDate(s: PaxSearchFormPayload, tmDate: Option[TimeMachineDate], terminalPageTab: TerminalPageTabLoc) = {
-        val dateMonth = (s.arrivalDate.getMonth() + 1).toLong
-        val dateDay = s.arrivalDate.getDate().toLong
-        val dateString = f"${s.arrivalDate.getFullYear()}-${dateMonth}%02d-${dateDay}%02d"
+        val viewDate = SDate(s.arrivalDate.valueOf().toLong)
 
-        def startTimeFormat = if (s.fromDate.nonEmpty) Some(f"${s.fromDate.split(":")(0).toInt}%02d:00") else None
+        val dateMonth = viewDate.getMonth
+        val dateDay = viewDate.getDate
+        val dateString = f"${viewDate.getFullYear}-$dateMonth%02d-$dateDay%02d"
 
-        def endTimeFormat = if (s.toDate.nonEmpty)
-          if (s.toDate.contains("+1")) {
-            val d = f"${s.toDate.split(":")(0).toInt}%02d:00"
-            Option(s"$d +1")
-          }
-          else Some(f"${s.toDate.split(":")(0).toInt}%02d:00") else None
+        def startTimeFormat = SDate(s.fromDate.valueOf().toLong).toHoursAndMinutes
+
+        def endTimeFormat = {
+          val days = if (s.fromDate.getDate() != s.toDate.getDate()) Option(" +1") else None
+          SDate(s.toDate.valueOf().toLong).toHoursAndMinutes + days.getOrElse("")
+        }
 
         val selectedWindow: TimeRangeHours = s.time match {
           case "now" =>
@@ -134,8 +147,8 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           case "range" =>
             GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "range")
             TimeRangeHours(
-              startTimeFormat.getOrElse(CurrentWindow().start),
-              endTimeFormat.getOrElse(CurrentWindow().end)
+              startTimeFormat,
+              endTimeFormat,
             )
 
           case _ => CurrentWindow()
@@ -192,10 +205,13 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                   toDate = searchFormForDate.toTime,
                   timeMachine = state.maybeTimeMachineDate.nonEmpty,
                   onChange = (s: PaxSearchFormPayload) => {
-                    val timeMachineDate = if (s.timeMachine) {
-                      Option(TimeMachineDate(SDate.now(), isNotValid = false))
+                    val tm = if (s.timeMachine) {
+                      state.maybeTimeMachineDate match {
+                        case Some(tm) => Some(tm)
+                        case None => Some(TimeMachineDate(state.selectedDate, isNotValid = false))
+                      }
                     } else None
-                    updateUrlWithDate(s, timeMachineDate, props.terminalPageTab).runNow()
+                    updateUrlWithDate(s, tm, props.terminalPageTab).runNow()
                   },
                   key = "pax-search-form",
                 )

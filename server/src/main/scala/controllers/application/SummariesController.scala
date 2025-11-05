@@ -36,7 +36,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             .mapAsync(1) { date =>
               ctrl
                 .applicationService.populateLivePaxViewForDate(date)
-                .flatMap(_ => ctrl.applicationService.updateAndPersistCapacity(date))
+                .flatMap(_ => ctrl.updateCapacityForDate(date))
                 .recover {
                   case t: Throwable =>
                     log.error(s"Failed to populate passengers or capacity for $date: ${t.getMessage}")

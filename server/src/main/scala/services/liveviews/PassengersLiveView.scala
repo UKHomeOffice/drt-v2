@@ -119,10 +119,10 @@ object PassengersLiveView {
   def persistCapacityForDate(db: AggregatedDbTables, portCode: PortCode)
                             (implicit ec: ExecutionContext): (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done] = {
     val replaceHours = CapacityHourlyDao.replaceHours(portCode)
-    (date, capacity) => {
+    (date, hourlyCapacityByTerminal) => {
       log.info(s"Populating capacities for ${date.toISOString}")
 
-      val eventuals = capacity.map {
+      val eventuals = hourlyCapacityByTerminal.map {
         case (terminal, hourly) =>
           val terminalHours = hourly.map {
             case (hour, capForHour) =>

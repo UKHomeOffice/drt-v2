@@ -11,12 +11,7 @@ import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.db.dao._
 import uk.gov.homeoffice.drt.db.tables.{UserTable, UserTableLike}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.staffing.{IShiftStaffRollingService,
-  ShiftMetaInfoService,
-  ShiftMetaInfoServiceImpl,
-  ShiftStaffRollingService,
-  ShiftsService,
-  ShiftsServiceImpl}
+import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService, QueueConfig}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
@@ -98,7 +93,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.forecastMaxDays,
     params.legacyFeedArrivalsBeforeDate,
   )
-
 
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,

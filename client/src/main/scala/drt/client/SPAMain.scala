@@ -90,6 +90,19 @@ object SPAMain {
     override val paramName = "timeRangeEnd"
   }
 
+  object UrlTimeInterval {
+    val paramName = "timeInterval"
+
+    def apply(timeInterval: Option[String]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = timeInterval.map {
+        case "30" => "30"
+        case "15" => "15"
+        case _ => "60"
+      }
+    }
+  }
+
   object UrlViewType {
     val paramName = "viewType"
 

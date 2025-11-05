@@ -113,12 +113,6 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def getActiveShiftsForDate(terminal: String, date: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getActiveShifts(ctrl.airportConfig.portCode.iata, terminal, Option(date)).map { shifts =>
-      Ok(shifts.toJson.compactPrint)
-    }
-  }
-
   def getActiveShiftsForViewRange(terminal: String, dayRange: String, date: String): Action[AnyContent] = Action.async {
     ctrl.shiftsService.getActiveShiftsForViewRange(ctrl.airportConfig.portCode.iata, terminal, Option(dayRange), Option(date)).map { shifts =>
       Ok(shifts.toJson.compactPrint)
@@ -165,23 +159,23 @@ class ShiftsController @Inject()(cc: ControllerComponents,
 
   def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
-      try {
-        val shifts = shiftsFromJson(text)
-        ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
-          shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-            val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
-            shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-              ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffRollingCreating(shifts))
-              Ok(write(s))
-            }
-          }.recoverWith {
-            case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
-          }
-        }
-      } catch {
-        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
-      }
+      val newShifts = shiftsFromJson(text)
+      createShifts(newShifts)
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
+  }
+
+  private def createShifts(shifts: Seq[Shift]) = {
+    ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
+      shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+        val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
+        shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+          ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffRollingCreating(shifts))
+          Ok(write(s))
+        }
+      }.recoverWith {
+        case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+      }
+    }
   }
 
   private def updateAssignments(previousShift: Shift, futureExistingShift: Option[Shift], updatedNewShift: Shift) = {
@@ -238,4 +232,5 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       }
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
+
 }
