@@ -4,7 +4,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.{ShiftAssignments, StaffAssignmentLike}
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.scalajs.js.Date
 
@@ -35,14 +35,14 @@ object MonthlyShiftsUtil {
       case _ => numberOfDaysInMonth(viewingDate)
     }
 
-  val firstDayByViewPeriod: (String, SDateLike) => SDateLike = (viewPeriod, viewingDate) =>
+  val firstDayByViewPeriod: (String, SDateLike) => LocalDate = (viewPeriod, viewingDate) =>
     viewPeriod match {
-      case "weekly" => SDate.firstDayOfWeek(viewingDate)
-      case "daily" => viewingDate
-      case _ => SDate.firstDayOfMonth(viewingDate)
+      case "weekly" => SDate.firstDayOfWeek(viewingDate).toLocalDate
+      case "daily" => viewingDate.toLocalDate
+      case _ => SDate.firstDayOfMonth(viewingDate).toLocalDate
     }
 
-  def createStaffTableEntries(startDate: SDateLike,
+  def createStaffTableEntries(startDate: LocalDate,
                               daysCount: Int,
                               intervalMinutes: Int,
                               shiftDetails: ShiftDetails,
@@ -56,7 +56,7 @@ object MonthlyShiftsUtil {
     val shiftEndsAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
     //For all the days in the period, create the staff table entries for the shift
     (dayRange.start to dayRange.end).flatMap { day =>
-      val currentDay = startDate.addDays(day - 1)
+      val currentDay = SDate(startDate).addDays(day - 1).toLocalDate
       val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
       val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
       val midnightNextDay = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0).addDays(1)
@@ -73,37 +73,43 @@ object MonthlyShiftsUtil {
         addToIndex = 0
       )
 
-      val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails)
+      val entriesBeforeMidnight = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails)
 
       val isFirstNightShiftForMonth = day == 1 && shiftEndsAfterMidnight && daysCount > 7
 
-      val fromMidNightDateStartTime = if (shiftEndsAfterMidnight) {
-        val midnightStart = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0)
-        val endTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
+      val entriesFromMidnight =
+        if (shiftEndsAfterMidnight) {
+          getEntriesAfterMidnight(shiftDetails, shiftEndHour, shiftEndMinute, currentDay, beforeMidnightPeriod, entriesBeforeMidnight, isFirstNightShiftForMonth)
+        }
+        else Seq.empty
 
-        val firstDayMidnightToStartTimePeriod = beforeMidnightPeriod.copy(
-          start = midnightStart,
-          end = endTime,
-          firstDayEndsAfterMidnight = isFirstNightShiftForMonth,
-          addToIndex = beforeMidnightEntries.size
-        )
-
-        staffTableEntriesForShift(firstDayMidnightToStartTimePeriod, shiftDetails)
-      } else Seq.empty
-
-      beforeMidnightEntries ++ fromMidNightDateStartTime
+      entriesBeforeMidnight ++ entriesFromMidnight
     }
   }
 
-  private def dayRangeForView(startDate: SDateLike, daysCount: Int, shiftDetails: ShiftDetails): Range.Inclusive = {
-    val startDay: Int = if (startDate.getMonth == shiftDetails.shift.startDate.month &&
-      startDate.getFullYear == shiftDetails.shift.startDate.year &&
-      shiftDetails.shift.startDate.day > startDate.getDate)
-      shiftDetails.shift.startDate.day - (startDate.getDate - 1)
+  private def getEntriesAfterMidnight(shiftDetails: ShiftDetails, shiftEndHour: Int, shiftEndMinute: Int, currentDay: SDateLike, beforeMidnightPeriod: ShiftPeriod, entriesBeforeMidnight: Seq[StaffTableEntry], isFirstNightShiftForMonth: Boolean) = {
+    val midnightStart = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0)
+    val endTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
+
+    val periodFromMidnight = beforeMidnightPeriod.copy(
+      start = midnightStart,
+      end = endTime,
+      firstDayEndsAfterMidnight = isFirstNightShiftForMonth,
+      addToIndex = entriesBeforeMidnight.size
+    )
+
+    staffTableEntriesForShift(periodFromMidnight, shiftDetails)
+  }
+
+  private def dayRangeForView(startDate: LocalDate, daysCount: Int, shiftDetails: ShiftDetails): Range.Inclusive = {
+    val startDay: Int = if (startDate.month == shiftDetails.shift.startDate.month &&
+      startDate.year == shiftDetails.shift.startDate.year &&
+      shiftDetails.shift.startDate.day > startDate.day)
+      shiftDetails.shift.startDate.day - (startDate.day - 1)
     else 1
     val daysInMonth: Int =
-      if (shiftDetails.shift.endDate.exists(ed => startDate.getMonth == ed.month && startDate.getFullYear == ed.year && ed.day >= startDate.getDate))
-        shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.getDate) - (startDate.getDate - 1)
+      if (shiftDetails.shift.endDate.exists(ed => startDate.month == ed.month && startDate.year == ed.year && ed.day >= startDate.day))
+        shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.day) - (startDate.day - 1)
       else daysCount
     startDay to daysInMonth
   }
@@ -169,14 +175,11 @@ object MonthlyShiftsUtil {
         intervalMinutes,
         ShiftDetails(shift, terminal, shiftAssignments),
       )
-      ShiftSummaryStaffing(
-        index = index,
-        shiftSummary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime,
-          startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year),
-          endDate = shift.endDate.map(d => ShiftDate(day = d.day, month = d.month, year = d.year))
-        ),
-        staffTableEntries = tableEntries
-      )
+      val startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year)
+      val maybeEndDate = shift.endDate.map(d => ShiftDate(day = d.day, month = d.month, year = d.year))
+      val summary = ShiftSummary(shift.shiftName, shift.staffNumber, shift.startTime, shift.endTime, startDate, maybeEndDate)
+
+      ShiftSummaryStaffing(index, summary, tableEntries)
     }
   }
 

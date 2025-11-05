@@ -162,7 +162,7 @@ object ShiftHotTableViewProps {
   def apply(shiftDate: ShiftDate,
             dayRange: String,
             interval: Int,
-            initialShifts: Seq[ShiftSummaryStaffing],
+            shiftSummaries: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
             handleEditShift: (Int, ShiftSummary) => Unit
            ): ShiftHotTableViewProps = {
@@ -170,7 +170,7 @@ object ShiftHotTableViewProps {
     p.shiftDate = shiftDate
     p.dayRange = dayRange
     p.interval = interval
-    p.shiftSummaries = initialShifts.toJSArray
+    p.shiftSummaries = shiftSummaries.toJSArray
     p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)

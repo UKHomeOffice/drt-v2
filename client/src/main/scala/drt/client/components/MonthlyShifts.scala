@@ -97,7 +97,8 @@ object MonthlyShifts {
               props.terminalPageTab.terminal,
               staffShifts,
               ShiftAssignments(shiftAssignments.forTerminal(props.terminalPageTab.terminal)),
-              props.timeSlotMinutes)
+              props.timeSlotMinutes
+            )
             scope.modState(state => state.copy(shiftAssignments = shiftAssignments,
               shiftSummaries = shiftSummaries, shifts = staffShifts)).runNow()
           }
@@ -196,7 +197,7 @@ object MonthlyShifts {
                     shiftDate = ShiftDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                     dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                     interval = props.timeSlotMinutes,
-                    initialShifts = state.shiftSummaries,
+                    shiftSummaries = state.shiftSummaries,
                     handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
                       val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                       val updateShifts = updateAssignments(shifts, updateChanges, 15)
@@ -246,11 +247,13 @@ object MonthlyShifts {
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("ShiftStaffing")
-    .initialStateFromProps(p => State(showEditStaffForm = false,
-      showStaffSuccess = false,
-      addShiftForm = false,
-      shifts = p.shifts,
-      shiftAssignments = ShiftAssignments.empty))
+    .initialStateFromProps(p =>
+      State(showEditStaffForm = false,
+        showStaffSuccess = false,
+        addShiftForm = false,
+        shifts = p.shifts,
+        shiftAssignments = ShiftAssignments.empty)
+    )
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
@@ -269,7 +272,7 @@ object MonthlyShifts {
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
             userPreferences: UserPreferences,
-            shiftCreated : Boolean
+            shiftCreated: Boolean
            ): Unmounted[Props, State, Backend] = {
     if (shiftCreated) {
       val newQueryParams = terminalPageTab.queryParams - "shifts"
