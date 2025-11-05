@@ -9,12 +9,14 @@ import scala.scalajs.js.annotation.JSImport
 @js.native
 trait IAddShiftBarComponentProps extends js.Object {
   var onClickGetStarted: js.Function0[Unit] = js.native
+  var onClickViewStaffing: js.Function0[Unit] = js.native
 }
 
 object IAddShiftBarComponentProps {
-  def apply(onClickGetStarted: js.Function0[Unit]): IAddShiftBarComponentProps = {
+  def apply(onClickGetStarted: js.Function0[Unit], onViewStaffing: js.Function0[Unit]): IAddShiftBarComponentProps = {
     val p = (new js.Object).asInstanceOf[IAddShiftBarComponentProps]
     p.onClickGetStarted = onClickGetStarted
+    p.onClickViewStaffing = onViewStaffing
     p
   }
 }

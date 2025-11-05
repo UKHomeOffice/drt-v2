@@ -1,9 +1,11 @@
 package drt.client.components
 
-import japgolly.scalajs.react.{Children, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
-import scala.scalajs.js
+import japgolly.scalajs.react.{Children, JsFnComponent}
+
 import scala.scalajs.js.Date
+
+import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
 @js.native
@@ -11,8 +13,8 @@ trait PaxSearchFormPayload extends js.Object {
   var day: String
   var time: String
   var arrivalDate: Date
-  var fromDate: String
-  var toDate: String
+  var fromDate: Date
+  var toDate: Date
   var timeMachine: Boolean
   var key: String
 }
@@ -23,7 +25,7 @@ trait IPaxSearchForm extends PaxSearchFormPayload {
 }
 
 object IPaxSearchForm {
-  def apply(day: String, time: String, arrivalDate: Date, fromDate: String, toDate: String, timeMachine: Boolean, onChange: PaxSearchFormPayload => Unit, key: String): IPaxSearchForm = {
+  def apply(day: String, time: String, arrivalDate: Date, fromDate: Date, toDate: Date, timeMachine: Boolean, onChange: PaxSearchFormPayload => Unit, key: String): IPaxSearchForm = {
     val p = (new js.Object).asInstanceOf[IPaxSearchForm]
     p.day = day
     p.time = time
@@ -47,5 +49,4 @@ object PaxSearchFormComponent {
   def apply(props: IPaxSearchForm): VdomElement = {
     component(props)
   }
-
 }

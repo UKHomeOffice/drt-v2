@@ -63,9 +63,8 @@ DELETE        /sla-configs/:effectiveFrom                                       
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
-POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
-POST          /shifts/update/:previousName                                            controllers.application.ShiftsController.updateShift(previousName: String)
-#GET           /shifts/:terminal/:date                                                 controllers.application.ShiftsController.getActiveShiftsForDate(terminal: String, date: String)
+POST          /shifts                                                                 controllers.application.ShiftsController.saveShifts
+PUT           /shifts/:previousName                                                   controllers.application.ShiftsController.updateShift(previousName: String)
 GET           /shifts/:terminal/:dayRange/:date                                       controllers.application.ShiftsController.getActiveShiftsForViewRange(terminal: String, dayRange: String, date: String)
 GET           /shifts/:terminal/:dayRange                                             controllers.application.ShiftsController.getActiveShiftsForCurrentViewRange(terminal: String, dayRange: String)
 GET           /shifts/:terminal                                                       controllers.application.ShiftsController.getActiveShifts(terminal: String)
@@ -146,7 +145,7 @@ PUT           /api/passengers/:startDate/:endDate                               
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
 
 + nocsrf
-PUT           /api/v1/flights/:startDateUtc/:endDateUtc                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateUtc: String, endDateUtc: String)
+PUT           /api/v1/flights/:startDateUtc/:endDateUtc                               controllers.application.api.v1.FlightsApiController.populateFlights(startDateUtc: String, endDateUtc: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)
