@@ -73,7 +73,6 @@ object MonthlyShiftsUtil {
         addToIndex = 0
       )
 
-
       val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails)
 
       val isFirstNightShiftForMonth = day == 1 && shiftEndsAfterMidnight && daysCount > 7
@@ -156,7 +155,7 @@ object MonthlyShiftsUtil {
   }
 
   def generateShiftSummaries(viewingDate: SDateLike,
-                             dayRange: String,
+                             viewPeriod: String,
                              terminal: Terminal,
                              shifts: Seq[Shift],
                              shiftAssignments: ShiftAssignments,
@@ -165,8 +164,8 @@ object MonthlyShiftsUtil {
 
     shifts.sortBy(_.startTime).zipWithIndex.map { case (shift, index) =>
       val tableEntries = createStaffTableEntries(
-        firstDayByViewPeriod(dayRange, viewingDate),
-        daysCountByViewPeriod(dayRange, viewingDate),
+        firstDayByViewPeriod(viewPeriod, viewingDate),
+        daysCountByViewPeriod(viewPeriod, viewingDate),
         intervalMinutes,
         ShiftDetails(shift, terminal, shiftAssignments),
       )
