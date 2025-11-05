@@ -156,6 +156,7 @@ trait ShiftHotTableViewProps extends js.Object {
   var shiftSummaries: js.Array[ShiftSummaryStaffing] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
   var handleEditShift: js.Function2[Int, ShiftSummary, Unit] = js.native
+  var handleRemoveShift : js.Function2[Int, ShiftSummary, Unit] = js.native
   var sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
 }
 
@@ -166,6 +167,7 @@ object ShiftHotTableViewProps {
             initialShifts: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
             handleEditShift: (Int, ShiftSummary) => Unit,
+            handleRemoveShift: (Int, ShiftSummary) => Unit,
             sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit]
            ): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
@@ -176,6 +178,7 @@ object ShiftHotTableViewProps {
     p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)
+    p.handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => handleRemoveShift(index, shiftSummary)
     p.sendAnalyticsEvent = sendAnalyticsEvent
     p
   }

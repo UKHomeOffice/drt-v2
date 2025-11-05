@@ -198,7 +198,17 @@ object MonthlyShifts {
                       props.router.set(props.terminalPageTab.copy(subMode = "editShifts",
                         queryParams = props.terminalPageTab.queryParams ++ Map(
                           "shiftName" -> s"${shiftSummary.name}",
-                          "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"
+                          "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
+                          "shiftStartTime" -> s"${shiftSummary.startTime}"
+                        )
+                      )).runNow()
+                    },
+                    handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => {
+                      props.router.set(props.terminalPageTab.copy(subMode = "removeShift",
+                        queryParams = props.terminalPageTab.queryParams ++ Map(
+                          "shiftName" -> s"${shiftSummary.name}",
+                          "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
+                          "shiftStartTime" -> s"${shiftSummary.startTime}",
                         )
                       )).runNow()
                     },

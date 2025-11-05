@@ -1,7 +1,8 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import actors.persistent.staffing.StaffingUtil.updateWithShiftDefaultStaff
+import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, staffAssignmentsSlotSummaries, updateWithShiftDefaultStaff}
+import drt.shared.{StaffAssignment, StaffAssignmentLike, TM}
 import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.{Shift, ShiftStaffRolling}
@@ -12,6 +13,7 @@ import uk.gov.homeoffice.drt.util.ShiftUtil.{currentLocalDate, localDateFromStri
 import upickle.default.write
 
 import javax.inject._
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
@@ -93,19 +95,19 @@ class ShiftsController @Inject()(cc: ControllerComponents,
                                  shiftAssignmentsService: ShiftAssignmentsService,
                                 )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
-  def getShift(terminal: String, shiftName: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, shiftName, currentLocalDate).map {
-      case Some(shift) => Ok(shift.toString)
-      case None => NotFound
-    }
-  }
-
-  def getAShift(terminal: String, shiftName: String, startDate: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, shiftName, localDateFromString(startDate)).map {
-      case Some(shift) => Ok(shift.toString)
-      case None => NotFound
-    }
-  }
+  //  def getShift(terminal: String, shiftName: String): Action[AnyContent] = Action.async {
+  //    ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, shiftName, currentLocalDate).map {
+  //      case Some(shift) => Ok(shift.toString)
+  //      case None => NotFound
+  //    }
+  //  }
+  //
+  //  def getAShift(terminal: String, shiftName: String, startDate: String): Action[AnyContent] = Action.async {
+  //    ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, shiftName, localDateFromString(startDate)).map {
+  //      case Some(shift) => Ok(shift.toString)
+  //      case None => NotFound
+  //    }
+  //  }
 
   def getShifts(terminal: String): Action[AnyContent] = Action.async {
     ctrl.shiftsService.getShifts(ctrl.airportConfig.portCode.iata, terminal).map { shifts =>
@@ -182,7 +184,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
       ctrl.shiftsService.getOverlappingStaffShifts(updatedNewShift.port, updatedNewShift.terminal, updatedNewShift)
         .flatMap { overridingShifts =>
-          val updatedAssignments = StaffingUtil.updateAssignmentsForShiftChange(
+          val updatedAssignments: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(
             previousShift,
             overridingShifts,
             futureExistingShift,
@@ -204,11 +206,52 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
+  private def updateAssignmentsWithDelete(previousShift: Shift) = {
+    val previousShiftStaff: Seq[StaffAssignment] = generateDailyAssignments(previousShift)
+    val previousShiftSplitDailyAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(previousShiftStaff)
+    shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+      val existingAllAssignments = allShiftAssignments.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
+      ctrl.shiftsService.getOverlappingStaffShifts(previousShift.port, previousShift.terminal, previousShift)
+        .flatMap { overridingShifts =>
+          val overridingAssignments: Seq[StaffAssignment] = getOverridingAssignments(overridingShifts, previousShift)
+          val overridingShiftAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(overridingAssignments)
+          val updatedAssignments = previousShiftSplitDailyAssignments.map {
+            case (tm, prevAssignment) =>
+              val updatedAssignment = existingAllAssignments.get(tm) match {
+                case Some(existingAssignment) =>
+                  if (existingAssignment.numberOfStaff - prevAssignment.numberOfStaff == overridingShiftAssignments.get(tm).map(_.numberOfStaff).getOrElse(0))
+                    StaffAssignment(existingAssignment.name, existingAssignment.terminal, existingAssignment.start,
+                      existingAssignment.end, existingAssignment.numberOfStaff - prevAssignment.numberOfStaff, existingAssignment.createdBy)
+                  else
+                    existingAssignment
+                case None =>
+                  prevAssignment
+              }
+              updatedAssignment
+          }
+
+          shiftAssignmentsService.updateShiftAssignments(updatedAssignments.toSeq).map { s =>
+            log.info(s"Deleted shift assignments updated for shift: ${previousShift.shiftName}")
+            Ok(write(s))
+          }.recoverWith {
+            case e: Exception =>
+              log.error(s"Failed to update shifts with assignments: ", e.printStackTrace())
+              Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+          }
+
+        }
+    }.recoverWith {
+      case e: Exception =>
+        log.error(s"Failed to update shifts: ", e.printStackTrace())
+        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+    }
+  }
+
   def updateShift(previousName: String): Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
         val newShift = shiftFromJson(text)
-        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, previousName, newShift.startDate).flatMap {
+        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, previousName, newShift.startDate, newShift.startTime).flatMap {
           case Some(previousShift) =>
             ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { updatedNewShift =>
               updateAssignments(previousShift, None, updatedNewShift)
@@ -233,4 +276,20 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
+  def removeShift(terminal: String, previousName: String, startDate: String, startTime: String): Action[AnyContent] = Action.async { request =>
+    try {
+      val startDateLocal = localDateFromString(startDate)
+      ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, previousName, startDateLocal, startTime).flatMap {
+        case Some(previousShift) =>
+          ctrl.shiftsService.deleteShift(previousShift).flatMap { deletedShift =>
+            updateAssignmentsWithDelete(previousShift)
+          }
+        case None =>
+          Future.successful(BadRequest(s"Previous shift not found for deletion: $previousName on ${startDate}"))
+
+      }
+    } catch {
+      case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+    }
+  }
 }

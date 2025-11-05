@@ -260,6 +260,17 @@ object TerminalComponent {
                         terminalModel.shiftsPot,
                         props.terminalPageTab.queryParams("shiftName"),
                         props.terminalPageTab.queryParams.get("shiftDate"),
+                        props.terminalPageTab.queryParams.get("shiftStartTime"),
+                        props.terminalPageTab.queryParams.get("date"),
+                        props.router))
+
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "removeShift" =>
+                      <.div(RemoveShiftsComponent(props.terminalPageTab.terminal,
+                        props.terminalPageTab.portCodeStr,
+                        terminalModel.shiftsPot,
+                        props.terminalPageTab.queryParams("shiftName"),
+                        props.terminalPageTab.queryParams.get("shiftDate"),
+                        props.terminalPageTab.queryParams.get("shiftStartTime"),
                         props.terminalPageTab.queryParams.get("date"),
                         props.router))
 
@@ -273,7 +284,7 @@ object TerminalComponent {
                       if (!userPreferences.showStaffingShiftView)
                         <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, shifts.isEmpty, props.terminalPageTab.subMode == "viewShifts", featureFlags.enableShiftPlanningChange))
                       else
-                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences, props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created", props.terminalPageTab.subMode == "viewShifts"))
+                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences, Seq("created", "removed").contains(props.terminalPageTab.queryParams.getOrElse("shifts", "")), props.terminalPageTab.subMode == "viewShifts"))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
                       <.div(^.className := "staffing-container-empty",

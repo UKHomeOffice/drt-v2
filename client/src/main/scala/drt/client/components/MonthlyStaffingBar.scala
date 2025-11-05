@@ -241,6 +241,10 @@ object MonthlyStaffingBar {
             MuiButton(color = Color.secondary, variant = "contained")
             (<.span("Create shift pattern"),
               ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")))
+          else if (props.isShiftFeatureEnabled && !props.isShiftsEmpty)
+            MuiButton(color = Color.secondary, variant = "contained")
+            (<.span("Add shift"),
+              ^.onClick --> props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "addShift")))
           else
             EmptyVdom,
           MuiButton(color = Color.primary, variant = "contained")

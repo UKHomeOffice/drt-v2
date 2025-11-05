@@ -65,11 +65,12 @@ GET           /fixed-points                                                     
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts                                                                 controllers.application.ShiftsController.saveShifts
 PUT           /shifts/:previousName                                                   controllers.application.ShiftsController.updateShift(previousName: String)
+DELETE        /shifts/:terminal/:previousName/:startDate/:startTime                   controllers.application.ShiftsController.removeShift(terminal: String, previousName: String, startDate: String, startTime: String)
 GET           /shifts/:terminal/:dayRange/:date                                       controllers.application.ShiftsController.getActiveShiftsForViewRange(terminal: String, dayRange: String, date: String)
 GET           /shifts/:terminal/:dayRange                                             controllers.application.ShiftsController.getActiveShiftsForCurrentViewRange(terminal: String, dayRange: String)
-GET           /shifts/:terminal                                                       controllers.application.ShiftsController.getActiveShifts(terminal: String)
-GET           /shift/:terminal/:shiftName/:startDate                                  controllers.application.ShiftsController.getAShift(terminal: String, shiftName: String, startDate: String)
-GET           /shift/:terminal/:shiftName                                             controllers.application.ShiftsController.getShift(terminal: String, shiftName: String)
+#GET           /shifts/:terminal                                                       controllers.application.ShiftsController.getActiveShifts(terminal: String)
+#GET           /shift/:terminal/:shiftName/:startDate                                  controllers.application.ShiftsController.getAShift(terminal: String, shiftName: String, startDate: String)
+#GET           /shift/:terminal/:shiftName                                             controllers.application.ShiftsController.getShift(terminal: String, shiftName: String)
 POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveShiftAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllShiftAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftAssignmentsController.getShiftAssignmentsForDate(localDate: String)

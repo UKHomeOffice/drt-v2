@@ -45,7 +45,7 @@ object StaffingUtil {
     }
   }
 
-  private def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
+   def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
     shiftAssignments
       .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
       .groupBy(a => TM(a.terminal, a.start))
@@ -55,6 +55,7 @@ object StaffingUtil {
         }
         tm -> combinedAssignment
       }
+
 
   def updateAssignmentsForShiftChange(previousShift: Shift,
                                       overridingShift: Seq[Shift],
@@ -96,7 +97,7 @@ object StaffingUtil {
       updatedNewShiftsAssignments
   }
 
-  private def getOverridingAssignments(overridingShift: Seq[Shift],
+   def getOverridingAssignments(overridingShift: Seq[Shift],
                                        newShift: Shift
                                       ): Seq[StaffAssignment] = {
     overridingShift
