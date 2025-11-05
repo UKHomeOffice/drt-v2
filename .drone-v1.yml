@@ -150,7 +150,7 @@ steps:
       event:
         - push
     depends_on:
-      - Publish app
+      - Client-side unit tests
 
   - name: Code coverage report
     pull: if-not-exists

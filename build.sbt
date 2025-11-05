@@ -67,13 +67,14 @@ lazy val client: Project = (project in file("client"))
     zonesFilter := { (z: String) => z == "Europe/London" },
 
     Test / scalaJSStage := FastOptStage,
-    //    Test / scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) },
+
     Test / scalaJSLinkerConfig ~= { cfg =>
       cfg
-        .withModuleKind(ModuleKind.CommonJSModule) // CJS so Node resolves like your app bundler did
-        .withModuleSplitStyle(ModuleSplitStyle.FewestModules) // disable splitting for tests → single file
+        .withModuleKind(ModuleKind.CommonJSModule)
+        .withModuleSplitStyle(ModuleSplitStyle.FewestModules)
         .withSourceMap(true)
     },
+
     // Make Node see client/node_modules while running tests
     Test / jsEnv := {
       val cfg = NodeJSEnv.Config()
@@ -82,7 +83,9 @@ lazy val client: Project = (project in file("client"))
       new NodeJSEnv(cfg)
     },
 
-    // **Prepend** dom-setup.js so it runs before the linked test module
+    /* **Prepend** dom-setup.js so it runs before the linked test module
+       Gives us a DOM for tests & modules that need it, eg handsontable
+     */
     Test / jsEnvInput := {
       val base = (Test / jsEnvInput).value
       val domSetup = Input.Script(((Test / resourceDirectory).value / "dom-setup.js").toPath)
