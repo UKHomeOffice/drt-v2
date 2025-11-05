@@ -224,10 +224,10 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
 
-  override def searchShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
-    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
-    Future.successful(shift)
-  }
+//  override def searchShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
+//    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
+//    Future.successful(shift)
+//  }
 
   override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] = {
     val overlappingShifts = shiftSeq.filter { s =>
