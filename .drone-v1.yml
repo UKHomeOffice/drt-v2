@@ -14,28 +14,9 @@ steps:
     commands:
       - /root/entrypoint.sh
       - npm --prefix client ci
-      - sbt --error client/test
       - sbt "client/fullLinkJS"
       - npm --prefix client run build
 
-#      - cd client
-#      - node -v
-#      - npm -v
-#      - npm config get legacy-peer-deps
-#      - echo "$NODE_OPTIONS"
-#
-#      - # Full dependency tree for parse5
-#      - npm ls parse5 --all
-#
-#      - # What YOUR app would import:
-#      - node -p "require.resolve('parse5/package.json')"
-#
-#      - # What JSDOM would import *relative to itself* (this is key):
-#      - node -p "require.resolve('jsdom/node_modules/parse5/package.json')"
-#
-#      - # Print the version at each resolved path:
-#      - node -p "require('fs').readFileSync(require.resolve('parse5/package.json'),'utf8')"
-#      - node -p "require('fs').readFileSync(require.resolve('jsdom/node_modules/parse5/package.json'),'utf8')"
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -137,7 +118,24 @@ steps:
     depends_on:
       - ECR login
 
-  - name: Unit tests
+  - name: Client-side unit tests
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error client/test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+    depends_on:
+      - Publish app
+
+  - name: Server-side unit tests
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
@@ -171,7 +169,7 @@ steps:
       branch:
         - master
     depends_on:
-      - Unit tests
+      - Server-side unit tests
 
   - name: Scapegoat
     pull: if-not-exists
@@ -275,7 +273,7 @@ steps:
       event:
         - push
     depends_on:
-      - Unit tests
+      - Server-side unit tests
       - End to end test
 
 services:
