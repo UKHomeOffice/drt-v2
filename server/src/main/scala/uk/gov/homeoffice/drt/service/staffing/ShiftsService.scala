@@ -13,8 +13,6 @@ trait ShiftsService {
 
   def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate, startTime: String): Future[Option[Shift]]
 
-  //  def searchShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]]
-
   def getShifts(port: String, terminal: String): Future[Seq[Shift]]
 
   def latestStaffShiftForADate(port: String, terminal: String, startDate: LocalDate, startTime: String)(implicit ec: ExecutionContext): Future[Option[Shift]]
@@ -57,9 +55,6 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit val ec: Ex
     previousShift.startTime).map(_ => previousShift)
 
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
-
-  //  override def searchShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] =
-  //    staffShiftsDao.searchStaffShift(port, terminal, shiftName, startDate)
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal)
