@@ -46,9 +46,10 @@ object MonthlyShiftsUtil {
                               daysCount: Int,
                               intervalMinutes: Int,
                               shiftDetails: ShiftDetails,
+                              recommendedStaff: Map[Long, Int],
                              ): Seq[StaffTableEntry] = {
 
-    val dayRange = dayRangeForView(startDate, daysCount, shiftDetails)
+    val dayRange = dayRangeForView(startDate, daysCount, shiftDetails.shift)
 
     val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
@@ -57,9 +58,9 @@ object MonthlyShiftsUtil {
     //For all the days in the period, create the staff table entries for the shift
     (dayRange.start to dayRange.end).flatMap { day =>
       val currentDay = SDate(startDate).addDays(day - 1).toLocalDate
-      val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
-      val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
-      val midnightNextDay = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0).addDays(1)
+      val shiftStartTime = SDate(currentDay).addHours(shiftStartHour).addMinutes(shiftStartMinute)
+      val shiftEndTime = SDate(currentDay).addHours(shiftEndHour).addMinutes(shiftEndMinute)
+      val midnightNextDay = SDate(currentDay).addDays(1)
 
       val beforeMidnightPeriod = ShiftPeriod(
         start = shiftStartTime,
@@ -73,13 +74,22 @@ object MonthlyShiftsUtil {
         addToIndex = 0
       )
 
-      val entriesBeforeMidnight = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails)
+      val entriesBeforeMidnight = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails, recommendedStaff)
 
       val isFirstNightShiftForMonth = day == 1 && shiftEndsAfterMidnight && daysCount > 7
 
       val entriesFromMidnight =
         if (shiftEndsAfterMidnight) {
-          getEntriesAfterMidnight(shiftDetails, shiftEndHour, shiftEndMinute, currentDay, beforeMidnightPeriod, entriesBeforeMidnight, isFirstNightShiftForMonth)
+          val midnightStart = SDate(currentDay)
+
+          val periodFromMidnight = beforeMidnightPeriod.copy(
+            start = midnightStart,
+            end = shiftEndTime,
+            firstDayEndsAfterMidnight = isFirstNightShiftForMonth,
+            addToIndex = entriesBeforeMidnight.size
+          )
+
+          staffTableEntriesForShift(periodFromMidnight, shiftDetails, recommendedStaff)
         }
         else Seq.empty
 
@@ -87,64 +97,51 @@ object MonthlyShiftsUtil {
     }
   }
 
-  private def getEntriesAfterMidnight(shiftDetails: ShiftDetails, shiftEndHour: Int, shiftEndMinute: Int, currentDay: SDateLike, beforeMidnightPeriod: ShiftPeriod, entriesBeforeMidnight: Seq[StaffTableEntry], isFirstNightShiftForMonth: Boolean) = {
-    val midnightStart = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0)
-    val endTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
+  private def dayRangeForView(startDate: LocalDate, daysCount: Int, shift: Shift): Range.Inclusive = {
+    val startDateBeforeShiftStartDate = startDate.month == shift.startDate.month &&
+      startDate.year == shift.startDate.year &&
+      startDate.day < shift.startDate.day
 
-    val periodFromMidnight = beforeMidnightPeriod.copy(
-      start = midnightStart,
-      end = endTime,
-      firstDayEndsAfterMidnight = isFirstNightShiftForMonth,
-      addToIndex = entriesBeforeMidnight.size
-    )
+    val startDay: Int = if (startDateBeforeShiftStartDate) shift.startDate.day - (startDate.day - 1) else 1
 
-    staffTableEntriesForShift(periodFromMidnight, shiftDetails)
-  }
-
-  private def dayRangeForView(startDate: LocalDate, daysCount: Int, shiftDetails: ShiftDetails): Range.Inclusive = {
-    val startDay: Int = if (startDate.month == shiftDetails.shift.startDate.month &&
-      startDate.year == shiftDetails.shift.startDate.year &&
-      shiftDetails.shift.startDate.day > startDate.day)
-      shiftDetails.shift.startDate.day - (startDate.day - 1)
-    else 1
     val daysInMonth: Int =
-      if (shiftDetails.shift.endDate.exists(ed => startDate.month == ed.month && startDate.year == ed.year && ed.day >= startDate.day))
-        shiftDetails.shift.endDate.map(_.day).getOrElse(startDate.day) - (startDate.day - 1)
+      if (shift.endDate.exists(ed => startDate.month == ed.month && startDate.year == ed.year && ed.day >= startDate.day))
+        shift.endDate.map(_.day).getOrElse(startDate.day) - (startDate.day - 1)
       else daysCount
+
     startDay to daysInMonth
   }
 
-  def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails): Seq[StaffTableEntry] = {
+  def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails, recommendedStaff: Map[Long, Int]): Seq[StaffTableEntry] = {
     val dayAssignments = shiftDetails.shiftAssignments.assignments
       .filter(assignment => assignment.start >= shiftPeriod.start.millisSinceEpoch && assignment.end <= shiftPeriod.end.millisSinceEpoch)
 
-    Iterator.iterate(shiftPeriod.start) { slotTime =>
-      nextSlotTime(shiftPeriod, slotTime)
-    }.takeWhile(_ < shiftPeriod.end).toSeq.zipWithIndex.map { case (currentTime, index) =>
-      val nextTime = nextSlotTime(shiftPeriod, currentTime)
-      findAndCreateDayTableAssignment(shiftPeriod, shiftDetails.terminal, shiftDetails.shift, dayAssignments, currentTime, index, nextTime)
-    }
+    Iterator
+      .iterate(shiftPeriod.start)(slotTime => nextSlotTime(shiftPeriod, slotTime))
+      .takeWhile(_ < shiftPeriod.end).toSeq.zipWithIndex.map { case (slotStart, index) =>
+        val nextTime = nextSlotTime(shiftPeriod, slotStart)
+        val maybeAssignment = dayAssignments.find(assignment => assignment.start == slotStart.millisSinceEpoch && assignment.terminal == shiftDetails.terminal)
+        val staffRec = recommendedStaff.getOrElse(slotStart.millisSinceEpoch, 0)
+        findAndCreateDayTableAssignment(shiftPeriod, shiftDetails.shift, staffRec, maybeAssignment, slotStart, index, nextTime)
+      }
   }
 
-  private def nextSlotTime(shiftPeriod: ShiftPeriod, slotTime: SDateLike): SDateLike = {
-    //if hours is starting or ending in :30 then add 30 minutes interval instead of 60 mins
+  private def nextSlotTime(shiftPeriod: ShiftPeriod, slotTime: SDateLike): SDateLike =
+    //if slot time starts or ends at 30 minutes then override the shift's interval minutes with 30 minutes
     if ((slotTime.getMinutes == 30 && shiftPeriod.intervalMinutes == 60) ||
       (slotTime.getHours == shiftPeriod.endHour && shiftPeriod.intervalMinutes == 60 && shiftPeriod.endMinute == 30)) {
       slotTime.addMinutes(30)
     } else {
       slotTime.addMinutes(shiftPeriod.intervalMinutes)
     }
-  }
 
   private def findAndCreateDayTableAssignment(shiftPeriod: ShiftPeriod,
-                                              terminal: Terminal,
                                               shift: Shift,
-                                              dayAssignments: Seq[StaffAssignmentLike],
-                                              currentTime: SDateLike,
+                                              staffRecommendation: Int,
+                                              maybeAssignment: Option[StaffAssignmentLike],
+                                              slotStart: SDateLike,
                                               index: Int,
                                               nextTime: SDateLike): StaffTableEntry = {
-    val maybeAssignment = dayAssignments.find(assignment => assignment.start == currentTime.millisSinceEpoch && assignment.terminal == terminal)
-
     val staff = maybeAssignment match {
       case Some(assignment) => assignment.numberOfStaff
       case None => if (shiftPeriod.firstDayEndsAfterMidnight) 0 else shift.staffNumber
@@ -154,8 +151,9 @@ object MonthlyShiftsUtil {
       column = shiftPeriod.day,
       row = if (shiftPeriod.endsAfterMidnight) index + shiftPeriod.addToIndex else index,
       name = maybeAssignment.map(_.name).getOrElse(shift.shiftName),
+      staffRecommendation = staffRecommendation,
       staffNumber = staff,
-      startTime = ShiftDateTime(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+      startTime = ShiftDateTime(slotStart.getFullYear, slotStart.getMonth, slotStart.getDate, slotStart.getHours, slotStart.getMinutes),
       endTime = ShiftDateTime(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
     )
   }
@@ -165,6 +163,7 @@ object MonthlyShiftsUtil {
                              terminal: Terminal,
                              shifts: Seq[Shift],
                              shiftAssignments: ShiftAssignments,
+                             recommendedStaff: Map[Long, Int],
                              intervalMinutes: Int,
                             ): Seq[ShiftSummaryStaffing] = {
 
@@ -174,6 +173,7 @@ object MonthlyShiftsUtil {
         daysCountByViewPeriod(viewPeriod, viewingDate),
         intervalMinutes,
         ShiftDetails(shift, terminal, shiftAssignments),
+        recommendedStaff
       )
       val startDate = ShiftDate(day = shift.startDate.day, month = shift.startDate.month, year = shift.startDate.year)
       val maybeEndDate = shift.endDate.map(d => ShiftDate(day = d.day, month = d.month, year = d.year))

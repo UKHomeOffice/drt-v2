@@ -32,7 +32,7 @@ import scala.scalajs.js
 import scala.util.Try
 
 
-object MonthlyShifts {
+object MonthlyShiftsComponent {
 
   case class State(showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
@@ -51,6 +51,7 @@ object MonthlyShifts {
                    airportConfig: AirportConfig,
                    userPreferences: UserPreferences,
                    shifts: Seq[Shift],
+                   recommendedStaff: Map[Long, Int],
                    viewMode: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
@@ -72,9 +73,9 @@ object MonthlyShifts {
 
       def confirmAndSaveShifts(shiftsData: Seq[ShiftSummaryStaffing],
                                changedAssignments: Seq[StaffTableEntry],
-                               props: MonthlyShifts.Props,
-                               state: MonthlyShifts.State,
-                               scope: BackendScope[MonthlyShifts.Props, MonthlyShifts.State]): ReactEventFromInput => Callback = {
+                               props: MonthlyShiftsComponent.Props,
+                               state: MonthlyShiftsComponent.State,
+                               scope: BackendScope[MonthlyShiftsComponent.Props, MonthlyShiftsComponent.State]): ReactEventFromInput => Callback = {
         ConfirmAndSaveForMonthlyShifts(shiftsData, changedAssignments, props, state, scope)()
       }
 
@@ -94,7 +95,8 @@ object MonthlyShifts {
               props.terminalPageTab.terminal,
               staffShifts,
               ShiftAssignments(shiftAssignments.forTerminal(props.terminalPageTab.terminal)),
-              props.timeSlotMinutes
+              props.recommendedStaff,
+              props.timeSlotMinutes,
             )
             scope.modState(state => state.copy(shiftAssignments = shiftAssignments,
               shiftSummaries = shiftSummaries, shifts = staffShifts)).runNow()
@@ -288,12 +290,13 @@ object MonthlyShifts {
             userPreferences: UserPreferences,
             shiftCreated: Boolean,
             viewMode: Boolean,
+            recommendedStaff: Map[Long, Int],
            ): Unmounted[Props, State, Backend] = {
     if (shiftCreated) {
       val newQueryParams = terminalPageTab.queryParams - "shifts"
       Callback(SPACircuit.dispatch(GetShifts)).runNow()
       router.set(terminalPageTab.copy(queryParams = newQueryParams)).runNow()
     }
-    component(Props(terminalPageTab, router, airportConfig, userPreferences, Seq.empty, viewMode))
+    component(Props(terminalPageTab, router, airportConfig, userPreferences, Seq.empty, recommendedStaff, viewMode))
   }
 }

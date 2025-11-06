@@ -90,6 +90,7 @@ trait StaffTableEntry extends js.Object {
   var column: Int
   var row: Int
   var name: String
+  var staffRecommendation: Int
   var staffNumber: Int
   var startTime: ShiftDateTime
   var endTime: ShiftDateTime
@@ -105,25 +106,27 @@ object StaffTableEntry {
     ShiftDateTime(s_date.getFullYear, s_date.getMonth, s_date.getDate, s_date.getHours, s_date.getMinutes)
   }
 
-  def splitIntoSlots(shiftAssignment: StaffTableEntry, slotMinutes: Int): Seq[StaffTableEntry] =
-    (shiftDateToSDate(shiftAssignment.startTime).millisSinceEpoch until shiftDateToSDate(shiftAssignment.endTime).millisSinceEpoch
+  def splitIntoSlots(tableEntry: StaffTableEntry, slotMinutes: Int): Seq[StaffTableEntry] =
+    (shiftDateToSDate(tableEntry.startTime).millisSinceEpoch until shiftDateToSDate(tableEntry.endTime).millisSinceEpoch
       by slotMinutes.minutes.toMillis).map(start =>
       StaffTableEntry(
-        column = shiftAssignment.column,
-        row = shiftAssignment.row,
-        name = shiftAssignment.name,
-        staffNumber = shiftAssignment.staffNumber,
+        column = tableEntry.column,
+        row = tableEntry.row,
+        name = tableEntry.name,
+        staffRecommendation = tableEntry.staffRecommendation,
+        staffNumber = tableEntry.staffNumber,
         startTime = sDateToShiftDate(start),
         endTime = sDateToShiftDate(start + (slotMinutes.minutes.toMillis - oneMinuteMillis)
         )
       )
     )
 
-  def apply(column: Int, row: Int, name: String, staffNumber: Int, startTime: ShiftDateTime, endTime: ShiftDateTime): StaffTableEntry = {
+  def apply(column: Int, row: Int, name: String, staffRecommendation: Int, staffNumber: Int, startTime: ShiftDateTime, endTime: ShiftDateTime): StaffTableEntry = {
     val p = (new js.Object).asInstanceOf[StaffTableEntry]
     p.column = column
     p.row = row
     p.name = name
+    p.staffRecommendation = staffRecommendation
     p.staffNumber = staffNumber
     p.startTime = startTime
     p.endTime = endTime

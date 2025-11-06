@@ -36,9 +36,9 @@ sealed trait ConfirmAndSave {
 
 case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
                                             timeSlots: Seq[Seq[Any]],
-                                            props: MonthlyStaffing.Props,
-                                            state: MonthlyStaffing.State,
-                                            scope: BackendScope[MonthlyStaffing.Props, MonthlyStaffing.State]) extends ConfirmAndSave {
+                                            props: MonthlyStaffingComponent.Props,
+                                            state: MonthlyStaffingComponent.State,
+                                            scope: BackendScope[MonthlyStaffingComponent.Props, MonthlyStaffingComponent.State]) extends ConfirmAndSave {
   override def apply(): ReactEventFromInput => Callback = _ => Callback {
     val initialTimeSlots: Seq[Seq[Any]] = slotsFromShiftAssignments(state.shiftAssignments,
       props.terminalPageTab.terminal,
@@ -50,7 +50,7 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
     val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(timeSlots, state.changes)
     val saveAsTimeSlotMinutes = 15
 
-    val changedShiftSlots: Seq[StaffAssignment] = MonthlyStaffing.updatedShiftAssignments(
+    val changedShiftSlots: Seq[StaffAssignment] = MonthlyStaffingComponent.updatedShiftAssignments(
       quarterHourlyChanges,
       viewingDate,
       props.terminalPageTab.terminal,
@@ -74,14 +74,14 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
 
 case class ConfirmAndSaveForMonthlyShifts(shiftsData: Seq[ShiftSummaryStaffing],
                                           changedAssignments: Seq[StaffTableEntry],
-                                          props: MonthlyShifts.Props,
-                                          state: MonthlyShifts.State,
-                                          scope: BackendScope[MonthlyShifts.Props, MonthlyShifts.State]) extends ConfirmAndSave {
+                                          props: MonthlyShiftsComponent.Props,
+                                          state: MonthlyShiftsComponent.State,
+                                          scope: BackendScope[MonthlyShiftsComponent.Props, MonthlyShiftsComponent.State]) extends ConfirmAndSave {
   override def apply(): ReactEventFromInput => Callback = _ => Callback {
     val changedShifts: Seq[StaffAssignment] = shiftsData
       .flatMap(_.staffTableEntries.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
-    val changedShiftSlots: Seq[StaffAssignment] = MonthlyShifts.updatedConvertedShiftAssignments(
+    val changedShiftSlots: Seq[StaffAssignment] = MonthlyShiftsComponent.updatedConvertedShiftAssignments(
       changedShifts,
       props.terminalPageTab.terminal)
 
