@@ -11,13 +11,12 @@ object DashboardComponentTests extends TestSuite {
 
   import DashboardTerminalSummary._
 
+  def tests: Tests = Tests {
 
-  def tests = Tests {
+    test("DashboardComponentTests") - {
 
-    "DashboardComponentTests" - {
-
-      "When calculating the combined load across all queues" - {
-        "Given two CrunchMinutes for different Queues in the same minute, I should get one combined CrunchMinute back" - {
+      test("When calculating the combined load across all queues") - {
+        test("Given two CrunchMinutes for different Queues in the same minute, I should get one combined CrunchMinute back") - {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
@@ -33,7 +32,7 @@ object DashboardComponentTests extends TestSuite {
           assert(result == expected)
         }
 
-        "Given two CrunchMinutes for different Queues in two minutes, I should get the same values back" - {
+        test("Given two CrunchMinutes for different Queues in two minutes, I should get the same values back") - {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
@@ -50,7 +49,8 @@ object DashboardComponentTests extends TestSuite {
 
           assert(result.toSet == expected.toSet)
         }
-        "Given four CrunchMinutes for different Queues in two minutes, I should get aggregate for each minute back" - {
+
+        test("Given four CrunchMinutes for different Queues in two minutes, I should get aggregate for each minute back") - {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
@@ -70,7 +70,7 @@ object DashboardComponentTests extends TestSuite {
         }
       }
 
-      "Given a list of Crunch Minutes I should find the timeslot with the highest RAG rating in the list" - {
+      test("Given a list of Crunch Minutes I should find the timeslot with the highest RAG rating in the list") - {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val worstRagRatingMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(30).millisSinceEpoch, 2, 40, 10, 10, Option(10), Option(10), None, None)
         val crunchMinutes = List(
@@ -85,30 +85,30 @@ object DashboardComponentTests extends TestSuite {
       }
     }
 
-    "When choosing the timeslot to display in a dashboard widget " - {
+    test("When choosing the timeslot to display in a dashboard widget ") - {
 
-      "given 13:45 I should get back 13:45" - {
+      test("given 13:45 I should get back 13:45") - {
         val time = SDate("2017-11-30T13:45")
         val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
-      "given 13:46 I should get back 13:45" - {
+      test("given 13:46 I should get back 13:45") - {
         val time = SDate("2017-11-30T13:46")
         val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
-      "given 13:52 I should get back 13:45" - {
+      test("given 13:52 I should get back 13:45") - {
         val time = SDate("2017-11-30T13:52")
         val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
-      "given 13:02 I should get back 13:00" - {
+      test("given 13:02 I should get back 13:00") - {
         val time = SDate("2017-11-30T13:02")
         val result = DashboardTerminalSummary.windowStart(time, 15)
         val expected = SDate("2017-11-30T13:00")
@@ -117,8 +117,8 @@ object DashboardComponentTests extends TestSuite {
       }
     }
 
-    "Given a list of flights spanning a 3 hour period when I group by hour I should a list of touples of hour to list " +
-      "of flights ordered by hour" - {
+    test("Given a list of flights spanning a 3 hour period when I group by hour I should a list of touples of hour to list " +
+      "of flights ordered by hour") - {
       val flight1 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T09:52:00", feedSource = LiveFeedSource), Set())
       val flight2 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T09:45:00", feedSource = LiveFeedSource), Set())
       val flight3 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T10:55:00", feedSource = LiveFeedSource), Set())
@@ -142,7 +142,7 @@ object DashboardComponentTests extends TestSuite {
       assert(result == expected)
     }
 
-    "Given a list of CrunchMinutes when asking for the lowest PCP pressure I should get the Minute with the lowest pax back" - {
+    test("Given a list of CrunchMinutes when asking for the lowest PCP pressure I should get the Minute with the lowest pax back") - {
       val startDate = SDate("2017-10-30T00:00:00Z")
       val lowestMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 5, 40, 10, 10, Option(10), None, None)
       val cms = List(
@@ -157,7 +157,7 @@ object DashboardComponentTests extends TestSuite {
       assert(result == lowestMinute)
     }
 
-    "Given a list of CrunchMinutes when asking for the highest PCP pressure I should get the Minute with the most pax back" - {
+    test("Given a list of CrunchMinutes when asking for the highest PCP pressure I should get the Minute with the most pax back") - {
       val startDate = SDate("2017-10-30T00:00:00Z")
       val highestMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 30, 40, 10, 10, Option(10), None, None)
       val cms = List(
@@ -172,13 +172,13 @@ object DashboardComponentTests extends TestSuite {
       assert(result == highestMinute)
     }
 
-    "When I ask for a break down of flights and queues per hour" - {
-      "Given 1 flight and 1 Crunch Minute for the same period" - {
+    test("When I ask for a break down of flights and queues per hour") - {
+      test("Given 1 flight and 1 Crunch Minute for the same period") - {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()))
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
 
-        val result = periodSummaries(flights, cms, startDate, 1)
+        val result = periodSummaries(flights, cms, startDate, 60)
         val expected = List(
           DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 1, Map(Queues.EeaDesk -> 20d)),
           DashboardSummary(SDate("2017-10-30T01:00:00Z").millisSinceEpoch, 0, Map()),
@@ -188,7 +188,7 @@ object DashboardComponentTests extends TestSuite {
         assert(result == expected)
       }
 
-      "Given 2 flights and 1 Crunch Minute for the same period then we should get a summary with 2 flights in" - {
+      test("Given 2 flights and 1 Crunch Minute for the same period then we should get a summary with 2 flights in") - {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
@@ -209,7 +209,8 @@ object DashboardComponentTests extends TestSuite {
 
         assert(result == expected)
       }
-      "Given 2 flights and 1 Crunch Minute for different hours then we should get two hour summaries back each with one flight" - {
+
+      test("Given 2 flights and 1 Crunch Minute for different hours then we should get two hour summaries back each with one flight") - {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
@@ -230,7 +231,8 @@ object DashboardComponentTests extends TestSuite {
 
         assert(result == expected)
       }
-      "Given 2 flights and 2 Crunch Minutes for different hours and queues then we should get two hour summaries back each with one flight" - {
+
+      test("Given 2 flights and 2 Crunch Minutes for different hours and queues then we should get two hour summaries back each with one flight") - {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
@@ -257,8 +259,8 @@ object DashboardComponentTests extends TestSuite {
         assert(result == expected)
       }
 
-      "When calculating the total per queue for 3 hours" - {
-        "Given non round queue totals then the total should be equal to the sum of the rounded values" - {
+      test("When calculating the total per queue for 3 hours") - {
+        test("Given non round queue totals then the total should be equal to the sum of the rounded values") - {
           val hourSummaries = List(
             DashboardSummary(SDate("2017-10-30T00:00:00Z").millisSinceEpoch, 0, Map(Queues.EeaDesk -> 1.4)),
             DashboardSummary(SDate("2017-10-30T00:00:00Z").addHours(1).millisSinceEpoch, 0, Map(Queues.EeaDesk -> 1.4)),
