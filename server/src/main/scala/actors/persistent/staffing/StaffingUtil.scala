@@ -264,12 +264,7 @@ object StaffingUtil {
                 assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
               else
                 assignment
-            }.getOrElse {
-              if (existing.numberOfStaff == 0)
-                assignment
-              else
-                existing
-            }
+            }.getOrElse(assignment)
           case None => assignment
         }
     }.toSeq.sortBy(_.start)

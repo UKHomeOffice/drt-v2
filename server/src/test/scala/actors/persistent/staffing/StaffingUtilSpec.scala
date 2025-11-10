@@ -218,10 +218,9 @@ class StaffingUtilSpec extends Specification {
 
       val allShifts = ShiftAssignments(assignments = existingAssignments)
 
-      val result: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(previousShift, overridingShift, Option(futureShift), newShift, allShifts)
-//      result.map(
-//        a => println(s"Updated Assignment: ${a.name}, Start: ${SDate(a.start).toISOString}, End: ${SDate(a.end).toISOString}, Staff: ${a.numberOfStaff}")
-//      )
+      val result: Seq[StaffAssignmentLike] = StaffingUtil.updateAssignmentsForShiftChange(
+        previousShift, overridingShift, Option(futureShift), newShift, allShifts
+      )
       result must not(beEmpty)
       result.exists(a => a.numberOfStaff == 6)
       !result.exists(a => a.numberOfStaff == 9) // Previous + override should be replaced
@@ -638,5 +637,60 @@ class StaffingUtilSpec extends Specification {
         result.exists(a => SDate(a.start).getHours == 12 && a.numberOfStaff == 10) and
         result.exists(a => SDate(a.start).getHours == 13 && a.numberOfStaff == 12)
     }
+
+    "addAssignments should add new assignments and update existing ones with overrides" in {
+      val terminal = Terminal("T1")
+      val baseDate = LocalDate(2024, 7, 1)
+
+      val newShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Test Shift",
+        startDate = baseDate,
+        startTime = "09:00",
+        endTime = "13:00",
+        endDate = Some(baseDate),
+        staffNumber = 4,
+        frequency = None,
+        createdBy = Some("tester"),
+        createdAt = System.currentTimeMillis()
+      )
+
+      //      val newAssignments = StaffingUtil.generateDailyAssignments(newShift)
+      val existingAssignment = StaffAssignment(
+        name = "Existing",
+        terminal = terminal,
+        start = SDate(2024, 7, 1, 9, 0, europeLondonTimeZone).millisSinceEpoch,
+        end = SDate(2024, 7, 1, 13, 0, europeLondonTimeZone).millisSinceEpoch,
+        numberOfStaff = 5,
+        createdBy = Some("tester")
+      )
+      val allShifts: ShiftAssignments = ShiftAssignments(Seq(existingAssignment).flatMap(_.splitIntoSlots(15)))
+
+      val overridingShift = Seq(
+        Shift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Override Shift",
+          startDate = baseDate,
+          startTime = "11:00",
+          endTime = "13:00",
+          endDate = Some(baseDate),
+          staffNumber = 5,
+          frequency = None,
+          createdBy = Some("tester"),
+          createdAt = System.currentTimeMillis()
+        )
+      )
+      allShifts.assignments.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 5)
+      allShifts.assignments.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 5)
+
+      val result = StaffingUtil.addAssignments(newShift, overridingShift, allShifts)
+
+      result.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 4)
+      result.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 9)
+
+    }
   }
+
 }
