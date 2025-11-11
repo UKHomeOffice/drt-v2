@@ -58,10 +58,9 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (startOfWeekMidnight, endOfForecast)
   }
 
-  def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch, periodInterval: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
+  def forecastSummary(terminalName: String, startDay: MillisSinceEpoch, numberOfDays: Int, periodInterval: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async {
       val terminal = Terminal(terminalName)
-      val numberOfDays = 7
       val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
 
       val portStateFuture = ctrl.actorService.portStateActor.ask(

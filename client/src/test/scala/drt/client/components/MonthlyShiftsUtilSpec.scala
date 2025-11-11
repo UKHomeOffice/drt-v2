@@ -1,12 +1,12 @@
 package drt.client.components
 
 import drt.client.components.MonthlyShiftsUtil._
-import utest._
+import drt.client.services.JSDateConversions.SDate
 import drt.shared._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
-import drt.client.services.JSDateConversions.SDate
-import uk.gov.homeoffice.drt.Shift
+import utest._
 
 object MonthlyShiftsUtilSpec extends TestSuite {
   val tests: Tests = Tests {
@@ -226,7 +226,14 @@ object MonthlyShiftsUtilSpec extends TestSuite {
 
       val shiftDetails = ShiftDetails(staffShift, terminal, shifts)
 
-      val result = MonthlyShiftsUtil.createStaffTableEntries(LocalDate(2023, 10, 1), 1, interval, shiftDetails, Map.empty)
+      val recStaff = Map(
+        SDate(2023, 10, 1, 22).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1, 23).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1, 1).millisSinceEpoch -> 4,
+      )
+
+      val result = MonthlyShiftsUtil.createStaffTableEntries(LocalDate(2023, 10, 1), 1, interval, shiftDetails, recStaff)
 
       val expected = Seq(
         StaffTableEntry(1, 0, "Night", 4, 5, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),
@@ -240,6 +247,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         assert(res.column == exp.column)
         assert(res.row == exp.row)
         assert(res.name == exp.name)
+        assert(res.staffRecommendation == exp.staffRecommendation)
         assert(res.staffNumber == exp.staffNumber)
         assert(ShiftDateTime.isEqual(res.startTime, exp.startTime))
         assert(ShiftDateTime.isEqual(res.endTime, exp.endTime))

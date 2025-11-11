@@ -183,14 +183,14 @@ object MonthlyShiftsUtil {
     }
   }
 
-  def updateChangeAssignment(previousChange: Seq[StaffTableEntry], newChange: Seq[StaffTableEntry]): Seq[StaffTableEntry] = {
-    val previousChangeMap = previousChange.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
-    val newChangeMap = newChange.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
+  def updateTableEntries(existing: Seq[StaffTableEntry], updates: Seq[StaffTableEntry]): Seq[StaffTableEntry] = {
+    val previousChangeMap = existing.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
+    val newChangeMap = updates.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
     val mergedMap = previousChangeMap ++ newChangeMap
     mergedMap.values.toSeq
   }
 
-  def updateAssignments(shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry], slotMinutes: Int): Seq[ShiftSummaryStaffing] = {
+  def updateShiftSummaries(shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry], slotMinutes: Int): Seq[ShiftSummaryStaffing] = {
     val changedAssignmentsWithSlotMap: Seq[StaffTableEntry] = changedAssignments.flatMap(a => StaffTableEntry.splitIntoSlots(a, slotMinutes))
     val changedAssignmentsMap: Map[String, StaffTableEntry] = changedAssignmentsWithSlotMap.map(a => ShiftDateTime.toString(a.startTime) -> a).toMap
     shifts.map { shift: ShiftSummaryStaffing =>

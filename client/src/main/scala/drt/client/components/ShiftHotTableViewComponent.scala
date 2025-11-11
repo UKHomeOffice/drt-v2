@@ -154,8 +154,8 @@ object ShiftSummaryStaffing {
 @js.native
 trait ShiftHotTableViewProps extends js.Object {
   var shiftDate: ShiftDate = js.native
-  var dayRange: String = js.native
-  var interval: Int = js.native
+  var viewPeriod: String = js.native
+  var intervalMinutes: Int = js.native
   var shiftSummaries: js.Array[ShiftSummaryStaffing] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
   var handleEditShift: js.Function2[Int, ShiftSummary, Unit] = js.native
@@ -164,7 +164,7 @@ trait ShiftHotTableViewProps extends js.Object {
 
 object ShiftHotTableViewProps {
   def apply(shiftDate: ShiftDate,
-            dayRange: String,
+            viewPeriod: String,
             interval: Int,
             shiftSummaries: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
@@ -173,8 +173,8 @@ object ShiftHotTableViewProps {
            ): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.shiftDate = shiftDate
-    p.dayRange = dayRange
-    p.interval = interval
+    p.viewPeriod = viewPeriod
+    p.intervalMinutes = interval
     p.shiftSummaries = shiftSummaries.toJSArray
     p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)

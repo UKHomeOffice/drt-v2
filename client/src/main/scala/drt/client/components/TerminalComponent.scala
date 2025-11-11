@@ -5,6 +5,7 @@ import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain._
+import drt.client.actions.Actions.{GetAllShiftAssignments, GetForecast}
 import drt.client.components.TerminalDesksAndQueues.Recommended
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -37,6 +38,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable
 import scala.collection.immutable.{HashSet, SortedMap}
+import scala.util.Try
 
 object TerminalComponent {
 
@@ -52,7 +54,7 @@ object TerminalComponent {
                                    staffMovementsPot: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
                                    airportConfigPot: Pot[AirportConfig],
-                                   slaConfigsPot: Pot[SlaConfigs],
+//                                   slaConfigsPot: Pot[SlaConfigs],
                                    loadingState: LoadingState,
                                    showActuals: Boolean,
                                    loggedInUserPot: Pot[LoggedInUser],
@@ -65,6 +67,7 @@ object TerminalComponent {
                                    paxFeedSourceOrder: List[FeedSource],
                                    shiftsPot: Pot[Seq[Shift]],
                                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
+                                   allShiftAssignments: Pot[ShiftAssignments],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -92,7 +95,7 @@ object TerminalComponent {
         staffMovementsPot = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
         airportConfigPot = model.airportConfig,
-        slaConfigsPot = model.slaConfigs,
+//        slaConfigsPot = model.slaConfigs,
         loadingState = model.loadingState,
         showActuals = model.showActualIfAvailable,
         loggedInUserPot = model.loggedInUserPot,
@@ -105,6 +108,7 @@ object TerminalComponent {
         paxFeedSourceOrder = model.paxFeedSourceOrder,
         shiftsPot = model.shifts,
         addedStaffMovementMinutes = model.addedStaffMovementMinutes,
+        allShiftAssignments = model.allShiftAssignments,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -288,7 +292,17 @@ object TerminalComponent {
                               (ts, queueStaff + miscStaff)
                           }
                         }
-                        <.div(MonthlyShiftsComponent(props.terminalPageTab, props.router, airportConfig, userPreferences, props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created", props.terminalPageTab.subMode == "viewShifts", slotStaffRecs.getOrElse(Map.empty)))
+                        <.div(MonthlyShiftsComponent(
+                          props.terminalPageTab,
+                          props.router,
+                          airportConfig,
+                          userPreferences,
+                          props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created",
+                          props.terminalPageTab.subMode == "viewShifts",
+                          slotStaffRecs.getOrElse(Map.empty),
+                          terminalModel.shiftsPot,
+                          terminalModel.allShiftAssignments,
+                        ))
                       }
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
@@ -309,10 +323,16 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString,
-        p.props.terminalPageTab.queryParams.get("date"),
-        p.props.terminalPageTab.queryParams.get("dayRange")))))
+    .componentDidMount { m =>
+      val date = m.props.terminalPageTab.dateFromUrlOrNow.startOfTheMonth
+      val intervalMinutes = Try(m.props.terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
+      println(s"getting forecast, shifts & assignmenst on did mount... $intervalMinutes")
+      Callback(SPACircuit.dispatch(GetForecast(date, 31, m.props.terminalPageTab.terminal, intervalMinutes)))
+        .flatMap(_ => Callback(SPACircuit.dispatch(
+          GetShifts(m.props.terminalPageTab.terminal.toString, m.props.terminalPageTab.queryParams.get("date"), m.props.terminalPageTab.queryParams.get("dayRange"))))
+        )
+        .flatMap(_ => Callback(SPACircuit.dispatch(GetAllShiftAssignments)))
+    }
     .build
 
   private def terminalTabs(props: Props,
