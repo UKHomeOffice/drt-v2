@@ -196,20 +196,12 @@ object MonthlyShifts {
                     },
                     handleEditShift = (index: Int, shiftSummary: ShiftSummary) => {
                       props.router.set(props.terminalPageTab.copy(subMode = "editShifts",
-                        queryParams = props.terminalPageTab.queryParams ++ Map(
-                          "shiftName" -> s"${shiftSummary.name}",
-                          "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
-                          "shiftStartTime" -> s"${shiftSummary.startTime}"
-                        )
+                        queryParams = props.terminalPageTab.queryParams ++ shiftQueryParameter(shiftSummary)
                       )).runNow()
                     },
                     handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => {
                       props.router.set(props.terminalPageTab.copy(subMode = "removeShift",
-                        queryParams = props.terminalPageTab.queryParams ++ Map(
-                          "shiftName" -> s"${shiftSummary.name}",
-                          "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
-                          "shiftStartTime" -> s"${shiftSummary.startTime}",
-                        )
+                        queryParams = props.terminalPageTab.queryParams ++ shiftQueryParameter(shiftSummary)
                       )).runNow()
                     },
                     sendAnalyticsEvent = GoogleEventTracker.sendEvent
@@ -236,6 +228,14 @@ object MonthlyShifts {
         )
       )
     }
+  }
+
+  private def shiftQueryParameter(shiftSummary: ShiftSummary) = {
+    Map(
+      "shiftName" -> s"${shiftSummary.name}",
+      "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
+      "shiftStartTime" -> s"${shiftSummary.startTime}"
+    )
   }
 
   private def goToViewShifts(props: Props) = {

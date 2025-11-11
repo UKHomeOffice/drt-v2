@@ -33,7 +33,7 @@ trait ShiftsService {
 
   def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift): Future[(Shift, Option[Shift])]
 
-  def deleteShift(previousShift: Shift): Future[Shift]
+  def deleteShift(shift: Shift): Future[Shift]
 
   def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]]
 
@@ -48,11 +48,11 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit val ec: Ex
     Future.sequence(shifts.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
   }
 
-  override def deleteShift(previousShift: Shift): Future[Shift] = staffShiftsDao.deleteStaffShift(previousShift.port,
-    previousShift.terminal,
-    previousShift.shiftName,
-    previousShift.startDate,
-    previousShift.startTime).map(_ => previousShift)
+  override def deleteShift(shift: Shift): Future[Shift] = staffShiftsDao.deleteStaffShift(shift.port,
+    shift.terminal,
+    shift.shiftName,
+    shift.startDate,
+    shift.startTime).map(_ => shift)
 
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
 

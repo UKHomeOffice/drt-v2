@@ -10,8 +10,8 @@ import scala.scalajs.js.annotation.JSImport
 @js.native
 trait RemoveShiftFormProps extends js.Object {
   var shift: ShiftForm = js.native
-  var removeShiftConfirmHandler: js.Function1[ShiftForm, Unit] = js.native
-  var cancelRemoveShiftHandler: js.Function0[Unit] = js.native
+  var onConfirm: js.Function1[ShiftForm, Unit] = js.native
+  var onCancel: js.Function0[Unit] = js.native
 }
 
 object RemoveShiftFormProps {
@@ -21,8 +21,8 @@ object RemoveShiftFormProps {
            ): RemoveShiftFormProps = {
     val p = (new js.Object).asInstanceOf[RemoveShiftFormProps]
     p.shift = shift
-    p.removeShiftConfirmHandler = (shiftForm: ShiftForm) => removeShiftConfirmHandler(shiftForm)
-    p.cancelRemoveShiftHandler = () => cancelRemoveShiftHandler()
+    p.onConfirm = (shiftForm: ShiftForm) => removeShiftConfirmHandler(shiftForm)
+    p.onCancel = () => cancelRemoveShiftHandler()
     p
   }
 }

@@ -247,7 +247,7 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
     Future.successful(
       shiftSeq.find(s => s.port == port && s.terminal == terminal && s.shiftName == shiftName && s.startDate == startDate && s.startTime == startTime))
 
-  override def deleteShift(previousShift: Shift): Future[Shift] = Future.successful(previousShift)
+  override def deleteShift(shift: Shift): Future[Shift] = Future.successful(shift)
 }
 
 case class MockShiftStaffRollingService()(implicit ec: ExecutionContext) extends IShiftStaffRollingService {

@@ -148,7 +148,43 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       val newShifts = shiftsFromJson(text)
-      createShifts(newShifts)
+      if (newShifts.size == 1) {
+        val newShift = newShifts.head
+        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, newShift.startDate, newShift.startTime).flatMap {
+          case Some(_) =>
+            Future.successful(BadRequest(s"Shift with name ${newShift.shiftName} already exists on ${newShift.startDate}"))
+          case None =>
+            ctrl.shiftsService.saveShift(Seq(newShift)).flatMap { _ =>
+              shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+                ctrl.shiftsService.getOverlappingStaffShifts(newShift.port, newShift.terminal, newShift)
+                  .flatMap { overlappingShifts =>
+                    val updatedAssignments = StaffingUtil.updateAssignmentsForNewShift(
+                      newShift = newShift,
+                      overlappingShift = overlappingShifts,
+                      allShifts = allShiftAssignments)
+                    shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+                      ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffingRollingWhileEditing(newShift))
+                      Ok(write(s))
+                    }.recoverWith {
+                      case e: Exception =>
+                        log.error(s"Failed to add new shift with assignments: ", e.printStackTrace())
+                        Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+                    }
+                  }
+              }.recoverWith {
+                case e: Exception =>
+                  log.error(s"Failed to get all shifts assignments: ", e.printStackTrace())
+                  Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+              }
+            }.recoverWith {
+              case e: Exception =>
+                log.error(s"Failed to create new shift: ", e.printStackTrace())
+                Future.successful(BadRequest(s"Failed to create new shift: ${e.getMessage}"))
+            }
+        }
+      } else {
+        createShifts(newShifts)
+      }
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
@@ -164,48 +200,6 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
       }
     }
-  }
-
-  // It is different from createShifts as here we need to check if the shift already exists
-  // before adding a new one (we don't want duplicates)
-  // Also, we need to handle existing overlapping shifts and update assignments accordingly
-
-   def addAShift(): Action[AnyContent] = Action.async { request =>
-    request.body.asText.map { text =>
-      val newShift = shiftFromJson(text)
-      ctrl.shiftsService.getShift(newShift.port, newShift.terminal, newShift.shiftName, newShift.startDate, newShift.startTime).flatMap {
-        case Some(_) =>
-          Future.successful(BadRequest(s"Shift with name ${newShift.shiftName} already exists on ${newShift.startDate}"))
-        case None =>
-          ctrl.shiftsService.saveShift(Seq(newShift)).flatMap { _ =>
-            shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-              ctrl.shiftsService.getOverlappingStaffShifts(newShift.port, newShift.terminal, newShift)
-                .flatMap { overridingShifts =>
-                  val updatedAssignments = StaffingUtil.addAssignments(
-                    newShift = newShift,
-                    overridingShift = overridingShifts,
-                    allShifts = allShiftAssignments)
-                  shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-                    ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffingRollingWhileEditing(newShift))
-                    Ok(write(s))
-                  }.recoverWith {
-                    case e: Exception =>
-                      log.error(s"Failed to add new shift with assignments: ", e.printStackTrace())
-                      Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
-                  }
-                }
-            }.recoverWith {
-              case e: Exception =>
-                log.error(s"Failed to get all shifts assignments: ", e.printStackTrace())
-                Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
-            }
-          }.recoverWith {
-            case e: Exception =>
-              log.error(s"Failed to create new shift: ", e.printStackTrace())
-              Future.successful(BadRequest(s"Failed to create new shift: ${e.getMessage}"))
-          }
-      }
-    }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
   private def updateAssignments(previousShift: Shift, futureExistingShift: Option[Shift], updatedNewShift: Shift) = {

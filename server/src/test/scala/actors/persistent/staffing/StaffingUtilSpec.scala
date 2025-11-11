@@ -656,7 +656,6 @@ class StaffingUtilSpec extends Specification {
         createdAt = System.currentTimeMillis()
       )
 
-      //      val newAssignments = StaffingUtil.generateDailyAssignments(newShift)
       val existingAssignment = StaffAssignment(
         name = "Existing",
         terminal = terminal,
@@ -667,7 +666,7 @@ class StaffingUtilSpec extends Specification {
       )
       val allShifts: ShiftAssignments = ShiftAssignments(Seq(existingAssignment).flatMap(_.splitIntoSlots(15)))
 
-      val overridingShift = Seq(
+      val overlappingShift = Seq(
         Shift(
           port = "LHR",
           terminal = "T1",
@@ -685,7 +684,7 @@ class StaffingUtilSpec extends Specification {
       allShifts.assignments.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 5)
       allShifts.assignments.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 5)
 
-      val result = StaffingUtil.addAssignments(newShift, overridingShift, allShifts)
+      val result = StaffingUtil.updateAssignmentsForNewShift(newShift, overlappingShift, allShifts)
 
       result.exists(a => SDate(a.start).getHours == 9 && a.numberOfStaff == 4)
       result.exists(a => SDate(a.start).getHours == 11 && a.numberOfStaff == 9)
