@@ -292,7 +292,7 @@ object TerminalComponent {
                               (ts, queueStaff + miscStaff)
                           }
                         }
-                        <.div(MonthlyShiftsComponent(
+                        <.div(MonthlyShifts(
                           props.terminalPageTab,
                           props.router,
                           airportConfig,

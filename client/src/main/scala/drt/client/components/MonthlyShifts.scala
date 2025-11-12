@@ -36,7 +36,7 @@ import scala.scalajs.js
 import scala.util.Try
 
 
-object MonthlyShiftsComponent {
+object MonthlyShifts {
 
   case class State(showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
@@ -65,7 +65,7 @@ object MonthlyShiftsComponent {
 
   class Backend(scope: BackendScope[Props, State]) {
 
-    def populateShiftSummaries(recs: Map[MillisSinceEpoch, Int], props: MonthlyShiftsComponent.Props, viewingDate: SDateLike, shifts: Seq[Shift], shiftAssignments: ShiftAssignments): Seq[ShiftSummaryStaffing] =
+    def populateShiftSummaries(recs: Map[MillisSinceEpoch, Int], props: MonthlyShifts.Props, viewingDate: SDateLike, shifts: Seq[Shift], shiftAssignments: ShiftAssignments): Seq[ShiftSummaryStaffing] =
       MonthlyShiftsUtil.generateShiftSummaries(
         viewingDate,
         props.terminalPageTab.dayRangeType.getOrElse("monthly"),
@@ -86,9 +86,9 @@ object MonthlyShiftsComponent {
 
       def confirmAndSaveShifts(shiftsData: Seq[ShiftSummaryStaffing],
                                changedAssignments: Seq[StaffTableEntry],
-                               props: MonthlyShiftsComponent.Props,
-                               state: MonthlyShiftsComponent.State,
-                               scope: BackendScope[MonthlyShiftsComponent.Props, MonthlyShiftsComponent.State]): ReactEventFromInput => Callback = {
+                               props: MonthlyShifts.Props,
+                               state: MonthlyShifts.State,
+                               scope: BackendScope[MonthlyShifts.Props, MonthlyShifts.State]): ReactEventFromInput => Callback = {
         ConfirmAndSaveForMonthlyShifts(shiftsData, changedAssignments, props, state, scope)()
       }
 

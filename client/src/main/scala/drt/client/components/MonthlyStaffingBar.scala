@@ -74,14 +74,14 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
 
 case class ConfirmAndSaveForMonthlyShifts(shiftsData: Seq[ShiftSummaryStaffing],
                                           changedAssignments: Seq[StaffTableEntry],
-                                          props: MonthlyShiftsComponent.Props,
-                                          state: MonthlyShiftsComponent.State,
-                                          scope: BackendScope[MonthlyShiftsComponent.Props, MonthlyShiftsComponent.State]) extends ConfirmAndSave {
+                                          props: MonthlyShifts.Props,
+                                          state: MonthlyShifts.State,
+                                          scope: BackendScope[MonthlyShifts.Props, MonthlyShifts.State]) extends ConfirmAndSave {
   override def apply(): ReactEventFromInput => Callback = _ => Callback {
     val changedShifts: Seq[StaffAssignment] = shiftsData
       .flatMap(_.staffTableEntries.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
-    val changedShiftSlots: Seq[StaffAssignment] = MonthlyShiftsComponent.updatedConvertedShiftAssignments(
+    val changedShiftSlots: Seq[StaffAssignment] = MonthlyShifts.updatedConvertedShiftAssignments(
       changedShifts,
       props.terminalPageTab.terminal)
 
