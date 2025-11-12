@@ -124,7 +124,7 @@ object MonthlyShiftsUtil {
       .iterate(shiftPeriod.start)(slotTime => nextSlotTime(shiftPeriod, slotTime))
       .takeWhile(_ < shiftPeriod.end).toSeq.zipWithIndex.map { case (slotStart, index) =>
         val nextTime = nextSlotTime(shiftPeriod, slotStart)
-        val maybeAssignment = dayAssignments.get((slotStart.millisSinceEpoch, shiftDetails.terminal))//.find(assignment => assignment.start == slotStart.millisSinceEpoch && assignment.terminal == shiftDetails.terminal)
+        val maybeAssignment = dayAssignments.get((slotStart.millisSinceEpoch, shiftDetails.terminal))
         val staffRec = recommendedStaff.getOrElse(slotStart.millisSinceEpoch, 0)
         findAndCreateDayTableAssignment(shiftPeriod, shiftDetails.shift, staffRec, maybeAssignment, slotStart, index, nextTime)
       }
