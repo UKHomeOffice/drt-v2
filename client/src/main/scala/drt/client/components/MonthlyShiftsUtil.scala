@@ -157,6 +157,7 @@ object MonthlyShiftsUtil {
       name = maybeAssignment.map(_.name).getOrElse(shift.shiftName),
       staffRecommendation = staffRecommendation,
       staffNumber = staff,
+      startTimeMillis = slotStart.millisSinceEpoch,
       startTime = ShiftDateTime(slotStart.getFullYear, slotStart.getMonth, slotStart.getDate, slotStart.getHours, slotStart.getMinutes),
       endTime = ShiftDateTime(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
     )

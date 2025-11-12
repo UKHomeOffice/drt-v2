@@ -92,6 +92,7 @@ trait StaffTableEntry extends js.Object {
   var name: String
   var staffRecommendation: Int
   var staffNumber: Int
+  var startTimeMillis: Long
   var startTime: ShiftDateTime
   var endTime: ShiftDateTime
 }
@@ -115,18 +116,28 @@ object StaffTableEntry {
         name = tableEntry.name,
         staffRecommendation = tableEntry.staffRecommendation,
         staffNumber = tableEntry.staffNumber,
+        startTimeMillis = tableEntry.startTimeMillis,
         startTime = sDateToShiftDate(start),
         endTime = sDateToShiftDate(start + (slotMinutes.minutes.toMillis - oneMinuteMillis)
         )
       )
     )
 
-  def apply(column: Int, row: Int, name: String, staffRecommendation: Int, staffNumber: Int, startTime: ShiftDateTime, endTime: ShiftDateTime): StaffTableEntry = {
+  def apply(column: Int,
+            row: Int,
+            name: String,
+            staffRecommendation: Int,
+            staffNumber: Int,
+            startTimeMillis: Long,
+            startTime: ShiftDateTime,
+            endTime: ShiftDateTime,
+           ): StaffTableEntry = {
     val p = (new js.Object).asInstanceOf[StaffTableEntry]
     p.column = column
     p.row = row
     p.name = name
     p.staffRecommendation = staffRecommendation
+    p.startTimeMillis = startTimeMillis
     p.staffNumber = staffNumber
     p.startTime = startTime
     p.endTime = endTime
