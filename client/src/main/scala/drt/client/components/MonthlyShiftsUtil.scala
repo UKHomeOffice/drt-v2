@@ -115,12 +115,16 @@ object MonthlyShiftsUtil {
   def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails, recommendedStaff: Map[Long, Int]): Seq[StaffTableEntry] = {
     val dayAssignments = shiftDetails.shiftAssignments.assignments
       .filter(assignment => assignment.start >= shiftPeriod.start.millisSinceEpoch && assignment.end <= shiftPeriod.end.millisSinceEpoch)
+      .map { a =>
+        ((a.start, a.terminal), a)
+      }
+      .toMap
 
     Iterator
       .iterate(shiftPeriod.start)(slotTime => nextSlotTime(shiftPeriod, slotTime))
       .takeWhile(_ < shiftPeriod.end).toSeq.zipWithIndex.map { case (slotStart, index) =>
         val nextTime = nextSlotTime(shiftPeriod, slotStart)
-        val maybeAssignment = dayAssignments.find(assignment => assignment.start == slotStart.millisSinceEpoch && assignment.terminal == shiftDetails.terminal)
+        val maybeAssignment = dayAssignments.get((slotStart.millisSinceEpoch, shiftDetails.terminal))//.find(assignment => assignment.start == slotStart.millisSinceEpoch && assignment.terminal == shiftDetails.terminal)
         val staffRec = recommendedStaff.getOrElse(slotStart.millisSinceEpoch, 0)
         findAndCreateDayTableAssignment(shiftPeriod, shiftDetails.shift, staffRec, maybeAssignment, slotStart, index, nextTime)
       }
