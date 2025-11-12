@@ -13,7 +13,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.{GetShifts, UpdateUserPreferences}
 import drt.client.util.DateRange
-import drt.shared.CrunchApi.{ForecastPeriod, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{ForecastPeriod, ForecastPeriodWithHeadlines, MillisSinceEpoch}
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
@@ -41,11 +41,8 @@ object MonthlyShiftsComponent {
   case class State(showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
                    addShiftForm: Boolean,
-                   //                   shifts: Seq[Shift],
-                   //                   shiftAssignments: ShiftAssignments,
                    shiftSummaries: Seq[ShiftSummaryStaffing],
                    changedAssignments: Seq[StaffTableEntry],
-                   //                   userPreferences: UserPreferences,
                    intervalMinutes: Int,
                   )
 
@@ -68,28 +65,16 @@ object MonthlyShiftsComponent {
 
   class Backend(scope: BackendScope[Props, State]) {
 
-    def populateShiftSummaries(forecast: ForecastPeriod, props: MonthlyShiftsComponent.Props, viewingDate: SDateLike): Seq[ShiftSummaryStaffing] = {
-
-      val recs = forecast.days.values.flatMap(_.map(slot => (slot.startMillis, slot.required))).toMap
-
-      val summariesPot: Pot[Seq[ShiftSummaryStaffing]] = for {
-        shifts <- props.shifts
-        shiftAssignments <- props.shiftAssignments
-      } yield {
-        MonthlyShiftsUtil.generateShiftSummaries(
-          viewingDate,
-          props.terminalPageTab.dayRangeType.getOrElse("monthly"),
-          props.terminalPageTab.terminal,
-          shifts,
-          ShiftAssignments(shiftAssignments.forTerminal(props.terminalPageTab.terminal)),
-          recs,
-          props.timeSlotMinutes,
-        )
-      }
-      val x = summariesPot.getOrElse(Seq.empty)
-      println(s"created ${x.size} shift summaries")
-      x
-    }
+    def populateShiftSummaries(recs: Map[MillisSinceEpoch, Int], props: MonthlyShiftsComponent.Props, viewingDate: SDateLike, shifts: Seq[Shift], shiftAssignments: ShiftAssignments): Seq[ShiftSummaryStaffing] =
+      MonthlyShiftsUtil.generateShiftSummaries(
+        viewingDate,
+        props.terminalPageTab.dayRangeType.getOrElse("monthly"),
+        props.terminalPageTab.terminal,
+        shifts,
+        ShiftAssignments(shiftAssignments.forTerminal(props.terminalPageTab.terminal)),
+        recs,
+        props.timeSlotMinutes,
+      )
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val handleShiftEditForm = (e: ReactEventFromInput) => Callback {
@@ -119,27 +104,21 @@ object MonthlyShiftsComponent {
 
             for {
               forecast <- model.forecastPot
-              _ <- props.shifts
-              _ <- props.shiftAssignments
+              shifts <- props.shifts
+              shiftAssignments <- props.shiftAssignments
             } {
               if (state.shiftSummaries.isEmpty || state.intervalMinutes != forecast.intervalMinutes) {
-                println(s"empty shift summaries. populating using forecast")
                 scope.modState { s =>
-                  val staffings = populateShiftSummaries(forecast, props, viewingDate)
-                  println(s"setting shift summaries to ${staffings.size}")
+                  val recommendationsBySlotTime = forecast.days.values.flatMap(_.map(slot => (slot.startMillis, slot.required))).toMap
+                  val staffings = populateShiftSummaries(recommendationsBySlotTime, props, viewingDate, shifts, shiftAssignments)
                   s.copy(shiftSummaries = staffings, intervalMinutes = forecast.intervalMinutes)
                 }.runNow()
               }
             }
 
             val content = for {
-              //              forecast <- model.forecastPot
               shifts <- props.shifts
-              //              shiftAssignments <- props.shiftAssignments
             } yield {
-              val forecast = model.forecastPot.getOrElse(ForecastPeriod(15, Map.empty))
-
-              println(s"got forecast recs for ${forecast.intervalMinutes}. props: ${props.timeSlotMinutes}")
               <.div(
                 <.div(
                   if (state.showStaffSuccess)
@@ -150,14 +129,11 @@ object MonthlyShiftsComponent {
                 <.div(^.className := "staffing-container",
                   MuiTypography(variant = "h2")(s"Staffing"),
                   if (shifts.isEmpty && !props.viewMode) {
-                    println(s"Rendering add shift bar component, isShiftsEmpty: ${shifts.isEmpty}")
-
                     <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(
                       gotToCreateShifts(props),
                       goToViewShifts(props),
                     )))
                   } else {
-                    println(s"**********hello forecast, ${shifts.size} shifts, ${state.shiftSummaries.size} shift summaries")
                     <.div(^.className := "staffing-controls",
                       maybeClockChangeDate(viewingDate).map { clockChangeDate =>
                         val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
@@ -232,7 +208,7 @@ object MonthlyShiftsComponent {
                                   "shiftName" -> s"${shiftSummary.name}",
                                   "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}"
                                 )
-                              ))
+                              )).runNow()
                             },
                             sendAnalyticsEvent = GoogleEventTracker.sendEvent
                           ))
