@@ -54,7 +54,6 @@ object TerminalComponent {
                                    staffMovementsPot: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
                                    airportConfigPot: Pot[AirportConfig],
-//                                   slaConfigsPot: Pot[SlaConfigs],
                                    loadingState: LoadingState,
                                    showActuals: Boolean,
                                    loggedInUserPot: Pot[LoggedInUser],
@@ -95,7 +94,6 @@ object TerminalComponent {
         staffMovementsPot = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
         airportConfigPot = model.airportConfig,
-//        slaConfigsPot = model.slaConfigs,
         loadingState = model.loadingState,
         showActuals = model.showActualIfAvailable,
         loggedInUserPot = model.loggedInUserPot,
@@ -326,7 +324,7 @@ object TerminalComponent {
     .componentDidMount { m =>
       val date = m.props.terminalPageTab.dateFromUrlOrNow.startOfTheMonth
       val intervalMinutes = Try(m.props.terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
-      println(s"getting forecast, shifts & assignmenst on did mount... $intervalMinutes")
+
       Callback(SPACircuit.dispatch(GetForecast(date, 31, m.props.terminalPageTab.terminal, intervalMinutes)))
         .flatMap(_ => Callback(SPACircuit.dispatch(
           GetShifts(m.props.terminalPageTab.terminal.toString, m.props.terminalPageTab.queryParams.get("date"), m.props.terminalPageTab.queryParams.get("dayRange"))))
