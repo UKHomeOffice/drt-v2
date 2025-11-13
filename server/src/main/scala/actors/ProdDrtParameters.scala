@@ -73,6 +73,8 @@ trait DrtParameters {
   val disableDeploymentFairXmax: Boolean
 
   val stalePredictionHours: FiniteDuration
+
+  val enableStaffingPageWarnings: Boolean
 }
 
 object DrtParameters {
@@ -154,4 +156,6 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val disableDeploymentFairXmax: Boolean = config.get[Boolean]("feature-flags.disable-deployment-fair-xmax")
 
   override val stalePredictionHours: FiniteDuration = config.get[Int]("crunch.stale-prediction-hours").hours
+
+  override val enableStaffingPageWarnings: Boolean = config.get[Boolean]("feature-flags.enable-staffing-page-warnings")
 }

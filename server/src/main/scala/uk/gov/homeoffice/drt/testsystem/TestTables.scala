@@ -8,18 +8,14 @@ import manifests.ManifestLookupLike
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import org.apache.pekko.stream.scaladsl.Source
 import slickdb._
-import uk.gov.homeoffice.drt.{Shift, ShiftMeta, ShiftStaffRolling}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.models.{UniqueArrivalKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.service.staffing.{
-  IShiftStaffRollingService,
-  LegacyShiftAssignmentsService, ShiftMetaInfoService, ShiftsService
-}
+import uk.gov.homeoffice.drt.service.staffing.{IShiftStaffRollingService, LegacyShiftAssignmentsService, ShiftMetaInfoService, ShiftsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
-import uk.gov.homeoffice.drt.util.ShiftUtil.localDateFromString
+import uk.gov.homeoffice.drt.{Shift, ShiftMeta, ShiftStaffRolling}
 
 import java.sql.Timestamp
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -142,6 +138,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val enableShiftPlanningChange: Boolean = true
   override val disableDeploymentFairXmax: Boolean = true
   override val stalePredictionHours: FiniteDuration = 24.hours
+  override val enableStaffingPageWarnings: Boolean = false
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {

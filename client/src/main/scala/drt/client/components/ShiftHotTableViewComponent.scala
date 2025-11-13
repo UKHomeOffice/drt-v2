@@ -171,6 +171,7 @@ trait ShiftHotTableViewProps extends js.Object {
   var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
   var handleEditShift: js.Function2[Int, ShiftSummary, Unit] = js.native
   var sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
+  var warningsEnabled: Boolean = js.native
 }
 
 object ShiftHotTableViewProps {
@@ -180,7 +181,8 @@ object ShiftHotTableViewProps {
             shiftSummaries: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
             handleEditShift: (Int, ShiftSummary) => Unit,
-            sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit]
+            sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit],
+            warningsEnabled: Boolean,
            ): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.shiftDate = shiftDate
@@ -191,6 +193,7 @@ object ShiftHotTableViewProps {
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)
     p.sendAnalyticsEvent = sendAnalyticsEvent
+    p.warningsEnabled = warningsEnabled
     p
   }
 }

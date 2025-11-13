@@ -17,6 +17,7 @@ import drt.shared.CrunchApi.{ForecastPeriod, ForecastPeriodWithHeadlines, Millis
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.component.builder.Lifecycle.ComponentDidMount
@@ -44,6 +45,7 @@ object MonthlyShifts {
                    shiftSummaries: Seq[ShiftSummaryStaffing],
                    changedAssignments: Seq[StaffTableEntry],
                    intervalMinutes: Int,
+                   isBelowRecommended: Boolean,
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -55,7 +57,8 @@ object MonthlyShifts {
                    shifts: Pot[Seq[Shift]],
                    recommendedStaff: Map[Long, Int],
                    shiftAssignments: Pot[ShiftAssignments],
-                   viewMode: Boolean
+                   viewMode: Boolean,
+                   warningsEnabled: Boolean,
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
   }
@@ -96,7 +99,6 @@ object MonthlyShifts {
 
       val forecastRCP: ReactConnectProxy[Model] = SPACircuit.connect(m => Model(m.forecastPeriodPot.map(_.forecast)))
 
-
       <.div(
         forecastRCP { modelMP =>
           val model = modelMP()
@@ -111,7 +113,10 @@ object MonthlyShifts {
                 scope.modState { s =>
                   val recommendationsBySlotTime = forecast.days.values.flatMap(_.map(slot => (slot.startMillis, slot.required))).toMap
                   val staffings = populateShiftSummaries(recommendationsBySlotTime, props, viewingDate, shifts, shiftAssignments)
-                  s.copy(shiftSummaries = staffings, intervalMinutes = forecast.intervalMinutes)
+                  val belowRecommendedExists = staffings.flatMap(_.staffTableEntries).exists { entry =>
+                    entry.staffNumber < entry.staffRecommendation
+                  }
+                  s.copy(shiftSummaries = staffings, intervalMinutes = forecast.intervalMinutes, isBelowRecommended = belowRecommendedExists)
                 }.runNow()
               }
             }
@@ -158,6 +163,14 @@ object MonthlyShifts {
                         userPreferences = props.userPreferences,
                         isShiftFeatureEnabled = true
                       ),
+                      if (props.warningsEnabled && state.isBelowRecommended)
+                        MuiAlert(variant = MuiAlert.Variant.standard, severity = "error")(
+                          <.div(
+                            MuiTypography(variant = "h3")("Risk of queue breach"),
+                            MuiTypography()("There are shifts that may need more staff"),
+                          )
+                        )
+                      else EmptyVdom,
                       MuiSwipeableDrawer(open = state.showEditStaffForm,
                         anchor = "right",
                         PaperProps = js.Dynamic.literal(
@@ -210,7 +223,8 @@ object MonthlyShifts {
                                 )
                               )).runNow()
                             },
-                            sendAnalyticsEvent = GoogleEventTracker.sendEvent
+                            sendAnalyticsEvent = GoogleEventTracker.sendEvent,
+                            warningsEnabled = props.warningsEnabled,
                           ))
                         ),
                         <.div(^.className := "terminal-staffing-content-footer",
@@ -281,6 +295,7 @@ object MonthlyShifts {
         shiftSummaries = Seq.empty,
         changedAssignments = Seq.empty,
         intervalMinutes = 0,
+        isBelowRecommended = false,
       )
     )
     .renderBackend[Backend]
@@ -306,12 +321,13 @@ object MonthlyShifts {
             recommendedStaff: Map[Long, Int],
             shiftsPot: Pot[Seq[Shift]],
             shiftAssignmentsPot: Pot[ShiftAssignments],
+            warningsEnabled: Boolean,
            ): Unmounted[Props, State, Backend] = {
     if (shiftCreated) {
       val newQueryParams = terminalPageTab.queryParams - "shifts"
       Callback(SPACircuit.dispatch(GetShifts)).runNow()
       router.set(terminalPageTab.copy(queryParams = newQueryParams)).runNow()
     }
-    component(Props(terminalPageTab, router, airportConfig, userPreferences, shiftsPot, recommendedStaff, shiftAssignmentsPot, viewMode))
+    component(Props(terminalPageTab, router, airportConfig, userPreferences, shiftsPot, recommendedStaff, shiftAssignmentsPot, viewMode, warningsEnabled))
   }
 }

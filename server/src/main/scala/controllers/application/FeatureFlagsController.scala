@@ -15,7 +15,8 @@ class FeatureFlagsController @Inject()(cc: ControllerComponents, ctrl: DrtSystem
       useApiPaxNos = ctrl.params.useApiPaxNos,
       displayWaitTimesToggle = ctrl.params.enableToggleDisplayWaitTimes,
       displayRedListInfo = ctrl.params.displayRedListInfo,
-      enableShiftPlanningChange = ctrl.params.enableShiftPlanningChange
+      enableShiftPlanningChange = ctrl.params.enableShiftPlanningChange,
+      enableStaffingPageWarnings = ctrl.params.enableStaffingPageWarnings,
     )
 
     Ok(write(frontendFeatures))

@@ -290,17 +290,19 @@ object TerminalComponent {
                               (ts, queueStaff + miscStaff)
                           }
                         }
-                        <.div(MonthlyShifts(
-                          props.terminalPageTab,
-                          props.router,
-                          airportConfig,
-                          userPreferences,
-                          props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created",
-                          props.terminalPageTab.subMode == "viewShifts",
-                          slotStaffRecs.getOrElse(Map.empty),
-                          terminalModel.shiftsPot,
-                          terminalModel.allShiftAssignments,
-                        ))
+                        val staffWarningsEnabled = terminalModel.featureFlagsPot.map(_.enableStaffingPageWarnings).getOrElse(false)
+                        MonthlyShifts(
+                          terminalPageTab = props.terminalPageTab,
+                          router = props.router,
+                          airportConfig = airportConfig,
+                          userPreferences = userPreferences,
+                          shiftCreated = props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created",
+                          viewMode = props.terminalPageTab.subMode == "viewShifts",
+                          recommendedStaff = slotStaffRecs.getOrElse(Map.empty),
+                          shiftsPot = terminalModel.shiftsPot,
+                          shiftAssignmentsPot = terminalModel.allShiftAssignments,
+                          warningsEnabled = staffWarningsEnabled,
+                        )
                       }
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
