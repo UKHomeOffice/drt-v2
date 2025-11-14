@@ -45,7 +45,43 @@ object StaffingUtil {
     }
   }
 
-   def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
+  def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment],
+                                    existingAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] = {
+
+    val newSlots: Map[TM, StaffAssignment] =
+      shiftAssignments
+        .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+        .groupBy(a => TM(a.terminal, a.start))
+        .map { case (tm, assignments) =>
+          val combined = assignments.reduce((a1, a2) =>
+            a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
+          )
+          tm -> combined
+        }
+
+    val existingSlots: Map[TM, StaffAssignment] =
+      existingAssignments
+        .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+        .groupBy(a => TM(a.terminal, a.start))
+        .map { case (tm, assignments) =>
+          val combined = assignments.reduce((a1, a2) =>
+            a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
+          )
+          tm -> combined
+        }
+
+    val keys = newSlots.keySet ++ existingSlots.keySet
+
+    keys.map { tm =>
+      val chosen = existingSlots.get(tm) match {
+        case Some(ex) if ex.numberOfStaff > 0 => ex            // keep existing if non‑zero
+        case _ => newSlots.getOrElse(tm, existingSlots(tm))     // otherwise use new (or existing zero)
+      }
+      tm -> chosen
+    }.toMap
+  }
+
+  def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] =
     shiftAssignments
       .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
       .groupBy(a => TM(a.terminal, a.start))
@@ -207,24 +243,20 @@ object StaffingUtil {
     }
   }
 
+
   def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+    val allShiftsStaff: Seq[StaffAssignment] =
+      shifts.flatMap(generateDailyAssignments)
 
-    val allShiftsStaff: Seq[StaffAssignment] = shifts.flatMap { shift =>
-      generateDailyAssignments(shift)
-    }
+    // keep only real StaffAssignment from existing
+    val existingAssignmentsAsStaff: Seq[StaffAssignment] =
+      allShifts.assignments.collect { case sa: StaffAssignment => sa }
 
-    val splitDailyAssignmentsWithOverlap = staffAssignmentsSlotSummaries(allShiftsStaff)
+    // combined summary (existing + new); do not add again later
+    val splitDailyAssignmentsWithOverlap: Map[TM, StaffAssignment] =
+      staffAssignmentsSlotSummaries(allShiftsStaff , existingAssignmentsAsStaff)
 
-    val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
-
-    splitDailyAssignmentsWithOverlap.map {
-      case (tm, assignment) =>
-        existingAllAssignments.get(tm) match {
-          case Some(existing) =>
-            if (existing.numberOfStaff == 0) assignment else existing
-          case None => assignment
-        }
-    }.toSeq.sortBy(_.start)
+    splitDailyAssignmentsWithOverlap.values.toSeq
 
   }
 
