@@ -324,14 +324,9 @@ object TerminalComponent {
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
     .componentDidMount { m =>
-      val date = m.props.terminalPageTab.dateFromUrlOrNow.startOfTheMonth
-      val intervalMinutes = Try(m.props.terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
-
-      Callback(SPACircuit.dispatch(GetForecast(date, 31, m.props.terminalPageTab.terminal, intervalMinutes)))
-        .flatMap(_ => Callback(SPACircuit.dispatch(
-          GetShifts(m.props.terminalPageTab.terminal.toString, m.props.terminalPageTab.queryParams.get("date"), m.props.terminalPageTab.queryParams.get("dayRange"))))
-        )
-        .flatMap(_ => Callback(SPACircuit.dispatch(GetAllShiftAssignments)))
+      Callback(SPACircuit.dispatch(
+        GetShifts(m.props.terminalPageTab.terminal.toString, m.props.terminalPageTab.queryParams.get("date"), m.props.terminalPageTab.queryParams.get("dayRange")))
+      ).flatMap(_ => Callback(SPACircuit.dispatch(GetAllShiftAssignments)))
     }
     .build
 

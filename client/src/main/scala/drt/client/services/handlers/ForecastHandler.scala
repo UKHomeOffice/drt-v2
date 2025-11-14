@@ -1,6 +1,6 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready, Unavailable}
+import diode.data.{Empty, Pot, Ready, Unavailable}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.{GetForecast, RetryActionAfter, SetForecastPeriod}
 import drt.client.logger.log
@@ -24,7 +24,7 @@ class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) 
             Future(RetryActionAfter(action, PollDelay.recoveryDelay))
         })
 
-      effectOnly(apiCallEffect)
+      updated(Empty, apiCallEffect)
 
     case SetForecastPeriod(Some(forecastPeriod)) =>
       updated(Ready(forecastPeriod))

@@ -300,6 +300,11 @@ object MonthlyShifts {
     )
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount { m =>
+      val intervalMinutes = Try(m.props.terminalPageTab.queryParams("timeInterval").toInt).toOption.getOrElse(60)
+      val maxDaysInMonth = 31
+      Callback(SPACircuit.dispatch(GetForecast(m.props.terminalPageTab.dateFromUrlOrNow, maxDaysInMonth, Terminal(m.props.terminalPageTab.terminalName), intervalMinutes)))
+    }
     .build
 
   def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
