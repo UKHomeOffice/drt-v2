@@ -2,7 +2,7 @@ package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
 import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, staffAssignmentsSlotSummaries, updateWithShiftDefaultStaff}
-import drt.shared.{StaffAssignment, StaffAssignmentLike, TM}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
 import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.{Shift, ShiftStaffRolling}
@@ -153,18 +153,39 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   }
 
   private def createShifts(shifts: Seq[Shift]) = {
-    ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
-      shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
-        val updatedAssignments = updateWithShiftDefaultStaff(shifts, allShiftAssignments)
-        shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
-          ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffRollingCreating(shifts))
-          Ok(write(s))
+    getOverlapsForShifts(shifts).flatMap { overlappingShifts =>
+      ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
+        shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
+          val updatedAssignments = updateWithShiftDefaultStaff(shifts, overlappingShifts, allShiftAssignments)
+          shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
+            ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffRollingCreating(shifts))
+            Ok(write(s))
+          }
+        }.recoverWith {
+          case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
         }
-      }.recoverWith {
-        case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
       }
     }
   }
+
+  // requires an implicit ExecutionContext in scope
+  private def getOverlapsForShifts(shifts: Seq[Shift]): Future[Seq[Shift]] = {
+    val overlapFutures: Seq[Future[Seq[Shift]]] =
+      shifts.map(s => ctrl.shiftsService.getOverlappingStaffShifts(s.port, s.terminal, s))
+
+    Future.sequence(overlapFutures).map { lists =>
+      val originals = shifts.map(s => (s.port, s.terminal, s.shiftName, s.startDate, s.startTime)).toSet
+      lists
+        .flatten
+        .filterNot(o =>
+          originals.contains((o.port, o.terminal, o.shiftName, o.startDate, o.startTime))
+        )
+        .distinct
+    }
+
+
+  }
+
 
   private def updateAssignments(previousShift: Shift, futureExistingShift: Option[Shift], updatedNewShift: Shift) = {
     shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>

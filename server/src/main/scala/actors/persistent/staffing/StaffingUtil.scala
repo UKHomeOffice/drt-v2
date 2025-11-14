@@ -46,6 +46,7 @@ object StaffingUtil {
   }
 
   def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment],
+                                    overlapsShiftsStaff: Seq[StaffAssignment],
                                     existingAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] = {
 
     val newSlots: Map[TM, StaffAssignment] =
@@ -70,12 +71,30 @@ object StaffingUtil {
           tm -> combined
         }
 
-    val keys = newSlots.keySet ++ existingSlots.keySet
+    val overlapsSlots: Map[TM, StaffAssignment] =
+      overlapsShiftsStaff
+        .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+        .groupBy(a => TM(a.terminal, a.start))
+        .map { case (tm, assignments) =>
+          val combined = assignments.reduce((a1, a2) =>
+            a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
+          )
+          tm -> combined
+        }
+
+    val keys = newSlots.keySet
 
     keys.map { tm =>
       val chosen = existingSlots.get(tm) match {
-        case Some(ex) if ex.numberOfStaff > 0 => ex            // keep existing if non‑zero
-        case _ => newSlots.getOrElse(tm, existingSlots(tm))     // otherwise use new (or existing zero)
+        case Some(ex) if ex.numberOfStaff > 0 =>
+          val overlapStaff = overlapsSlots.get(tm).map(_.numberOfStaff).getOrElse(0)
+          if (ex.numberOfStaff == overlapStaff) {
+            val newAssignment = newSlots(tm)
+            newAssignment.copy(numberOfStaff = ex.numberOfStaff + newAssignment.numberOfStaff)
+          } else {
+            ex
+          }
+        case _ => newSlots.getOrElse(tm, existingSlots(tm)) // otherwise use new (or existing zero)
       }
       tm -> chosen
     }.toMap
@@ -133,9 +152,9 @@ object StaffingUtil {
       updatedNewShiftsAssignments
   }
 
-   def getOverridingAssignments(overridingShift: Seq[Shift],
-                                       newShift: Shift
-                                      ): Seq[StaffAssignment] = {
+  def getOverridingAssignments(overridingShift: Seq[Shift],
+                               newShift: Shift
+                              ): Seq[StaffAssignment] = {
     overridingShift
       .filterNot(s =>
         s.port == newShift.port &&
@@ -244,9 +263,12 @@ object StaffingUtil {
   }
 
 
-  def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateWithShiftDefaultStaff(shifts: Seq[Shift], overlaps: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
     val allShiftsStaff: Seq[StaffAssignment] =
       shifts.flatMap(generateDailyAssignments)
+
+    val overlapsShiftsStaff: Seq[StaffAssignment] =
+      overlaps.flatMap(generateDailyAssignments)
 
     // keep only real StaffAssignment from existing
     val existingAssignmentsAsStaff: Seq[StaffAssignment] =
@@ -254,7 +276,7 @@ object StaffingUtil {
 
     // combined summary (existing + new); do not add again later
     val splitDailyAssignmentsWithOverlap: Map[TM, StaffAssignment] =
-      staffAssignmentsSlotSummaries(allShiftsStaff , existingAssignmentsAsStaff)
+      staffAssignmentsSlotSummaries(allShiftsStaff, overlapsShiftsStaff, existingAssignmentsAsStaff)
 
     splitDailyAssignmentsWithOverlap.values.toSeq
 
@@ -296,13 +318,13 @@ object StaffingUtil {
                 assignment.copy(numberOfStaff = overridingStaff + newShift.staffNumber)
               else if (existing.numberOfStaff != 0)
                 existing
-                else
+              else
                 assignment
             }.getOrElse(
               if (existing.numberOfStaff != 0)
-              existing
-            else
-              assignment)
+                existing
+              else
+                assignment)
           case None => assignment
         }
     }.toSeq.sortBy(_.start)
