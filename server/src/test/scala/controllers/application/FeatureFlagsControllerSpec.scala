@@ -1,7 +1,9 @@
 package controllers.application
 
+import actors.DrtParameters
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.OK
+import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
@@ -12,12 +14,13 @@ class FeatureFlagsControllerSpec extends PlaySpec {
 
     "get list of feature flag" in {
 
-      val module = new TestDrtModule() {
-        override lazy val drtParameters = new MockDrtParameters {
+      val module: TestDrtModule = new TestDrtModule() {
+        override lazy val drtParameters: DrtParameters = new MockDrtParameters {
           override val useApiPaxNos = true
           override val enableToggleDisplayWaitTimes = true
           override val displayRedListInfo = true
           override val enableShiftPlanningChange = true
+          override val enableStaffingPageWarnings = true
         }
       }
 
@@ -32,11 +35,14 @@ class FeatureFlagsControllerSpec extends PlaySpec {
 
       status(result) mustBe OK
 
-      val resultExpected =
-        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":true,"displayRedListInfo":true,"enableShiftPlanningChange":true}""".stripMargin
-          .stripMargin
+      val jsonContent = Json.parse(contentAsString(result))
+      val featureFlags = jsonContent.as[Map[String, Boolean]]
 
-      contentAsString(result) must include(resultExpected)
+      featureFlags("useApiPaxNos") mustBe true
+      featureFlags("displayWaitTimesToggle") mustBe true
+      featureFlags("displayRedListInfo") mustBe true
+      featureFlags("enableShiftPlanningChange") mustBe true
+      featureFlags("enableStaffingPageWarnings") mustBe true
     }
   }
 }

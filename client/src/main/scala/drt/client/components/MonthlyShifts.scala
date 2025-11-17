@@ -223,6 +223,8 @@ object MonthlyShifts {
                                 )
                               )).runNow()
                             },
+                            handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => {
+                            },
                             sendAnalyticsEvent = GoogleEventTracker.sendEvent,
                             warningsEnabled = props.warningsEnabled,
                           ))
