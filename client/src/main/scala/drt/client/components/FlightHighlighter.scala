@@ -3,6 +3,7 @@ package drt.client.components
 import japgolly.scalajs.react.vdom.all.EmptyVdom
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{VdomElement, html_<^}
+import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, PaxAgeRange}
 import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
@@ -15,10 +16,10 @@ object FlightHighlighter {
                                              flaggedAgeGroups: Set[PaxAgeRange],
                                              showNumberOfVisaNationals: Boolean): Seq[(Boolean, Set[Option[Int]])] = {
     val flaggedNationalitiesInSummary: Set[Option[Int]] = flaggedNationalities.map { country =>
-      manifestSummary.map(_.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0))
+      manifestSummary.map(_.nationalities.getOrElse(Nationality(country.threeLetterCode), 0))
     }
-    val flaggedAgeGroupInSummary: Set[Option[Int]] = flaggedAgeGroups.map { ageRanges =>
-      manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
+    val flaggedAgeGroupInSummary: Set[Option[Int]] = flaggedAgeGroups.map { ageRange =>
+      manifestSummary.map(_.ageRanges.getOrElse(ageRange, 0))
     }
     val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
 
@@ -101,12 +102,12 @@ object FlightHighlighter {
         }
 
         val flaggedNationalitiesChips: Set[Option[VdomElement]] = flaggedNationalities.map { country =>
-          val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
+          val pax = summary.nationalities.getOrElse(Nationality(country.threeLetterCode), 0)
           generateChip(pax > 0, pax, s"${country.name} (${country.threeLetterCode}) pax")
         }
 
         val flaggedAgeGroupsChips: Set[Option[VdomElement]] = flaggedAgeGroups.map { ageRanges =>
-          val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
+          val pax = summary.ageRanges.getOrElse(ageRanges, 0)
           generateChip(pax > 0, pax, s"pax aged ${ageRanges.title}")
         }
 

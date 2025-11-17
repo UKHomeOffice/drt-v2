@@ -18,7 +18,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val t0045Millis = day1Midnight.addMinutes(45).millisSinceEpoch
       val t0100Millis = day1Midnight.addMinutes(60).millisSinceEpoch
 
-      val forecast = ForecastPeriod(Map(
+      val forecast = ForecastPeriod(15, Map(
         t0000Millis -> Seq(
           ForecastTimeSlot(t0000Millis, 1, 2),
           ForecastTimeSlot(t0015Millis, 3, 4),
@@ -43,7 +43,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
 
     "Given ForecastPeriod with no data, we should get an empty list of timeslots" >> {
 
-      val forecast = ForecastPeriod(Map())
+      val forecast = ForecastPeriod(15, Map())
 
       val result = Forecast.timeSlotStartTimes(forecast, CSVData.millisToHoursAndMinutesString)
 
@@ -74,7 +74,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val d3t0045Millis = day3Midnight.addMinutes(45).millisSinceEpoch
       val d3t0100Millis = day3Midnight.addMinutes(60).millisSinceEpoch
 
-      val forecast = ForecastPeriod(Map(
+      val forecast = ForecastPeriod(15, Map(
         d1t0000Millis -> Seq(
           ForecastTimeSlot(d1t0000Millis, 1, 2),
           ForecastTimeSlot(d1t0015Millis, 3, 4),
@@ -479,7 +479,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
     val range = forecastStart.millisSinceEpoch until forecastEnd.millisSinceEpoch by (15 * 60 * 1000)
     val days = range.toList.groupBy(m => SDate(m).getLocalLastMidnight.millisSinceEpoch)
 
-    ForecastPeriod(days.view.mapValues(_.map(ts => ForecastTimeSlot(ts, 1, 1))).toMap)
+    ForecastPeriod(15, days.view.mapValues(_.map(ts => ForecastTimeSlot(ts, 1, 1))).toMap)
   }
 
   "Forecast Headline Export" >> {

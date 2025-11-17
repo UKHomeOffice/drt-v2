@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.actions.Actions.GetForecastWeek
+import drt.client.actions.Actions.GetForecast
 import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
@@ -176,9 +176,10 @@ object TerminalPlanningComponent {
                       "color" -> DrtReactTheme.palette.grey.`900`,
                       "fontWeight" -> "bold")))(<.span("Time Period")),
                     MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
+                      val daysInWeek = 7
                       scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
                         Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
-                        Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt))) >>
+                        Callback(SPACircuit.dispatch(GetForecast(props.page.dateFromUrlOrNow, daysInWeek, Terminal(props.page.terminalName), e.target.value.toInt))) >>
                         Callback(GoogleEventTracker.sendEvent(props.page.terminalName, "planning-time-period", e.target.value))
                     }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                       MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
@@ -228,7 +229,8 @@ object TerminalPlanningComponent {
     }
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
-      Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod)))
+      val daysInWeek = 7
+      Callback(SPACircuit.dispatch(GetForecast(p.props.page.dateFromUrlOrNow, daysInWeek, Terminal(p.props.page.terminalName), p.props.timePeriod)))
     }
     .build
 
