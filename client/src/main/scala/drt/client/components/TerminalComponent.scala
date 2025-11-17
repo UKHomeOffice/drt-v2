@@ -374,7 +374,7 @@ object TerminalComponent {
             mode = Staffing,
             subMode = subModeInterval,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
+          ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ")
         ) else "",
       if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange) {
         <.li(^.className := tabClass(Shifts),
@@ -382,7 +382,7 @@ object TerminalComponent {
             mode = Shifts,
             subMode = subModeInterval,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
+          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ")
         )
       } else "",
       <.li(^.className := tabClass(Dashboard),
