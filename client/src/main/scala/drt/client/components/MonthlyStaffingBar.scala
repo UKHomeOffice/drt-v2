@@ -36,9 +36,9 @@ sealed trait ConfirmAndSave {
 
 case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
                                             timeSlots: Seq[Seq[Any]],
-                                            props: MonthlyStaffing.Props,
-                                            state: MonthlyStaffing.State,
-                                            scope: BackendScope[MonthlyStaffing.Props, MonthlyStaffing.State]) extends ConfirmAndSave {
+                                            props: MonthlyStaffingComponent.Props,
+                                            state: MonthlyStaffingComponent.State,
+                                            scope: BackendScope[MonthlyStaffingComponent.Props, MonthlyStaffingComponent.State]) extends ConfirmAndSave {
   override def apply(): ReactEventFromInput => Callback = _ => Callback {
     val initialTimeSlots: Seq[Seq[Any]] = slotsFromShiftAssignments(state.shiftAssignments,
       props.terminalPageTab.terminal,
@@ -50,7 +50,7 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
     val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(timeSlots, state.changes)
     val saveAsTimeSlotMinutes = 15
 
-    val changedShiftSlots: Seq[StaffAssignment] = MonthlyStaffing.updatedShiftAssignments(
+    val changedShiftSlots: Seq[StaffAssignment] = MonthlyStaffingComponent.updatedShiftAssignments(
       quarterHourlyChanges,
       viewingDate,
       props.terminalPageTab.terminal,

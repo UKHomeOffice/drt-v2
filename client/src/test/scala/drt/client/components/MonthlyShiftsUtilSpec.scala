@@ -1,12 +1,12 @@
 package drt.client.components
 
 import drt.client.components.MonthlyShiftsUtil._
-import utest._
+import drt.client.services.JSDateConversions.SDate
 import drt.shared._
+import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
-import drt.client.services.JSDateConversions.SDate
-import uk.gov.homeoffice.drt.Shift
+import utest._
 
 object MonthlyShiftsUtilSpec extends TestSuite {
   val tests: Tests = Tests {
@@ -37,19 +37,19 @@ object MonthlyShiftsUtilSpec extends TestSuite {
     test("firstDay should return correct first day for monthly dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
       val result = MonthlyShiftsUtil.firstDayByViewPeriod("monthly", viewingDate)
-      assert(result == SDate(2023, 10, 1))
+      assert(result == LocalDate(2023, 10, 1))
     }
 
     test("firstDay should return correct first day for weekly dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
       val result = MonthlyShiftsUtil.firstDayByViewPeriod("weekly", viewingDate)
-      assert(result == SDate(2023, 10, 9, 1)) // Assuming the week starts on Monday
+      assert(result == LocalDate(2023, 10, 9)) // Assuming the week starts on Monday
     }
 
     test("firstDay should return correct first day for daily dayRange") {
       val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
       val result = MonthlyShiftsUtil.firstDayByViewPeriod("daily", viewingDate)
-      assert(result == viewingDate)
+      assert(result == viewingDate.toLocalDate)
     }
 
     test("assignmentsForShift should generate correct row and col values for monthly dayRange") {
@@ -72,7 +72,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       )
       val shiftAssignments = ShiftAssignments(Seq.empty)
 
-      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(firstDay, dayRange, terminal, Seq(shift), shiftAssignments, interval)
+      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(firstDay, dayRange, terminal, Seq(shift), shiftAssignments, Map.empty, interval)
 
       assert(result.nonEmpty)
       assert(result.head.shiftSummary.name == "Morning")
@@ -104,7 +104,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       )
       val shiftAssignments = ShiftAssignments(Seq.empty)
 
-      val result = MonthlyShiftsUtil.generateShiftSummaries(firstDay, dayRange, terminal, Seq(shift), shiftAssignments, interval)
+      val result = MonthlyShiftsUtil.generateShiftSummaries(firstDay, dayRange, terminal, Seq(shift), shiftAssignments, Map.empty, interval)
 
       assert(result.nonEmpty)
       assert(result.head.shiftSummary.name == "Morning")
@@ -147,7 +147,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         addToIndex = 0
       )
       val shiftDetails = ShiftDetails(shift, terminal, shiftAssignments)
-      val result = MonthlyShiftsUtil.staffTableEntriesForShift(shiftPeriod, shiftDetails)
+      val result = MonthlyShiftsUtil.staffTableEntriesForShift(shiftPeriod, shiftDetails, Map.empty)
 
       assert(result.nonEmpty)
       assert(result.head.name == "Morning")
@@ -194,7 +194,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val shifts = ShiftAssignments(Seq.empty)
       val interval = 60
 
-      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(viewingDate, dayRange, terminal, staffShifts, shifts, interval)
+      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(viewingDate, dayRange, terminal, staffShifts, shifts, Map.empty, interval)
 
       assert(result.size == 2)
       assert(result.head.shiftSummary.name == "Morning")
@@ -226,13 +226,20 @@ object MonthlyShiftsUtilSpec extends TestSuite {
 
       val shiftDetails = ShiftDetails(staffShift, terminal, shifts)
 
-      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22), 1, interval, shiftDetails)
+      val recStaff = Map(
+        SDate(2023, 10, 1, 22).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1, 23).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1, 1).millisSinceEpoch -> 4,
+      )
+
+      val result = MonthlyShiftsUtil.createStaffTableEntries(LocalDate(2023, 10, 1), 1, interval, shiftDetails, recStaff)
 
       val expected = Seq(
-        StaffTableEntry(1, 0, "Night", 5, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),
-        StaffTableEntry(1, 1, "Night", 5, ShiftDateTime(2023, 10, 1, 23, 0), ShiftDateTime(2023, 10, 2, 0, 0)),
-        StaffTableEntry(1, 2, "Night", 5, ShiftDateTime(2023, 10, 1, 0, 0), ShiftDateTime(2023, 10, 1, 1, 0)),
-        StaffTableEntry(1, 3, "Night", 5, ShiftDateTime(2023, 10, 1, 1, 0), ShiftDateTime(2023, 10, 1, 2, 0))
+        StaffTableEntry(1, 0, "Night", 4, 5, SDate(2023, 10, 1, 22).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),
+        StaffTableEntry(1, 1, "Night", 4, 5, SDate(2023, 10, 1, 23).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 23, 0), ShiftDateTime(2023, 10, 2, 0, 0)),
+        StaffTableEntry(1, 2, "Night", 4, 5, SDate(2023, 10, 1, 0).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 0, 0), ShiftDateTime(2023, 10, 1, 1, 0)),
+        StaffTableEntry(1, 3, "Night", 4, 5, SDate(2023, 10, 1, 1).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 1, 0), ShiftDateTime(2023, 10, 1, 2, 0))
       )
 
       assert(result.size == expected.size)
@@ -240,6 +247,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         assert(res.column == exp.column)
         assert(res.row == exp.row)
         assert(res.name == exp.name)
+        assert(res.staffRecommendation == exp.staffRecommendation)
         assert(res.staffNumber == exp.staffNumber)
         assert(ShiftDateTime.isEqual(res.startTime, exp.startTime))
         assert(ShiftDateTime.isEqual(res.endTime, exp.endTime))

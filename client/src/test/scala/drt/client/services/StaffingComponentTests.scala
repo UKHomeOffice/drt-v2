@@ -11,7 +11,7 @@ import utest._
 
 object StaffingComponentTests extends TestSuite {
 
-  import drt.client.components.MonthlyStaffing._
+  import drt.client.components.MonthlyStaffingComponent._
 
 
   def tests = Tests {

@@ -29,7 +29,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import scala.scalajs.js
 import scala.util.Try
 
-object MonthlyStaffing {
+object MonthlyStaffingComponent {
   private var tempChanges: Map[(Int, Int), Int] = Map.empty
 
   case class TimeSlotDay(timeSlot: Int, day: Int) {
@@ -78,7 +78,7 @@ object MonthlyStaffing {
         scope.modState(state => state.copy(showEditStaffForm = true)).runNow()
       }
 
-      def confirmAndSaveStaffing(viewingDate: SDateLike, timeSlots: Seq[Seq[Any]], props: MonthlyStaffing.Props, state: MonthlyStaffing.State, scope: BackendScope[MonthlyStaffing.Props, MonthlyStaffing.State]): ReactEventFromInput => Callback = {
+      def confirmAndSaveStaffing(viewingDate: SDateLike, timeSlots: Seq[Seq[Any]], props: MonthlyStaffingComponent.Props, state: MonthlyStaffingComponent.State, scope: BackendScope[MonthlyStaffingComponent.Props, MonthlyStaffingComponent.State]): ReactEventFromInput => Callback = {
         ConfirmAndSaveForMonthlyStaffing(viewingDate, timeSlots, props, state, scope)()
       }
 

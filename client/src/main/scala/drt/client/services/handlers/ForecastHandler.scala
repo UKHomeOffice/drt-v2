@@ -1,8 +1,8 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready, Unavailable}
+import diode.data.{Empty, Pot, Ready, Unavailable}
 import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{GetForecastWeek, RetryActionAfter, SetForecastPeriod}
+import drt.client.actions.Actions.{GetForecast, RetryActionAfter, SetForecastPeriod}
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
@@ -13,20 +13,20 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetForecastWeek(startDay, terminalName, periodInterval) =>
-      log.info(s"Calling forecastWeekSummary starting at ${startDay.toLocalDateTimeString} for forecastPeriod $periodInterval.")
-      val apiCallEffect = Effect(DrtApi.get(s"forecast-summary/$terminalName/${startDay.millisSinceEpoch}/$periodInterval")
-        .map(res => SetForecastPeriod(read[Option[ForecastPeriodWithHeadlines]](res.responseText)))
+    case action@GetForecast(startDay, numberOfDays, terminalName, periodInterval) =>
+      val apiCallEffect = Effect(DrtApi.get(s"forecast-summary/$terminalName/${startDay.millisSinceEpoch}/$numberOfDays/$periodInterval")
+        .map { res =>
+          SetForecastPeriod(read[Option[ForecastPeriodWithHeadlines]](res.responseText))
+        }
         .recoverWith {
           case t =>
             log.error(s"Failed to get Forecast Period: ${t.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetForecastWeek(startDay, terminalName, periodInterval), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(action, PollDelay.recoveryDelay))
         })
 
-      effectOnly(apiCallEffect)
+      updated(Empty, apiCallEffect)
 
     case SetForecastPeriod(Some(forecastPeriod)) =>
-      log.info(s"Received forecast period.")
       updated(Ready(forecastPeriod))
 
     case SetForecastPeriod(None) =>

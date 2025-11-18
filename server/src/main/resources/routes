@@ -74,7 +74,7 @@ GET           /staff-assignments/:localDate                                     
 +nocsrf
 POST          /staff-assignments/migrate-legacy-staff-assignments                     controllers.application.LegacyShiftAssignmentsMigrationController.legacyToShiftAssignments
 
-GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
+GET           /forecast-summary/:terminalName/:startDay/:numberOfDays/:periodInterval controllers.application.PortStateController.forecastSummary(terminalName: String, startDay: Long, numberOfDays: Int, periodInterval: Int)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.recsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/recs-combined/:startLocalDate/:endLocalDate                     controllers.application.exports.DesksExportController.terminalsRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate)

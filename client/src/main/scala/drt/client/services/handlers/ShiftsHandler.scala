@@ -47,27 +47,6 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       )
       updated(Pot.empty, apiCallEffect)
 
-//    case AddShift(staffShift) =>
-//      staffShift match {
-//        case None =>
-//          log.error("No shift provided to add")
-//          noChange
-//        case Some(s) =>
-//          val apiCallEffect = Effect(DrtApi.post("shift", write(s))
-//            .map { r =>
-//              val assignments = read[ShiftAssignments](r.responseText)
-//              log.info(s"Received shift assignments after saving shifts")
-//              SetAllShiftAssignments(assignments)
-//            }.recover {
-//              case t =>
-//                log.error(msg = s"Failed to save shift: ${t.getMessage}")
-//                NoAction
-//            }
-//          )
-//          updated(Pot.empty, apiCallEffect)
-//      }
-
-
     case UpdateShift(shift, shiftName) =>
       shift match {
         case Some(s) =>
