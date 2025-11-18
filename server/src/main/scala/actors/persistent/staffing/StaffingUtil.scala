@@ -45,9 +45,9 @@ object StaffingUtil {
     }
   }
 
-  def staffAssignmentsSlotSummaries(shiftAssignments: Seq[StaffAssignment],
-                                    overlapsShiftsStaff: Seq[StaffAssignment],
-                                    existingAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] = {
+  def newAssignments(shiftAssignments: Seq[StaffAssignment],
+                     overlappingAssignments: Seq[StaffAssignment],
+                     existingAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] = {
 
     val newSlots: Map[TM, StaffAssignment] =
       shiftAssignments
@@ -72,7 +72,7 @@ object StaffingUtil {
         }
 
     val overlapsSlots: Map[TM, StaffAssignment] =
-      overlapsShiftsStaff
+      overlappingAssignments
         .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
         .groupBy(a => TM(a.terminal, a.start))
         .map { case (tm, assignments) =>
@@ -82,9 +82,9 @@ object StaffingUtil {
           tm -> combined
         }
 
-    val keys = newSlots.keySet
+    val newSlotKeys = newSlots.keySet
 
-    keys.map { tm =>
+    newSlotKeys.map { tm =>
       val chosen = existingSlots.get(tm) match {
         case Some(ex) if ex.numberOfStaff > 0 =>
           val overlapStaff = overlapsSlots.get(tm).map(_.numberOfStaff).getOrElse(0)
@@ -276,7 +276,7 @@ object StaffingUtil {
 
     // combined summary (existing + new); do not add again later
     val splitDailyAssignmentsWithOverlap: Map[TM, StaffAssignment] =
-      staffAssignmentsSlotSummaries(allShiftsStaff, overlapsShiftsStaff, existingAssignmentsAsStaff)
+      newAssignments(allShiftsStaff, overlapsShiftsStaff, existingAssignmentsAsStaff)
 
     splitDailyAssignmentsWithOverlap.values.toSeq
 

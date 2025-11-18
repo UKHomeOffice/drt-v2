@@ -204,7 +204,6 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
   }
 
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
-//    shiftSeq = Seq.empty[Shift]
     shiftSeq = shiftSeq ++ shifts
     Future.successful(shiftSeq.size)
   }

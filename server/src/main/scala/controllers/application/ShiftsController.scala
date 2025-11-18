@@ -1,7 +1,7 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, staffAssignmentsSlotSummaries, updateWithShiftDefaultStaff}
+import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, newAssignments, updateWithShiftDefaultStaff}
 import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
 import play.api.mvc._
 import spray.json._
@@ -153,7 +153,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   }
 
   private def createShifts(shifts: Seq[Shift]) = {
-    getOverlapsForShifts(shifts).flatMap { overlappingShifts =>
+    findShiftsOverlappingWith(shifts).flatMap { overlappingShifts =>
       ctrl.shiftsService.saveShift(shifts).flatMap { _ =>
         shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>
           val updatedAssignments = updateWithShiftDefaultStaff(shifts, overlappingShifts, allShiftAssignments)
@@ -168,12 +168,11 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
-  // requires an implicit ExecutionContext in scope
-  private def getOverlapsForShifts(shifts: Seq[Shift]): Future[Seq[Shift]] = {
-    val overlapFutures: Seq[Future[Seq[Shift]]] =
+  private def findShiftsOverlappingWith(shifts: Seq[Shift]): Future[Seq[Shift]] = {
+    val overlappingShiftsFutures: Seq[Future[Seq[Shift]]] =
       shifts.map(s => ctrl.shiftsService.getOverlappingStaffShifts(s.port, s.terminal, s))
 
-    Future.sequence(overlapFutures).map { lists =>
+    Future.sequence(overlappingShiftsFutures).map { lists =>
       val originals = shifts.map(s => (s.port, s.terminal, s.shiftName, s.startDate, s.startTime)).toSet
       lists
         .flatten
@@ -182,10 +181,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         )
         .distinct
     }
-
-
   }
-
 
   private def updateAssignments(previousShift: Shift, futureExistingShift: Option[Shift], updatedNewShift: Shift) = {
     shiftAssignmentsService.allShiftAssignments.flatMap { allShiftAssignments =>

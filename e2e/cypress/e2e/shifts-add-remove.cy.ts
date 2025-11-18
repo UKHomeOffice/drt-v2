@@ -89,7 +89,7 @@ describe('Add and remove Shifts Staffing', () => {
 
   describe('When creating new shifts by clicking "Add shift"', () => {
     const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
-    it("should display the assigned staff name in the table cell after adding a shift", () => {
+    it("should display the assigned staff number in the table cell after adding a shift and remove staff number after removing shift", () => {
       Cypress.env('enableShiftPlanningChange', true);
       cy
       .asABorderForcePlanningOfficer()

@@ -224,7 +224,7 @@ object MonthlyShifts {
                             },
                             handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => {
                               props.router.set(props.terminalPageTab.copy(subMode = "removeShift",
-                                queryParams = props.terminalPageTab.queryParams ++ shiftQueryParameter(shiftSummary)
+                                queryParams = props.terminalPageTab.queryParams ++ shiftQueryParameters(shiftSummary)
                               )).runNow()
                             },
                             sendAnalyticsEvent = GoogleEventTracker.sendEvent,
@@ -260,7 +260,7 @@ object MonthlyShifts {
     }
   }
 
-  private def shiftQueryParameter(shiftSummary: ShiftSummary) = {
+  private def shiftQueryParameters(shiftSummary: ShiftSummary) = {
     Map(
       "shiftName" -> s"${shiftSummary.name}",
       "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
