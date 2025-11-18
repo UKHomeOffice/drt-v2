@@ -29,8 +29,6 @@ object ToolTips {
 
   val miscTooltip = Tippy.info("misc-tooltip", "The values under Misc represent the number of staff not allocated to a desk or e-passport gate (these are often referred to as fixed points). You can edit this value by clicking on the Staff Movements tab.")
 
-  val monthlyStaffingTooltip = Tippy.info("monthly-staffing-tooltip", "You have permission to add staff to DRT. Add them directly into the spreadsheet in hourly or 15 minutes slots, or copy and paste from an existing spreadsheet if you have one in the same format.")
-
   val movesTooltip = Tippy.info("moves-tooltip", "The value displayed in the Moves column reflects adjustments.")
 
   val recBanksTooltip = Tippy.info("rec-banks-tooltip", "The values under Rec banks represent the number of banks DRT recommends are deployed to avoid an SLA breach without taking available staff into consideration.")
