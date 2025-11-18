@@ -1,7 +1,7 @@
 import {moment} from '../support/time-helpers'
 
 
-describe('Monthly Shifts Staffing', () => {
+describe('Add and remove Shifts Staffing', () => {
 
   beforeEach(() => {
     cy.deleteData("");
@@ -87,45 +87,45 @@ describe('Monthly Shifts Staffing', () => {
                });
   });
 
-  const thisMonthDateString = (): string => {
-    return moment().toISOString().split("T")[0];
-  }
-
-  const nextMonthDateString = (): string => {
-    return moment().add(1, 'M').toISOString().split("T")[0];
-  }
-
-  describe('When creating new shifts by clicking "Create shift pattern"', () => {
+  describe('When creating new shifts by clicking "Add shift"', () => {
     const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
-    it("should display the assigned staff name in the table cell after creating a shift", () => {
+    it("should display the assigned staff name in the table cell after adding a shift", () => {
       Cypress.env('enableShiftPlanningChange', true);
       cy
-        .asABorderForcePlanningOfficer()
-        .request('/')
-        .then((response) => {
-          const $html = Cypress.$(response.body)
-          const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
-          cy.saveShifts(shifts(), csrf).then(() => {
-            const baseUrl = '#terminal/T1/shifts/15/';
-            cy.visit(baseUrl)
-              .clickCreateShiftPattern()
-              .get('[data-cy="shift-name-input"]').type('Shift 1')
-              .get('[data-cy="start-time-select"]').click()
-              .get('[data-cy="select-start-time-option-00-00"]').click()
-              .get('[data-cy="end-time-select"]').click()
-              .get('[data-cy="select-end-time-option-18-00"]').click()
-              .get('[data-cy="staff-number-input"]').type('8')
-              .get('[data-cy="shift-continue-button"]').click()
-              .get('[data-cy="shift-confirm-button"]').click()
-              .wait(1000)
-              .get(cellToTest, {timeout: 20000}).should('exist').contains("1")
-              .visit(baseUrl + '?date=' + nextMonthDateString())
-              .get(cellToTest, {timeout: 20000}).should('exist').contains("2")
-              .visit(baseUrl + '?date=' + thisMonthDateString())
-              .get(cellToTest, {timeout: 20000}).should('exist').contains("1")
-              .resetShifts(csrf);
-          });
+      .asABorderForcePlanningOfficer()
+      .request('/')
+      .then((response) => {
+        const $html = Cypress.$(response.body)
+        const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
+        cy.saveShifts(shifts(), csrf).then(() => {
+          const baseUrl = '#terminal/T1/shifts/60/';
+          cy.visit(baseUrl)
+            .clickCreateShiftPattern()
+            .get('[data-cy="shift-name-input"]').type('Shift 1')
+            .get('[data-cy="start-time-select"]').click()
+            .get('[data-cy="select-start-time-option-12-00"]').click()
+            .get('[data-cy="end-time-select"]').click()
+            .get('[data-cy="select-end-time-option-18-00"]').click()
+            .get('[data-cy="staff-number-input"]').type('5')
+            .get('[data-cy="shift-continue-button"]').click()
+            .get('[data-cy="shift-confirm-button"]').click()
+            .clickAddShiftButton()
+            .get('[data-cy="shift-name-input"]').type('Shift 2')
+            .get('[data-cy="start-time-select"]').click()
+            .get('[data-cy="select-start-time-option-16-00"]').click()
+            .get('[data-cy="end-time-select"]').click()
+            .get('[data-cy="select-end-time-option-20-00"]').click()
+            .get('[data-cy="staff-number-input"]').type('5')
+            .get('[data-cy="shift-continue-button"]').click()
+            .get('[data-cy="shift-confirm-button"]').click()
+            .wait(500)
+            .get  (cellToTest, {timeout: 20000}).should('exist').contains("10")
+            .get('[data-cy="shift-remove-0"]').click({ multiple: true })
+            .get('[data-cy="shift-confirm-remove-button"]').click({ multiple: true })
+            .get(cellToTest, { timeout: 1000 }).should('exist').should('not.contain', '10')
+            .resetShifts(csrf);
         });
+      });
     });
   });
 });

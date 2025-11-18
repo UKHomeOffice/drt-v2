@@ -207,7 +207,7 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
   }
 
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
-    shiftSeq = Seq.empty[Shift]
+//    shiftSeq = Seq.empty[Shift]
     shiftSeq = shiftSeq ++ shifts
     Future.successful(shiftSeq.size)
   }
@@ -247,7 +247,16 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
     Future.successful(
       shiftSeq.find(s => s.port == port && s.terminal == terminal && s.shiftName == shiftName && s.startDate == startDate && s.startTime == startTime))
 
-  override def deleteShift(shift: Shift): Future[Shift] = Future.successful(shift)
+  override def deleteShift(shift: Shift): Future[Shift] = {
+    val removedShift = shiftSeq.filterNot(
+      s => s.port == shift.port &&
+        s.terminal == shift.terminal &&
+        s.startDate == shift.startDate &&
+        s.startTime == shift.startTime
+    )
+    shiftSeq = removedShift
+    Future.successful(shift)
+  }
 }
 
 case class MockShiftStaffRollingService()(implicit ec: ExecutionContext) extends IShiftStaffRollingService {
