@@ -50,7 +50,7 @@ object AutoRollShiftUtil {
         assignments <- assignmentsF
         updatedAssignments <- if (shifts.nonEmpty) {
           val updatedShifts = updateShiftDateForRolling(shifts, startRollingDate, endRollingDate)
-          val withDefaultStaff = StaffingUtil.updateWithShiftDefaultStaff(updatedShifts, assignments)
+          val withDefaultStaff = StaffingUtil.updateWithShiftDefaultStaff(updatedShifts, Seq.empty, assignments)
           shiftAssignmentsService.updateShiftAssignments(withDefaultStaff)
         } else {
           Future.successful(ShiftAssignments(Seq.empty[StaffAssignmentLike]))

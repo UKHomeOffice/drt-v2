@@ -264,6 +264,17 @@ object TerminalComponent {
                         terminalModel.shiftsPot,
                         props.terminalPageTab.queryParams("shiftName"),
                         props.terminalPageTab.queryParams.get("shiftDate"),
+                        props.terminalPageTab.queryParams.get("shiftStartTime"),
+                        props.terminalPageTab.queryParams.get("date"),
+                        props.router))
+
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "removeShift" =>
+                      <.div(RemoveShiftsComponent(props.terminalPageTab.terminal,
+                        props.terminalPageTab.portCodeStr,
+                        terminalModel.shiftsPot,
+                        props.terminalPageTab.queryParams("shiftName"),
+                        props.terminalPageTab.queryParams.get("shiftDate"),
+                        props.terminalPageTab.queryParams.get("shiftStartTime"),
                         props.terminalPageTab.queryParams.get("date"),
                         props.router))
 
@@ -296,7 +307,7 @@ object TerminalComponent {
                           router = props.router,
                           airportConfig = airportConfig,
                           userPreferences = userPreferences,
-                          shiftCreated = props.terminalPageTab.queryParams.getOrElse("shifts", "") == "created",
+                          shiftCreated = Seq("created", "removed").contains(props.terminalPageTab.queryParams.getOrElse("shifts", "")),
                           viewMode = props.terminalPageTab.subMode == "viewShifts",
                           recommendedStaff = slotStaffRecs.getOrElse(Map.empty),
                           shiftsPot = terminalModel.shiftsPot,
