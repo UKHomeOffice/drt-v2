@@ -1,7 +1,7 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, newAssignments, updateWithShiftDefaultStaff}
+import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, newAssignments, staffAssignmentsSlotSummaries, updateWithShiftDefaultStaff}
 import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
 import play.api.mvc._
 import spray.json._
