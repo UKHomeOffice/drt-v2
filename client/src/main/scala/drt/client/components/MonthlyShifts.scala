@@ -103,7 +103,6 @@ object MonthlyShifts {
         forecastRCP { modelMP =>
           val model = modelMP()
           <.div {
-
             for {
               forecast <- model.forecastPot
               shifts <- props.shifts
@@ -224,6 +223,9 @@ object MonthlyShifts {
                               )).runNow()
                             },
                             handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => {
+                              props.router.set(props.terminalPageTab.copy(subMode = "removeShift",
+                                queryParams = props.terminalPageTab.queryParams ++ shiftQueryParameters(shiftSummary)
+                              )).runNow()
                             },
                             sendAnalyticsEvent = GoogleEventTracker.sendEvent,
                             warningsEnabled = props.warningsEnabled,
@@ -256,6 +258,14 @@ object MonthlyShifts {
       )
 
     }
+  }
+
+  private def shiftQueryParameters(shiftSummary: ShiftSummary) = {
+    Map(
+      "shiftName" -> s"${shiftSummary.name}",
+      "shiftDate" -> s"${shiftSummary.startDate.year}-${shiftSummary.startDate.month}-${shiftSummary.startDate.day}",
+      "shiftStartTime" -> s"${shiftSummary.startTime}"
+    )
   }
 
   private def goToViewShifts(props: Props) = {

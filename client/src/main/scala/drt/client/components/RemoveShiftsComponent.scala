@@ -6,18 +6,18 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.UpdateShift
+import drt.client.services.handlers.{RemoveShift, UpdateShift}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{VdomTagOf, _}
-import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-object EditShiftsComponent {
+object RemoveShiftsComponent {
 
 
   case class Props(terminal: Terminal,
@@ -54,26 +54,31 @@ object EditShiftsComponent {
     }
 
     def render(props: Props): VdomTagOf[Div] = {
-      def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
-        val staffShifts = shifts.map { s =>
-          val startDate: LocalDate = startDateInLocalDate(s.startDate)
-          Shift(
-            port = props.portCode,
-            terminal = props.terminal.toString,
-            shiftName = s.name,
-            startDate = startDate,
-            startTime = s.startTime,
-            endTime = s.endTime,
-            endDate = None,
-            staffNumber = s.defaultStaffNumber,
-            frequency = None,
-            createdBy = None,
-            createdAt = System.currentTimeMillis()
-          )
-        }
-        SPACircuit.dispatch(UpdateShift(staffShifts.headOption, props.shiftName))
-        Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "update")).runNow()
-        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map("shifts" -> "created"))).runNow()
+
+      def cancelHandler(): Unit = {
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60")).runNow()
+      }
+
+      def confirmHandler(shift: ShiftForm): Unit = {
+
+        val startDate: LocalDate = startDateInLocalDate(shift.startDate)
+        val staffShift = Shift(
+          port = props.portCode,
+          terminal = props.terminal.toString,
+          shiftName = shift.name,
+          startDate = startDate,
+          startTime = shift.startTime,
+          endTime = shift.endTime,
+          endDate = None,
+          staffNumber = shift.defaultStaffNumber,
+          frequency = None,
+          createdBy = None,
+          createdAt = System.currentTimeMillis()
+        )
+
+        SPACircuit.dispatch(RemoveShift(Some(staffShift), props.shiftName))
+        Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "removed")).runNow()
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map("shifts" -> "removed"))).runNow()
       }
 
       <.div(
@@ -91,21 +96,23 @@ object EditShiftsComponent {
               )
             }
 
-          ShiftsFormComponent(
-            ShiftFormProps(port = props.portCode,
-              terminal = props.terminal.toString,
-              interval = 30,
-              initialShifts = shiftForms,
-              confirmHandler = confirmHandler,
-              formMode = "edit",
-              disableAdd = false))
+          shiftForms.headOption match {
+            case Some(shiftForm) =>
+              ConfirmRemoveShiftComponent(
+                RemoveShiftFormProps(
+                  shift = shiftForm,
+                  removeShiftConfirmHandler = confirmHandler,
+                  cancelRemoveShiftHandler = cancelHandler
+                ))
+            case None =>
+              <.div("No matching shift found to remove.")
+          }
+
         })
     }
-
   }
 
-
-  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingEditShiftsV2")
+  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingRemoveShiftsV2")
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build

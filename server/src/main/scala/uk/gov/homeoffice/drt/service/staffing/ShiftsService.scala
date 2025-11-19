@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait ShiftsService {
   implicit val ec: ExecutionContext
 
-  def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]]
+  def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate, startTime: String): Future[Option[Shift]]
 
   def getShifts(port: String, terminal: String): Future[Seq[Shift]]
 
@@ -33,7 +33,7 @@ trait ShiftsService {
 
   def createNewShiftWhileEditing(previousShift: Shift, shiftRow: Shift): Future[(Shift, Option[Shift])]
 
-  def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
+  def deleteShift(shift: Shift): Future[Shift]
 
   def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]]
 
@@ -48,12 +48,13 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit val ec: Ex
     Future.sequence(shifts.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
   }
 
-  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = staffShiftsDao.deleteStaffShift(port, terminal, shiftName)
+  override def deleteShift(shift: Shift): Future[Shift] = staffShiftsDao.deleteStaffShift(shift.port,
+    shift.terminal,
+    shift.shiftName,
+    shift.startDate,
+    shift.startTime).map(_ => shift)
 
   override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
-
-  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] =
-    staffShiftsDao.searchStaffShift(port, terminal, shiftName, startDate)
 
   override def getShifts(port: String, terminal: String): Future[Seq[Shift]] =
     staffShiftsDao.getStaffShiftsByPortAndTerminal(port, terminal)
@@ -102,4 +103,7 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit val ec: Ex
                                         startTime: String)
                                        (implicit ec: ExecutionContext): Future[Option[Shift]] =
     staffShiftsDao.latestStaffShiftForADate(port, terminal, startDate, startTime)
+
+  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate, startTime: String): Future[Option[Shift]] =
+    staffShiftsDao.getStaffShift(port, terminal, shiftName, startDate, startTime)
 }

@@ -15,13 +15,13 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 case class GetShifts(terminal: String, viewDate: Option[String] = None, dayRange: Option[String] = None)
 
-case class GetShift(terminal: String, shiftName: String, viewDate: Option[String])
-
 case class SaveShifts(staffShifts: Seq[Shift])
+
+//case class AddShift(staffShift: Option[Shift])
 
 case class UpdateShift(shift: Option[Shift], shiftName: String)
 
-case class RemoveShift(terminal: String, shiftName: String)
+case class RemoveShift(shift: Option[Shift], shiftName: String)
 
 case class SetShifts(staffShifts: Seq[Shift])
 
@@ -31,17 +31,6 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetShifts(terminal, dateOption, dayRangeOption) =>
       val apiCallEffect = getShiftsFromServer(terminal, dateOption, dayRangeOption)
-      updated(Pot.empty, apiCallEffect)
-
-    case GetShift(terminal, shiftName, viewDateOption) =>
-      val url: String = shiftUrl(terminal, shiftName, viewDateOption)
-      val apiCallEffect = Effect(DrtApi.get(url)
-        .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
-        .recoverWith {
-          case t =>
-            log.error(msg = s"Failed to get shift: ${t.getMessage}")
-            Future(NoAction)
-        })
       updated(Pot.empty, apiCallEffect)
 
     case SaveShifts(staffShifts) =>
@@ -73,15 +62,20 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
           noChange
       }
 
-    case RemoveShift(terminal, shiftName) =>
-      val apiCallEffect = Effect(DrtApi.delete(s"shifts/remove/$terminal/$shiftName")
-        .map(_ => NoAction)
-        .recoverWith {
-          case t =>
-            log.error(msg = s"Failed to remove shift: ${t.getMessage}")
-            Future(NoAction)
-        })
-      updated(Pot.empty, apiCallEffect)
+    case RemoveShift(shift, shiftName) =>
+      shift match {
+        case Some(s) =>
+          val apiCallEffect = Effect(DrtApi.delete(s"shifts/${s.terminal}/$shiftName/${s.startDate}/${s.startTime}")
+            .map(r => SetAllShiftAssignments(read[ShiftAssignments](r.responseText)))
+            .recoverWith {
+              case t =>
+                log.error(msg = s"Failed to delete shift: ${t.getMessage}")
+                Future(NoAction)
+            })
+          updated(Pot.empty, apiCallEffect)
+        case None =>
+          noChange
+      }
 
     case SetShifts(staffShifts) =>
       updated(Ready(staffShifts))
@@ -109,16 +103,6 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
         Future(NoAction)
     })
     apiCallEffect
-  }
-
-  private def shiftUrl(terminal: String, shiftName: String, viewDateOption: Option[String]) = {
-    val url = viewDateOption match {
-      case Some(date) =>
-        s"shift/$terminal/$shiftName/$date"
-      case None =>
-        s"shift/$terminal/$shiftName"
-    }
-    url
   }
 
   private def shiftsUrl(terminal: String, dateOption: Option[String], dayRange: String) = {

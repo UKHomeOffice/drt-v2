@@ -203,13 +203,7 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
     Future.successful(shiftSeq)
   }
 
-  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = {
-    shiftSeq = Seq.empty
-    Future.successful(shiftSeq.size)
-  }
-
   override def saveShift(shifts: Seq[Shift]): Future[Int] = {
-    shiftSeq = Seq.empty[Shift]
     shiftSeq = shiftSeq ++ shifts
     Future.successful(shiftSeq.size)
   }
@@ -220,11 +214,6 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
   }
 
   override def updateShift(previousShift: Shift, shift: Shift): Future[Shift] = Future.successful(shift)
-
-  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate): Future[Option[Shift]] = {
-    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
-    Future.successful(shift)
-  }
 
   override def getOverlappingStaffShifts(port: String, terminal: String, shift: Shift): Future[Seq[Shift]] = {
     val overlappingShifts = shiftSeq.filter { s =>
@@ -250,6 +239,20 @@ case class MockStaffShiftsService()(implicit val ec: ExecutionContext) extends S
                                            dayRange: Option[String],
                                            date: Option[String]): Future[Seq[Shift]] = Future.successful(shiftSeq)
 
+  override def getShift(port: String, terminal: String, shiftName: String, startDate: LocalDate, startTime: String): Future[Option[Shift]] =
+    Future.successful(
+      shiftSeq.find(s => s.port == port && s.terminal == terminal && s.shiftName == shiftName && s.startDate == startDate && s.startTime == startTime))
+
+  override def deleteShift(shift: Shift): Future[Shift] = {
+    val removedShift = shiftSeq.filterNot(
+      s => s.port == shift.port &&
+        s.terminal == shift.terminal &&
+        s.startDate == shift.startDate &&
+        s.startTime == shift.startTime
+    )
+    shiftSeq = removedShift
+    Future.successful(shift)
+  }
 }
 
 case class MockShiftStaffRollingService()(implicit ec: ExecutionContext) extends IShiftStaffRollingService {
