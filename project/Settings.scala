@@ -32,7 +32,7 @@ object Settings {
     val bluebus = "v149"
 
     val pekko = "1.1.3"
-    val pekkoHttp = "1.1.0"
+    val pekkoHttp = "1.3.0"
     val pekkoPersistenceJdbc = "1.1.0"
     val slick = "3.5.2"
 
