@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode.AnyAction.aType
-import diode.data.{Pending, Pot, Ready}
+import diode.data.{Empty, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions.SetAllShiftAssignments
 import drt.client.logger.log
@@ -29,7 +29,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetShifts(terminal, dateOption, dayRangeOption) =>
       val apiCallEffect = getShiftsFromServer(terminal, dateOption, dayRangeOption)
-      updated(Pending(), apiCallEffect)
+      updated(Empty, apiCallEffect)
 
     case SaveShifts(staffShifts) =>
       val apiCallEffect = Effect(DrtApi.post("shifts", write(staffShifts))
