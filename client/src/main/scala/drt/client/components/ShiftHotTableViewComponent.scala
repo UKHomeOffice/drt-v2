@@ -3,14 +3,14 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.component.JsFn.Component
-import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
+import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
 import scala.concurrent.duration.DurationInt
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSImport
 
 @js.native
 trait ShiftDate extends js.Object {
@@ -169,8 +169,8 @@ trait ShiftHotTableViewProps extends js.Object {
   var intervalMinutes: Int = js.native
   var shiftSummaries: js.Array[ShiftSummaryStaffing] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
-  var handleEditShift: js.Function2[Int, ShiftSummary, Unit] = js.native
-  var handleRemoveShift: js.Function2[Int, ShiftSummary, Unit] = js.native
+  var handleEditShift: js.Function1[ShiftSummary, Unit] = js.native
+  var handleRemoveShift: js.Function1[ShiftSummary, Unit] = js.native
   var sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
   var warningsEnabled: Boolean = js.native
 }
@@ -181,8 +181,8 @@ object ShiftHotTableViewProps {
             interval: Int,
             shiftSummaries: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
-            handleEditShift: (Int, ShiftSummary) => Unit,
-            handleRemoveShift: (Int, ShiftSummary) => Unit,
+            handleEditShift: ShiftSummary => Unit,
+            handleRemoveShift: ShiftSummary => Unit,
             sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit],
             warningsEnabled: Boolean,
            ): ShiftHotTableViewProps = {
@@ -193,8 +193,8 @@ object ShiftHotTableViewProps {
     p.shiftSummaries = shiftSummaries.toJSArray
     p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
-    p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)
-    p.handleRemoveShift = (index: Int, shiftSummary: ShiftSummary) => handleRemoveShift(index, shiftSummary)
+    p.handleEditShift = (shiftSummary: ShiftSummary) => handleEditShift(shiftSummary)
+    p.handleRemoveShift = (shiftSummary: ShiftSummary) => handleRemoveShift(shiftSummary)
     p.sendAnalyticsEvent = sendAnalyticsEvent
     p.warningsEnabled = warningsEnabled
     p
