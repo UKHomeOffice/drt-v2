@@ -110,7 +110,7 @@ object MonthlyStaffingComponent {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
+        <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "flexStart", "gap" -> "40px", "alignItems" -> "center"),
           MuiTypography(variant = "h2")(s"Staffing")),
         if (props.isStaffShiftPage && props.isShiftsEmpty && !props.viewMode) {
           <.div(^.style := js.Dictionary("padding-top" -> "10px"),

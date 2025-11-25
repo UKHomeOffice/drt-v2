@@ -169,7 +169,7 @@ object MonthlyStaffingBar {
       <.div(^.className := "staffing-bar",
         <.div(^.className := "staffing-controls-save",
           <.div(
-            <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
+            <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "spaceBetween", "alignItems" -> "center"),
               <.span(^.className := "staffing-controls-title",
                 <.strong(props.terminalPageTab.dayRangeType match {
                   case Some("monthly") => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
@@ -232,7 +232,7 @@ object MonthlyStaffingBar {
                 )
               } else EmptyVdom),
           )),
-        <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "align-items" -> "center"),
+        <.div(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingTop" -> "20px", "paddingBottom" -> "10px", "gap" -> "15px", "display" -> "flex", "alignItems" -> "center"),
           MuiButton(color = Color.secondary, variant = "contained")
           (<.span("Edit staff"),
             VdomAttr("data-cy") := "edit-staff-button",
