@@ -32,13 +32,17 @@ An assumption/desire to operate with high utilization. Littles law shows us this
 ## Feeds
 
 ### Airports/Flights
-We take feeds from the Airports about flight statuses. Ports use a variety of formats including JSON. LHR has their own proprietary feed based on CSV files on a web server. Gatwick use a push service in Microsoft's Azure cloud.
+We take feeds from the Airports about flight statuses. Ports use a variety of formats including JSON. LHR has their own proprietary feed based on CSV files on an sftp server. Gatwick use a push service in Microsoft's Azure cloud.
 
 ### API (Advance Passenger Info)
-This provides us data about the nationality breakdown on incoming flights.
+This provides us with data about the age & nationality breakdowns on incoming flights.
 
 ### Technical Stack
-Scala server. Scalajs reactjs client. Communication between client server is via lihaoyi's autowire & spray JSON. Server is hosted in play, uses Akka streams to read the feeds, state is store in Akka actors. Some of the actors use akka persistence.
+Scala server
+Scalajs reactjs client
+ReactJS drt components library
+
+Communication between client server is via spray JSON. Server is hosted in play, uses Pekko streams to read the feeds, state is stored in classic Pekko actors using Pekko Persistence.
 The simulation/optimization algorithm is Scala, translated & enhanced from R taken directly from HOAI.
 
 ### Physical Deployment
