@@ -109,8 +109,8 @@ describe('Add and remove Shifts Staffing', () => {
             .get('[data-cy="staff-number-input"]').type('5')
             .get('[data-cy="shift-continue-button"]').click()
             .get('[data-cy="shift-confirm-button"]').click()
+            .get(cellToTest, {timeout: 20000}).should('exist').contains("5")
             .clickAddShiftButton()
-            .wait(1000)
             .get('[data-cy="shift-name-input"]').type('Shift 2')
             .get('[data-cy="start-time-select"]').click()
             .get('[data-cy="select-start-time-option-16-00"]').click()
@@ -119,12 +119,10 @@ describe('Add and remove Shifts Staffing', () => {
             .get('[data-cy="staff-number-input"]').type('5')
             .get('[data-cy="shift-continue-button"]').click()
             .get('[data-cy="shift-confirm-button"]').click()
-            .wait(1000)
-            .get  (cellToTest, {timeout: 20000}).should('exist').contains("10")
-            .get('[data-cy="shift-remove-0"]').click({ multiple: true })
-            .get('[data-cy="shift-confirm-remove-button"]').click({ multiple: true })
-            .wait(1000)
-            .get(cellToTest, { timeout: 1000 }).should('exist').should('not.contain', '10')
+            .get(cellToTest, {timeout: 20000}).should('exist').contains("10")
+            .get('[data-cy="shift-remove-0"]').should('be.visible').click()
+            .get('[data-cy="shift-confirm-remove-button"]').should('be.visible').click()
+            .get(cellToTest, { timeout: 5000 }).should('exist').should('not.contain', '10')
             .resetShifts(csrf);
         });
       });
