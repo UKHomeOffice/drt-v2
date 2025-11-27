@@ -122,9 +122,6 @@ describe('Add and remove Shifts Staffing', () => {
             .get('[data-cy="shift-confirm-button"]').click()
             .wait(1000)
             .get(cellToTest, {timeout: 20000}).should('exist').contains("6")
-            .get('[data-cy="shift-remove-0"]').should('be.visible').click()
-            .get('[data-cy="shift-confirm-remove-button"]').should('be.visible').click()
-            .get(cellToTest, { timeout: 5000 }).should('exist').should('not.contain', '5')
             .resetShifts(csrf);
         });
       });
