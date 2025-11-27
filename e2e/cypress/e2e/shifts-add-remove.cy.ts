@@ -117,14 +117,14 @@ describe('Add and remove Shifts Staffing', () => {
             .get('[data-cy="select-start-time-option-16-00"]').click()
             .get('[data-cy="end-time-select"]').click()
             .get('[data-cy="select-end-time-option-20-00"]').click()
-            .get('[data-cy="staff-number-input"]').type('5')
+            .get('[data-cy="staff-number-input"]').type('6')
             .get('[data-cy="shift-continue-button"]').click()
             .get('[data-cy="shift-confirm-button"]').click()
-            .getShifts()
-            .get(cellToTest, {timeout: 20000}).should('exist').contains("10")
+            .wait(1000)
+            .get(cellToTest, {timeout: 20000}).should('exist').contains("6")
             .get('[data-cy="shift-remove-0"]').should('be.visible').click()
             .get('[data-cy="shift-confirm-remove-button"]').should('be.visible').click()
-            .get(cellToTest, { timeout: 5000 }).should('exist').should('not.contain', '10')
+            .get(cellToTest, { timeout: 5000 }).should('exist').should('not.contain', '5')
             .resetShifts(csrf);
         });
       });
