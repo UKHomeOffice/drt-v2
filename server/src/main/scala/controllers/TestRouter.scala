@@ -26,6 +26,7 @@ class TestRouter @Inject()(testController: TestController) extends SimpleRouter 
 
     case POST(p"/test/replace-all-shifts") => testController.replaceAllShifts
 
+    case GET(p"/test/shifts/$port/$terminal") => testController.getShifts(port, terminal)
   }
 
 
