@@ -57,28 +57,23 @@ trait IShiftMetaInfoMigration {
     val terminals: Seq[Terminal] = ctrl.airportConfig.terminalsForDate(SDate(dateTime).toLocalDate).toSeq
     Future.sequence(terminals.map { terminal =>
       if (ctrl.params.enableShiftPlanningChange) {
-        shiftMetaInfoService.getShiftMetaInfo(port, terminal.toString).map {
+        shiftMetaInfoService.getShiftMetaInfo(port, terminal.toString).flatMap {
           case Some(shiftMeta) if shiftMeta.shiftAssignmentsMigratedAt.isDefined =>
             log.info(s"Already migrated shift assignments as migrated for $port $terminal")
             Future.successful("No action taken")
           case _ =>
             log.info(s"No existing shift meta info for $port $terminal, creating new entry and marking as migrated")
-            migrateStaffAssignments(port, terminal.toString, now).map { _ =>
-              markMigrationRecord(port, terminal, now, shiftMetaInfoService).map { _ =>
-                  log.info(s"Marked shift assignments as migrated for $port $terminal")
-                  Future.successful("Migration completed")
-                }
-                .recover {
-                  case ex: Exception =>
-                    log.error(s"Failed to mark shift assignments as migrated for $port $terminal: ${ex.getMessage}", ex)
-                }
-            }.recover {
-              case ex: Exception =>
-                log.error(s"Failed to migrate shift assignments for $port $terminal: ${ex.getMessage}", ex)
+            for {
+              _ <- migrateStaffAssignments(port, terminal.toString, now)
+              _ <- markMigrationRecord(port, terminal, now, shiftMetaInfoService)
+            } yield {
+              log.info(s"Marked shift assignments as migrated for $port $terminal")
+              "Migration completed"
             }
         }.recover {
           case ex: Exception =>
-            log.error(s"Failed to get shift meta info for $port $terminal: ${ex.getMessage}", ex)
+            log.error(s"Failed to get or migrate shift meta info for $port $terminal: ${ex.getMessage}", ex)
+            "Failed"
         }
       } else {
         log.info(s"enableShiftPlanningChange for $port $terminal is disabled, no needed to migrate shift assignments")

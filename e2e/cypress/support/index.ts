@@ -63,6 +63,8 @@ declare global {
 
       findAndClick(thing: string): Chainable<Element>;
 
+      getShifts(): Chainable<Element>;
+
       openAdjustmentDialogueForHour(direction: string, amount: number): Chainable<Element>;
 
       navigateHome(): Chainable<Element>;
