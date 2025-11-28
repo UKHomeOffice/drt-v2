@@ -255,7 +255,8 @@ class TestDrtActor extends Actor {
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)))
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig),
+        paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)), identity)
 
       val paxProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]] =
         OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor)

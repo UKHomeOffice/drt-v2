@@ -75,6 +75,8 @@ trait DrtParameters {
   val stalePredictionHours: FiniteDuration
 
   val enableStaffingPageWarnings: Boolean
+
+  val codeShareExceptions: Set[String]
 }
 
 object DrtParameters {
@@ -158,4 +160,6 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val stalePredictionHours: FiniteDuration = config.get[Int]("crunch.stale-prediction-hours").hours
 
   override val enableStaffingPageWarnings: Boolean = config.get[Boolean]("feature-flags.enable-staffing-page-warnings")
+
+  override val codeShareExceptions: Set[String] = config.getOptional[Seq[String]]("code-share.exceptions").getOrElse(Seq()).toSet
 }

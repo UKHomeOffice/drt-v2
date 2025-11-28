@@ -73,6 +73,7 @@ object TerminalContentComponent {
                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
                    defaultDesksAndQueuesViewType: String,
                    userPreferences: UserPreferences,
+                   codeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false, anchorEl: Option[HTMLElement] = None)
@@ -288,7 +289,8 @@ object TerminalContentComponent {
                       arrivalSources = props.arrivalSources,
                       originMapper = originMapper,
                       userPreferences = props.userPreferences,
-                      terminalPageTab = props.terminalPageTab
+                      terminalPageTab = props.terminalPageTab,
+                      codeShares = props.codeShares,
                     )
                   )
                 }

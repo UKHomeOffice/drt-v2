@@ -31,7 +31,11 @@ object FlightsLiveView {
         }
   }
 
-  def updateCapacityForDate(airportConfig: AirportConfig, aggregatedDb: AggregatedDbTables, feedService: FeedService)
+  def updateCapacityForDate(airportConfig: AirportConfig,
+                            aggregatedDb: AggregatedDbTables,
+                            feedService: FeedService,
+                            uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
+                           )
                            (implicit ec: ExecutionContext): UtcDate => Future[Done] = {
     val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] = {
       val getFlights = FlightDao().getForUtcDate(airportConfig.portCode)
@@ -41,7 +45,7 @@ object FlightsLiveView {
     val uniqueFlightsForDate = PassengersLiveView.uniqueFlightsForDate(
       flights = flightsForDate,
       baseArrivals = feedService.aclArrivalsForDate,
-      paxFeedSourceOrder = feedService.paxFeedSourceOrder,
+      uniqueFlights = uniqueFlights,
     )
 
     val getCapacities = PassengersLiveView.capacityForDate(uniqueFlightsForDate)

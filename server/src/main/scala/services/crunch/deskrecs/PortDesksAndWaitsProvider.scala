@@ -7,7 +7,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunchWholePax
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
-import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -129,6 +129,7 @@ object PortDesksAndWaitsProvider {
             flightFilter: FlightFilter,
             paxFeedSourceOrder: List[FeedSource],
             sla: (LocalDate, Queue) => Future[Int],
+            uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
            ): PortDesksAndWaitsProvider = {
 
     val calculator = DynamicWorkloadCalculator(
@@ -136,7 +137,7 @@ object PortDesksAndWaitsProvider {
       fallbacks = QueueFallbacks(QueueConfig.queuesForDateAndTerminal(airportConfig.queuesByTerminal)),
       flightHasWorkload = flightFilter,
       fallbackProcessingTime = AirportConfigDefaults.fallbackProcessingTime,
-      paxFeedSourceOrder = paxFeedSourceOrder
+      uniqueFlights = uniqueFlights,
     )
 
     PortDesksAndWaitsProvider(

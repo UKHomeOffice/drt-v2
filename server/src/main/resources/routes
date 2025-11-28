@@ -12,8 +12,9 @@ GET           /health-check/received-landing-times/:from/:to/:minimumToConsider 
 GET           /health-check/received-arrival-updates/:from/:to/:minimumToConsider/:lastUpdatedMinutes  controllers.application.HealthCheckController.receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int)
 GET           /health-check/calculated-desk-updates                                   controllers.application.HealthCheckController.deskUpdates()
 
-GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
-GET           /pax-feed-source-order                                                  controllers.application.ConfigController.getPaxFeedSourceOrder
+GET           /config/airport-config                                                  controllers.application.ConfigController.getAirportConfig
+GET           /config/pax-feed-source-order                                           controllers.application.ConfigController.getPaxFeedSourceOrder
+GET           /config/codeshare-exceptions                                            controllers.application.ConfigController.getCodeshareExceptions
 GET           /contact-details                                                        controllers.application.ContactDetailsController.getContactDetails
 
 GET           /ooh-status                                                             controllers.application.ContactDetailsController.getOOHStatus

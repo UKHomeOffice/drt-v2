@@ -52,7 +52,8 @@ object FlightTable {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    userPreferences: UserPreferences,
-                   terminalPageTab: TerminalPageTabLoc
+                   terminalPageTab: TerminalPageTabLoc,
+                   codeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])],
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
@@ -189,7 +190,8 @@ object FlightTable {
               originMapper = props.originMapper,
               flightHighlight = props.flightHighlight,
               userPreferences = props.userPreferences,
-              terminalPageTab = props.terminalPageTab
+              terminalPageTab = props.terminalPageTab,
+              codeShares = props.codeShares,
             )
           )
         },

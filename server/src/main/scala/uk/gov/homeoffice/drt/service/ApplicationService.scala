@@ -81,6 +81,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               persistentStateActors: PersistentStateActors,
                               requestAndTerminateActor: ActorRef,
                               splitsCalculator: SplitsCalculator,
+                              uniqueArrivals: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
                              )
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout, airportConfig: AirportConfig) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -119,7 +120,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
   val portDeskRecs: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiserDeskRecs, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
+    PortDesksAndWaitsProvider(airportConfig, optimiserDeskRecs, FlightFilter.forPortConfig(airportConfig),
+      feedService.paxFeedSourceOrder, slaForDateAndQueue, uniqueArrivals)
 
   private val deploymentSlas: (LocalDate, Queue) => Future[Int] =
     (date, queue) =>
@@ -133,7 +135,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       }
 
   private val portDeployments: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiserDeployments, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
+    PortDesksAndWaitsProvider(airportConfig, optimiserDeployments, FlightFilter.forPortConfig(airportConfig),
+      feedService.paxFeedSourceOrder, deploymentSlas, uniqueArrivals)
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(arrival.Terminal, 300000L)

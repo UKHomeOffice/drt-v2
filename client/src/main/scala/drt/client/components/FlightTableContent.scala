@@ -53,6 +53,7 @@ object FlightTableContent {
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    userPreferences: UserPreferences,
                    terminalPageTab: TerminalPageTabLoc,
+                   codeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])],
                   ) extends UseValueEq
 
   class Backend {
@@ -87,7 +88,7 @@ object FlightTableContent {
         flights <- props.flights
       } yield {
         val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-        val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+        val flightsWithCodeShares = props.codeShares(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
         val ageGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet
         val showFlagger = props.flightHighlight.selectedNationalities.nonEmpty ||

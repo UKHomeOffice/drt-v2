@@ -111,7 +111,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)))
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig),
+      paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)), identity)
 
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(

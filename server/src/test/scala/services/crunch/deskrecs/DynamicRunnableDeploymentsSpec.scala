@@ -41,7 +41,9 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
   val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
   val staffToDeskLimits: (Terminal, List[Int]) => FlexedTerminalDeskLimitsFromAvailableStaff = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider, _ => dummyPaxForQueue)
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)))
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider =
+    PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder,
+      (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)), identity)
 
   def setupGraphAndCheckQueuePax(minutes: MinutesContainer[PassengersMinute, TQM],
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {

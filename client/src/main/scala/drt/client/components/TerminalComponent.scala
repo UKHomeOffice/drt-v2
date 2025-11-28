@@ -25,7 +25,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.Shift
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.models.{CrunchMinute, UserPreferences}
@@ -67,6 +67,7 @@ object TerminalComponent {
                                    shiftsPot: Pot[Seq[Shift]],
                                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
                                    allShiftAssignments: Pot[ShiftAssignments],
+                                   codeShareExceptions: Set[FlightCode],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -107,6 +108,7 @@ object TerminalComponent {
         shiftsPot = model.shifts,
         addedStaffMovementMinutes = model.addedStaffMovementMinutes,
         allShiftAssignments = model.allShiftAssignments,
+        codeShareExceptions = model.codeShareExceptions,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -151,6 +153,7 @@ object TerminalComponent {
                       .toList
                   }
                   val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
+                  val codeShares = CodeShares.uniqueFlightsWithCodeShares(terminalModel.paxFeedSourceOrder, terminalModel.codeShareExceptions)
 
                   props.terminalPageTab.mode match {
                     case Current =>
@@ -183,6 +186,7 @@ object TerminalComponent {
                         case Some(viewType) => viewType
                         case None => if (hasStaff) "deployments" else "ideal"
                       }
+
                       <.div(
                         MuiTypography(variant = "h2")(s"Queues & Arrivals"),
                         <.div(^.className := s"terminal-content-header $headerClass",
@@ -226,7 +230,8 @@ object TerminalComponent {
                           windowStaffSummaries = windowStaffSummaries,
                           addedStaffMovementMinutes = terminalModel.addedStaffMovementMinutes,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
-                          userPreferences = userPreferences
+                          userPreferences = userPreferences,
+                          codeShares = codeShares,
                         ))
                       )
 
@@ -248,6 +253,7 @@ object TerminalComponent {
                           arrivalSources = arrSources,
                           flightHighlight = fhl,
                           userPreferences = userPreferences,
+                          codeShares = codeShares,
                         )
                       )
 

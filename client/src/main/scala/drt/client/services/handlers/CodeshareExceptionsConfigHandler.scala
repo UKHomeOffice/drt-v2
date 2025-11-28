@@ -1,27 +1,26 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{GetAirportConfig, RetryActionAfter, UpdateAirportConfig}
+import drt.client.actions.Actions.{GetAirportConfig, RetryActionAfter, UpdateCodeShareExceptions}
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.arrivals.FlightCode
 import upickle.default.read
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
+class CodeshareExceptionsConfigHandler[M](modelRW: ModelRW[M, Set[FlightCode]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportConfig =>
-      effectOnly(Effect(DrtApi.get("config/airport-config")
-        .map(r => UpdateAirportConfig(read[AirportConfig](r.responseText))).recoverWith {
+      effectOnly(Effect(DrtApi.get("config/codeshare-exceptions")
+        .map(r => UpdateCodeShareExceptions(read[Set[String]](r.responseText).map(FlightCode(_)))).recoverWith {
         case _ =>
           log.error(s"AirportConfig request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
       }))
 
-    case UpdateAirportConfig(airportConfig) =>
-      updated(Ready(airportConfig))
+    case UpdateCodeShareExceptions(codeShareExceptions) =>
+      updated(codeShareExceptions)
   }
 }

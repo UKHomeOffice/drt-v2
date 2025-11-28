@@ -147,7 +147,7 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
       val eventualUniqueFlights = PassengersLiveView.uniqueFlightsForDate(
         _ => Future.successful(flights),
         _ => Future.successful(baseArrivals),
-        List(AclFeedSource)
+        identity,
       )
 
       val result = Await.result(eventualUniqueFlights(UtcDate(2024, 6, 27)), 1.second)
