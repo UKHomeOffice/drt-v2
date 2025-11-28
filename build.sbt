@@ -1,14 +1,15 @@
 
 import Settings.versions.scalajsReact
 import com.typesafe.config.ConfigFactory
-import net.nmoncho.sbt.dependencycheck.settings.NvdApiSettings
+import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
+import net.nmoncho.sbt.dependencycheck.settings.{AnalyzerSettings, NvdApiSettings}
 import org.scalajs.jsenv.Input
 import org.scalajs.jsenv.nodejs.NodeJSEnv
 import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
 import sbt.Keys.credentials
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
-
+import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
 
 scalaVersion := Settings.versions.scala
 
@@ -154,6 +155,19 @@ lazy val server = (project in file("server"))
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .dependsOn(shared.jvm)
+
+ThisBuild / dependencyCheckAnalyzers := dependencyCheckAnalyzers.value.copy(
+  ossIndex = AnalyzerSettings.OssIndex(
+    enabled = Some(false),
+    url = None,
+    batchSize = None,
+    requestDelay = None,
+    useCache = None,
+    warnOnlyOnRemoteErrors = None,
+    username = None,
+    password = None
+  )
+)
 
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
