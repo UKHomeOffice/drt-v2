@@ -48,7 +48,7 @@ class CodeSharesSpec extends Specification {
     val flight1 = ApiFlightWithSplits(live(iata = "SV111", schDt = "2016-01-01T10:25Z", totalPax = Option(100), terminal = T1, origin = PortCode("JFK")).toArrival(LiveFeedSource), Set())
     val flight2 = ApiFlightWithSplits(live(iata = "RX401", schDt = "2016-01-01T10:25Z", totalPax = Option(150), terminal = T1, origin = PortCode("JFK")).toArrival(LiveFeedSource), Set())
 
-    val result = uniqueFlightsWithCodeShares(paxFeedSourceOrder, Set.empty)(Seq(flight1, flight2))
+    val result = uniqueFlightsWithCodeShares(paxFeedSourceOrder, Set(flight1.apiFlight.flightCode, flight2.apiFlight.flightCode))(Seq(flight1, flight2))
 
     val expected = List((flight1, Seq.empty), (flight2, Seq.empty))
 

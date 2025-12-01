@@ -11,7 +11,7 @@ import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
-import drt.shared.CrunchApi
+import drt.shared.{CodeShares, CrunchApi}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.ManifestLookupLike
@@ -37,7 +37,7 @@ import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightCode, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
@@ -255,8 +255,11 @@ class TestDrtActor extends Actor {
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
+      val uniqueArrivals: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] =
+        CodeShares.uniqueArrivals(paxFeedSourceOrder, Set.empty)
+      
       val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig),
-        paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)), identity)
+        paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)), uniqueArrivals)
 
       val paxProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]] =
         OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor)
