@@ -257,7 +257,7 @@ class TestDrtActor extends Actor {
 
       val uniqueArrivals: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] =
         CodeShares.uniqueArrivals(paxFeedSourceOrder, Set.empty)
-      
+
       val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig),
         paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)), uniqueArrivals)
 
