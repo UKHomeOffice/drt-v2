@@ -1,7 +1,7 @@
 
 import Settings.versions.scalajsReact
 import com.typesafe.config.ConfigFactory
-import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
+import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
 import net.nmoncho.sbt.dependencycheck.settings.{AnalyzerSettings, NvdApiSettings}
 import org.scalajs.jsenv.Input
 import org.scalajs.jsenv.nodejs.NodeJSEnv
@@ -9,7 +9,6 @@ import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
 import sbt.Keys.credentials
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
-import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
 
 scalaVersion := Settings.versions.scala
 
