@@ -60,6 +60,8 @@ object Actions {
 
   case object GetAirportConfig extends Action
 
+  case object GetCodeShareExceptions extends Action
+
   case object GetSlaConfigs extends Action
 
   case object GetPaxFeedSourceOrder extends Action

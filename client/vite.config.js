@@ -25,8 +25,7 @@ export default defineConfig({
     proxy: {
       "/report-to": "http://localhost:9000",
       "/health-check": "http://localhost:9000",
-      "/airport-config": "http://localhost:9000",
-      "/pax-feed-source-order": "http://localhost:9000",
+      "/config": "http://localhost:9000",
       "/contact-details": "http://localhost:9000",
       "/ooh-status": "http://localhost:9000",
       "/feature-flags": "http://localhost:9000",
