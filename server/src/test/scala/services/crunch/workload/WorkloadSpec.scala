@@ -31,7 +31,7 @@ class WorkloadSpec extends CrunchTestLike {
       QueueFallbacks((_, _) => Seq.empty),
       filter,
       AirportConfigDefaults.fallbackProcessingTime,
-      paxFeedSourceOrder,
+      identity,
     )
 
   private val procTime = 1.5

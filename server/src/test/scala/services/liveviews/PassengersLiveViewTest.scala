@@ -1,6 +1,7 @@
 package services.liveviews
 
 import controllers.ArrivalGenerator
+import drt.shared.CodeShares
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -134,12 +135,12 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
 
   "uniqueFlightsForDate" should {
     "return the unique flights for the date" in {
-      val flight1 = ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = "2024-06-27T12:00", feedSource = AclFeedSource)
-      val codeShare1 = flight1.copy(VoyageNumber = VoyageNumber(2))
-      val flight2 = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("CDG"), schDt = "2024-06-27T12:05", maxPax = Option(85),
+      val arrival1 = ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = "2024-06-27T12:00", feedSource = AclFeedSource)
+      val codeShare1 = arrival1.copy(VoyageNumber = VoyageNumber(2))
+      val arrival2 = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("CDG"), schDt = "2024-06-27T12:05", maxPax = Option(85),
         feedSource = AclFeedSource)
 
-      val flights = Iterable(flight1, codeShare1, flight2).map(flight => ApiFlightWithSplits(flight, Set(), None))
+      val flights = Iterable(arrival1, codeShare1, arrival2).map(flight => ApiFlightWithSplits(flight, Set(), None))
 
       val baseArrival = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2024-06-27T12:00", maxPax = Option(85), feedSource = AclFeedSource)
       val baseArrivals = ArrivalsState(SortedMap(baseArrival.unique -> baseArrival), AclFeedSource, None)
@@ -147,15 +148,15 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
       val eventualUniqueFlights = PassengersLiveView.uniqueFlightsForDate(
         _ => Future.successful(flights),
         _ => Future.successful(baseArrivals),
-        List(AclFeedSource)
+        CodeShares.uniqueArrivals(List(AclFeedSource), Set()),
       )
 
       val result = Await.result(eventualUniqueFlights(UtcDate(2024, 6, 27)), 1.second)
 
-      result.toSet should ===(Set(
-        codeShare1.copy(MaxPax = Option(85)),
-        flight2,
-      ).map(flight => ApiFlightWithSplits(flight, Set(), None)))
+      val mergedArrival = codeShare1.copy(MaxPax = Option(85))
+      val expected = Set(mergedArrival, arrival2).map(flight => ApiFlightWithSplits(flight, Set(), None))
+
+      result.toSet should ===(expected)
     }
   }
 

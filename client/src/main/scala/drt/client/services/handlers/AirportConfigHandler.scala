@@ -1,6 +1,6 @@
 package drt.client.services.handlers
 
-import diode.data.{Pending, Pot, Ready}
+import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.{GetAirportConfig, RetryActionAfter, UpdateAirportConfig}
 import drt.client.logger.log
@@ -14,7 +14,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportConfig =>
-      effectOnly(Effect(DrtApi.get("airport-config")
+      effectOnly(Effect(DrtApi.get("config/airport-config")
         .map(r => UpdateAirportConfig(read[AirportConfig](r.responseText))).recoverWith {
         case _ =>
           log.error(s"AirportConfig request failed. Re-requesting after ${PollDelay.recoveryDelay}")

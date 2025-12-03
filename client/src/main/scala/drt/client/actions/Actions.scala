@@ -9,7 +9,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import drt.shared.api.{ForecastAccuracy, WalkTimes}
 import org.scalajs.dom.File
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey}
@@ -60,11 +60,15 @@ object Actions {
 
   case object GetAirportConfig extends Action
 
+  case object GetCodeShareExceptions extends Action
+
   case object GetSlaConfigs extends Action
 
   case object GetPaxFeedSourceOrder extends Action
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
+
+  case class UpdateCodeShareExceptions(exceptions: Set[FlightCode]) extends Action
 
   case class UpdateSlaConfigs(configs: SlaConfigs) extends Action
 

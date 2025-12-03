@@ -14,7 +14,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class PaxFeedSourceOrderHandler[M](modelRW: ModelRW[M, List[FeedSource]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetPaxFeedSourceOrder =>
-      updated(List(), Effect(DrtApi.get("pax-feed-source-order")
+      updated(List(), Effect(DrtApi.get("config/pax-feed-source-order")
         .map(r => UpdateGetPaxFeedSourceOrder(read[List[FeedSource]](r.responseText)))
         .recoverWith {
           case _ =>

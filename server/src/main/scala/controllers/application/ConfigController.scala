@@ -22,4 +22,12 @@ class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
       Ok(write(ctrl.feedService.paxFeedSourceOrder))
     }
   }
+
+  def getCodeshareExceptions: Action[AnyContent] = auth {
+    Action { _ =>
+      import upickle.default._
+
+      Ok(write(ctrl.params.codeShareExceptions))
+    }
+  }
 }

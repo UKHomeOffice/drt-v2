@@ -3,6 +3,7 @@ package uk.gov.homeoffice.drt.crunchsystem
 import actors._
 import com.typesafe.config.ConfigFactory
 import controllers._
+import drt.shared.CodeShares
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.apache.pekko.actor.ActorSystem
@@ -18,7 +19,7 @@ import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import slickdb.AkkaDbTables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
@@ -99,6 +100,9 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
+  val uniqueArrivals: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] =
+    CodeShares.uniqueArrivals(paxFeedSourceOrder, params.codeShareExceptions.map(FlightCode(_)))
+
   lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
     val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
     (date, state) => doUpdate(date, state).map(_ => ())
@@ -114,7 +118,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   }
 
   private lazy val updateAndRemoveFlights = FlightsLiveView.updateAndRemove(flightDao, aggregatedDb, airportConfig.portCode)
-  lazy val updateCapacityForDate: UtcDate => Future[Done] = FlightsLiveView.updateCapacityForDate(airportConfig, aggregatedDb, feedService)
+  lazy val updateCapacityForDate: UtcDate => Future[Done] = FlightsLiveView.updateCapacityForDate(airportConfig, aggregatedDb, feedService, uniqueArrivals)
 
   lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
     (updates, removals) =>
@@ -140,6 +144,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     persistentStateActors = persistentActors,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
     splitsCalculator = splitsCalculator,
+    uniqueArrivals = uniqueArrivals,
   )
 
   def run(): Unit

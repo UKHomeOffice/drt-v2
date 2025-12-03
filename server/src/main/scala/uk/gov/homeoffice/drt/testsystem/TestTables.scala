@@ -139,6 +139,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val disableDeploymentFairXmax: Boolean = true
   override val stalePredictionHours: FiniteDuration = 24.hours
   override val enableStaffingPageWarnings: Boolean = false
+  override val codeShareExceptions: Set[String] = Set.empty
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
