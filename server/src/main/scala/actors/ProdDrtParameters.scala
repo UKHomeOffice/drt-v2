@@ -161,5 +161,7 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
 
   override val enableStaffingPageWarnings: Boolean = config.get[Boolean]("feature-flags.enable-staffing-page-warnings")
 
-  override val codeShareExceptions: Set[String] = config.getOptional[String]("code-share.exceptions").map(_.split(",").toSet).getOrElse(Set())
+  override val codeShareExceptions: Set[String] = config.getOptional[String]("code-share.exceptions")
+    .map(_.split(",").map(_.trim.toUpperCase).toSet)
+    .getOrElse(Set())
 }
