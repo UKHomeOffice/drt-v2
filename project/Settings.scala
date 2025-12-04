@@ -52,7 +52,7 @@ object Settings {
 
     val bootstrap = "3.3.6"
 
-    val poi = "5.2.5"
+    val poi = "5.5.1"
     val renjin = "0.9.2725"
     val csvCommons = "1.13.0"
     val postgres = "42.7.5"
