@@ -29,7 +29,7 @@ addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.13")
 
 addSbtPlugin("com.github.sbt" % "sbt-js-engine" % "1.3.9")
 
-addSbtPlugin("io.github.cquiroz" % "sbt-tzdb" % "4.2.0")
+addSbtPlugin("io.github.cquiroz" % "sbt-tzdb" % "4.3.0")
 
 addSbtPlugin("net.nmoncho" % "sbt-dependency-check" % "1.7.2")
 
