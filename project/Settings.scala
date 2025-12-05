@@ -31,7 +31,7 @@ object Settings {
     val drtCirium = "v339"
     val bluebus = "v149"
 
-    val pekko = "1.1.3"
+    val pekko = "1.1.5"
     val pekkoHttp = "1.2.0"
     val pekkoPersistenceJdbc = "1.1.0"
     val slick = "3.5.2"
@@ -73,7 +73,7 @@ object Settings {
     val mockito = "5.16.0"
     val rtVersion = "4.0.3"
     val jakartaXmlWsApi = "4.0.2"
-    val scalatestplusPlay = "7.0.1"
+    val scalatestplusPlay = "7.0.2"
     val nettyAll = "4.1.128.Final"
     val jwtCore = "11.0.3"
     val logback = "1.5.21"
