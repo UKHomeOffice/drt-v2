@@ -19,7 +19,7 @@ addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.11.4")
 
 addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.9")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.2")
+addSbtPlugin("com.github.sbt" % "sbt-gzip" % "2.0.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.4")
 
