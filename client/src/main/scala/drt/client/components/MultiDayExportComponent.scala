@@ -90,10 +90,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       if (props.loggedInUser.hasRole(BorderForceStaff))
         <.div(
           ^.className := "export-button-wrapper",
-          MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
-            MuiIcons(GetApp)(fontSize = "large"),
+          MuiButton(color = Color.secondary, variant = "contained", sx = SxProps(Map("fontWeight" -> "normal")))(
             "Multi Day Export",
-            ^.className := "btn btn-default",
             VdomAttr("data-toggle") := "modal",
             VdomAttr("data-target") := "#multi-day-export",
             ^.href := "#",
@@ -130,9 +128,18 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                           else List(ExportArrivals(props.terminal))
                         exportLinksGroup(props, state, exports, "Arrivals")
                       } else EmptyVdom,
-                      if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                        exportLinksGroup(props, state, List(ExportDeskRecs(props.terminal), ExportDeployments(props.terminal)), "Desks and queues")
-                      else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView)) {
+                        val exports = if (props.terminals.size > 1)
+                          List(ExportDeskRecsSingleTerminal(props.terminal), ExportDeskRecsCombinedTerminals)
+                        else List(ExportDeskRecs(props.terminal))
+                        exportLinksGroup(props, state, exports, "Desks recommendations")
+                      } else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView)) {
+                        val exports = if (props.terminals.size > 1)
+                          List(ExportDeploymentsSingleTerminal(props.terminal), ExportDeploymentsCombinedTerminals)
+                        else List(ExportDeployments(props.terminal))
+                        exportLinksGroup(props, state, exports, "Available staff deployments")
+                      } else EmptyVdom,
                       if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
                         exportLinksGroup(props, state, List(ExportLiveArrivalsFeed(props.terminal)), "Feeds")
                       else EmptyVdom

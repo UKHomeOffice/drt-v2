@@ -2,7 +2,7 @@
 @import "lib/font-awesome/less/font-awesome.less";
 @import "popover-styles.less";
 @import "popover-styles-staff-movement.less";
-@import 'handsontable.full.css';
+
 @import 'tippy.css';
 @import 'tippy-themes/light.css';
 @import 'tippy-themes/light-border.css';
@@ -33,12 +33,6 @@ html, body {
 
 .main-content {
   flex: 1;
-}
-
-footer {
-  background: #f1f1f1;
-  padding: 10px;
-  text-align: center;
 }
 
 label {
@@ -111,7 +105,6 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   width: 96%;
   margin: 0 auto;
   padding: 0 10px;
-  font-size: 14px;
 }
 
 .main-menu-title {
@@ -222,7 +215,11 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  margin-bottom: 15px;
+  margin: 15px 0px;
+
+  .terminal-header {
+    margin-top: 15px;
+  }
 }
 
 .status-bar {
@@ -387,6 +384,7 @@ div.planning-week {
 
 table.headlines {
   margin-top: 15px;
+  margin-bottom: 15px;
   display: block;
   width: 100%;
 }
@@ -394,6 +392,7 @@ table.headlines {
 table.forecast {
   border-collapse: separate;
   border-spacing: 0;
+  margin-top: 15px;
 }
 
 table.forecast td.red {
@@ -494,7 +493,6 @@ table.headlines tr:nth-child(odd) {
 
 #staff-adjustment-dialogue {
   display: block;
-  font-size: medium;
   position: fixed;
 
   /* prettify */
@@ -629,7 +627,6 @@ table.headlines tr:nth-child(odd) {
 
 .date-time-picker-container .container {
   display: block;
-  font-size: medium;
   position: absolute;
 
   /* prettify */
@@ -669,10 +666,15 @@ table.headlines tr:nth-child(odd) {
   justify-content: flex-start;
   flex-grow: 4;
   align-self: flex-start;
+  margin-bottom: 15px;
 }
 
 .nav-tabs li {
   white-space: nowrap;
+
+  &.active a {
+    height: 55px;
+  }
 }
 
 .current-view-header {
@@ -711,7 +713,10 @@ table.headlines tr:nth-child(odd) {
 .exports {
   display: flex;
   gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 10px;
 }
+
 
 .export-button-wrapper {
   display: inline-flex;
@@ -1259,17 +1264,15 @@ p {
   flex-grow: 1;
 }
 
-.arrival-datetime-pax-search {
-  width: 750px;
-}
 
-.terminal-staffing-content-header {
+.terminal-staffing-content-footer {
+  display: flex;
   gap: 15px;
-  justify-content: space-between;
-  flex-grow: 1;
   border-radius: 5px;
   margin-top: 15px;
-  padding: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 15px;
   background-color: #eeeff0;
 }
 
@@ -1289,7 +1292,7 @@ p {
   flex-grow: 2;
   border-radius: 5px;
   //margin-top: 15px;
-  padding: 10px;
+  padding: 20px;
   background-color: #E6E9F1;
 }
 
@@ -1446,6 +1449,19 @@ p {
   gap: 15px;
 }
 
+.vstack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hstack {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  align-items: center;
+}
+
 .staffing-controls-row {
   display: flex;
   gap: 15px;
@@ -1468,12 +1484,6 @@ p {
   height: 600px;
   overflow-y: auto;
 }
-
-.shifts-table-content {
-  height: 500px;
-  overflow-y: auto;
-}
-
 
 .staffing-controls {
   background-color: white;
@@ -1499,24 +1509,24 @@ p {
   margin-left: 20px;
 }
 
-.staffing-controls-save {
+.staffing-bar {
   position: sticky;
   top: 0;
   z-index: 101;
+  padding-bottom: 10px;
+  background-color: #E6E9F1;
+}
+
+.staffing-controls-save {
   padding-top: 10px;
   padding-right: 10px;
   padding-bottom: 10px;
   display: flex;
   gap: 15px;
-  background-color: #E6E9F1;
 }
 
 .staffing-controls-save > div {
   align-self: flex-end;
-}
-
-.staffing-controls-label {
-  width: 200px;
 }
 
 .staffing-controls-select {
@@ -1986,7 +1996,6 @@ th h2 {
 
 .dashboard-summary__splits-tooltip:hover {
   display: block;
-  font-size: medium;
   /* position relative to container div.tooltip */
   position: absolute;
 
@@ -2336,7 +2345,13 @@ div#arrivals {
 }
 
 body {
-  font-size: 1.45rem
+  font-size: 19px;
+}
+
+@media (max-width: 1024px) {
+  body {
+    font-size: 16px;
+  }
 }
 
 .port-dashboard-period {
@@ -2495,7 +2510,7 @@ a i.fa.fa-remove {
 }
 
 .feed-status-description {
-  height: 50px;
+  height: 90px;
 }
 
 .clear {
@@ -2522,11 +2537,20 @@ a i.fa.fa-remove {
 }
 
 .topbar {
-  height: 70px;
   width: 96%;
   margin: auto;
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap
+}
+
+.topbar .contact {
+  margin-left: auto;
+}
+
+#alerts {
+  order: -1;
+  width: 100%;
+  margin-top: 5px;
 }
 
 .has-alerts {
@@ -2596,7 +2620,6 @@ div.access-restricted {
 
 .terminal-dashboard-queues {
   width: 73%;
-  padding-top: 3%;
   display: flex;
   flex-direction: column;
   gap: 25px;
@@ -2900,3 +2923,12 @@ div.access-restricted {
 .underline {
   text-decoration: underline;
 }
+
+.terminal-header {
+  margin-top: 15px;
+}
+
+.btn:focus {
+  outline: none !important;
+}
+

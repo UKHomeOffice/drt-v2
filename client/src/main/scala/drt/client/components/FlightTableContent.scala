@@ -53,6 +53,7 @@ object FlightTableContent {
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    userPreferences: UserPreferences,
                    terminalPageTab: TerminalPageTabLoc,
+                   codeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])],
                   ) extends UseValueEq
 
   class Backend {
@@ -64,7 +65,15 @@ object FlightTableContent {
 
     private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
       val searchFormForDate = searchForm(selectedDate, terminalPageTab)
-      s"${searchFormForDate.displayText} (${searchFormForDate.fromTime} - ${searchFormForDate.toTime})"
+
+      val fromSDate = SDate(searchFormForDate.fromTime.valueOf().toLong)
+      val toSDate = SDate(searchFormForDate.toTime.valueOf().toLong)
+      val from = fromSDate.toHoursAndMinutes
+      val to = toSDate.toHoursAndMinutes
+      if (fromSDate.toLocalDate != toSDate.toLocalDate)
+        s"${searchFormForDate.displayText} ($from ${fromSDate.toLocalDate.ddmmyyyy} to $to ${toSDate.toLocalDate.ddmmyyyy})"
+      else
+        s"${searchFormForDate.displayText} ($from to $to)"
     }
 
 
@@ -79,7 +88,7 @@ object FlightTableContent {
         flights <- props.flights
       } yield {
         val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-        val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+        val flightsWithCodeShares = props.codeShares(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
         val ageGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet
         val showFlagger = props.flightHighlight.selectedNationalities.nonEmpty ||
@@ -113,12 +122,12 @@ object FlightTableContent {
                   MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
                 },
                 <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
-                  MuiTypography()("Show pax data descriptions"),
+                  MuiTypography(sx = SxProps(Map("marginBottom" -> "0 !important")))("Show pax data descriptions"),
                   MuiFormControl()(
                     MuiSwitch(defaultChecked = !props.userPreferences.hidePaxDataSourceDescription)
                     (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e, props.userPreferences)))
                   ),
-                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
+                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px", "marginBottom" -> "0 !important")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
                 )
               ),
               <.div(
@@ -178,7 +187,7 @@ object FlightTableContent {
           }
           else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
             if (flights.isEmpty) {
-              <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
+              <.div(^.style := js.Dictionary(),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
                 (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
             } else {

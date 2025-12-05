@@ -11,7 +11,7 @@ import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
-import drt.shared.CrunchApi
+import drt.shared.{CodeShares, CrunchApi}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.ManifestLookupLike
@@ -37,7 +37,7 @@ import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightCode, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM, UniqueArrivalKey}
@@ -140,6 +140,7 @@ class TestDrtActor extends Actor {
       val nowMillis = () => tc.now().millisSinceEpoch
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
       val terminals: (LocalDate, LocalDate) => Seq[Terminal] = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
+
       def feedArrivalsRouter(source: FeedSource,
                              partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              name: String): ActorRef =
@@ -204,21 +205,17 @@ class TestDrtActor extends Actor {
           val flightDao = FlightDao()
           val queueSlotDao = QueueSlotDao()
 
-          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
-            val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, dbTables, airportConfig.portCode)
-            (updates, removals) =>
-              doUpdate(updates, removals)
-          }
+          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] =
+            FlightsLiveView.updateAndRemove(flightDao, dbTables, airportConfig.portCode)
 
-          val update15MinuteQueueSlotsLiveView: Terminal => (UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit] = {
+          val update15MinuteQueues: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
             val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
-            terminal => (date, updates, removals) => {
-              doUpdate(terminal)(date, updates, removals).map(_ => ())
-            }
+            (date, state) => doUpdate(date, state).map(_ => ())
           }
-          (updateFlightsLiveView, update15MinuteQueueSlotsLiveView)
+          (updateFlightsLiveView, update15MinuteQueues)
+
         case None =>
-          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: Terminal) => (_: UtcDate, _: Iterable[CrunchMinute], _: Iterable[TQM]) => Future.successful(()))
+          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
       }
 
       val terminalsForDateRange = QueueConfig.terminalsForDateRange(tc.airportConfig.queuesByTerminal)
@@ -258,7 +255,11 @@ class TestDrtActor extends Actor {
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)))
+      val uniqueArrivals: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] =
+        CodeShares.uniqueArrivals(paxFeedSourceOrder, Set.empty)
+
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig),
+        paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)), uniqueArrivals)
 
       val paxProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]] =
         OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor)
@@ -329,7 +330,6 @@ class TestDrtActor extends Actor {
           queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
           queuesByTerminal = QueueConfig.queuesForDateAndTerminal(tc.airportConfig.queuesByTerminal),
           paxFeedSourceOrder = paxFeedSourceOrder,
-          updateCapacity = _ => Future.successful(Done),
           setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
           validTerminals = QueueConfig.terminalsForDate(tc.airportConfig.queuesByTerminal)
         )

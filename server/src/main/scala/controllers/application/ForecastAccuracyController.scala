@@ -99,7 +99,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       (date, maybePit) =>
         ctrl.applicationService.flightsProvider.terminalDateScheduled(ctrl.materializer, ctrl.ec)(terminal)(date, maybePit)
           .map(_.filter(fws => !fws.apiFlight.Origin.isDomesticOrCta && !fws.apiFlight.isCancelled))
-          .map(fs => CodeShares.uniqueArrivals(ctrl.paxFeedSourceOrder)(fs).toSeq)
+          .map(fs => ctrl.uniqueArrivals(fs).toSeq)
     }
     val daysAhead = 3
 

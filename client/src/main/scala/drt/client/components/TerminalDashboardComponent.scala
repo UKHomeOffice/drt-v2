@@ -15,7 +15,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.Queues.{FastTrack, Queue, Transfer}
@@ -47,7 +47,8 @@ object TerminalDashboardComponent {
                    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    flightHighlight: FlightHighlight,
-                   userPreferences: UserPreferences
+                   userPreferences: UserPreferences,
+                   codeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])],
                   ) extends UseValueEq
 
   private val defaultSlotSize = 120
@@ -121,7 +122,8 @@ object TerminalDashboardComponent {
                         arrivalSources = props.arrivalSources,
                         originMapper = originMapper,
                         userPreferences = props.userPreferences,
-                        terminalPageTab = props.terminalPageTabLoc
+                        terminalPageTab = props.terminalPageTabLoc,
+                        codeShares = props.codeShares,
                       )
                     )
                   ),

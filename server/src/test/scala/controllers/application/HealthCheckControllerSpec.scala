@@ -122,7 +122,8 @@ class HealthCheckControllerSpec extends PlaySpec {
         actorService = actorService,
         persistentStateActors = persistentActors,
         requestAndTerminateActor = actorService.requestAndTerminateActor,
-        splitsCalculator = splitsCalculator
+        splitsCalculator = splitsCalculator,
+        uniqueArrivals = uniqueArrivals,
       )(system, ec, mat, timeout, airportConfig) {
         override lazy val flightsProvider: FlightsProvider = FlightsProvider(system.actorOf(Props(new MockFlightsRouterActor(flights))))(timeout)
       }

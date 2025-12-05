@@ -5,6 +5,7 @@ import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain._
+import drt.client.actions.Actions.{GetAllShiftAssignments, GetForecast}
 import drt.client.components.TerminalDesksAndQueues.Recommended
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -13,6 +14,7 @@ import drt.client.services.handlers.GetShifts
 import drt.client.services._
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
+import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import drt.shared.api.WalkTimes
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
@@ -23,18 +25,20 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.Shift
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
-import uk.gov.homeoffice.drt.models.UserPreferences
+import uk.gov.homeoffice.drt.models.{CrunchMinute, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Queues.Transfer
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import scala.collection.immutable.HashSet
+import scala.collection.immutable
+import scala.collection.immutable.{HashSet, SortedMap}
+import scala.util.Try
 
 object TerminalComponent {
 
@@ -50,7 +54,6 @@ object TerminalComponent {
                                    staffMovementsPot: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
                                    airportConfigPot: Pot[AirportConfig],
-                                   slaConfigsPot: Pot[SlaConfigs],
                                    loadingState: LoadingState,
                                    showActuals: Boolean,
                                    loggedInUserPot: Pot[LoggedInUser],
@@ -63,6 +66,8 @@ object TerminalComponent {
                                    paxFeedSourceOrder: List[FeedSource],
                                    shiftsPot: Pot[Seq[Shift]],
                                    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
+                                   allShiftAssignments: Pot[ShiftAssignments],
+                                   codeShareExceptions: Set[FlightCode],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -90,7 +95,6 @@ object TerminalComponent {
         staffMovementsPot = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
         airportConfigPot = model.airportConfig,
-        slaConfigsPot = model.slaConfigs,
         loadingState = model.loadingState,
         showActuals = model.showActualIfAvailable,
         loggedInUserPot = model.loggedInUserPot,
@@ -103,6 +107,8 @@ object TerminalComponent {
         paxFeedSourceOrder = model.paxFeedSourceOrder,
         shiftsPot = model.shifts,
         addedStaffMovementMinutes = model.addedStaffMovementMinutes,
+        allShiftAssignments = model.allShiftAssignments,
+        codeShareExceptions = model.codeShareExceptions,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -118,6 +124,7 @@ object TerminalComponent {
             loggedInUser <- terminalModel.loggedInUserPot
             redListUpdates <- terminalModel.redListUpdatesPot
             userPreferences <- terminalModel.userPreferencesPot
+            shifts <- terminalModel.shiftsPot
           } yield {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -134,13 +141,20 @@ object TerminalComponent {
                     m.flightManifestSummaries,
                     m.arrivalSources,
                     m.simulationResult,
-                    m.flightHighlight,
+                    m.flightHighlight
                   ))
 
                 rcp { mp =>
                   val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
+                  val terminal = props.terminalPageTab.terminal
+                  val queuesPot = terminalModel.airportConfigPot.map { ac =>
+                    QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal)
+                      .filterNot(_ == Transfer)
+                      .toList
+                  }
+                  val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
+                  val codeShares = CodeShares.uniqueFlightsWithCodeShares(terminalModel.paxFeedSourceOrder, terminalModel.codeShareExceptions)
 
-                  val emptyShifts = terminalModel.shiftsPot.map(z => z.isEmpty).getOrElse(true)
                   props.terminalPageTab.mode match {
                     case Current =>
                       val headerClass = if (terminalModel.timeMachineEnabled) "terminal-content-header__time-machine" else ""
@@ -161,15 +175,10 @@ object TerminalComponent {
 
                       val hoursToView = timeWindow.endInt - timeWindow.startInt
 
-                      val terminal = props.terminalPageTab.terminal
-                      val viewInterval = userPreferences.desksAndQueuesIntervalMinutes
-                      val queues = terminalModel.airportConfigPot.map { ac =>
-                        QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(viewStart.toLocalDate, viewEnd.toLocalDate, terminal)
-                          .filterNot(_ == Transfer)
-                          .toList
-                      }
-                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, q)))
-                      val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, q)))
+                      val windowCrunchSummaries = queuesPot.flatMap(queues => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, viewInterval, terminal, queues)))
+                      val windowStaffRecs: Pot[SortedMap[Long, Int]] = queuesPot.flatMap(queues => ps.map(ps => ps.queueRecStaffSummary(viewStart, hoursToView * 4, viewInterval, terminal, queues)))
+                      val windowStaffDeps: Pot[SortedMap[Long, Option[Int]]] = queuesPot.flatMap(queues => ps.map(ps => ps.queueDepStaffSummary(viewStart, hoursToView * 4, viewInterval, terminal, queues)))
+                      val dayCrunchSummaries: Pot[SortedMap[Long, Map[Queues.Queue, CrunchMinute]]] = queuesPot.flatMap(queues => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, viewInterval, terminal, queues)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, viewInterval, terminal).toMap)
 
                       val hasStaff = windowStaffSummaries.exists(_.values.exists(_.available > 0))
@@ -177,6 +186,7 @@ object TerminalComponent {
                         case Some(viewType) => viewType
                         case None => if (hasStaff) "deployments" else "ideal"
                       }
+
                       <.div(
                         MuiTypography(variant = "h2")(s"Queues & Arrivals"),
                         <.div(^.className := s"terminal-content-header $headerClass",
@@ -214,11 +224,14 @@ object TerminalComponent {
                           viewStart = viewStart,
                           hoursToView = hoursToView,
                           windowCrunchSummaries = windowCrunchSummaries,
+                          windowStaffRecs = windowStaffRecs,
+                          windowStaffDeps = windowStaffDeps,
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
                           addedStaffMovementMinutes = terminalModel.addedStaffMovementMinutes,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
-                          userPreferences = userPreferences
+                          userPreferences = userPreferences,
+                          codeShares = codeShares,
                         ))
                       )
 
@@ -240,6 +253,7 @@ object TerminalComponent {
                           arrivalSources = arrSources,
                           flightHighlight = fhl,
                           userPreferences = userPreferences,
+                          codeShares = codeShares,
                         )
                       )
 
@@ -251,27 +265,64 @@ object TerminalComponent {
                       })
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "editShifts" =>
-                      <.div(EditShiftsComponent(props.terminalPageTab.terminal,
+                      <.div(EditShiftsComponent(terminal,
                         props.terminalPageTab.portCodeStr,
                         terminalModel.shiftsPot,
                         props.terminalPageTab.queryParams("shiftName"),
                         props.terminalPageTab.queryParams.get("shiftDate"),
+                        props.terminalPageTab.queryParams.get("shiftStartTime"),
                         props.terminalPageTab.queryParams.get("date"),
                         props.router))
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
-                      <.div(ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "removeShift" =>
+                      <.div(RemoveShiftsComponent(props.terminalPageTab.terminal,
+                        props.terminalPageTab.portCodeStr,
+                        terminalModel.shiftsPot,
+                        props.terminalPageTab.queryParams("shiftName"),
+                        props.terminalPageTab.queryParams.get("shiftDate"),
+                        props.terminalPageTab.queryParams.get("shiftStartTime"),
+                        props.terminalPageTab.queryParams.get("date"),
+                        props.router))
+
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && Seq("createShifts", "addShift").contains(props.terminalPageTab.subMode) =>
+                      <.div(ShiftsComponent(terminal, props.terminalPageTab.portCodeStr, userPreferences, props.terminalPageTab.subMode, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, emptyShifts))
+                      <.div(MonthlyStaffingComponent(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = false, userPreferences, shifts.isEmpty, false, featureFlags.enableShiftPlanningChange))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && featureFlags.enableShiftPlanningChange =>
                       if (!userPreferences.showStaffingShiftView)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, emptyShifts))
-                      else
-                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences))
+                        <.div(MonthlyStaffingComponent(props.terminalPageTab, props.router, airportConfig, showShiftsStaffing = true, userPreferences, shifts.isEmpty, props.terminalPageTab.subMode == "viewShifts", featureFlags.enableShiftPlanningChange))
+                      else {
+                        val slotStaffRecs = for {
+                          portState <- ps
+                          queues <- queuesPot
+                        } yield {
+                          val cs = portState.crunchSummary(viewStart.getLocalLastMidnight, 1440 / viewInterval, viewInterval, terminal, queues)
+                          val ss = portState.staffSummary(viewStart.getLocalLastMidnight, 1440 / viewInterval, viewInterval, terminal)
+                          cs.map {
+                            case (ts, queues) =>
+                              val queueStaff = queues.values.map(_.deskRec).sum
+                              val miscStaff = ss.getOrElse(ts, StaffMinute.empty).fixedPoints
+                              (ts, queueStaff + miscStaff)
+                          }
+                        }
+                        val staffWarningsEnabled = terminalModel.featureFlagsPot.map(_.enableStaffingPageWarnings).getOrElse(false)
+                        MonthlyShifts(
+                          terminalPageTab = props.terminalPageTab,
+                          router = props.router,
+                          airportConfig = airportConfig,
+                          userPreferences = userPreferences,
+                          shiftCreated = Seq("created", "removed").contains(props.terminalPageTab.queryParams.getOrElse("shifts", "")),
+                          viewMode = props.terminalPageTab.subMode == "viewShifts",
+                          recommendedStaff = slotStaffRecs.getOrElse(Map.empty),
+                          shiftsPot = terminalModel.shiftsPot,
+                          shiftAssignmentsPot = terminalModel.allShiftAssignments,
+                          warningsEnabled = staffWarningsEnabled,
+                        )
+                      }
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) && emptyShifts =>
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
                       <.div(^.className := "staffing-container-empty",
                         "No staff shifts are currently available. Please visit the ", <.strong("Staffing"), " tab to create new shifts or select a different tab." +
                           "If you have already created shifts, kindly refresh the page."
@@ -289,10 +340,11 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.terminal.toString,
-        p.props.terminalPageTab.queryParams.get("date"),
-        p.props.terminalPageTab.queryParams.get("dayRange")))))
+    .componentDidMount { m =>
+      Callback(SPACircuit.dispatch(
+        GetShifts(m.props.terminalPageTab.terminal.toString, m.props.terminalPageTab.queryParams.get("date"), m.props.terminalPageTab.queryParams.get("dayRange")))
+      ).flatMap(_ => Callback(SPACircuit.dispatch(GetAllShiftAssignments)))
+    }
     .build
 
   private def terminalTabs(props: Props,
@@ -339,7 +391,7 @@ object TerminalComponent {
             mode = Staffing,
             subMode = subModeInterval,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
+          ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ")
         ) else "",
       if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange) {
         <.li(^.className := tabClass(Shifts),
@@ -347,7 +399,7 @@ object TerminalComponent {
             mode = Shifts,
             subMode = subModeInterval,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
+          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ")
         )
       } else "",
       <.li(^.className := tabClass(Dashboard),

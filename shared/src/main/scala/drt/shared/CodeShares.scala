@@ -1,20 +1,17 @@
 package drt.shared
 
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightCode}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 
 object CodeShares {
-
-  def uniqueArrivals(paxFeedSourceOrder: List[FeedSource])
-                    (flights: Seq[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] =
-    uniqueArrivalsWithCodeShares(paxFeedSourceOrder)(flights, (f: ApiFlightWithSplits) => f.hasApi, (f: ApiFlightWithSplits) => f.apiFlight).map(_._1)
-
-  def uniqueArrivalsWithCodeShares[T](paxFeedSourceOrder: List[FeedSource])
-                                     (flights: Seq[T], hasApi: T => Boolean, arrival: T => Arrival): Seq[(T, Seq[String])] = {
+  private def uniqueArrivalsWithCodeShares[T](paxFeedSourceOrder: List[FeedSource], exceptions: Set[FlightCode])
+                                             (flights: Seq[T], hasApi: T => Boolean, arrival: T => Arrival): Seq[(T, Seq[String])] = {
     flights
-      .groupBy(f =>
-        (arrival(f).Scheduled, arrival(f).Terminal, arrival(f).Origin)
-      )
+      .groupBy { f =>
+        val code = arrival(f).flightCode
+        val exceptionKey = Some(code).filter(exceptions.contains)
+        (arrival(f).Scheduled, arrival(f).Terminal, arrival(f).Origin, exceptionKey)
+      }
       .values
       .map { flights =>
         val mainFlight = flights
@@ -36,6 +33,22 @@ object CodeShares {
       }
   }
 
-  def uniqueFlightsWithCodeShares(paxFeedSourceOrder: List[FeedSource])(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Seq[String])] =
-    uniqueArrivalsWithCodeShares(paxFeedSourceOrder)(flights, (f: ApiFlightWithSplits) => f.hasApi, (f: ApiFlightWithSplits) => f.apiFlight)
+  def uniqueFlightsWithCodeShares(paxFeedSourceOrder: List[FeedSource],
+                                  exceptions: Set[FlightCode],
+                                 ): Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])] = {
+    val fn: (Seq[ApiFlightWithSplits], ApiFlightWithSplits => Boolean, ApiFlightWithSplits => Arrival) => Seq[(ApiFlightWithSplits, Seq[String])] =
+      uniqueArrivalsWithCodeShares(paxFeedSourceOrder, exceptions)
+
+    flights =>
+      fn(flights, (f: ApiFlightWithSplits) => f.hasApi, (f: ApiFlightWithSplits) => f.apiFlight)
+  }
+
+  def uniqueArrivals(paxFeedSourceOrder: List[FeedSource],
+                     exceptions: Set[FlightCode],
+                    ): Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] = {
+    val fn = uniqueFlightsWithCodeShares(paxFeedSourceOrder, exceptions)
+
+    flights =>
+      fn(flights).map(_._1)
+  }
 }

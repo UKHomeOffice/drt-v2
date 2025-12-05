@@ -76,7 +76,8 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       egateBanksProvider = egateBanksProvider,
       paxFeedSourceOrder = paxFeedSourceOrder,
-      deskLimitsProviders = PortDeskLimits.flexed(airportConfig, terminalEgatesProvider, _ => dummyPaxForQueue)
+      deskLimitsProviders = PortDeskLimits.flexed(airportConfig, terminalEgatesProvider, _ => dummyPaxForQueue),
+      uniqueFlights = identity,
     )
 
     val result = Await.result(futureResult, 1.second)

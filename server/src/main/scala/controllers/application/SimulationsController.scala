@@ -391,6 +391,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         egateBanksProvider = portEgateBanksFromParams(simulationParams),
         paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
         deskLimitsProviders = deskLimits,
+        uniqueFlights = ctrl.uniqueArrivals,
       )
     }.flatten
   }

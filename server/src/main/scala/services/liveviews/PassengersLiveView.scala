@@ -1,6 +1,8 @@
 package services.liveviews
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
+import drt.shared.CrunchApi
+import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.StatusReply.Ack
@@ -8,8 +10,6 @@ import org.apache.pekko.pattern.{StatusReply, ask}
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
-import drt.shared.{CodeShares, CrunchApi}
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
@@ -18,8 +18,8 @@ import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.db.serialisers.{CapacityHourlySerialiser, PassengersHourlySerialiser}
 import uk.gov.homeoffice.drt.db.tables.{CapacityHourly, PassengersHourly, PassengersHourlyRow}
 import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
@@ -119,10 +119,10 @@ object PassengersLiveView {
   def persistCapacityForDate(db: AggregatedDbTables, portCode: PortCode)
                             (implicit ec: ExecutionContext): (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done] = {
     val replaceHours = CapacityHourlyDao.replaceHours(portCode)
-    (date, capacity) => {
+    (date, hourlyCapacityByTerminal) => {
       log.info(s"Populating capacities for ${date.toISOString}")
 
-      val eventuals = capacity.map {
+      val eventuals = hourlyCapacityByTerminal.map {
         case (terminal, hourly) =>
           val terminalHours = hourly.map {
             case (hour, capForHour) =>
@@ -174,13 +174,13 @@ object PassengersLiveView {
 
   def uniqueFlightsForDate(flights: UtcDate => Future[Iterable[ApiFlightWithSplits]],
                            baseArrivals: UtcDate => Future[ArrivalsState],
-                           paxFeedSourceOrder: List[FeedSource],
+                           uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
                           )
                           (implicit ec: ExecutionContext): UtcDate => Future[Iterable[ApiFlightWithSplits]] =
     utcDate => {
       flights(utcDate)
         .map(_.filterNot(_.apiFlight.Origin.isDomesticOrCta))
-        .map(flights => CodeShares.uniqueArrivals(paxFeedSourceOrder)(flights.toSeq))
+        .map(flights => uniqueFlights(flights.toSeq))
         .flatMap(fs => populateMissingMaxPax(utcDate, baseArrivals, fs))
     }
 

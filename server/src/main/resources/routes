@@ -12,8 +12,9 @@ GET           /health-check/received-landing-times/:from/:to/:minimumToConsider 
 GET           /health-check/received-arrival-updates/:from/:to/:minimumToConsider/:lastUpdatedMinutes  controllers.application.HealthCheckController.receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int)
 GET           /health-check/calculated-desk-updates                                   controllers.application.HealthCheckController.deskUpdates()
 
-GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
-GET           /pax-feed-source-order                                                  controllers.application.ConfigController.getPaxFeedSourceOrder
+GET           /config/airport-config                                                  controllers.application.ConfigController.getAirportConfig
+GET           /config/pax-feed-source-order                                           controllers.application.ConfigController.getPaxFeedSourceOrder
+GET           /config/codeshare-exceptions                                            controllers.application.ConfigController.getCodeshareExceptions
 GET           /contact-details                                                        controllers.application.ContactDetailsController.getContactDetails
 
 GET           /ooh-status                                                             controllers.application.ContactDetailsController.getOOHStatus
@@ -63,21 +64,18 @@ DELETE        /sla-configs/:effectiveFrom                                       
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
-POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
-POST          /shifts/update/:previousName                                            controllers.application.ShiftsController.updateShift(previousName: String)
-#GET           /shifts/:terminal/:date                                                 controllers.application.ShiftsController.getActiveShiftsForDate(terminal: String, date: String)
+POST          /shifts                                                                 controllers.application.ShiftsController.saveShifts
+PUT           /shifts/:previousName                                                   controllers.application.ShiftsController.updateShift(previousName: String)
+DELETE        /shifts/:terminal/:previousName/:startDate/:startTime                   controllers.application.ShiftsController.removeShift(terminal: String, previousName: String, startDate: String, startTime: String)
 GET           /shifts/:terminal/:dayRange/:date                                       controllers.application.ShiftsController.getActiveShiftsForViewRange(terminal: String, dayRange: String, date: String)
 GET           /shifts/:terminal/:dayRange                                             controllers.application.ShiftsController.getActiveShiftsForCurrentViewRange(terminal: String, dayRange: String)
-GET           /shifts/:terminal                                                       controllers.application.ShiftsController.getActiveShifts(terminal: String)
-GET           /shift/:terminal/:shiftName/:startDate                                 controllers.application.ShiftsController.getAShift(terminal: String, shiftName: String, startDate: String)
-GET           /shift/:terminal/:shiftName                                            controllers.application.ShiftsController.getShift(terminal: String, shiftName: String)
 POST          /staff-assignments                                                      controllers.application.ShiftAssignmentsController.saveShiftAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftAssignmentsController.getAllShiftAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftAssignmentsController.getShiftAssignmentsForDate(localDate: String)
 +nocsrf
 POST          /staff-assignments/migrate-legacy-staff-assignments                     controllers.application.LegacyShiftAssignmentsMigrationController.legacyToShiftAssignments
 
-GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
+GET           /forecast-summary/:terminalName/:startDay/:numberOfDays/:periodInterval controllers.application.PortStateController.forecastSummary(terminalName: String, startDay: Long, numberOfDays: Int, periodInterval: Int)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.recsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/recs-combined/:startLocalDate/:endLocalDate                     controllers.application.exports.DesksExportController.terminalsRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate)
@@ -146,7 +144,7 @@ PUT           /api/passengers/:startDate/:endDate                               
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
 
 + nocsrf
-PUT           /api/v1/flights/:startDateUtc/:endDateUtc                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateUtc: String, endDateUtc: String)
+PUT           /api/v1/flights/:startDateUtc/:endDateUtc                               controllers.application.api.v1.FlightsApiController.populateFlights(startDateUtc: String, endDateUtc: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)

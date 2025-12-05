@@ -1,7 +1,6 @@
 package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import org.apache.pekko.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.WholePassengerQueueSplits
@@ -39,7 +38,7 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
                                      fallbacks: QueueFallbacks,
                                      flightHasWorkload: FlightFilter,
                                      fallbackProcessingTime: Double,
-                                     paxFeedSourceOrder: List[FeedSource],
+                                     uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
                                     )
   extends WorkloadCalculatorLike {
 
@@ -53,7 +52,7 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
                                  terminalSplits: Terminal => Option[Splits],
                                 )
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes = {
-    val uniqueWithCodeShares = CodeShares.uniqueArrivals(paxFeedSourceOrder)(flights.flights.values.toSeq)
+    val uniqueWithCodeShares = uniqueFlights(flights.flights.values.toSeq)
     val relevantFlights = flightsWithPcpWorkload(uniqueWithCodeShares, redListUpdates)
     val procTimes = (terminal: Terminal) => (paxType: PaxType, queue: Queue) =>
       terminalProcTimes

@@ -60,8 +60,8 @@ object Layout {
           val email = contactDetails.supportEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk")
           val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
           val (bannerHead, gridItem1, gridItem2, gridItem3) = aORbTest match {
-            case "A" => ("Your feedback improves DRT for everyone", 4, 2, 5)
-            case _ => ("Help us improve the DRT experience", 4, 2, 5)
+            case "A" => ("Your feedback improves DRT for everyone", 4, 3, 4)
+            case _ => ("Help us improve the DRT experience", 4, 3, 4)
           }
           ThemeProvider(DrtReactTheme)(
             <.div(^.id := "root-content",
@@ -74,7 +74,7 @@ object Layout {
                           bannerHead
                         )
                       ),
-                      MuiGrid(item = true, xs = gridItem2)(
+                      MuiGrid(item = true, xs = gridItem2, sx = SxProps(Map("flexGrow" -> "1")) )(
                         MuiTypography(variant = "h5", sx = SxProps(Map("color" -> "white", "padding" -> "3px 10px")))
                         ("Takes 2 minutes to complete")
                       ),

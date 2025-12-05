@@ -19,7 +19,7 @@ class ShiftAssignmentsControllerSpec extends Specification  {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 
-  case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends ShiftAssignmentsService {
+  private case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends ShiftAssignmentsService {
     override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
       Future.successful(ShiftAssignments(shifts))
 

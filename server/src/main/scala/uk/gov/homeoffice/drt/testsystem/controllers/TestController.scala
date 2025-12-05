@@ -10,6 +10,7 @@ import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
 import drt.shared.ShiftAssignments
 import drt.staff.ImportStaff
 import module.NoCSRFAction
+import controllers.application.StaffShiftsJson
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
@@ -17,7 +18,7 @@ import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.passengerInfoResponseConverter
 import play.api.http.HeaderNames
-import play.api.mvc._
+import play.api.mvc.{Action, _}
 import spray.json._
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightCode, LiveArrival}
@@ -37,7 +38,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction)
+  extends AbstractController(cc) with StaffShiftsJson {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
@@ -207,4 +209,11 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
             BadRequest("{\"error\": \"Unable to parse data\"}")
         }
     }
+
+  def getShifts(port: String, terminal: String): Action[AnyContent] = noCSRFAction.async {
+    ctrl.shiftsService.getShifts(port, terminal).map { shifts =>
+      log.info(s"Shifts for $port $terminal : ${shifts.mkString(", ")}")
+      Ok(shifts.toJson.compactPrint)
+    }
+  }
 }

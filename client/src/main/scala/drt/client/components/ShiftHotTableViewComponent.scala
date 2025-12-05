@@ -3,14 +3,14 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.component.JsFn.Component
-import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
+import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
 import scala.concurrent.duration.DurationInt
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSImport
 
 @js.native
 trait ShiftDate extends js.Object {
@@ -90,7 +90,9 @@ trait StaffTableEntry extends js.Object {
   var column: Int
   var row: Int
   var name: String
+  var staffRecommendation: Int
   var staffNumber: Int
+  var startTimeMillis: Long
   var startTime: ShiftDateTime
   var endTime: ShiftDateTime
 }
@@ -105,25 +107,37 @@ object StaffTableEntry {
     ShiftDateTime(s_date.getFullYear, s_date.getMonth, s_date.getDate, s_date.getHours, s_date.getMinutes)
   }
 
-  def splitIntoSlots(shiftAssignment: StaffTableEntry, slotMinutes: Int): Seq[StaffTableEntry] =
-    (shiftDateToSDate(shiftAssignment.startTime).millisSinceEpoch until shiftDateToSDate(shiftAssignment.endTime).millisSinceEpoch
+  def splitIntoSlots(tableEntry: StaffTableEntry, slotMinutes: Int): Seq[StaffTableEntry] =
+    (shiftDateToSDate(tableEntry.startTime).millisSinceEpoch until shiftDateToSDate(tableEntry.endTime).millisSinceEpoch
       by slotMinutes.minutes.toMillis).map(start =>
       StaffTableEntry(
-        column = shiftAssignment.column,
-        row = shiftAssignment.row,
-        name = shiftAssignment.name,
-        staffNumber = shiftAssignment.staffNumber,
+        column = tableEntry.column,
+        row = tableEntry.row,
+        name = tableEntry.name,
+        staffRecommendation = tableEntry.staffRecommendation,
+        staffNumber = tableEntry.staffNumber,
+        startTimeMillis = tableEntry.startTimeMillis,
         startTime = sDateToShiftDate(start),
         endTime = sDateToShiftDate(start + (slotMinutes.minutes.toMillis - oneMinuteMillis)
         )
       )
     )
 
-  def apply(column: Int, row: Int, name: String, staffNumber: Int, startTime: ShiftDateTime, endTime: ShiftDateTime): StaffTableEntry = {
+  def apply(column: Int,
+            row: Int,
+            name: String,
+            staffRecommendation: Int,
+            staffNumber: Int,
+            startTimeMillis: Long,
+            startTime: ShiftDateTime,
+            endTime: ShiftDateTime,
+           ): StaffTableEntry = {
     val p = (new js.Object).asInstanceOf[StaffTableEntry]
     p.column = column
     p.row = row
     p.name = name
+    p.staffRecommendation = staffRecommendation
+    p.startTimeMillis = startTimeMillis
     p.staffNumber = staffNumber
     p.startTime = startTime
     p.endTime = endTime
@@ -151,29 +165,38 @@ object ShiftSummaryStaffing {
 @js.native
 trait ShiftHotTableViewProps extends js.Object {
   var shiftDate: ShiftDate = js.native
-  var dayRange: String = js.native
-  var interval: Int = js.native
+  var viewPeriod: String = js.native
+  var intervalMinutes: Int = js.native
   var shiftSummaries: js.Array[ShiftSummaryStaffing] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
-  var handleEditShift: js.Function2[Int, ShiftSummary, Unit] = js.native
+  var handleEditShift: js.Function1[ShiftSummary, Unit] = js.native
+  var handleRemoveShift: js.Function1[ShiftSummary, Unit] = js.native
+  var sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
+  var warningsEnabled: Boolean = js.native
 }
 
 object ShiftHotTableViewProps {
   def apply(shiftDate: ShiftDate,
-            dayRange: String,
+            viewPeriod: String,
             interval: Int,
-            initialShifts: Seq[ShiftSummaryStaffing],
+            shiftSummaries: Seq[ShiftSummaryStaffing],
             handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit,
-            handleEditShift: (Int, ShiftSummary) => Unit
+            handleEditShift: ShiftSummary => Unit,
+            handleRemoveShift: ShiftSummary => Unit,
+            sendAnalyticsEvent: js.Function1[IAnalyticsEvent, Unit],
+            warningsEnabled: Boolean,
            ): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.shiftDate = shiftDate
-    p.dayRange = dayRange
-    p.interval = interval
-    p.shiftSummaries = initialShifts.toJSArray
+    p.viewPeriod = viewPeriod
+    p.intervalMinutes = interval
+    p.shiftSummaries = shiftSummaries.toJSArray
     p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing],
                            changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
-    p.handleEditShift = (index: Int, shiftSummary: ShiftSummary) => handleEditShift(index, shiftSummary)
+    p.handleEditShift = (shiftSummary: ShiftSummary) => handleEditShift(shiftSummary)
+    p.handleRemoveShift = (shiftSummary: ShiftSummary) => handleRemoveShift(shiftSummary)
+    p.sendAnalyticsEvent = sendAnalyticsEvent
+    p.warningsEnabled = warningsEnabled
     p
   }
 }

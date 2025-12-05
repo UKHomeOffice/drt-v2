@@ -7,6 +7,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike, UtcDate}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDateTime, ZoneId}
 import scala.language.implicitConversions
+import scala.util.Try
 
 object JSDateConversions {
 
@@ -82,7 +83,7 @@ object JSDateConversions {
 
     def apply(milliDate: MilliDate): SDateLike = SDate(milliDate.millisSinceEpoch)
 
-    def apply(millis: MillisSinceEpoch): SDateLike = JSSDate(LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), europeLondonZoneId))
+    def apply(millis: MillisSinceEpoch): SDateLike = JSSDate(millis)
 
     /** **
      * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
@@ -98,12 +99,11 @@ object JSDateConversions {
      */
     def apply(dateString: String): SDateLike = parse(dateString).getOrElse(throw new IllegalArgumentException(s"Could not parse date string: $dateString"))
 
-    def parse(dateString: String): Option[SDateLike] = {
-      LocalDateTime.parse(dateString.replace(" ", "T"), DateTimeFormatter.ISO_DATE_TIME) match {
-        case ldt: LocalDateTime => Some(JSSDate(ldt))
-        case _ => None
-      }
-    }
+    def parse(dateString: String): Option[SDateLike] =
+      if (dateString.length <= 10)
+        Try(parseLocalDateString(dateString)).toOption
+      else
+        Try(parseDateTimeString(dateString)).toOption
 
     def midnightThisMorning(): SDateLike = JSSDate(LocalDateTime.now(europeLondonZoneId)).getLocalLastMidnight
 
@@ -127,11 +127,28 @@ object JSDateConversions {
 
     def now(): SDateLike = JSSDate(LocalDateTime.now())
 
-    def apply(localDate: LocalDate): SDateLike = SDate(localDate.toISOString + "T00:00")
+    def apply(localDate: LocalDate): SDateLike = parseLocalDateString(localDate.toISOString)
 
     def apply(utcDate: UtcDate): SDateLike = JSSDate(
-      LocalDateTime.ofInstant(Instant.parse(s"${utcDate.year}-${utcDate.month}-${utcDate.day}T00:00:00Z"), europeLondonZoneId)
+      Instant.parse(f"${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02dT00:00:00Z").toEpochMilli
     )
+  }
+
+  private def parseLocalDateString(dateString: String): SDateLike = SDate(
+    java.time.LocalDate
+      .parse(dateString)
+      .atStartOfDay(ZoneId.of("Europe/London"))
+      .toInstant.toEpochMilli
+  )
+
+  private def parseDateTimeString(dateString: String): SDateLike = {
+    val tz = if (dateString.endsWith("Z")) "UTC" else "Europe/London"
+    val millis = LocalDateTime
+      .parse(dateString.replace(" ", "T"), DateTimeFormatter.ISO_DATE_TIME)
+      .atZone(ZoneId.of(tz))
+      .toInstant.toEpochMilli
+
+    SDate(millis)
   }
 
   def startOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear, d.getMonth, d.getDate)

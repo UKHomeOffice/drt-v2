@@ -138,12 +138,12 @@ object EgatesScheduleEditor {
                         ^.defaultValue := SDate(editing.update.effectiveFrom).toLocalDateTimeString,
                         ^.onChange ==> setDate
                       ),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(Add)(fontSize = "large"), "Add bank", ^.onClick ==> addBank()),
+                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank()),
                       editing.update.banks.zipWithIndex.map { case (egateBank, bankIdx) =>
                         MuiGrid(item = true, container = true, spacing = 1)(
                           <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px", "padding" -> "8px", "alignItems" -> "center"),
                             s"Bank ${bankIdx + 1}",
-                            MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "large"), ^.onClick ==> removeBank(bankIdx))
+                            MuiButton(color = Color.secondary, variant = "contained", size = "small")(MuiIcons(Delete)(fontSize = "small"), ^.onClick ==> removeBank(bankIdx))
                           ),
                           MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
                             MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
@@ -168,8 +168,8 @@ object EgatesScheduleEditor {
                     )
                   ),
                   MuiDialogActions()(
-                    MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Cancel", ^.onClick --> cancelEdit),
-                    MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Save", ^.onClick --> saveEdit),
+                    MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> cancelEdit),
+                    MuiButton(color = Color.primary, variant = "outlined")("Save", ^.onClick --> saveEdit),
                   )
                 )
               case None => EmptyVdom
@@ -179,8 +179,7 @@ object EgatesScheduleEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Effective from")),
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Open gates per bank")),
                 MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
-                  MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                    MuiIcons(Add)(fontSize = "large"),
+                  MuiButton(color = Color.secondary, variant = "contained")(
                     "Add e-Gates change",
                     ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today)))))),
               ),
@@ -202,11 +201,11 @@ object EgatesScheduleEditor {
                   ),
                   MuiGrid(item = true, xs = 4)(
                     <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Edit)(fontSize = "large"),
+                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
+                        MuiIcons(Edit)(fontSize = "small"),
                         ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Delete)(fontSize = "large"),
+                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
+                        MuiIcons(Delete)(fontSize = "small"),
                         ^.onClick --> deleteUpdates(updates.effectiveFrom)),
                     )
                   )

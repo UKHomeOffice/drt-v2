@@ -40,6 +40,7 @@ object Scenarios {
                        egateBanksProvider: () => Future[PortEgateBanksUpdates],
                        paxFeedSourceOrder: List[FeedSource],
                        deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike],
+                       uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
                       )
                       (implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
@@ -53,6 +54,7 @@ object Scenarios {
         FlightFilter.forPortConfig(simulationAirportConfig),
         paxFeedSourceOrder,
         sla,
+        uniqueFlights,
       )
 
     val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(simulationAirportConfig.queuesByTerminal)
@@ -68,7 +70,6 @@ object Scenarios {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalculator.terminalSplits,
-      updateCapacity = _ => Future.successful(Done),
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
       validTerminals = QueueConfig.terminalsForDate(simulationAirportConfig.queuesByTerminal),
     )

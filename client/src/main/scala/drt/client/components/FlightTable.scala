@@ -52,7 +52,8 @@ object FlightTable {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    userPreferences: UserPreferences,
-                   terminalPageTab: TerminalPageTabLoc
+                   terminalPageTab: TerminalPageTabLoc,
+                   codeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])],
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
@@ -60,7 +61,8 @@ object FlightTable {
   val ageGroups: js.Array[String] =
     js.Array(
       AgeRange(0, 9).title,
-      AgeRange(10, 24).title,
+      AgeRange(10, 17).title,
+      AgeRange(18, 24).title,
       AgeRange(25, 49).title,
       AgeRange(50, 65).title,
       AgeRange(65, None).title,
@@ -145,13 +147,6 @@ object FlightTable {
           case _ => <.div()
         },
         <.div(
-          ^.style := js.Dictionary(
-            "backgroundColor" -> "#E6E9F1",
-            "paddingLeft" -> "24px",
-            "paddingTop" -> "36px",
-            "paddingBottom" -> "24px",
-            "paddingRight" -> "24px"
-          ),
           if (props.showFlagger) {
             val initialState = js.Dynamic.literal(
               showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
@@ -195,7 +190,8 @@ object FlightTable {
               originMapper = props.originMapper,
               flightHighlight = props.flightHighlight,
               userPreferences = props.userPreferences,
-              terminalPageTab = props.terminalPageTab
+              terminalPageTab = props.terminalPageTab,
+              codeShares = props.codeShares,
             )
           )
         },

@@ -95,7 +95,7 @@ describe('Monthly Shifts Staffing', () => {
     return moment().add(1, 'M').toISOString().split("T")[0];
   }
 
-  describe('When creating new shifts by clicking "Get Start"', () => {
+  describe('When creating new shifts by clicking "Create shift pattern"', () => {
     const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
     it("should display the assigned staff name in the table cell after creating a shift", () => {
       Cypress.env('enableShiftPlanningChange', true);
@@ -108,7 +108,7 @@ describe('Monthly Shifts Staffing', () => {
           cy.saveShifts(shifts(), csrf).then(() => {
             const baseUrl = '#terminal/T1/shifts/15/';
             cy.visit(baseUrl)
-              .clickShiftsGetStartedButton()
+              .clickCreateShiftPattern()
               .get('[data-cy="shift-name-input"]').type('Shift 1')
               .get('[data-cy="start-time-select"]').click()
               .get('[data-cy="select-start-time-option-00-00"]').click()

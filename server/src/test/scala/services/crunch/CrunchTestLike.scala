@@ -303,7 +303,7 @@ class CrunchTestLike
     }
 
   def expectPaxByQueue(paxByQueueToExpect: Map[Queue, Double])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val paxByQueue = ps.crunchMinutes.values
           .groupBy(_.queue)

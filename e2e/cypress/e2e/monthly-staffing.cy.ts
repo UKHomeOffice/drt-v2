@@ -99,7 +99,6 @@ describe('Monthly Staffing', () => {
     describe('When adding staff using the monthly staff view', () => {
       const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
       it("If I enter staff for the current month those staff should still be visible if I change months and change back", () => {
-        Cypress.env('enableShiftPlanningChange', false);
         cy
           .asABorderForcePlanningOfficer()
           .request('/')
@@ -107,7 +106,7 @@ describe('Monthly Staffing', () => {
             const $html = Cypress.$(response.body)
             const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
             cy.saveShifts(shifts(), csrf).then(() => {
-              const baseUrl = '#terminal/T1/shifts/15/';
+              const baseUrl = '#terminal/T1/shifts/viewShifts/';
               cy.visit(baseUrl)
                 .get(cellToTest, { timeout: 2000 }).should('exist').contains("1")
                 .visit(baseUrl + '?date=' + nextMonthDateString())

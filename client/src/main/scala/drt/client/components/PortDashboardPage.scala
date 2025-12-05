@@ -144,11 +144,11 @@ object PortDashboardPage {
               }
 
               <.div(
-                <.h3(s"Filter upcoming arrivals"),
+                <.h2(s"Filter upcoming arrivals"),
                 <.div(^.className := "port-dashboard-period",
                   <.div(^.className := "port-dashboard-title",
                     <.div(
-                      <.label(^.htmlFor := "period-select", <.strong("Time window:")),
+                      <.label(^.htmlFor := "period-select", <.strong("Time period:")),
                       <.div(^.className := "port-dashboard-select",
                         <.select(
                           ^.className := "form-control dynamic-width",
@@ -191,7 +191,7 @@ object PortDashboardPage {
                     } else ""
                   )),
                 <.div(
-                  <.h3(s"Arrivals"),
+                  <.h2(s"Arrivals"),
                   <.div(^.className := "port-dashboard-selection",
                     <.span(<.strong("Filters applied:")),
                     <.span(s"Time period: $displayPeriodDisplay (${displayPeriod.start.prettyTime} to ${displayPeriod.end.prettyTime})"),

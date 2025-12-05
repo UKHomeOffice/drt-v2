@@ -47,7 +47,9 @@ declare global {
 
       choose24Hours(): Chainable<Element>;
 
-      clickShiftsGetStartedButton(): Chainable<Element>;
+      clickAddShiftButton(): Chainable<Element>;
+
+      clickCreateShiftPattern(): Chainable<Element>;
 
       chooseDesksAndQueuesTab(): Chainable<Element>;
 
@@ -60,6 +62,8 @@ declare global {
       downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response<any>>;
 
       findAndClick(thing: string): Chainable<Element>;
+
+      getShifts(): Chainable<Element>;
 
       openAdjustmentDialogueForHour(direction: string, amount: number): Chainable<Element>;
 

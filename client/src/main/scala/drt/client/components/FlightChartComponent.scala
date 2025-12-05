@@ -8,7 +8,6 @@ import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
-import org.scalajs.dom
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.models.FlightManifestSummary
 import uk.gov.homeoffice.drt.ports.PaxTypes
@@ -59,12 +58,7 @@ object FlightChartComponent {
         scope.modState(_.copy(showAllNationalities = newValue))
       }
 
-      val chartHeight = 350
-      val widthFactor = if (props.manifestSummary.nationalities.size > 10 && state.showAllNationalities) 5 else 0
-      val chartWidth: Int = if (dom.window.innerWidth > 800)
-        300 + widthFactor * props.manifestSummary.nationalities.size
-      else
-        200 + widthFactor * props.manifestSummary.nationalities.size
+      val natsChartWidth = 30 * nationalitiesCount
 
       val isBeforeAgeEligibilityChangeDate: Long => Boolean = scheduled => scheduled < SDate("2023-07-25T00:00").millisSinceEpoch
 
@@ -83,21 +77,21 @@ object FlightChartComponent {
             <.div(^.cls := "arrivals__table__flight__chart-box",
               maybeWarning.map(MuiAlert(variant = MuiAlert.Variant.standard, severity = "warning")(_)).getOrElse(<.div()),
 
-              <.div(^.className := "arrivals__table__flight__chart-wrapper", ^.width := (chartWidth * 3).toString + "px",
+              <.div(^.className := "arrivals__table__flight__chart-wrapper",
                 if (sortedNats.toMap.values.sum > 0) {
                   val maxY = sortedNats.toMap.values.max + 5
-                  <.div(^.key := "nat-chart", ^.cls := "arrivals__table__flight__chart-box__chart",
-                    chart("Nationality breakdown", nationalityData, maxY, chartWidth, chartHeight))
+                  <.div(^.key := "nat-chart", ^.cls := "arrivals__table__flight__chart-box__chart", ^.width := s"${natsChartWidth}px", ^.height := s"350px",
+                    chart("Nationality breakdown", nationalityData, maxY))
                 } else EmptyVdom,
                 if (sortedPaxTypes.toMap.values.sum > 0) {
                   val maxY = sortedPaxTypes.toMap.values.max + 5
                   <.div(^.key := "pax-chart", ^.cls := "arrivals__table__flight__chart-box__chart",
-                    chart("Passenger types", paxTypeData, maxY, chartWidth, chartHeight))
+                    chart("Passenger types", paxTypeData, maxY))
                 } else EmptyVdom,
                 if (sortedAges.toMap.values.sum > 0) {
                   val maxY = sortedAges.toMap.values.max + 5
                   <.div(^.key := "age-chart", ^.cls := "arrivals__table__flight__chart-box__chart",
-                    chart("Age breakdown", ageData, maxY, chartWidth, chartHeight))
+                    chart("Age breakdown", ageData, maxY))
                 } else EmptyVdom
               ),
               if (props.manifestSummary.nationalities.size > 10)
@@ -112,15 +106,17 @@ object FlightChartComponent {
         ))
     }.build
 
-  private def chart(title: String, data: ChartJsData, maxY: Int, width: Int, height: Int): UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]] =
+  private def chart(title: String, data: ChartJsData, maxY: Int): UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]] = {
     ChartJSComponent(
       ChartJsProps(
         data = data,
-        width = Option(width),
-        height = Option(height),
+        width = None,
+        height = None,
         options = ChartJsOptions(title).copy(
+          responsive = true,
+          maintainAspectRatio = false,
           scales = js.Dictionary[js.Any](
-            "xAxes" -> js.Dictionary(
+            "x" -> js.Dictionary(
               "ticks" -> js.Dictionary(
                 "autoSkip" -> false,
               )
@@ -131,6 +127,7 @@ object FlightChartComponent {
           ))
       )
     )
+  }
 
   def summariseNationalities(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
     nats

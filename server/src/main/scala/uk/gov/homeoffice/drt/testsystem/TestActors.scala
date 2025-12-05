@@ -377,7 +377,7 @@ object TestActors {
                                    terminal: Terminal,
                                    queuesForDateAndTerminal: (LocalDate, Terminal) => Seq[Queue],
                                    now: () => SDateLike,
-                                   onUpdate: Option[(UtcDate, Iterable[CrunchMinute], Iterable[TQM]) => Future[Unit]],
+                                   onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
                                   ) extends TerminalDayQueuesActor(date, terminal, queuesForDateAndTerminal, now, None, onUpdate) with Resettable {
     override def resetState(): Unit = state.clear()
 

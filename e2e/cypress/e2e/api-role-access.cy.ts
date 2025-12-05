@@ -9,7 +9,7 @@ describe('API role access', () => {
   const testCases = [
     {
       roles: ["test"],
-      endpoint: "/airport-config",
+      endpoint: "/config/airport-config",
       method: "GET",
       shouldBeGranted: true
     },

@@ -11,7 +11,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.{ForecastAccuracy, WalkTimes}
 import uk.gov.homeoffice.drt.{ABFeature, Shift}
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feedback.UserFeedback
@@ -178,7 +178,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestStaffUpdateMillis: MillisSinceEpoch = 0L,
                      portStatePot: Pot[PortState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
-                     airportInfos: Map[PortCode, Pot[AirportInfo]] = Map(),
+                     airportInfos: Map[PortCode, Pot[AirportInfo]] = Map.empty,
                      airportConfig: Pot[AirportConfig] = Empty,
                      arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])] = None,
                      contactDetails: Pot[ContactDetails] = Empty,
@@ -201,7 +201,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
                      simulationResult: Pot[SimulationResult] = Empty,
-                     passengerInfoSummariesByArrival: Pot[Map[ManifestKey, FlightManifestSummary]] = Ready(Map()),
+                     passengerInfoSummariesByArrival: Pot[Map[ManifestKey, FlightManifestSummary]] = Ready(Map.empty),
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
@@ -210,9 +210,9 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
                      featureGuides: Pot[Seq[FeatureGuide]] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
-                     flaggedNationalities: Set[Country] = Set(),
-                     flightManifestSummaries: Map[ManifestKey, FlightManifestSummary] = Map(),
-                     paxFeedSourceOrder: List[FeedSource] = List(),
+                     flaggedNationalities: Set[Country] = Set.empty,
+                     flightManifestSummaries: Map[ManifestKey, FlightManifestSummary] = Map.empty,
+                     paxFeedSourceOrder: List[FeedSource] = List.empty,
                      showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
@@ -224,8 +224,9 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      userPreferences: Pot[UserPreferences] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
-                     addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map(),
-                     removedStaffMovements: Set[String] = Set(),
+                     addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map.empty,
+                     removedStaffMovements: Set[String] = Set.empty,
+                     codeShareExceptions: Set[FlightCode] = Set.empty,
                     )
 
 object PollDelay {
@@ -264,6 +265,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new PaxFeedSourceOrderHandler(zoomRW(_.paxFeedSourceOrder)((m, v) => m.copy(paxFeedSourceOrder = v))),
+      new CodeshareExceptionsConfigHandler(zoomRW(_.codeShareExceptions)((m, v) => m.copy(codeShareExceptions = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
       new FeatureFlagHandler(zoomRW(_.featureFlags)((m, v) => m.copy(featureFlags = v))),

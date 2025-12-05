@@ -27,12 +27,12 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1285"
+    val drtLib = "v1339"
     val drtCirium = "v339"
     val bluebus = "v149"
 
     val pekko = "1.1.3"
-    val pekkoHttp = "1.1.0"
+    val pekkoHttp = "1.2.0"
     val pekkoPersistenceJdbc = "1.1.0"
     val slick = "3.5.2"
 
@@ -45,22 +45,22 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.3.232"
+    val h2 = "2.4.240"
 
-    val specs2 = "4.20.9"
+    val specs2 = "4.23.0"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
-    val poi = "5.2.5"
+    val poi = "5.5.1"
     val renjin = "0.9.2725"
     val csvCommons = "1.13.0"
-    val postgres = "42.7.5"
+    val postgres = "42.7.8"
     val sshJ = "0.39.0"
     val jodaTime = "2.13.1"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
-    val typesafeConfig = "1.4.3"
+    val typesafeConfig = "1.4.5"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
@@ -74,9 +74,9 @@ object Settings {
     val rtVersion = "4.0.3"
     val jakartaXmlWsApi = "4.0.2"
     val scalatestplusPlay = "7.0.1"
-    val nettyAll = "4.1.119.Final"
+    val nettyAll = "4.1.128.Final"
     val jwtCore = "11.0.3"
-    val logback = "1.5.17"
+    val logback = "1.5.21"
     val logbackContrib = "0.1.5"
     val scalajsScripts = "1.3.0"
   }
@@ -184,7 +184,7 @@ object Settings {
 
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-    "org.webjars" %% "webjars-play" % "3.0.2",
+    "org.webjars" %% "webjars-play" % "3.0.9",
     "org.webjars" % "webjars-locator" % "0.52",
 
     "io.netty" % "netty-all" % nettyAll,

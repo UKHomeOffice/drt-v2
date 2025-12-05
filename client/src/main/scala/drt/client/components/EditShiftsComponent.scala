@@ -25,6 +25,7 @@ object EditShiftsComponent {
                    shiftsPot: Pot[Seq[Shift]],
                    shiftName: String,
                    shiftDate: Option[String],
+                   shiftStartTime: Option[String],
                    viewDate: Option[String],
                    router: RouterCtl[Loc])
 
@@ -72,13 +73,13 @@ object EditShiftsComponent {
         }
         SPACircuit.dispatch(UpdateShift(staffShifts.headOption, props.shiftName))
         Callback(GoogleEventTracker.sendEvent(props.terminal.toString, action = "Shifts", label = "update")).runNow()
-        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map("shifts" -> "created"))).runNow()
       }
 
       <.div(
         props.shiftsPot.renderReady { shifts =>
           val shiftForms: Seq[ShiftForm] = shifts
-            .filter(s => s.shiftName == props.shiftName && s.startDate == dateStringToLocalDate(props.shiftDate))
+            .filter(s => s.shiftName == props.shiftName && s.startDate == dateStringToLocalDate(props.shiftDate) && s.startTime == props.shiftStartTime.getOrElse(s.startTime))
             .zipWithIndex.map { case (s, index) =>
               ShiftForm(
                 id = index + 1,
@@ -90,13 +91,14 @@ object EditShiftsComponent {
               )
             }
 
-          AddShiftsFormComponent(
+          ShiftsFormComponent(
             ShiftFormProps(port = props.portCode,
               terminal = props.terminal.toString,
               interval = 30,
               initialShifts = shiftForms,
               confirmHandler = confirmHandler,
-              isEdit = true))
+              formMode = "edit",
+              disableAdd = false))
         })
     }
 
@@ -114,6 +116,7 @@ object EditShiftsComponent {
             shifts: Pot[Seq[Shift]],
             shiftName: String,
             shiftDate: Option[String],
+            shiftStartTime: Option[String],
             viewDate: Option[String],
-            router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, shifts, shiftName, shiftDate, viewDate, router))
+            router: RouterCtl[Loc]): Unmounted[Props, Unit, Backend] = component(Props(terminal, portCode, shifts, shiftName, shiftDate, shiftStartTime, viewDate, router))
 }

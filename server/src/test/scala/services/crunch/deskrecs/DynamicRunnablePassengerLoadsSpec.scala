@@ -40,7 +40,9 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
   val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)))
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider =
+    PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder,
+      (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)), identity)
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(flight: ApiFlightWithSplits,
@@ -69,10 +71,6 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None),
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EGate, 50, None, None),
       ), TerminalAverage, None, Percentage)),
-      updateCapacity = _ => {
-        updatesProbe.ref ! "Capacity updated"
-        Future.successful(Done)
-      },
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
       validTerminals = QueueConfig.terminalsForDate(airportConfig.queuesByTerminal),
     )
@@ -95,7 +93,6 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         tqPax == expectedQueuePax
     }
 
-    updatesProbe.expectMsg("Capacity updated")
     updatesProbe.expectMsg("Live view updated")
   }
 

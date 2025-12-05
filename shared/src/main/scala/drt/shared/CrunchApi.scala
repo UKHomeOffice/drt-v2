@@ -368,7 +368,7 @@ object CrunchApi {
     implicit val rw: ReadWriter[ForecastPeriodWithHeadlines] = macroRW
   }
 
-  case class ForecastPeriod(days: IMap[MillisSinceEpoch, Seq[ForecastTimeSlot]])
+  case class ForecastPeriod(intervalMinutes: Int, days: IMap[MillisSinceEpoch, Seq[ForecastTimeSlot]])
 
   object ForecastPeriod {
     implicit val rw: ReadWriter[ForecastPeriod] = macroRW
