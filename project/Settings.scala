@@ -54,7 +54,7 @@ object Settings {
 
     val poi = "5.5.1"
     val renjin = "0.9.2725"
-    val csvCommons = "1.13.0"
+    val csvCommons = "1.14.1"
     val postgres = "42.7.8"
     val sshJ = "0.40.0"
     val jodaTime = "2.14.0"
