@@ -28,7 +28,7 @@ describe('Port dashboard', () => {
       .navigateHome()
       .wait(2000)
       .get('[data-cy="terminal-flights"]')
-      .contains("1 flight")
+      .contains("1 due at")
 
   })
 
