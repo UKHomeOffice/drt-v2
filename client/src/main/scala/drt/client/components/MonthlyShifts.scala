@@ -4,9 +4,9 @@ import diode.AnyAction.aType
 import diode.data.{Pending, Pot, Ready}
 import diode.react.ReactConnectProxy
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.{GetAllShiftAssignments, GetForecast, UpdateShiftAssignments}
+import drt.client.actions.Actions.{GetForecast, UpdateShiftAssignments}
 import drt.client.components.MonthlyShiftsUtil.{updateShiftSummaries, updateTableEntries}
-import drt.client.components.MonthlyStaffingUtil.slotsInDay
+import drt.client.components.MonthlyStaffingUtil.{slotsInDay, staffPlanningHeading}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -203,6 +203,9 @@ object MonthlyShifts {
                             MuiCircularProgress()()
                           )
                         },
+                        <.div(
+                          <.h3(staffPlanningHeading(viewingDate, props.terminalPageTab.dayRangeType))
+                        ),
                         state.shiftSummariesPot.renderReady { shiftSummaries =>
                           <.div(^.className := "shifts-table",
                             <.div(^.className := "shifts-table-content",

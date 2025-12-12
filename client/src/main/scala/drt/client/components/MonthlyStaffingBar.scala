@@ -169,21 +169,10 @@ object MonthlyStaffingBar {
       <.div(^.className := "staffing-bar",
         <.div(^.className := "staffing-controls-save",
           <.div(
+            <.div(^.className := "staffing-controls-title",
+              <.h3("Set time filter")
+            ),
             <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "spaceBetween", "alignItems" -> "center"),
-              <.span(^.className := "staffing-controls-title",
-                <.strong(props.terminalPageTab.dayRangeType match {
-                  case Some("monthly") => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
-                  case Some("weekly") =>
-                    val firstDayOfWeek = SDate.firstDayOfWeek(props.viewingDate)
-                    val lastDayOfWeek = SDate.lastDayOfWeek(props.viewingDate)
-                    if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
-                      val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
-                      s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
-                    } else
-                      s"${SDate.firstDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(props.viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
-                  case Some("daily") => s"${props.viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
-                  case _ => s"${props.viewingDate.getMonthString} ${props.viewingDate.getFullYear}"
-                })),
               <.span(^.className := "staffing-controls-title-options",
                 <.div(^.className := "staffing-controls-select",
                   drawSelect(

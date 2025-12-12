@@ -92,6 +92,23 @@ object MonthlyStaffingUtil {
 
   case class ColumnHeader(day: String, dayOfWeek: String)
 
+  def staffPlanningHeading(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
+    val headingPrefix = dayRangeType match {
+      case Some("monthly") => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+      case Some("weekly") =>
+        val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
+        val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
+        if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
+          val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
+          s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${lastDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`}"
+        } else
+          s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`} to ${lastDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`}"
+      case Some("daily") => s"${viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
+      case _ => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+    }
+    s"$headingPrefix staff planning"
+  }
+
   def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
     val startOfDay = SDate.midnightOf(date)
     val slots = minutesInDay(date) / slotDurationMinutes
