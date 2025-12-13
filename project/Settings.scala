@@ -194,7 +194,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "5.2.1-RELEASE",
+    "uk.gov.service.notify" % "notifications-java-client" % "6.0.0-RELEASE",
     "software.amazon.awssdk" % "s3" % aws,
   ))
 
