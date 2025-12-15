@@ -14,11 +14,6 @@ object HotTable {
 
   val log: Logger = LoggerFactory.getLogger("HotTable")
 
-  @JSImport("handsontable/dist/handsontable.full.css", JSImport.Namespace)
-  @js.native
-  object HandsontableCss extends js.Object
-  private val _ = HandsontableCss
-
   @JSImport("@handsontable/react", JSImport.Default)
   @js.native
   private object HotTableComponent extends js.Object

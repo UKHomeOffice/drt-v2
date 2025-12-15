@@ -71,6 +71,19 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   background-color: @bgHighlight;
 }
 
+// Hide Handsontable focus catcher inputs that leak into the UI
+.htFocusCatcher {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  display: block;
+}
+
 .mui-textfield-date-input {
   font-family: Roboto, Helvetica, Arial, sans-serif;
   font-weight: 400;
@@ -2931,4 +2944,3 @@ div.access-restricted {
 .btn:focus {
   outline: none !important;
 }
-
