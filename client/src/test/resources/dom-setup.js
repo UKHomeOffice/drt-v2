@@ -1,21 +1,6 @@
 /* eslint-disable */
 let jsdomMod = require("jsdom");
 
-// Ignore CSS imports required by Scala.js facades (e.g. Handsontable styles)
-require.extensions[".css"] = () => {};
-
-// Provide a simple stub for ESM-only deps when tests run under CommonJS (e.g. react-markdown)
-const Module = require("module");
-const originalRequire = Module.prototype.require;
-Module.prototype.require = function (request, ...args) {
-  if (request === "react-markdown") {
-    const stub = () => null;
-    stub.default = stub;
-    return stub;
-  }
-  return originalRequire.call(this, request, ...args);
-};
-
 function setupWithModern() {
   const JSDOM = jsdomMod.JSDOM || jsdomMod.default;
   if (!JSDOM) return false;

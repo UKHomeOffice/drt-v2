@@ -41,12 +41,6 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
 
-// That task writes a package.json with { "type": "commonjs" }
-// into the Scala.js test output directory (next to client-test-fastopt/main.js) before tests run.
-// It forces Node to treat that generated JS bundle as CommonJS, so require(...) works during client/test instead of
-//  Node assuming ES modules. The Test / test task depends on it, so it runs automatically before the tests.
-lazy val writeTestPackageJson = taskKey[Unit]("Write a package.json to mark Scala.js test output as CommonJS for Node")
-
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
@@ -80,16 +74,6 @@ lazy val client: Project = (project in file("client"))
         .withModuleSplitStyle(ModuleSplitStyle.FewestModules)
         .withSourceMap(true)
     },
-
-    // Ensure the Scala.js test output dir has package.json marking it as CommonJS
-    writeTestPackageJson := {
-      val mainFile = (Test / fastOptJS).value.data
-      val outDir = mainFile.getParentFile
-      val pkg = outDir / "package.json"
-      IO.write(pkg, """{ "type": "commonjs" }""")
-    },
-
-    Test / test := (Test / test).dependsOn(writeTestPackageJson).value,
 
     // Make Node see client/node_modules while running tests
     Test / jsEnv := {
