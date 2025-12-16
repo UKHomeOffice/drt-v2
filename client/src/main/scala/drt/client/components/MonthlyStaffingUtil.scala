@@ -93,20 +93,34 @@ object MonthlyStaffingUtil {
   case class ColumnHeader(day: String, dayOfWeek: String)
 
   def staffPlanningHeading(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
+    s"${staffPlanningHeadingPrefix(dayRangeType)}: ${staffPlanningHeadingPeriod(viewingDate, dayRangeType)}"
+  }
+
+  private def staffPlanningHeadingPrefix(dayRangeType: Option[String]): String = {
+    val headingPrefix = dayRangeType match {
+      case Some("monthly") => "Monthly"
+      case Some("weekly") => "Weekly"
+      case Some("daily") => s"Daily"
+      case _ => s"Monthly"
+    }
+    s"$headingPrefix staff planning"
+  }
+
+  private def staffPlanningHeadingPeriod(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
     val headingPrefix = dayRangeType match {
       case Some("monthly") => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
       case Some("weekly") =>
         val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
         val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
         if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
-          val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
-          s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${lastDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`}"
+          val length = firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`.length
+          s"${firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`.substring(0, length - 4)} to ${lastDayOfWeek.`dayOfWeek-DD-Month-YYYY`}"
         } else
-          s"${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`} to ${lastDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`}"
-      case Some("daily") => s"${viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
+          s"${firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`} to ${lastDayOfWeek.`dayOfWeek-DD-Month-YYYY`}"
+      case Some("daily") => s"${viewingDate.`dayOfWeek-DD-Month-YYYY`}"
       case _ => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
     }
-    s"$headingPrefix staff planning"
+    s"$headingPrefix"
   }
 
   def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
