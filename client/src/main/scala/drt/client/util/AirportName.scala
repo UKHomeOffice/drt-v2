@@ -23,7 +23,7 @@ object AirportName {
     "LBA" -> "Leeds Bradford",
     "LPL" -> "Liverpool",
     "MAN" -> "Manchester",
-    "MME" -> "Teeside",
+    "MME" -> "Teesside",
     "NCL" -> "Newcastle",
     "BOH" -> "Bournemouth",
     "CWL" -> "Cardiff",
