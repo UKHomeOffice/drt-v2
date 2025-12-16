@@ -100,14 +100,14 @@ object MonthlyStaffingUtil {
     val headingPrefix = dayRangeType match {
       case Some("monthly") => "Monthly"
       case Some("weekly") => "Weekly"
-      case Some("daily") => s"Daily"
-      case _ => s"Monthly"
+      case Some("daily") => "Daily"
+      case _ => "Monthly"
     }
     s"$headingPrefix staff planning"
   }
 
   private def staffPlanningHeadingPeriod(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
-    val headingPrefix = dayRangeType match {
+    val headingPeriod = dayRangeType match {
       case Some("monthly") => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
       case Some("weekly") =>
         val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
@@ -120,7 +120,7 @@ object MonthlyStaffingUtil {
       case Some("daily") => s"${viewingDate.`dayOfWeek-DD-Month-YYYY`}"
       case _ => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
     }
-    s"$headingPrefix"
+    headingPeriod
   }
 
   def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
