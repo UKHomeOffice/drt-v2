@@ -20,6 +20,10 @@
 @colHighlight: #666666;
 @dropDown: false;
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
 html, body {
   height: 100%;
   margin: 0;
@@ -69,6 +73,19 @@ ul.dropdown-menu > li.dropdown-item > span.region {
 
 ul.dropdown-menu > li.dropdown-item > span.port {
   background-color: @bgHighlight;
+}
+
+// Hide Handsontable focus catcher inputs that leak into the UI
+.htFocusCatcher {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  display: block;
 }
 
 .mui-textfield-date-input {
@@ -1506,7 +1523,7 @@ p {
   display: flex;
   justify-content: flex-end;
   gap: 15px;
-  margin-left: 20px;
+  margin-left: 10px;
 }
 
 .staffing-bar {
@@ -2931,4 +2948,3 @@ div.access-restricted {
 .btn:focus {
   outline: none !important;
 }
-

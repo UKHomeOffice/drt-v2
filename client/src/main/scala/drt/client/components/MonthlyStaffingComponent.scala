@@ -175,6 +175,9 @@ object MonthlyStaffingComponent {
                       },
                       cancelHandler = () => scope.modState(_.copy(showEditStaffForm = false)).runNow()
                     )))),
+                  <.div(
+                    <.h3(staffPlanningHeading(viewingDate, props.terminalPageTab.dayRangeType))
+                  ),
                   <.div(^.className := "staffing-table",
                     state.shiftsLastLoaded.map(lastLoaded =>
                       <.div(^.className := "staffing-table-content",

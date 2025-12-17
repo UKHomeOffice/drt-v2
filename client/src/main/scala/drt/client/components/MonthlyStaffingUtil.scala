@@ -92,6 +92,37 @@ object MonthlyStaffingUtil {
 
   case class ColumnHeader(day: String, dayOfWeek: String)
 
+  def staffPlanningHeading(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
+    s"${staffPlanningHeadingPrefix(dayRangeType)}: ${staffPlanningHeadingPeriod(viewingDate, dayRangeType)}"
+  }
+
+  private def staffPlanningHeadingPrefix(dayRangeType: Option[String]): String = {
+    val headingPrefix = dayRangeType match {
+      case Some("monthly") => "Monthly"
+      case Some("weekly") => "Weekly"
+      case Some("daily") => "Daily"
+      case _ => "Monthly"
+    }
+    s"$headingPrefix staff planning"
+  }
+
+  private def staffPlanningHeadingPeriod(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
+    val headingPeriod = dayRangeType match {
+      case Some("monthly") => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+      case Some("weekly") =>
+        val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
+        val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
+        if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
+          val length = firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`.length
+          s"${firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`.substring(0, length - 4)} to ${lastDayOfWeek.`dayOfWeek-DD-Month-YYYY`}"
+        } else
+          s"${firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`} to ${lastDayOfWeek.`dayOfWeek-DD-Month-YYYY`}"
+      case Some("daily") => s"${viewingDate.`dayOfWeek-DD-Month-YYYY`}"
+      case _ => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+    }
+    headingPeriod
+  }
+
   def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
     val startOfDay = SDate.midnightOf(date)
     val slots = minutesInDay(date) / slotDurationMinutes

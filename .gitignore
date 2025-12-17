@@ -45,6 +45,8 @@ doc/_book
 
 client/node_modules
 
+client/.npm-cache
+
 # esbuild output
 server/src/main/assets/main.js
 
