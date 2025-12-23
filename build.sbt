@@ -168,6 +168,11 @@ ThisBuild / dependencyCheckAnalyzers := dependencyCheckAnalyzers.value.copy(
   )
 )
 
+val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
+
+ThisBuild / dependencyCheckNvdApi := NvdApiSettings(apiKey = nvdAPIKey)
+
+
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
   state =>
@@ -177,9 +182,6 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 
-val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
-
-dependencyCheckNvdApi := NvdApiSettings(nvdAPIKey)
 
 Global / cancelable := true
 
