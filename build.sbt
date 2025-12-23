@@ -168,6 +168,11 @@ ThisBuild / dependencyCheckAnalyzers := dependencyCheckAnalyzers.value.copy(
   )
 )
 
+val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
+
+ThisBuild / dependencyCheckNvdApi := NvdApiSettings(apiKey = nvdAPIKey)
+
+
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
   state =>
@@ -176,8 +181,8 @@ lazy val ReleaseCmd = Command.command("release") {
       "set elideOptions in client := Seq()" ::
       state
 }
-val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
-val nvdAPIKey = sys.env.getOrElse("NVD_API_KEY", "")
+
+
 Global / cancelable := true
 
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
@@ -194,4 +199,3 @@ enablePlugins(DockerPlugin)
 // enabled for Alpine JVM docker image compatibility
 enablePlugins(AshScriptPlugin)
 
-dependencyCheckNvdApi := NvdApiSettings(nvdAPIKey)
