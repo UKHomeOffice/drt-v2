@@ -76,7 +76,7 @@ object Settings {
     val scalatestplusPlay = "7.0.2"
     val nettyAll = "4.2.0.Final"
     val jwtCore = "11.0.3"
-    val logback = "1.5.21"
+    val logback = "1.5.24"
     val logbackContrib = "0.1.5"
     val scalajsScripts = "1.3.0"
   }
