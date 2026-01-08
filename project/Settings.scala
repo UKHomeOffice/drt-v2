@@ -36,7 +36,7 @@ object Settings {
     val pekkoPersistenceJdbc = "1.1.1"
     val slick = "3.5.2"
 
-    val aws = "2.30.38"
+    val aws = "2.41.4"
 
     val scalaDom = "2.8.0"
     val scalajsReact = "2.1.2"
