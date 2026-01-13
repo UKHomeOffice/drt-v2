@@ -124,7 +124,8 @@ object TerminalStaffing {
               <.div(
                 <.p("One entry per line with values separated by commas, e.g.:"),
                 <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
-                <.textarea(^.defaultValue := state.text, ^.className := "staffing-editor",
+                <.label(^.`for` := "staffing-editor-textarea", ^.className := "staffing-editor-label", "Staffing Editor"),
+                <.textarea(^.id:= "staffing-editor-textarea", ^.defaultValue := state.text, ^.className := "staffing-editor",
                   ^.onChange ==> ((e: ReactEventFromInput) => {
                     val newRawFixedPoints = e.target.value
                     scope.modState(_.copy(text = newRawFixedPoints))
