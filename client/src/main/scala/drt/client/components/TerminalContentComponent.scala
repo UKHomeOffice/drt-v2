@@ -343,9 +343,7 @@ object TerminalContentComponent {
                  maybeExtraIcon: Option[Icon] = None,
                  title: String,
                 ): VdomTagOf[Div] = {
-    val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
     <.div(
-      ^.key := keyValue,
       MuiButton(color = Color.secondary, variant = "contained", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
         s" ${exportType.linkLabel}",
         ^.href := exportUrl,

@@ -13,6 +13,7 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import io.kinoplan.scalajs.react.material.ui.icons._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.onClick.Event
+import japgolly.scalajs.react.vdom.Attr
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
@@ -106,6 +107,7 @@ object TerminalExportComponent extends WithScalaCssImplicits {
       MuiGrid(container = true, spacing = 2)(
         exports.map(export =>
           MuiGrid(item = true, xs = 4)(
+            Attr("key") := export.hashCode().toString,
             exportLink(date, terminal.toString, export, SPAMain.exportUrl(export, viewMode), None, exportName)
           )).toVdomArray
       ))
