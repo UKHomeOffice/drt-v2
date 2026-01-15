@@ -15,7 +15,7 @@ addSbtPlugin("com.vmunier" % "sbt-web-scalajs" % "1.3.0")
 
 addSbtPlugin("com.github.sbt" % "sbt-less" % "2.0.1")
 
-addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.11.4")
+addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.11.7")
 
 addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.9")
 
