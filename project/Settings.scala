@@ -25,18 +25,18 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val scala = "2.13.16"
+    val scala = "2.13.18"
 
-    val drtLib = "v1367"
+    val drtLib = "v1394"
     val drtCirium = "v339"
     val bluebus = "v149"
 
-    val pekko = "1.1.5"
-    val pekkoHttp = "1.2.0"
-    val pekkoPersistenceJdbc = "1.1.1"
-    val slick = "3.5.2"
+    val pekko = "1.4.0"
+    val pekkoHttp = "1.3.0"
+    val pekkoPersistenceJdbc = "1.2.0"
+    val slick = "3.5.2" // restricted by pekko-persistence-jdbc 1.2.0
 
-    val aws = "2.30.38"
+    val aws = "2.41.9"
 
     val scalaDom = "2.8.0"
     val scalajsReact = "2.1.2"
@@ -55,7 +55,7 @@ object Settings {
     val poi = "5.5.1"
     val renjin = "0.9.2725"
     val csvCommons = "1.14.1"
-    val postgres = "42.7.8"
+    val postgres = "42.7.9"
     val sshJ = "0.40.0"
     val jodaTime = "2.14.0"
     val exposeLoader = "0.7.1"
@@ -69,16 +69,28 @@ object Settings {
     val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.19"
-    val twirlApi = "2.0.8"
-    val mockito = "5.16.1"
+    val twirlApi = "2.0.9"
+    val mockito = "5.21.0"
     val rtVersion = "4.0.3"
     val jakartaXmlWsApi = "4.0.2"
     val scalatestplusPlay = "7.0.2"
-    val nettyAll = "4.2.0.Final"
+    val nettyAll = "4.2.9.Final"
     val jwtCore = "11.0.3"
-    val logback = "1.5.21"
+    val logback = "1.5.24"
     val logbackContrib = "0.1.5"
     val scalajsScripts = "1.3.0"
+    val notificationsJavaClient = "6.0.0-RELEASE"
+    val fontAwesome = "4.7.0"
+    val webjarsPlay = "3.0.10"
+    val webjarsLocator = "0.52"
+    val janino = "3.0.16"
+    val scalajsJavaSecurerandom = "1.0.0"
+    val scalaJavaTime = "2.5.0"
+    val scalaCrypto = "1.0.0"
+    val scalaUri = "4.0.3"
+    val mail = "1.4.7"
+    val jaxbApi = "2.3.1"
+    val mockito34 = "3.2.10.0"
   }
 
   import versions.*
@@ -93,17 +105,17 @@ object Settings {
     "io.suzaku" %%% "diode" % diode,
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
-    "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
+    "org.scala-js" %%% "scalajs-java-securerandom" % scalajsJavaSecurerandom,
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
-    "io.github.cquiroz" %%% "scala-java-time" % "2.5.0",
+    "io.github.cquiroz" %%% "scala-java-time" % scalaJavaTime,
 
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
-    "com.dedipresta" %%% "scala-crypto" % "1.0.0",
-    "io.lemonlabs" %%% "scala-uri" % "4.0.3",
+    "com.dedipresta" %%% "scala-crypto" % scalaCrypto,
+    "io.lemonlabs" %%% "scala-uri" % scalaUri,
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
@@ -116,7 +128,7 @@ object Settings {
     "com.lihaoyi" %%% "upickle" % uPickle,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "io.suzaku" %%% "boopickle" % booPickle,
-    "org.webjars" % "webjars-locator" % "0.52",
+    "org.webjars" % "webjars-locator" % webjarsLocator,
   ))
 
   /** Dependencies only used by the JVM project */
@@ -127,10 +139,10 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
 
-    "javax.mail" % "mail" % "1.4.7",
+    "javax.mail" % "mail" % mail,
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % jakartaXmlWsApi,
     "com.sun.xml.ws" % "rt" % rtVersion,
-    "javax.xml.bind" % "jaxb-api" % "2.3.1",
+    "javax.xml.bind" % "jaxb-api" % jaxbApi,
 
     "com.h2database" % "h2" % h2,
     "com.typesafe" % "config" % typesafeConfig,
@@ -170,7 +182,7 @@ object Settings {
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
-    "org.codehaus.janino" % "janino" % "3.0.16",
+    "org.codehaus.janino" % "janino" % janino,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
@@ -180,12 +192,12 @@ object Settings {
     "org.specs2" %% "specs2-mock" % specs2 % Test,
     "org.mockito" % "mockito-core" % mockito % Test,
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
-    "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
+    "org.scalatestplus" %% "mockito-3-4" % mockito34 % Test,
 
-    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
+    "org.webjars" % "font-awesome" % fontAwesome % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-    "org.webjars" %% "webjars-play" % "3.0.9",
-    "org.webjars" % "webjars-locator" % "0.52",
+    "org.webjars" %% "webjars-play" % webjarsPlay,
+    "org.webjars" % "webjars-locator" % webjarsLocator,
 
     "io.netty" % "netty-all" % nettyAll,
 
@@ -194,7 +206,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "5.2.1-RELEASE",
+    "uk.gov.service.notify" % "notifications-java-client" % notificationsJavaClient,
     "software.amazon.awssdk" % "s3" % aws,
   ))
 
