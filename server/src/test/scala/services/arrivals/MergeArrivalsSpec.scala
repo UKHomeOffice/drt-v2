@@ -9,9 +9,9 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, UniqueArrival, VoyageNumber, Predictions => Preds}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, Predictions, UniqueArrival, VoyageNumber, Predictions => Preds}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -214,6 +214,40 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       result should ===(
         ArrivalsDiff(Map.empty[UniqueArrival, Arrival], Set(current.unique))
       )
+    }
+    "at EDI move an arrival from A2 to A1 when its baggage belt number is 1, 2 or 3" in {
+      val a2BaggageBelt = Option("7")
+      val a1BaggageBelt = Option("2")
+      val arrivalA2 = current.copy(Terminal = A2, BaggageReclaimId = a2BaggageBelt)
+      val arrivalWithA1Baggage = arrivalA2.copy(BaggageReclaimId = a1BaggageBelt)
+      val arrivalSets = Seq(
+        FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](arrivalWithA1Baggage.unique -> arrivalWithA1Baggage)),
+      )
+
+      val result = MergeArrivals.mergeSets(Set(arrivalA2.unique), arrivalSets, EdiArrivalsTerminalAdjustments.adjust)
+
+      val arrivalA1 = arrivalWithA1Baggage.copy(Terminal = A1)
+      result should ===(
+        ArrivalsDiff(Map[UniqueArrival, Arrival](arrivalA1.unique -> arrivalA1), Set(arrivalA2.unique))
+      )
+
+    }
+    "at EDI move an arrival from A1 to A2 when its baggage belt number is 7" in {
+      val a2BaggageBelt = Option("7")
+      val a1BaggageBelt = Option("2")
+      val arrivalA1 = current.copy(Terminal = A1, BaggageReclaimId = a1BaggageBelt)
+      val arrivalWithA2Baggage = arrivalA1.copy(BaggageReclaimId = a2BaggageBelt)
+      val arrivalSets = Seq(
+        FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](arrivalWithA2Baggage.unique -> arrivalWithA2Baggage)),
+      )
+
+      val result = MergeArrivals.mergeSets(Set(arrivalA1.unique), arrivalSets, EdiArrivalsTerminalAdjustments.adjust)
+
+      val arrivalA2 = arrivalWithA2Baggage.copy(Terminal = A2)
+      result should ===(
+        ArrivalsDiff(Map[UniqueArrival, Arrival](arrivalA2.unique -> arrivalA2), Set(arrivalA1.unique))
+      )
+
     }
     "merge a lower-priority non-primary arrival when the arrivals exists in a higher order primary source" in {
       val existingMerged = Set.empty[UniqueArrival]

@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDate, UtcDate}
 
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,11 +30,16 @@ object RunnableMergedArrivals {
            )
            (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): (ActorRef, UniqueKillSwitch) = {
     val existingMergedArrivals: (Terminal, UtcDate) => Future[Set[UniqueArrival]] =
-      (terminal, date) =>
-        FlightsProvider(flightsRouterActor)
-          .terminalDateRangeScheduledOrPcp(terminal)(date, date).map(_._2.map(_.unique).toSet)
+      (terminal, date) => {
+        val flightsForDate = if (portCode == PortCode("EDI"))
+          FlightsProvider(flightsRouterActor).allTerminalsScheduledOn
+        else
+          FlightsProvider(flightsRouterActor).terminalScheduledOn(terminal)
+
+        flightsForDate(date).map(_.map(_.unique).toSet)
           .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
           .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
+      }
 
     val merger = MergeArrivals(
       existingMerged = existingMergedArrivals,

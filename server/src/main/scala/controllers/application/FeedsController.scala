@@ -72,7 +72,8 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
                  terminal: String,
                  scheduled: MillisSinceEpoch,
                  origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
-    getAllFeedSourceArrivals(SDate.now().millisSinceEpoch, number, terminal, scheduled, origin)
+    val term = if (ctrl.airportConfig.portCode == PortCode("EDI")) "A2" else terminal
+    getAllFeedSourceArrivals(SDate.now().millisSinceEpoch, number, term, scheduled, origin)
   }
 
   def getArrivalAtPointInTime(pointInTime: MillisSinceEpoch,
