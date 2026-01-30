@@ -1,9 +1,9 @@
 package services.graphstages
 
-import org.apache.pekko.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared._
+import org.apache.pekko.testkit.TestProbe
 import services.PcpArrival.pcpFrom
 import services.arrivals.EdiArrivalsTerminalAdjustments
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
@@ -17,7 +17,6 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.AirportConfigs
 import uk.gov.homeoffice.drt.time.{MilliDate, SDate, SDateLike}
 
-import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -25,14 +24,14 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
   private val date = "2017-01-01"
   private val hour = "00:25"
   val scheduled = s"${date}T${hour}Z"
-  val estmated = s"${date}T00:37Z"
+  val estimated = s"${date}T00:37Z"
 
   val dateNow: SDateLike = SDate(date + "T00:00Z")
 
   val terminalSplits: Splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage)
 
   val airportConfig: AirportConfig = defaultAirportConfig.copy(
-    queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
+    queuesByTerminal = defaultAirportConfig.queuesByTerminal,
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
@@ -126,6 +125,26 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       success
     }
 
+    "Reassigns the terminal according to EDI's baggage belt rules with creating duplicates" in {
+      val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
+
+      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(), Seq())
+
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live)))
+
+      assertTerminals(crunch.portStateTestProbe, List(A1))
+
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live.copy(baggageReclaim = Option("7")))))
+
+      assertTerminals(crunch.portStateTestProbe, List(A2))
+
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live.copy(baggageReclaim = Option("2")))))
+
+      assertTerminals(crunch.portStateTestProbe, List(A1))
+
+      success
+    }
+
     "Remove any existing duplicates in the PortState" in {
       val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
       val fcBase = ArrivalGenerator.forecast(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2)
@@ -213,8 +232,8 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
           tuples == Set(("BA0001", A1), ("BA0011", A2), ("BA0002", A2), ("BA0003", A1))
       }
 
-      val cirium2a2 = ArrivalGenerator.live(iata = "BA0002", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, estDt = estmated)
-      val cirium3a1 = ArrivalGenerator.live(iata = "BA0003", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, estDt = estmated)
+      val cirium2a2 = ArrivalGenerator.live(iata = "BA0002", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, estDt = estimated)
+      val cirium3a1 = ArrivalGenerator.live(iata = "BA0003", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, estDt = estimated)
       offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Seq(cirium2a2, cirium3a1)))
 
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for BA0001 at A1, BA0002 at A2 & BA0003 at A1") {
@@ -239,7 +258,10 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
 
   private def assertTerminals(probe: TestProbe, terminals: List[Terminal]) = {
     probe.fishForMessage(1.seconds, s"looking for arrival at $terminals") {
-      case PortState(fs, _, _) => fs.values.map(_.apiFlight.Terminal) == terminals
+      case PortState(fs, _, _) =>
+        val terminals1 = fs.values.map(_.apiFlight.Terminal)
+        println(s"got terminals: $terminals1")
+        terminals1 == terminals
     }
   }
 }

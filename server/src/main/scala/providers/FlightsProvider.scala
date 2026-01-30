@@ -16,14 +16,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class FlightsProvider(flightsRouterActor: ActorRef)
                           (implicit timeout: Timeout) {
-  def terminalDateRangeScheduledOrPcp: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
-    terminal => (start, end) => {
-      val startMillis = SDate(start).millisSinceEpoch
-      val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
-      val request = PartitionedPortStateActor.GetFlightsForTerminals(startMillis, endMillis, Seq(terminal))
-      flightsByUtcDate(request)
-    }
-
   def terminalDateScheduledOrPcp(implicit mat: Materializer): Terminal => (LocalDate, Option[Long]) => Future[Seq[ApiFlightWithSplits]] =
     terminal => (localDate, maybePointInTime) => {
       val startMillis = SDate(localDate).millisSinceEpoch
@@ -44,6 +36,15 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       terminalDateScheduledOrPcp(mat)(terminal)(localDate, maybePointInTime).map(_.filter { fws =>
         fws.apiFlight.Scheduled >= start && fws.apiFlight.Scheduled < end
       })
+    }
+
+  def terminalScheduledOn: Terminal => UtcDate => Source[Seq[ApiFlightWithSplits], NotUsed] =
+    terminal => date => {
+      val start = SDate(date)
+      val end = start.addDays(1).addMinutes(-1)
+      val request = PartitionedPortStateActor.GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, Seq(terminal))
+      flightsByUtcDate(request)
+        .map { case (_, flights) => flights.filter(f => SDate(f.apiFlight.Scheduled).toUtcDate == date) }
     }
 
   def allTerminalsScheduledOn: UtcDate => Source[Seq[ApiFlightWithSplits], NotUsed] =
