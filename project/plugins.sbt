@@ -25,7 +25,7 @@ addSbtPlugin("com.github.sbt" % "sbt-digest" % "2.1.0")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
-addSbtPlugin("org.johnnei.scapegoat" %% "sbt-scapegoat" % "1.3.7")
+addSbtPlugin("org.johnnei.scapegoat" %% "sbt-scapegoat" % "1.3.8")
 
 addSbtPlugin("com.github.sbt" % "sbt-js-engine" % "1.3.9")
 
