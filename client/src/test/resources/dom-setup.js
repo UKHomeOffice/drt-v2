@@ -20,6 +20,7 @@ if (!setupWithModern()) {
 
 // Fill common globals used by libs like Handsontable
 global.HTMLElement = global.window.HTMLElement;
+global.Element = global.window.Element;
 global.Node = global.window.Node;
 global.getComputedStyle = global.window.getComputedStyle;
 global.MutationObserver = global.window.MutationObserver;
