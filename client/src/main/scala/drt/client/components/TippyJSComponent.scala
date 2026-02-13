@@ -136,16 +136,16 @@ object Tippy extends ScalaCssReactImplicits {
     apply(gaEventLabel, content, interactive = false, <.span(trigger))
 
   def interactiveInfo(gaEventLabel: String, content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "25px", MuiIcons(Info)(fontSize = "medium")), triggerCallback = triggerCallback)
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")), triggerCallback = triggerCallback)
 
   def info(gaEventLabel: String, content: VdomElement) =
-    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "25px", MuiIcons(Info)(fontSize = "medium")))
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")))
 
   def info(gaEventLabel: String, content: String) =
-    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "25px", MuiIcons(Info)(fontSize = "medium")))
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")))
 
   def infoHover(gaEventLabel: String, content: String) =
-    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "25px", MuiIcons(Info)(fontSize = "medium")), triggerEvent = TriggerEvents.focusAndHover)
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")), triggerEvent = TriggerEvents.focusAndHover)
 
 }
 
