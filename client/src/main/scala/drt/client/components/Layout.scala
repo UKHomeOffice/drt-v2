@@ -119,7 +119,9 @@ object Layout {
                         case _ => EmptyVdom
                       },
                     ),
-                    <.div(<.div(props.currentLoc.render()))
+
+                    <.div(^.className := s"${props.currentLoc.page.url.split('/')(2)}-tab",
+                      props.currentLoc.render())
                   ),
                   VersionUpdateNotice()
                 ),
