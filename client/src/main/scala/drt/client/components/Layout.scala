@@ -106,7 +106,7 @@ object Layout {
                   <.div(^.className := "main-container",
                     <.div(^.className := "sub-nav-bar",
                       props.currentLoc.page match {
-                        case TerminalPageTabLoc(terminalName, _, _, _) =>
+                        case TerminalPageTabLoc(terminalName, tabName , _, _) =>
                           val terminal = Terminal(terminalName)
                           <.div(^.className := "terminal-header",
                             MuiTypography(variant = "h1")(headerDisplay(airportConfig, terminalName)),
@@ -116,12 +116,13 @@ object Layout {
                                 terminal)),
                               //PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
                             ))
-                        case _ => EmptyVdom
+                            <.div(^.className := s"$tabName-tab",
+                            props.currentLoc.render())
+                        case _ => 
+                            props.currentLoc.render()
                       },
                     ),
 
-                    <.div(^.className := s"${props.currentLoc.page.url.split('/')(2)}-tab",
-                      props.currentLoc.render())
                   ),
                   VersionUpdateNotice()
                 ),
