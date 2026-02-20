@@ -8,6 +8,58 @@ platform:
   arch: amd64
 
 steps:
+  # 1. Tests first (in parallel)
+
+  - name: Client-side unit tests
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
+    commands:
+      - /root/entrypoint.sh
+      - npm --prefix client ci
+      - sbt --error client/test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+
+  - name: Server-side unit tests
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
+    commands:
+      - /root/entrypoint.sh
+      - sbt -mem 4096 --error test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+
+  - name: Code coverage report
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
+    commands:
+      - /root/entrypoint.sh
+      - sbt -mem 4096 --error clean coverage test coverageReport
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+      branch:
+        - master
+
+  # 2. Build and publish chain (in sequence)
+
   - name: Build scalajs app
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
@@ -16,7 +68,6 @@ steps:
       - npm --prefix client ci
       - sbt "client/fullLinkJS"
       - npm --prefix client run build
-
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -24,6 +75,10 @@ steps:
       ENV_LOG_LEVEL: ERROR
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
+    depends_on:
+      - Client-side unit tests
+      - Server-side unit tests
+      - Code coverage report
 
   - name: Build scala app
     pull: if-not-exists
@@ -81,6 +136,8 @@ steps:
     depends_on:
       - Build docker image
 
+  # 3. ECR / Cypress / E2E chain
+
   - name: ECR login
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
@@ -118,58 +175,35 @@ steps:
     depends_on:
       - ECR login
 
-  - name: Client-side unit tests
+  - name: End to end test
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
-    commands:
-      - /root/entrypoint.sh
-      - sbt --error client/test
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
     environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
-      ENV_LOG_LEVEL: ERROR
+      AWS_REGION: eu-west-2
+      PLAY:
+        from_secret: play
+      PLAY_HTTP_SECRET_KEY:
+        from_secret: PLAY_HTTP_SECRET_KEY
+    commands:
+      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e S3_AWS_ACCESS_KEY_ID="some-aws-access-id" -e S3_AWS_SECRET_ACCESS_KEY="some-aws-secret-access-id" -e PLAY_HTTP_SECRET_KEY=$${PLAY_HTTP_SECRET_KEY} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk -e START_UP_GRACE_PERIOD_SECONDS=0 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B${DRONE_BUILD_NUMBER} $${PLAY}
+      - echo "Waiting for $CONTAINER_NAME to be running..."
+      - |
+        while [ "$(docker inspect -f '{{.State.Running}}' "$${DRONE_COMMIT_SHA}")" != "true" ]; do
+          sleep 0.5
+        done
+      - echo "Container $${DRONE_COMMIT_SHA} is running"
+      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-${DRONE_BUILD_NUMBER} /bin/bash -c "/app/node_modules/.bin/cypress run"
+    volumes:
+      - name: dockerclientconfig
+        path: /root/.docker
     when:
       event:
         - push
     depends_on:
       - Publish app
+      - Publish cypress
 
-  - name: Server-side unit tests
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
-    commands:
-      - /root/entrypoint.sh
-      - sbt -mem 4096 --error test
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
-      ENV_LOG_LEVEL: ERROR
-    when:
-      event:
-        - push
-    depends_on:
-      - Client-side unit tests
-
-  - name: Code coverage report
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
-    commands:
-      - /root/entrypoint.sh
-      - sbt -mem 4096 --error clean coverage test coverageReport
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
-      ENV_LOG_LEVEL: ERROR
-    when:
-      event:
-        - push
-      branch:
-        - master
-    depends_on:
-      - Server-side unit tests
+  # 4. Static analysis chain
 
   - name: Scapegoat
     pull: if-not-exists
@@ -229,32 +263,7 @@ steps:
     depends_on:
       - Dependency check
 
-  - name: End to end test
-    pull: if-not-exists
-    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-    environment:
-      AWS_REGION: eu-west-2
-      PLAY:
-        from_secret: play
-      PLAY_HTTP_SECRET_KEY:
-        from_secret: PLAY_HTTP_SECRET_KEY
-    commands:
-      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e S3_AWS_ACCESS_KEY_ID="some-aws-access-id" -e S3_AWS_SECRET_ACCESS_KEY="some-aws-secret-access-id" -e PLAY_HTTP_SECRET_KEY=$${PLAY_HTTP_SECRET_KEY} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk -e START_UP_GRACE_PERIOD_SECONDS=0 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B${DRONE_BUILD_NUMBER} $${PLAY}
-      - echo "Waiting for $CONTAINER_NAME to be running..."
-      - |
-        while [ "$(docker inspect -f '{{.State.Running}}' "$${DRONE_COMMIT_SHA}")" != "true" ]; do
-          sleep 0.5
-        done
-      - echo "Container $${DRONE_COMMIT_SHA} is running"
-      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-${DRONE_BUILD_NUMBER} /bin/bash -c "/app/node_modules/.bin/cypress run"
-    volumes:
-      - name: dockerclientconfig
-        path: /root/.docker
-    when:
-      event:
-        - push
-    depends_on:
-      - Publish app
+  # 5. Slack notification
 
 #  - name: Slack notification
 #    pull: if-not-exists
@@ -273,7 +282,9 @@ steps:
 #      event:
 #        - push
 #    depends_on:
+#      - Client-side unit tests
 #      - Server-side unit tests
+#      - Code coverage report
 #      - End to end test
 
 services:
