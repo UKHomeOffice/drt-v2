@@ -57,6 +57,8 @@ steps:
         - push
       branch:
         - master
+    depends_on:
+      - Server-side unit tests
 
   # 2. Build and publish chain (in sequence)
 
