@@ -103,9 +103,11 @@ object StaffAdjustmentDialogue {
         def selectFromRange(range: Iterable[String],
                             defaultValue: String,
                             className: String,
-                            callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState
+                            callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
+                            autoFocus: Boolean = false,
                            ): VdomTagOf[Select] = {
           <.select(
+            if (autoFocus) ^.autoFocus := true else TagMod.empty,
             ^.value := defaultValue,
             ^.className := className,
             ^.onChange ==> ((e: ReactEventFromInput) => {
@@ -196,7 +198,7 @@ object StaffAdjustmentDialogue {
         def reasonSelector(): VdomTagOf[Div] = popoverFormRow(
           "Reason",
           Option("staff-adjustment--start-time"),
-          selectFromRange(movementReasons, state.reason, "staff-adjustment--select-reason", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v))
+          selectFromRange(movementReasons, state.reason, "staff-adjustment--select-reason", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v), autoFocus = true)
         )
 
         def staffAdjustments(): html_<^.VdomTagOf[Div] = {
@@ -281,8 +283,8 @@ object StaffAdjustmentDialogue {
     <.div(^.className := "form-group-row",
       <.div(^.className := "col-sm-4"),
       <.div(^.className := "col-sm-8 btn-toolbar",
-        <.button("Cancel", ^.className := "btn btn-default staff-adjustment--save-cancel", ^.onClick --> Callback(killPopover())),
-        <.button("Save", ^.className := "btn btn-primary staff-adjustment--save-cancel", ^.onClick --> Callback(trySaveMovement()))
+        <.button("Save", ^.className := "btn btn-primary staff-adjustment--save-cancel", ^.onClick --> Callback(trySaveMovement())),
+          <.button("Cancel", ^.className := "btn btn-default staff-adjustment--save-cancel", ^.onClick --> Callback(killPopover()))
       ))
   }
 
