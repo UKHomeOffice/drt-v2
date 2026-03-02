@@ -284,7 +284,9 @@ object TerminalDesksAndQueues {
           <.div(^.className := "desks-queues-title",
             MuiTypography(variant = "h2")(s"Desks and queues"),
             StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
+            <.p(^.id := "desk-queues-description", "Estimated queue pressure based on incoming passengers and staff availability"),
             <.div(^.className := "desks-and-queues-top",
+              ^.aria.labelledBy := "desk-queues-description",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
               if (props.loggedInUser.hasRole(SuperAdmin)) <.div(^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
                 adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
@@ -295,11 +297,13 @@ object TerminalDesksAndQueues {
             if (state.displayType == ChartsView) {
               queues.map { queue =>
                 val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
+                <.div(^.aria.labelledBy := "desk-queues-description",
                 QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), interval, state.deskType))
+              )
               }.toTagMod
             } else {
-              <.div(
                 <.table(
+                  ^.aria.labelledBy := "desk-queues-description",
                   ^.className := s"user-desk-recs table-striped",
                   <.thead(
                     ^.className := "sticky-top",
@@ -328,7 +332,6 @@ object TerminalDesksAndQueues {
                       )
                       TerminalDesksAndQueuesRow(rowProps)
                     }.toTagMod)
-                )
               )
             }
           )
