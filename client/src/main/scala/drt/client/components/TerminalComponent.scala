@@ -112,8 +112,7 @@ object TerminalComponent {
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
-
-      <.div(
+        <.div(^.className := s"${props.terminalPageTab.mode.asString}-tab",
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
           val terminalModel: TerminalModel = modelMP()
