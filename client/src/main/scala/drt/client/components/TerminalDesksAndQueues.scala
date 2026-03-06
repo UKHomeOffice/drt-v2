@@ -148,14 +148,14 @@ object TerminalDesksAndQueues {
 
       def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
         val queueSubHeadings = queueNames.flatMap { queueName =>
-          <.th(^.className := queueColour(queueName), "Incoming pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)
+          <.th(^.className := queueColour(queueName), <.div("Incoming pax", paxBanksOrDesksTip(queueName))) :: staffDeploymentSubheadings(queueName, showWaitColumn)
         }.toTagMod
 
         List(queueSubHeadings,
           <.th(^.className := "total-deployed", <.div("Misc", miscTooltip)),
           <.th(^.className := "total-deployed", <.div("Moves", movesTooltip)),
-          <.th(^.className := "total-deployed", <.div("Required", recToolTip)),
-          <.th(^.className := "total-deployed", "Deployed"),
+          <.th(^.className := "total-deployed", <.div("Required", pcpStaffRecommended(state.deskType))),
+          <.th(^.className := "total-deployed", <.div("Deployed", pcpStaffDeployed(state.deskType))),
           <.th(^.className := "total-deployed", <.div("Available", availTooltip), ^.colSpan := 2))
       }
 
