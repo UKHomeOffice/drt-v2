@@ -119,22 +119,32 @@ object TerminalDesksAndQueues {
       val endDate = props.viewStart.addHours(props.hoursToView).toLocalDate
       val queues = QueueConfig.queuesForDateRangeAndTerminal(props.airportConfig.queuesByTerminal)(startDate, endDate, props.terminal)
 
+      def stacked(label: String, tooltip: VdomNode): VdomTagOf[Div] =
+        <.div(
+          ^.className := "subheading-with-tooltip",
+          <.div(^.className := "subheading-label", label),
+          <.div(^.className := "subheading-tooltip", tooltip),
+        )
+
+      val emptyTooltipSpacer: VdomNode =
+        <.span(^.className := "subheading-tooltip-spacer", "\u00A0")
+
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
         val headings = state.deskType match {
           case Deployments =>
             val h = List(<.th(
-              <.div(s"${deskUnitLabel(queueName)}", depBanksOrDesksTip(queueName)), ^.className := queueColumnClass)
+              stacked(s"${deskUnitLabel(queueName)}", depBanksOrDesksTip(queueName)), ^.className := queueColumnClass)
             )
             if (showWaitColumn)
-              h :+ <.th(<.div("Wait", estWaitTooltip), ^.className := queueColumnClass)
+              h :+ <.th(stacked("Wait", estWaitTooltip), ^.className := queueColumnClass)
             else
               h
           case Recommended =>
-            val h = List(<.th(s"Required ${deskUnitLabel(queueName)} ", recBanksOrDesksTip(queueName), ^.className := queueColumnClass))
+            val h = List(<.th(stacked("Required", recBanksOrDesksTip(queueName)), ^.className := queueColumnClass))
             if (showWaitColumn)
-              h :+ <.th(<.div("Wait", " ", estWaitTooltip), ^.className := queueColumnClass)
+              h :+ <.th(stacked("Wait", estWaitTooltip), ^.className := queueColumnClass)
             else
               h
         }
@@ -148,15 +158,15 @@ object TerminalDesksAndQueues {
 
       def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
         val queueSubHeadings = queueNames.flatMap { queueName =>
-          <.th(^.className := queueColour(queueName), "Incoming pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)
+          <.th(^.className := queueColour(queueName), stacked("Incoming pax", emptyTooltipSpacer)) :: staffDeploymentSubheadings(queueName, showWaitColumn)
         }.toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "total-deployed", <.div("Misc", miscTooltip)),
-          <.th(^.className := "total-deployed", <.div("Moves", movesTooltip)),
-          <.th(^.className := "total-deployed", <.div("Required", recToolTip)),
-          <.th(^.className := "total-deployed", "Deployed"),
-          <.th(^.className := "total-deployed", <.div("Available", availTooltip), ^.colSpan := 2))
+          <.th(^.className := "total-deployed", stacked("Misc", miscTooltip)),
+          <.th(^.className := "total-deployed", stacked("Moves", movesTooltip)),
+          <.th(^.className := "total-deployed", stacked("Required", recToolTip)),
+          <.th(^.className := "total-deployed", stacked("Deployed", emptyTooltipSpacer)),
+          <.th(^.className := "total-deployed", stacked("Available", availTooltip), ^.colSpan := 2))
       }
 
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
