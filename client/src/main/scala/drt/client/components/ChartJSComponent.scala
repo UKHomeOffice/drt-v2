@@ -206,6 +206,9 @@ object ChartJSComponent {
 
     def apply(datasets: Seq[ChartJsDataSet]): ChartJsData = ChartJsData(datasets.map(_.toJs).toJSArray)
 
+    def apply(datasets: js.Array[js.Object], labels: js.UndefOr[js.Array[String]] = js.undefined): ChartJsData =
+      new ChartJsData(datasets, labels)
+
     def apply(datasets: Seq[ChartJsDataSet], labels: Option[Seq[String]]): ChartJsData =
       ChartJsData(datasets.map(_.toJs).toJSArray, labels.map(_.toJSArray).orUndefined)
 

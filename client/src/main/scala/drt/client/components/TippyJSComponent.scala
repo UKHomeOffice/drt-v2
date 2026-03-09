@@ -139,10 +139,10 @@ object Tippy extends ScalaCssReactImplicits {
     apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "small")), triggerCallback = triggerCallback)
 
   def info(gaEventLabel: String, content: VdomElement) =
-    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "small")))
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")))
 
   def info(gaEventLabel: String, content: String) =
-    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "small")))
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")))
 
   def infoHover(gaEventLabel: String, content: String) =
     apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "small")), triggerEvent = TriggerEvents.focusAndHover)
