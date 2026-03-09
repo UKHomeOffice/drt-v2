@@ -126,9 +126,6 @@ object TerminalDesksAndQueues {
           <.div(^.className := "subheading-tooltip", tooltip),
         )
 
-      val emptyTooltipSpacer: VdomNode =
-        <.span(^.className := "subheading-tooltip-spacer", "\u00A0")
-
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
