@@ -96,7 +96,8 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
                     "paddingLeft" -> "12px",
                     "paddingRight" -> "12px",
                     "overflow" -> "hidden"
-                  )))(<.span(s"To book a drop-in session, please click the 'Book' button on the row that is most convenient for you."),
+                  )))(MuiTypography(sx = SxProps(Map("marginBottom" -> "16px")))(
+                    "To book a drop-in session, please click the 'Book' button on the row that is most convenient for you."),
                     MuiGrid(container = true, spacing = 2, sx = SxProps(Map("width" -> "60%")))(
                       MuiGrid(item = true, xs = 12, sx = SxProps(Map(
                         "backgroundColor" -> "#FFFFFF",
