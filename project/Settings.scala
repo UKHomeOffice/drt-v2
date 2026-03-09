@@ -70,7 +70,7 @@ object Settings {
     val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.19"
     val twirlApi = "2.0.9"
-    val mockito = "5.21.0"
+    val mockito = "5.22.0"
     val rtVersion = "4.0.3"
     val jakartaXmlWsApi = "4.0.3"
     val scalatestplusPlay = "7.0.2"
