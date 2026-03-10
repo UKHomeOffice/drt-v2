@@ -80,7 +80,7 @@ object Settings {
     val logbackContrib = "0.1.5"
     val scalajsScripts = "1.3.0"
     val notificationsJavaClient = "6.0.0-RELEASE"
-    val fontAwesome = "4.7.0"
+    val fontAwesome = "7.2.0"
     val webjarsPlay = "3.0.10"
     val webjarsLocator = "0.52"
     val janino = "3.0.16"
