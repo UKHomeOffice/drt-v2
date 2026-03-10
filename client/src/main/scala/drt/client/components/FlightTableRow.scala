@@ -10,7 +10,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.MinuteAsAdjective
-import drt.shared.api.{WalkTimes}
+import drt.shared.api.WalkTimes
 import drt.shared.redlist._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -214,7 +214,7 @@ object FlightTableRow {
       val pcpPaxDataQuality = paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)
       val lastCells = List[TagMod](
         <.td(
-          pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
+          if(flight.Origin.isDomesticOrCta) EmptyVdom else pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
           ^.className := "arrivals__table__flight-est-pcp"
         ),
         <.td(

@@ -558,8 +558,13 @@ table.headlines tr:nth-child(odd) {
   margin: 5px 5px 5px 5px;
 }
 
+#staff-adjustment-dialogue .btn-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .staff-adjustment--save-cancel.btn.btn-default, .staff-adjustment--save-cancel.btn.btn-primary {
-  float: right;
+  float: none;
 }
 
 .date-selector {
@@ -935,7 +940,7 @@ table.user-desk-recs > tbody > tr > td > input:focus {
 
 table.user-desk-recs > tbody > tr > td {
   padding: 7px 10px 4px 12px;
-  text-align: right;
+  text-align: center;
   border: 0;
 }
 
@@ -2947,4 +2952,25 @@ div.access-restricted {
 
 .btn:focus {
   outline: none !important;
+}
+
+.subheading-with-tooltip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.subheading-label {
+  display: flex;
+  align-items: center;
+  margin-bottom:2px;
+}
+
+.subheading-tooltip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height:26px;
+  line-height:1;
+  width:100%;
 }
