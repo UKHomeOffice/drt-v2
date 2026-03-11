@@ -57,7 +57,7 @@ object Settings {
     val csvCommons = "1.14.1"
     val postgres = "42.7.10"
     val sshJ = "0.40.0"
-    val jodaTime = "2.14.0"
+    val jodaTime = "2.14.1"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.4.6"
