@@ -108,10 +108,13 @@ As a minimum you'll need the ACL username, key & host set. For larger ports you'
 ```sbt -J-Duser.timezone=UTC -J-Dconfig.resource=application-acp.conf run```
 
 ## Frontend
-The front end uses vite for hot-reloading on code changes. To run it you need to do the following
+The frontend uses Vite for hot-reloading on code changes. To run locally, do the following:
 - `cd client`
 - `npm install`
-- `VITE_DRT_PORT_CODE=<PORT_CODE> npm run dev` - nb PORT_CODE should be uppercase
+- `VITE_DRT_PORT_CODE=<PORT_CODE> INJECT_TEST_HEADERS=true npm run dev` 
+
+- PORT_CODE should be uppercase
+- INJECT_TEST_HEADERS=true/false determines whether the frontend will inject extra headers (X-Forwarded-Email and X-Forwarded-Groups) into the API requests (to surpass the authentication mechanism when running locally only)
 
 If you want to mimic the production build you can run `npm run build` and then use play's server @ `localhost:9000`
 
