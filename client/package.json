@@ -23,7 +23,7 @@
     "css-loader": "6.7.2",
     "flickity": "2.3.0",
     "handsontable": "^16.2.0",
-    "jsdom": "^27.0.1",
+    "jsdom": "^27.4.0",
     "log4javascript": "1.4.15",
     "moment": ">=2.29.4",
     "moment-timezone": "^0.5.43",
