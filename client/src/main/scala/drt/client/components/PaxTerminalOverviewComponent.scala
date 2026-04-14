@@ -11,7 +11,6 @@ import scala.scalajs.js.annotation.JSImport
 @js.native
 trait IPaxTerminalOverview extends js.Object {
   var terminal: String
-  var currentTime: String
   var desks: Int
   var staff: Int
   var flights: js.Array[Integer]
@@ -24,7 +23,6 @@ trait IPaxTerminalOverview extends js.Object {
 object IPaxTerminalOverview {
   def apply(
              terminal: String,
-             currentTime: String,
              desks: Int,
              staff: Int,
              flights: js.Array[Integer],
@@ -35,7 +33,6 @@ object IPaxTerminalOverview {
            ): IPaxTerminalOverview = {
     val p = (new js.Object).asInstanceOf[IPaxTerminalOverview]
     p.terminal = terminal
-    p.currentTime = currentTime
     p.desks = desks
     p.staff = staff
     p.flights = flights
