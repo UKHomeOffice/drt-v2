@@ -27,11 +27,11 @@ object Settings {
   object versions {
     val scala = "2.13.18"
 
-    val drtLib = "v1394"
+    val drtLib = "v1397"
     val drtCirium = "v339"
     val bluebus = "v149"
 
-    val pekko = "1.5.0"
+    val pekko = "1.4.0"
     val pekkoHttp = "1.3.0"
     val pekkoPersistenceJdbc = "1.2.0"
     val slick = "3.5.2" // restricted by pekko-persistence-jdbc 1.2.0
