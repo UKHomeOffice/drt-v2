@@ -25,6 +25,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   )
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .jsConfigure(_.enablePlugins(ScalaJSWeb))
 
 lazy val clientMacrosJS: Project = (project in file("client-macros"))
@@ -39,6 +40,7 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
     ),
     resolvers += Resolver.defaultLocal,
   )
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
 
 lazy val client: Project = (project in file("client"))
@@ -102,6 +104,7 @@ lazy val client: Project = (project in file("client"))
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
   )
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb, TzdbPlugin)
   .dependsOn(shared.js, clientMacrosJS)
 
@@ -150,6 +153,7 @@ lazy val server = (project in file("server"))
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
   )
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
