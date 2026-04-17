@@ -189,7 +189,6 @@ object DashboardTerminalSummary {
         <.div(
           PaxTerminalOverviewComponent(IPaxTerminalOverview(
             terminal = props.terminal.toString,
-            currentTime = SDate.now().prettyTime,
             desks = pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0),
             staff = pressurePointAvailableStaff,
             flights = new js.Array(props.flights.size),
