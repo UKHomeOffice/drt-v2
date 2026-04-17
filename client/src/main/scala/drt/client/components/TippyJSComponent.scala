@@ -40,12 +40,18 @@ object TippyJSComponent {
     var onTrigger: js.Function2[TippyElement, Event, Unit] = js.native
   }
 
-  def props(gaEventLabel: String, content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
+  def props(gaEventLabel: String,
+            content: js.Object,
+            interactive: Boolean,
+            plugins: js.Array[js.Any],
+            triggerEvent: String,
+            theme: String,
+           ): Props = {
     val p = (new js.Object).asInstanceOf[Props]
 
     p.interactive = interactive
     p.content = content
-    p.theme = "light-border"
+    p.theme = theme
     p.maxWidth = "None"
     p.trigger = triggerEvent
     p.placement = "top-end"
@@ -69,9 +75,10 @@ object TippyJSComponent {
                interactive: Boolean,
                trigger: VdomTagOf[HTMLElement],
                plugins: js.Array[js.Any] = js.Array(),
-               triggerEvent: String = Tippy.TriggerEvents.focus
+               triggerEvent: String = Tippy.TriggerEvents.focus,
+               theme: String = "light-border",
               ): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-    component(props(gaEventLabel, content, interactive, plugins, triggerEvent))(trigger)
+    component(props(gaEventLabel, content, interactive, plugins, triggerEvent, theme))(trigger)
 }
 
 @js.native
@@ -102,7 +109,14 @@ object Tippy extends ScalaCssReactImplicits {
     val focusAndHover = s"$hover $focus"
   }
 
-  case class Props(gaEventLabel: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
+  case class Props(gaEventLabel: String,
+                   content: VdomElement,
+                   interactive: Boolean,
+                   trigger: VdomNode,
+                   triggerEvent: String,
+                   theme: String,
+                   maybeOnClick: Option[ReactEventFromInput => Callback],
+                  ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("TippyJs")
     .render_P(props => {
@@ -122,12 +136,19 @@ object Tippy extends ScalaCssReactImplicits {
 
       val plugins: js.Array[js.Any] = js.Array(new HideOnEsc())
 
-      TippyJSComponent(props.gaEventLabel, props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
+      TippyJSComponent(props.gaEventLabel, props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent, props.theme)
     })
     .build
 
-  def apply(gaEventLabel: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    component(Props(gaEventLabel, content, interactive, trigger, triggerEvent, triggerCallback))
+  def apply(gaEventLabel: String,
+            content: VdomElement,
+            interactive: Boolean,
+            trigger: VdomNode,
+            triggerEvent: String = TriggerEvents.focus,
+            theme: String = "light-border",
+            triggerCallback: Option[ReactEventFromInput => Callback] = None,
+           ) =
+    component(Props(gaEventLabel, content, interactive, trigger, triggerEvent, theme, triggerCallback))
 
   def interactive(gaEventLabel: String, content: VdomElement, trigger: VdomNode) =
     apply(gaEventLabel, content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
@@ -135,8 +156,12 @@ object Tippy extends ScalaCssReactImplicits {
   def describe(gaEventLabel: String, content: VdomElement, trigger: TagMod) =
     apply(gaEventLabel, content, interactive = false, <.span(trigger))
 
-  def interactiveInfo(gaEventLabel: String, content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "small")), triggerCallback = triggerCallback)
+  def interactiveInfo(gaEventLabel: String,
+                      content: VdomElement,
+                      triggerCallback: Option[ReactEventFromInput => Callback] = None,
+                      theme: String = "light-border",
+                     ) =
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "small")), theme = theme, triggerCallback = triggerCallback)
 
   def info(gaEventLabel: String, content: VdomElement) =
     apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "24px", MuiIcons(Info)(fontSize = "large")))

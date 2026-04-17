@@ -9,6 +9,22 @@
 @import 'tippy-themes/material.css';
 @import 'tippy-themes/translucent.css';
 @import 'flickity.css';
+
+// Scope flight-chart tooltip overflow handling to the dedicated tooltip theme only.
+// This avoids changing tooltip behaviour elsewhere in the app while keeping the chart popup
+// within the viewport and removing stray vertical scrollbars.
+.tippy-box[data-theme~='flight-chart-tooltip'] {
+  max-width: 92vw;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tippy-box[data-theme~='flight-chart-tooltip'] > .tippy-content {
+  max-width: 92vw;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 /////////////////
 // Custom navbar
 /////////////////
@@ -2222,47 +2238,109 @@ th h2 {
   width: 130px;
 }
 
+@flight-chart-tooltip-narrow-breakpoint: 520px;
+@flight-chart-two-row-stack-breakpoint: 720px;
+@flight-chart-separator-border: #f3f2f1 1px solid;
+@flight-chart-separator-padding: 15px;
+
+.flight-chart-separator() {
+  border-left: @flight-chart-separator-border;
+  padding-left: @flight-chart-separator-padding;
+}
+
 .arrivals__table__flight__chart-box {
-  min-width: 850px;
-  @media (max-width: 800px) {
-    min-width: 550px;
-  };
+  font-size: 16px;
+  box-sizing: border-box;
 
   .arrivals__table__flight__chart-wrapper {
     display: grid;
     gap: 15px;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-  }
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 
-  .arrivals__table__flight__chart-box__chart {
-    width: 97%;
+    // For very narrow viewports / high zoom, even the 1-row layout should stack.
+    @media (max-width: @flight-chart-tooltip-narrow-breakpoint) {
+      grid-auto-flow: row;
+      grid-template-columns: 1fr;
+    }
+
+    &.arrivals__table__flight__chart-wrapper--single-row {
+      .arrivals__table__flight__chart-nat-scroller + .arrivals__table__flight__chart-box__chart--pax {
+        .flight-chart-separator();
+      }
+    }
+
+    &.arrivals__table__flight__chart-wrapper--two-rows {
+      grid-auto-flow: row;
+      // Keep the lower two charts at a stable width instead of stretching to the full tooltip width.
+      grid-template-columns: repeat(2, minmax(260px, 320px));
+      justify-content: start;
+
+      .arrivals__table__flight__chart-nat-scroller--enabled {
+        grid-column: 1 / -1;
+        // Reserve scrollbar gutter space so horizontal overflow doesn't introduce layout jitter.
+        display: block;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-gutter: stable;
+        min-height: 0;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      .arrivals__table__flight__chart-nat-scroller--enabled .arrivals__table__flight__chart-box__chart--nat {
+        border-right: 0;
+        margin-left: 0;
+      }
+
+      .arrivals__table__flight__chart-box__chart--pax,
+      .arrivals__table__flight__chart-box__chart--age {
+        width: 100%;
+        max-width: 320px;
+      }
+
+      // At very narrow widths (eg high zoom / small viewports), stack pax & age charts to avoid horizontal scrolling.
+      @media (max-width: @flight-chart-two-row-stack-breakpoint) {
+        grid-template-columns: 1fr;
+      }
+    }
   }
 }
 
-.arrivals__table__flight__chart__show__nationalities_label {
-  display: inline-block;
-  margin-left: 2px;
-  font-size: 12px;
-  font-weight: normal;
-  padding: 2px 10px 2px 1px;
+.arrivals__table__flight__chart-box--single-row {
+  width: min(92vw, 850px);
+  max-width: min(92vw, 850px);
+}
+
+.arrivals__table__flight__chart-box--two-rows {
+  width: fit-content;
+  max-width: min(92vw, 850px);
+}
+
+// When the tooltip is narrow (often stacked charts), keep content slightly away from the right edge.
+@media (max-width: @flight-chart-tooltip-narrow-breakpoint) {
+  .arrivals__table__flight__chart-box {
+    padding-right: 15px;
+  }
+
+  .arrivals__table__flight__chart-wrapper {
+    box-sizing: border-box;
+  }
 }
 
 .simulation__chart-box {
   width: 80%;
 }
 
-.arrivals__table__flight__chart-box-1 {
-  min-width: 330px;
-
-  .arrivals__table__flight__chart-box__chart {
-    width: 99%;
-  }
-}
-
 .arrivals__table__flight__chart-box__chart {
-  border-right: #f3f2f1 1px solid;
-  margin-left: 1%;
+  border-right: 0;
+  margin-left: 0;
+  min-width: 0;
 }
 
 .pax-of-interest {
@@ -2274,9 +2352,18 @@ th h2 {
   border: 2px solid #666;
 }
 
-.arrivals__table__flight__chart-box__chart:last-child {
-  border-right: 0;
-  margin-left: 0;
+.arrivals__table__flight__chart-box__chart + .arrivals__table__flight__chart-box__chart {
+  .flight-chart-separator();
+}
+
+// At narrow tooltip widths, separators + padding can push charts out of the visible area.
+// Drop the padding and border in these cases so charts use the full available width.
+@media (max-width: @flight-chart-tooltip-narrow-breakpoint) {
+  .arrivals__table__flight__chart-box__chart + .arrivals__table__flight__chart-box__chart,
+  .arrivals__table__flight__chart-wrapper--single-row .arrivals__table__flight__chart-nat-scroller + .arrivals__table__flight__chart-box__chart--pax {
+    border-left: 0;
+    padding-left: 0;
+  }
 }
 
 .arrivals__table__flight__chart-box__chart canvas {
