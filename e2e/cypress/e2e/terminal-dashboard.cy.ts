@@ -1,30 +1,36 @@
-import {todayAsLocalString, todayAsUtcString} from '../support/time-helpers'
+import {todayAtPortLocal, todayAsUtcString} from '../support/time-helpers'
 
 
 describe('Terminal dashboard', () => {
 
   beforeEach(function () {
-    cy.deleteData();
+    cy.deleteData('nocheck');
   });
 
-  let timeRangeSelector = ".tb-bar-wrapper";
+  const timeRangeSelector = ".tb-bar-wrapper";
+  const formatTimeRange = (start, slotSizeMinutes: number): string =>
+    `${start.format('HH:mm')} - ${start.clone().add(slotSizeMinutes, 'minutes').format('HH:mm')}`
 
   it("should display a box for every queue in the terminal", () => {
-    const viewWindowHour = '14'
+    const slotStart = todayAtPortLocal(14, 15)
+    const slotSizeMinutes = 15
 
     cy
       .addFlight({
         "SchDT": todayAsUtcString(14, 10),
+        "EstDT": todayAsUtcString(14, 10),
+        "ActDT": todayAsUtcString(14, 10),
+        "EstChoxDT": todayAsUtcString(14, 10),
         "ActChoxDT": todayAsUtcString(14, 10),
         "ActPax": 51
       })
       .asABorderForceOfficer()
       .navigateHome()
-      .visit("/#terminal/T1/dashboard/15/?start=" + todayAsLocalString(14, 15))
+      .visit("/#terminal/T1/dashboard/15/?start=" + slotStart.format('YYYY-MM-DDTHH:mm:ss'))
       .get(".pax-bar")
       .contains("51 passengers")
       .get(timeRangeSelector)
-      .contains(viewWindowHour + ":15 - " + viewWindowHour + ":30")
+      .contains(formatTimeRange(slotStart, slotSizeMinutes))
       .get(".eeadesk")
       .contains("37 pax joining")
       .get(".eeadesk")
@@ -34,7 +40,7 @@ describe('Terminal dashboard', () => {
       .get(".next-bar")
       .click({force: true})
       .get(timeRangeSelector)
-      .contains(viewWindowHour + ":30 - " + viewWindowHour + ":45")
+      .contains(formatTimeRange(slotStart.clone().add(slotSizeMinutes, 'minutes'), slotSizeMinutes))
       .get(".eeadesk")
       .contains("18 minute wait")
       .get(".eeadesk > :nth-child(4) > .fa")
@@ -44,7 +50,7 @@ describe('Terminal dashboard', () => {
       .get(".prev-bar")
       .click({force: true})
       .get(timeRangeSelector)
-      .contains(viewWindowHour + ":00 - " + viewWindowHour + ":15")
+      .contains(formatTimeRange(slotStart.clone().subtract(slotSizeMinutes, 'minutes'), slotSizeMinutes))
       .get(".eeadesk")
       .contains("0 minute wait")
       .get(".eeadesk > :nth-child(4) > .fa")
@@ -52,13 +58,15 @@ describe('Terminal dashboard', () => {
   })
 
   it("should display flights with PCP time in the window", () => {
-    const viewWindowHourStart = '14'
-    const viewWindowHourEnd = '15'
+    const initialSlotStart = todayAtPortLocal(14, 15)
     cy
       .addFlight({
         "ICAO": "TS0123",
         "IATA": "TS0123",
         "SchDT": todayAsUtcString(10, 30),
+        "EstDT": todayAsUtcString(10, 30),
+        "ActDT": todayAsUtcString(10, 30),
+        "EstChoxDT": todayAsUtcString(14, 15),
         "ActChoxDT": todayAsUtcString(14, 15),
         "ActPax": 300
       })
@@ -66,12 +74,15 @@ describe('Terminal dashboard', () => {
         "ICAO": "TS0124",
         "IATA": "TS0124",
         "SchDT": todayAsUtcString(14, 10),
+        "EstDT": todayAsUtcString(14, 10),
+        "ActDT": todayAsUtcString(14, 10),
+        "EstChoxDT": todayAsUtcString(14, 35),
         "ActChoxDT": todayAsUtcString(14, 35),
         "ActPax": 51
       })
       .asABorderForceOfficer()
       .navigateHome()
-      .visit("/#terminal/T1/dashboard/15/?start=" + todayAsLocalString(14, 15))
+      .visit("/#terminal/T1/dashboard/15/?start=" + initialSlotStart.format('YYYY-MM-DDTHH:mm:ss'))
       .get("a.terminal-dashboard-side__sidebar_widget").click({force: true})
       .get(".dashboard-arrivals-popup tbody tr").contains("TS0123")
       .get(".dashboard-arrivals-popup tbody tr").should('have.length', 1)
@@ -90,7 +101,7 @@ describe('Terminal dashboard', () => {
       .select('30')
       .url().should('include', 'dashboard/30')
       .get(timeRangeSelector)
-      .contains(viewWindowHourStart + ":30 - " + viewWindowHourEnd + ":00")
+      .contains(formatTimeRange(initialSlotStart.clone().add(15, 'minutes'), 30))
       .get('select')
       .should('have.value', '30')
       .get(".pax-bar")
