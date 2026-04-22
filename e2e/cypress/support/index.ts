@@ -3,7 +3,7 @@ export {};
 declare global {
   namespace Cypress {
     interface Chainable {
-      addFlight(flight: object, csrfToken: string): Chainable<Element>;
+      addFlight(flight: object, csrfToken?: string): Chainable<Element>;
 
       addManifest(manifest: object, csrfToken: string): Chainable<Element>;
 
@@ -57,7 +57,7 @@ declare global {
 
       deleteAlerts(): Chainable<Element>;
 
-      deleteData(csrfToken: string): Chainable<Element>;
+      deleteData(csrfToken?: string): Chainable<Element>;
 
       downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response<any>>;
 
