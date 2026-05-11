@@ -4,6 +4,7 @@ import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Flow
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
 
@@ -12,6 +13,35 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object MergeArrivals {
   case class FeedArrivalSet(isPrimary: Boolean, maybeScheduleTolerance: Option[FiniteDuration], arrivals: Map[UniqueArrival, Arrival])
+
+  // Used only when airport-specific adjustments make two previously distinct arrivals collapse onto the same key
+  // Live should win for operational state, while ACL should outrank forecast because forecast primarily enriches ACL
+  private val adjustmentCollisionPrecedence: Map[FeedSource, Int] = Map(
+    ForecastFeedSource -> 1,
+    AclFeedSource -> 2,
+    LiveBaseFeedSource -> 3,
+    LiveFeedSource -> 4
+  )
+
+  private def adjustmentCollisionPriority(arrival: Arrival): Int =
+    arrival.FeedSources.flatMap(feedSource => adjustmentCollisionPrecedence.get(feedSource)).maxOption.getOrElse(0)
+
+  private def mergeAdjustedCollision(existing: Arrival, incoming: Arrival): Arrival =
+    if (adjustmentCollisionPriority(existing) <= adjustmentCollisionPriority(incoming))
+      mergeArrivals(existing, incoming)
+    else
+      mergeArrivals(incoming, existing)
+
+  private def mergeAdjustedArrivals(arrivals: Iterable[Arrival], adjustments: Arrival => Arrival): Map[UniqueArrival, Arrival] =
+    arrivals.toSeq
+      .map(adjustments)
+      .foldLeft(Map.empty[UniqueArrival, Arrival]) {
+        case (acc, arrival) =>
+          acc.get(arrival.unique) match {
+            case Some(existing) => acc + (arrival.unique -> mergeAdjustedCollision(existing, arrival))
+            case None => acc + (arrival.unique -> arrival)
+          }
+      }
 
   def apply(existingMerged: (Terminal, UtcDate) => Future[Set[UniqueArrival]],
             arrivalSources: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
@@ -91,7 +121,7 @@ object MergeArrivals {
         }
     }
 
-    val mergedAndAdjusted = newMerged.values.map(adjustments).map(a => a.unique -> a).toMap
+    val mergedAndAdjusted = mergeAdjustedArrivals(newMerged.values, adjustments)
     val removed = existingMerged -- mergedAndAdjusted.keySet
     ArrivalsDiff(mergedAndAdjusted, removed)
   }
