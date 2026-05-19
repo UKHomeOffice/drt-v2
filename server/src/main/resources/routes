@@ -147,6 +147,7 @@ PUT           /api/v1/queues/:startDateLocal/:endDateLocal                      
 PUT           /api/v1/flights/:startDateUtc/:endDateUtc                               controllers.application.api.v1.FlightsApiController.populateFlights(startDateUtc: String, endDateUtc: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
+GET           /debug/flight-trace/:flightCode/:dateString/:messages                   controllers.application.DebugController.getFlightTraceAtTime(flightCode: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)
 # Logging
 + nocsrf
