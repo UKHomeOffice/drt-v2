@@ -14,6 +14,7 @@ trait ShiftMetaInfoService {
                                        terminal: String,
                                        shiftAssignmentsMigratedAt: Option[Long]): Future[Option[ShiftMeta]]
 
+  def reset(): Unit
 }
 
 case class ShiftMetaInfoServiceImpl(shiftMetaInfoDao: ShiftMetaInfoDao)(implicit ex: ExecutionContext) extends ShiftMetaInfoService {
@@ -29,5 +30,7 @@ case class ShiftMetaInfoServiceImpl(shiftMetaInfoDao: ShiftMetaInfoDao)(implicit
                                                 shiftAssignmentsMigratedAt: Option[Long]): Future[Option[ShiftMeta]] =
     shiftMetaInfoDao.updateShiftAssignmentsMigratedAt(port, terminal, shiftAssignmentsMigratedAt)
       .map(_.map(shiftMetaRow => ShiftMeta(shiftMetaRow.port, shiftMetaRow.terminal, shiftMetaRow.shiftAssignmentsMigratedAt)))
+
+  override def reset(): Unit = ()
 
 }
