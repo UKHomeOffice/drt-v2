@@ -14,6 +14,8 @@ object ArrivalsAdjustments {
   def adjustmentsForPort(portCode: PortCode): Arrival => Arrival =
     if (portCode == PortCode("EDI"))
       EdiArrivalsTerminalAdjustments.adjust
+    else if (portCode == PortCode("BHX"))
+      BhxArrivalsTerminalAdjustments.adjust
     else {
       ArrivalsAdjustmentsNoop.adjust
     }

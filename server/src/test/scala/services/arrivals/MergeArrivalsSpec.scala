@@ -9,8 +9,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, Predictions, UniqueArrival, VoyageNumber, Predictions => Preds}
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1, Terminal}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, UniqueArrival, VoyageNumber, Predictions => Preds}
+import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
 
@@ -248,6 +248,73 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         ArrivalsDiff(Map[UniqueArrival, Arrival](arrivalA2.unique -> arrivalA2), Set(arrivalA1.unique))
       )
 
+    }
+    "at BHX move a live arrival from T1 to T2 when its gate is between 1 and 25 and merge it with the existing T2 flight" in {
+      val existingT1 = current.copy(Terminal = T1)
+      val forecastT2 = current.copy(
+        Terminal = T2,
+        Status = ArrivalStatus("Expected"),
+        FeedSources = Set(ForecastFeedSource),
+        Gate = None,
+      )
+      val liveT1 = current.copy(
+        Terminal = T1,
+        Status = ArrivalStatus("On Chocks"),
+        FeedSources = Set(LiveFeedSource),
+        Gate = Option("13"),
+        Stand = Option("13"),
+        ActualChox = Option(40L),
+      )
+      val arrivalSets = Seq(
+        FeedArrivalSet(isPrimary = true, None, Map(forecastT2.unique -> forecastT2)),
+        FeedArrivalSet(isPrimary = true, None, Map(liveT1.unique -> liveT1)),
+      )
+
+      val result = MergeArrivals.mergeSets(Set(existingT1.unique, forecastT2.unique), arrivalSets, BhxArrivalsTerminalAdjustments.adjust)
+
+      result should ===(
+        ArrivalsDiff(
+          Map(forecastT2.unique -> forecastT2.copy(
+            Status = liveT1.Status,
+            Gate = liveT1.Gate,
+            Stand = liveT1.Stand,
+            ActualChox = liveT1.ActualChox,
+            FeedSources = liveT1.FeedSources ++ forecastT2.FeedSources,
+          )),
+          Set(existingT1.unique),
+        )
+      )
+    }
+    "prefer ACL over forecast when adjusted arrivals collide on the same BHX T2 flight" in {
+      val forecastT2 = current.copy(
+        Terminal = T2,
+        Status = ArrivalStatus("Forecast"),
+        FeedSources = Set(ForecastFeedSource),
+        Gate = None,
+      )
+      val aclT1 = current.copy(
+        Terminal = T1,
+        Status = ArrivalStatus("ACL"),
+        FeedSources = Set(AclFeedSource),
+        Gate = Option("13"),
+      )
+      val arrivalSets = Seq(
+        FeedArrivalSet(isPrimary = true, None, Map(forecastT2.unique -> forecastT2)),
+        FeedArrivalSet(isPrimary = true, None, Map(aclT1.unique -> aclT1)),
+      )
+
+      val result = MergeArrivals.mergeSets(Set.empty, arrivalSets, BhxArrivalsTerminalAdjustments.adjust)
+
+      result should ===(
+        ArrivalsDiff(
+          Map(forecastT2.unique -> forecastT2.copy(
+            Status = aclT1.Status,
+            Gate = aclT1.Gate,
+            FeedSources = aclT1.FeedSources ++ forecastT2.FeedSources,
+          )),
+          Set.empty,
+        )
+      )
     }
     "merge a lower-priority non-primary arrival when the arrivals exists in a higher order primary source" in {
       val existingMerged = Set.empty[UniqueArrival]
