@@ -180,6 +180,10 @@ case class MockShiftMetaInfoService()(implicit ec: ExecutionContext) extends Shi
       mockShiftMetaSeq = mockShiftMetaSeq.filterNot(s => port == s.port && terminal == s.terminal) :+ updatedShiftMeta
       updatedShiftMeta
     })
+
+  override def reset(): Unit = {
+    mockShiftMetaSeq = Seq.empty
+  }
 }
 
 case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyShiftAssignmentsService {
@@ -194,6 +198,10 @@ case class MockShiftAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends
   override def updateShiftAssignments(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = {
     shiftsAssignments = shiftsAssignments ++ shiftAssignments
     Future.successful(ShiftAssignments(shiftsAssignments))
+  }
+
+  def reset(): Unit = {
+    shiftsAssignments = Seq.empty
   }
 }
 
