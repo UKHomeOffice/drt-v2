@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val scala = "2.13.18"
 
-    val drtLib = "v1397"
+    val drtLib = "v1410"
     val drtCirium = "v339"
     val bluebus = "v149"
 
