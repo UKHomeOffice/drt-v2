@@ -21,6 +21,15 @@ import uk.gov.homeoffice.drt.time.SDate
 class SplitsCalculatorSpec extends CrunchTestLike {
   val config: AirportConfig = Bhx.config
 
+  private def rounded(n: Double): Double =
+    BigDecimal(n).setScale(4, BigDecimal.RoundingMode.HALF_UP).toDouble
+
+  private def splitCounts(splits: Splits): Map[(PaxType, Queue), Double] =
+    splits.splits.map {
+      case ApiPaxTypeAndQueueCount(paxType, queue, pax, _, _) =>
+        (paxType, queue) -> rounded(pax)
+    }.toMap
+
   "A SplitsCalculator" should {
     "Not produce ApiPaxTypeAndQueueCounts for SplitRatios with a zero ratio value" in {
       val terminalRatios: Map[Terminal, SplitRatios] = Map(
@@ -342,20 +351,22 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
     "Given a splits calculator with BHX's terminal pax splits " >> {
       "When I ask for the default splits for T2 " >> {
-        "I should see no EGate split" >> {
+        "I should see EGate split included" >> {
           val paxTypeQueueAllocation = PaxTypeQueueAllocation(
             B5JPlusWithTransitTypeAllocator,
             TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
           val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, config.terminalPaxSplits)
           val result = splitsCalculator.terminalDefaultSplits(T2)
 
-          val expected = Splits(Set(
-            ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None, None),
-            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None, None),
-            ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None, None)),
-            TerminalAverage, None, Percentage)
-
-          result === expected
+          result.source === TerminalAverage
+          result.maybeEventType === None
+          result.splitStyle === Percentage
+          splitCounts(result) === Map(
+            (NonVisaNational, Queues.NonEeaDesk) -> 4.0,
+            (EeaMachineReadable, Queues.EeaDesk) -> 22.5032,
+            (EeaMachineReadable, Queues.EGate) -> 69.4968,
+            (VisaNational, Queues.NonEeaDesk) -> 4.0,
+          )
         }
       }
     }
@@ -564,20 +575,22 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
       "Given a splits calculator with BHX's terminal pax splits " >> {
         "When I ask for the default splits for T2 " >> {
-          "I should see no EGate split" >> {
+          "I should see EGate split included" >> {
             val paxTypeQueueAllocation = PaxTypeQueueAllocation(
               B5JPlusWithTransitTypeAllocator,
               TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
             val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, config.terminalPaxSplits)
             val result = splitsCalculator.terminalDefaultSplits(T2)
 
-            val expected = Splits(Set(
-              ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None, None),
-              ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None, None),
-              ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None, None)),
-              TerminalAverage, None, Percentage)
-
-            result === expected
+            result.source === TerminalAverage
+            result.maybeEventType === None
+            result.splitStyle === Percentage
+            splitCounts(result) === Map(
+              (NonVisaNational, Queues.NonEeaDesk) -> 4.0,
+              (EeaMachineReadable, Queues.EeaDesk) -> 22.5032,
+              (EeaMachineReadable, Queues.EGate) -> 69.4968,
+              (VisaNational, Queues.NonEeaDesk) -> 4.0,
+            )
           }
         }
       }
