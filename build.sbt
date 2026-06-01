@@ -1,5 +1,5 @@
 
-import AppDependencies.scalajsReactVersion
+import FrontendDependencies.scalajsReactVersion
 import com.typesafe.config.ConfigFactory
 import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
 import net.nmoncho.sbt.dependencycheck.settings.{AnalyzerSettings, NvdApiSettings}
@@ -16,26 +16,7 @@ ThisBuild / scalaVersion := "2.13.18"
 val drtv2Name = "DRTv2"
 val drtv2Version = sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "dev"))
 
-lazy val drtv2 = (project in file("."))
-  .settings(name := drtv2Name)
-  .aggregate(server, client, shared.jvm, shared.js)
-
-lazy val shared = crossProject(JSPlatform, JVMPlatform)
-  .crossType(CrossType.Pure)
-  .in(file("shared"))
-  .settings(
-    libraryDependencies ++= AppDependencies.sharedDependencies.value,
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
-    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
-    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-  )
-  .settings(CodeCoverageSettings.codeCoverageSettings *)
-  .settings(WartRemoverSettings.wartRemoverSettings *)
-  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
-  .jsConfigure(_.enablePlugins(ScalaJSWeb))
-
-lazy val clientMacrosJS: Project = (project in file("client-macros"))
-  .settings(
+val frontendClientMacrosSettings: Seq[Def.Setting[?]] = Seq(
     name := "clientMacrosJS",
     version := drtv2Version,
     scalacOptions ++= ScalaCompilerSettings.scalacOptions,
@@ -44,27 +25,15 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
       "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReactVersion withSources()
     ),
     resolvers += Resolver.defaultLocal,
-  )
-  .settings(CodeCoverageSettings.codeCoverageSettings *)
-  .settings(WartRemoverSettings.wartRemoverSettings *)
-  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
-  .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
+)
 
-lazy val client: Project = (project in file("client"))
-  .settings(
+val frontendClientSettings: Seq[Def.Setting[?]] = Seq(
     name := "client",
     version := drtv2Version,
-    libraryDependencies ++= AppDependencies.scalajsDependencies.value,
+    libraryDependencies ++= FrontendDependencies.dependencies.value,
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("drt.client.SPAMain"),
 
-    /* Configure Scala.js to emit modules in the optimal way to
-     * connect to Vite's incremental reload.
-     * - emit ECMAScript modules
-     * - emit as many small modules as possible for classes in the "drt-client" package
-     * - emit as few (large) modules as possible for all other classes
-     *   (in particular, for the standard library)
-     */
     scalaJSLinkerConfig ~= {
       _.withModuleKind(ModuleKind.ESModule)
         .withModuleSplitStyle(
@@ -90,9 +59,7 @@ lazy val client: Project = (project in file("client"))
       new NodeJSEnv(cfg)
     },
 
-    /* **Prepend** dom-setup.js so it runs before the linked test module
-       Gives us a DOM for tests & modules that need it, eg handsontable
-     */
+    // Prepend dom-setup.js so it runs before the linked test module.
     Test / jsEnvInput := {
       val base = (Test / jsEnvInput).value
       val domSetup = Input.Script(((Test / resourceDirectory).value / "dom-setup.js").toPath)
@@ -106,22 +73,16 @@ lazy val client: Project = (project in file("client"))
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     Compile / doc / sources := List(),
-  )
-  .settings(CodeCoverageSettings.codeCoverageSettings *)
-  .settings(WartRemoverSettings.wartRemoverSettings *)
-  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
-  .enablePlugins(ScalaJSPlugin, ScalaJSWeb, TzdbPlugin)
-  .dependsOn(shared.js, clientMacrosJS)
+)
 
-lazy val server = (project in file("server"))
-  .settings(
+val backendServerSettings: Seq[Def.Setting[?]] = Seq(
     name := "drt",
     version := drtv2Version,
     scalacOptions ++= ScalaCompilerSettings.scalacOptions,
     Test / javaOptions += "-Duser.timezone=UTC",
     Test / javaOptions += "-Xmx1750m",
     Runtime / javaOptions += "-Duser.timezone=UTC",
-    libraryDependencies ++= AppDependencies.jvmDependencies,
+    libraryDependencies ++= BackendDependencies.all,
     libraryDependencies += specs2 % Test,
     libraryDependencies += guice,
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
@@ -153,7 +114,43 @@ lazy val server = (project in file("server"))
       "buildinfo._",
     ),
     Compile / doc / sources := List(),
+)
+
+lazy val drtv2 = (project in file("."))
+  .settings(name := drtv2Name)
+  .aggregate(server, client, shared.jvm, shared.js)
+
+lazy val shared = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("shared"))
+  .settings(
+    libraryDependencies ++= SharedDependencies.dependencies.value,
+    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
+    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   )
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
+  .jsConfigure(_.enablePlugins(ScalaJSWeb))
+
+lazy val clientMacrosJS: Project = (project in file("client-macros"))
+  .settings(frontendClientMacrosSettings *)
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
+  .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
+
+lazy val client: Project = (project in file("client"))
+  .settings(frontendClientSettings *)
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
+  .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
+  .enablePlugins(ScalaJSPlugin, ScalaJSWeb, TzdbPlugin)
+  .dependsOn(shared.js, clientMacrosJS)
+
+lazy val server = (project in file("server"))
+  .settings(backendServerSettings *)
   .settings(CodeCoverageSettings.codeCoverageSettings *)
   .settings(WartRemoverSettings.wartRemoverSettings *)
   .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
@@ -189,7 +186,6 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 
-
 Global / cancelable := true
 
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
@@ -206,4 +202,3 @@ Global / onLoad := (Command.process("project server", _: State)) compose (Global
 enablePlugins(DockerPlugin)
 // enabled for Alpine JVM docker image compatibility
 enablePlugins(AshScriptPlugin)
-
