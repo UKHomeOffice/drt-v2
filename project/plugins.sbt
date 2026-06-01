@@ -3,8 +3,6 @@ resolvers += "Typesafe Releases" at "https://repo.typesafe.com/typesafe/ivy-rele
 
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 
-libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.1.1"
-
 addSbtPlugin("org.scoverage"          % "sbt-scoverage"             % "2.4.4")
 addSbtPlugin("org.scalameta"          % "sbt-scalafmt"              % "2.6.1")
 addSbtPlugin("org.wartremover"        % "sbt-wartremover"           % "3.5.7")

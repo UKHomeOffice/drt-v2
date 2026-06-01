@@ -196,7 +196,10 @@ val tuple = (sourceManaged, Compile / dependencyClasspath, Compile / runner, str
 addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt Test/scalafmt")
 
 // loads the Play server project at sbt startup
-Global / onLoad := (Command.process("project server", _: State)) compose (Global / onLoad).value
+Global / onLoad := { state: State =>
+  val loaded = (Global / onLoad).value(state)
+  Command.process("project server", loaded, _ => loaded)
+}
 
 // Docker Plugin§
 enablePlugins(DockerPlugin)
