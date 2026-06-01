@@ -6,6 +6,8 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.1.1"
 
 addSbtPlugin("org.scoverage"          % "sbt-scoverage"             % "2.4.4")
+addSbtPlugin("org.scalameta"          % "sbt-scalafmt"              % "2.6.1")
+addSbtPlugin("org.wartremover"        % "sbt-wartremover"           % "3.5.7")
 addSbtPlugin("org.portable-scala"     % "sbt-scalajs-crossproject"  % "1.3.2")
 addSbtPlugin("org.scala-js"           % "sbt-scalajs"               % "1.21.0")
 addSbtPlugin("com.vmunier"            % "sbt-web-scalajs"           % "1.3.0")

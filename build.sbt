@@ -1,5 +1,5 @@
 
-import Settings.versions.scalajsReact
+import AppDependencies.scalajsReactVersion
 import com.typesafe.config.ConfigFactory
 import net.nmoncho.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
 import net.nmoncho.sbt.dependencycheck.settings.{AnalyzerSettings, NvdApiSettings}
@@ -10,46 +10,51 @@ import sbt.Credentials
 import sbt.Keys.credentials
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 
-scalaVersion := Settings.versions.scala
+ThisBuild / organization := "uk.gov.homeoffice.drt"
+ThisBuild / scalaVersion := "2.13.18"
+
+val drtv2Name = "DRTv2"
+val drtv2Version = sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "dev"))
 
 lazy val drtv2 = (project in file("."))
+  .settings(name := drtv2Name)
   .aggregate(server, client, shared.jvm, shared.js)
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("shared"))
   .settings(
-    scalaVersion := Settings.versions.scala,
-    libraryDependencies ++= Settings.sharedDependencies.value,
+    libraryDependencies ++= AppDependencies.sharedDependencies.value,
     resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   )
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
   .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .jsConfigure(_.enablePlugins(ScalaJSWeb))
 
 lazy val clientMacrosJS: Project = (project in file("client-macros"))
   .settings(
     name := "clientMacrosJS",
-    version := Settings.version,
-    scalaVersion := Settings.versions.scala,
-    scalacOptions ++= Settings.scalacOptions,
+    version := drtv2Version,
+    scalacOptions ++= ScalaCompilerSettings.scalacOptions,
     libraryDependencies ++= Seq(
-      "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
-      "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
+      "com.github.japgolly.scalajs-react" %%% "core" % scalajsReactVersion withSources(),
+      "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReactVersion withSources()
     ),
     resolvers += Resolver.defaultLocal,
   )
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
   .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
 
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
-    version := Settings.version,
-    scalaVersion := Settings.versions.scala,
-
-    libraryDependencies ++= Settings.scalajsDependencies.value,
+    version := drtv2Version,
+    libraryDependencies ++= AppDependencies.scalajsDependencies.value,
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("drt.client.SPAMain"),
 
@@ -95,15 +100,15 @@ lazy val client: Project = (project in file("client"))
     },
 
     resolvers += Resolver.defaultLocal,
-    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
 
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
-    Test / parallelExecution := false,
     Compile / doc / sources := List(),
   )
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
   .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb, TzdbPlugin)
   .dependsOn(shared.js, clientMacrosJS)
@@ -111,13 +116,12 @@ lazy val client: Project = (project in file("client"))
 lazy val server = (project in file("server"))
   .settings(
     name := "drt",
-    version := Settings.version,
-    scalaVersion := Settings.versions.scala,
-    scalacOptions ++= Settings.scalacOptions,
+    version := drtv2Version,
+    scalacOptions ++= ScalaCompilerSettings.scalacOptions,
     Test / javaOptions += "-Duser.timezone=UTC",
     Test / javaOptions += "-Xmx1750m",
     Runtime / javaOptions += "-Duser.timezone=UTC",
-    libraryDependencies ++= Settings.jvmDependencies.value,
+    libraryDependencies ++= AppDependencies.jvmDependencies,
     libraryDependencies += specs2 % Test,
     libraryDependencies += guice,
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
@@ -133,8 +137,6 @@ lazy val server = (project in file("server"))
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers ++= Seq(
       Resolver.defaultLocal,
-      Resolver.bintrayRepo("dwhjames", "maven"),
-      Resolver.bintrayRepo("mfglabs", "maven"),
       "Akka library repository".at("https://repo.akka.io/maven"),
       "Artifactory Realm release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
       "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
@@ -150,9 +152,10 @@ lazy val server = (project in file("server"))
     TwirlKeys.templateImports ++= Seq(
       "buildinfo._",
     ),
-    Test / parallelExecution := false,
     Compile / doc / sources := List(),
   )
+  .settings(CodeCoverageSettings.codeCoverageSettings *)
+  .settings(WartRemoverSettings.wartRemoverSettings *)
   .settings(SbtUpdatesSettings.sbtUpdatesSettings *)
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
@@ -194,7 +197,8 @@ val conf = ConfigFactory.parseFile(new File("server/src/main/resources/applicati
 lazy val slick = TaskKey[Seq[File]]("gen-tables")
 val tuple = (sourceManaged, Compile / dependencyClasspath, Compile / runner, streams)
 
-Test / parallelExecution := false
+addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt Test/scalafmt")
+
 // loads the Play server project at sbt startup
 Global / onLoad := (Command.process("project server", _: State)) compose (Global / onLoad).value
 
