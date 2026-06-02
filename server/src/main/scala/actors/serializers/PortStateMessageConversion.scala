@@ -2,7 +2,7 @@ package actors.serializers
 
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -13,8 +13,10 @@ import uk.gov.homeoffice.drt.time.SDateLike
 object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def snapshotMessageToState(sm: CrunchStateSnapshotMessage,
-                             optionalTimeWindowEnd: Option[SDateLike]): PortState =
+  def snapshotMessageToState(
+      sm: CrunchStateSnapshotMessage,
+      optionalTimeWindowEnd: Option[SDateLike]
+  ): PortState =
     optionalTimeWindowEnd match {
       case None =>
         val flights = sm.flightWithSplits.map(flightWithSplitsFromMessage)
@@ -79,7 +81,8 @@ object PortStateMessageConversion {
     shifts = Option(sm.shifts),
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements),
-    lastUpdated = sm.lastUpdated)
+    lastUpdated = sm.lastUpdated
+  )
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
     terminalName = Option(cm.terminal.toString),

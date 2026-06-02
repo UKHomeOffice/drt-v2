@@ -2,7 +2,7 @@ package controllers.application
 
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
+import play.api.test.{ FakeRequest, Helpers }
 
 class EgateBanksControllerSpec extends PlaySpec {
 
@@ -13,10 +13,12 @@ class EgateBanksControllerSpec extends PlaySpec {
 
       val controller = new EgateBanksController(Helpers.stubControllerComponents(), drtSystemInterface)
 
-      val request = FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+      val request = FakeRequest().withHeaders(
+        "X-Forwarded-Email" -> "test@test.com",
         "X-Forwarded-Preferred-Username" -> "test",
         "X-Forwarded-User" -> "test",
-        "X-Forwarded-Groups" -> s"TEST")
+        "X-Forwarded-Groups" -> s"TEST"
+      )
 
       val result = controller.getEgateBanksUpdates.apply(request)
 

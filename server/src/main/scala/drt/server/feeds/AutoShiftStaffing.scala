@@ -2,14 +2,14 @@ package drt.server.feeds
 
 import drt.shared.ShiftAssignments
 import org.apache.pekko.actor.typed.Behavior
-import org.apache.pekko.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
+import org.apache.pekko.actor.typed.scaladsl.{ ActorContext, Behaviors, TimerScheduler }
 import uk.gov.homeoffice.drt.ShiftStaffRolling
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{ ExecutionContextExecutor, Future }
+import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
 object AutoShiftStaffing {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)
@@ -19,10 +19,10 @@ object AutoShiftStaffing {
   case object ShiftCheck extends Command
 
   def apply(
-             timerInitialDelay: FiniteDuration,
-             drtSystemInterface: DrtSystemInterface,
-             shiftAssignmentsService: ShiftAssignmentsService
-           ): Behavior[Command] = {
+      timerInitialDelay: FiniteDuration,
+      drtSystemInterface: DrtSystemInterface,
+      shiftAssignmentsService: ShiftAssignmentsService
+  ): Behavior[Command] = {
     log.info(s"Starting AutoShiftStaffing with initial delay of ${timerInitialDelay.toSeconds} seconds")
     Behaviors.setup { context: ActorContext[Command] =>
       implicit val ec: ExecutionContextExecutor = context.executionContext
@@ -49,9 +49,10 @@ object AutoShiftStaffing {
     }
   }
 
-  private def runShiftCheck(drtSystemInterface: DrtSystemInterface,
-                            shiftAssignmentsService: ShiftAssignmentsService
-                           )(implicit ec: ExecutionContextExecutor): Unit = {
+  private def runShiftCheck(
+      drtSystemInterface: DrtSystemInterface,
+      shiftAssignmentsService: ShiftAssignmentsService
+  )(implicit ec: ExecutionContextExecutor): Unit = {
     val port = drtSystemInterface.airportConfig.portCode.iata
     val terminals = drtSystemInterface.airportConfig.terminalsForDate(SDate.now().toLocalDate).toSeq
     terminals.map { terminal =>

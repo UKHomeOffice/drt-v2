@@ -1,10 +1,10 @@
 package services.metrics
 
-import org.apache.pekko.stream.{Inlet, Outlet}
+import org.apache.pekko.stream.{ Inlet, Outlet }
 import com.typesafe.config.ConfigFactory
 import drt.shared.CrunchApi.MillisSinceEpoch
 import github.gphat.censorinus.StatsDClient
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.time.SDate
 
 trait MetricsCollectorLike {
@@ -72,7 +72,11 @@ object Metrics {
 
 case class StageTimer(stageName: String, portName: String, startTime: MillisSinceEpoch) {
   def stopAndReport(): Unit = {
-    Metrics.graphStageTimer(stageName = stageName, inletOutletName = portName, milliseconds = SDate.now().millisSinceEpoch - startTime)
+    Metrics.graphStageTimer(
+      stageName = stageName,
+      inletOutletName = portName,
+      milliseconds = SDate.now().millisSinceEpoch - startTime
+    )
   }
 }
 

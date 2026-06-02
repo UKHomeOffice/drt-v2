@@ -3,28 +3,32 @@ package services.arrivals
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Flow
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, ArrivalsDiff, UniqueArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ DateLike, LocalDate, UtcDate }
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object MergeArrivals {
-  case class FeedArrivalSet(isPrimary: Boolean, maybeScheduleTolerance: Option[FiniteDuration], arrivals: Map[UniqueArrival, Arrival])
+  case class FeedArrivalSet(
+      isPrimary: Boolean,
+      maybeScheduleTolerance: Option[FiniteDuration],
+      arrivals: Map[UniqueArrival, Arrival]
+  )
 
-  def apply(existingMerged: (Terminal, UtcDate) => Future[Set[UniqueArrival]],
-            arrivalSources: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
-            adjustments: Arrival => Arrival,
-           )
-           (implicit ec: ExecutionContext): (Terminal, UtcDate) => Future[ArrivalsDiff] =
+  def apply(
+      existingMerged: (Terminal, UtcDate) => Future[Set[UniqueArrival]],
+      arrivalSources: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
+      adjustments: Arrival => Arrival
+  )(implicit ec: ExecutionContext): (Terminal, UtcDate) => Future[ArrivalsDiff] =
     (terminal, date) => {
       for {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date, terminal)))
         existing <- existingMerged(terminal, date)
       } yield {
         val validatedArrivalSets = arrivalSets.map {
-          case fas@FeedArrivalSet(_, _, arrivals) =>
+          case fas @ FeedArrivalSet(_, _, arrivals) =>
             val filtered = arrivals.filterNot {
               case (_, arrival) =>
                 val isInvalidSuffix = arrival.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
@@ -37,10 +41,11 @@ object MergeArrivals {
       }
     }
 
-  def mergeSets(existingMerged: Set[UniqueArrival],
-                arrivalSets: Seq[FeedArrivalSet],
-                adjustments: Arrival => Arrival,
-               ): ArrivalsDiff = {
+  def mergeSets(
+      existingMerged: Set[UniqueArrival],
+      arrivalSets: Seq[FeedArrivalSet],
+      adjustments: Arrival => Arrival
+  ): ArrivalsDiff = {
     def existsInPrimary(uniqueArrival: UniqueArrival): Boolean = arrivalSets
       .filter {
         case FeedArrivalSet(isPrimary, _, _) => isPrimary
@@ -49,7 +54,10 @@ object MergeArrivals {
         case FeedArrivalSet(isPrimary, _, arrivals) => isPrimary && arrivals.contains(uniqueArrival)
       }
 
-    def findFuzzyInPrimary(maybeTolerance: Option[FiniteDuration], uniqueArrival: UniqueArrival): Option[UniqueArrival] =
+    def findFuzzyInPrimary(
+        maybeTolerance: Option[FiniteDuration],
+        uniqueArrival: UniqueArrival
+    ): Option[UniqueArrival] =
       maybeTolerance.flatMap { tolerance =>
         arrivalSets
           .filter {
@@ -58,9 +66,11 @@ object MergeArrivals {
           .map {
             case FeedArrivalSet(_, _, arrivals) =>
               arrivals.keys.find { case UniqueArrival(n, t, s, o) =>
-                def fuzzyScheduleMatches: Boolean = uniqueArrival.scheduled - tolerance.toMillis <= s && s <= uniqueArrival.scheduled + tolerance.toMillis
+                def fuzzyScheduleMatches: Boolean = uniqueArrival.scheduled - tolerance.toMillis <= s &&
+                  s <= uniqueArrival.scheduled + tolerance.toMillis
 
-                val isFuzzyMatch = uniqueArrival.number == n && uniqueArrival.terminal == t && uniqueArrival.origin == o && fuzzyScheduleMatches
+                val isFuzzyMatch = uniqueArrival.number == n && uniqueArrival.terminal == t &&
+                  uniqueArrival.origin == o && fuzzyScheduleMatches
                 isFuzzyMatch
               }
           }
@@ -78,8 +88,7 @@ object MergeArrivals {
               case None =>
                 if (isPrimary || existsInPrimary(uniqueArrival)) {
                   acc + (uniqueArrival -> nextArrival)
-                }
-                else {
+                } else {
                   findFuzzyInPrimary(maybeTolerance, uniqueArrival) match {
                     case Some(primaryUniqueArrival) =>
                       acc + (primaryUniqueArrival -> nextArrival.copy(Scheduled = primaryUniqueArrival.scheduled))
@@ -116,15 +125,15 @@ object MergeArrivals {
       RedListPax = next.RedListPax.orElse(current.RedListPax),
       PassengerSources = next.PassengerSources ++ current.PassengerSources,
       FlightCodeSuffix = next.FlightCodeSuffix.orElse(current.FlightCodeSuffix),
-      PreviousPort = next.PreviousPort.orElse(current.PreviousPort),
+      PreviousPort = next.PreviousPort.orElse(current.PreviousPort)
     )
 
-  def processingRequestToArrivalsDiff(mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff],
-                                      setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
-                                      addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
-                                      today: () => LocalDate,
-                                     )
-                                     (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, ArrivalsDiff, NotUsed] =
+  def processingRequestToArrivalsDiff(
+      mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff],
+      setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
+      addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+      today: () => LocalDate
+  )(implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, ArrivalsDiff, NotUsed] =
     Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>

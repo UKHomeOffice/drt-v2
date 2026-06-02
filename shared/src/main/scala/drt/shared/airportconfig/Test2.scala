@@ -3,9 +3,9 @@ package drt.shared.airportconfig
 import uk.gov.homeoffice.drt.auth.Roles.TEST2
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk, FastTrack, NonEeaDesk }
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{ SplitRatio, SplitRatios, SplitSources }
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2 }
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
 
@@ -28,14 +28,19 @@ object Test2 extends AirportConfigLike {
       T1 -> 600000L,
       T2 -> 600000L
     ),
-    terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
-      SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 1.0 - 0.7968),
-      SplitRatio(eeaMachineReadableToEGate, 0.7968),
-      SplitRatio(eeaNonMachineReadableToDesk, 0.0),
-      SplitRatio(visaNationalToDesk, 0.0),
-      SplitRatio(nonVisaNationalToDesk, 0.01)
-    ))).toMap,
+    terminalPaxSplits = List(T1, T2).map(t =>
+      (
+        t,
+        SplitRatios(
+          SplitSources.TerminalAverage,
+          SplitRatio(eeaMachineReadableToDesk, 1.0 - 0.7968),
+          SplitRatio(eeaMachineReadableToEGate, 0.7968),
+          SplitRatio(eeaNonMachineReadableToDesk, 0.0),
+          SplitRatio(visaNationalToDesk, 0.0),
+          SplitRatio(nonVisaNationalToDesk, 0.01)
+        )
+      )
+    ).toMap,
     terminalProcessingTimes = Map(T1 -> Map(
       b5jsskToDesk -> 50d / 60,
       b5jsskChildToDesk -> 50d / 60,
@@ -48,31 +53,62 @@ object Test2 extends AirportConfigLike {
       eeaMachineReadableToEGate -> 45d / 60,
       gbrNationalToEgate -> 45d / 60,
       visaNationalToDesk -> 89d / 60,
-      nonVisaNationalToDesk -> 75d / 60,
+      nonVisaNationalToDesk -> 75d / 60
     )),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
-        Queues.EGate -> (List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
-        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
-        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+        Queues.EGate ->
+          (
+            List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
+          ),
+        Queues.EeaDesk ->
+          (
+            List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)
+          ),
+        Queues.NonEeaDesk ->
+          (
+            List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)
+          )
       ),
       T2 -> Map(
-        Queues.EGate -> (List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
-        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
-        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)),
-        Queues.FastTrack -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
+        Queues.EGate ->
+          (
+            List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
+          ),
+        Queues.EeaDesk ->
+          (
+            List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)
+          ),
+        Queues.NonEeaDesk ->
+          (
+            List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)
+          ),
+        Queues.FastTrack ->
+          (
+            List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+            List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+          )
       )
     ),
     eGateBankSizes = Map(
       T1 -> Iterable(10, 10, 10),
-      T2 -> Iterable(10, 10, 10),
+      T2 -> Iterable(10, 10, 10)
     ),
     role = TEST2,
     terminalPaxTypeQueueAllocation = Map(
-      T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
-        EGate -> 0.7968,
-        EeaDesk -> (1.0 - 0.7968)
-      )))),
+      T1 ->
+        (defaultQueueRatios +
+          (EeaMachineReadable -> List(
+            EGate -> 0.7968,
+            EeaDesk -> (1.0 - 0.7968)
+          )))
+    ),
     desksByTerminal = Map(T1 -> 22, T2 -> 22),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )

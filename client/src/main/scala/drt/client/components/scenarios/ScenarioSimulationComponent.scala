@@ -6,7 +6,7 @@ import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.shared.SimulationResult
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.vdom.html_<^.{ <, _ }
 import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -14,7 +14,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.LocalDate
-
 
 object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
@@ -28,15 +27,18 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
     )
   }
 
-  case class Props(date: LocalDate,
-                   terminal: Terminal,
-                   airportConfig: AirportConfig,
-                   slaConfigs: SlaConfigs,
-                   simulationResult: Pot[SimulationResult]) extends UseValueEq
+  case class Props(
+      date: LocalDate,
+      terminal: Terminal,
+      airportConfig: AirportConfig,
+      slaConfigs: SlaConfigs,
+      simulationResult: Pot[SimulationResult]
+  ) extends UseValueEq
 
   class Backend {
     def render(props: Props, state: State): VdomTagOf[Div] = {
-      val queues = QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.date, props.terminal)
+      val queues =
+        QueueConfig.queuesForDateAndTerminal(props.airportConfig.queuesByTerminal)(props.date, props.terminal)
 
       <.div(
         MuiTypography(variant = "h2")(s"Simulate a day"),
@@ -48,7 +50,14 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
             ),
             MuiGrid(item = true, xs = 10)(
               SimulationChartComponent(
-                SimulationChartComponent.Props(state.simulationParams, props.airportConfig, props.slaConfigs, props.terminal, props.simulationResult, queues)
+                SimulationChartComponent.Props(
+                  state.simulationParams,
+                  props.airportConfig,
+                  props.slaConfigs,
+                  props.terminal,
+                  props.simulationResult,
+                  queues
+                )
               )
             )
           )
@@ -66,5 +75,3 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
   def apply(props: Props): VdomElement = component(props)
 }
-
-

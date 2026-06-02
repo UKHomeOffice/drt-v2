@@ -1,14 +1,13 @@
 package passengersplits.parsing
 
-import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
+import spray.json.{ DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat }
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.InvalidEventType
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models._
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ PaxAge, PortCode }
 
-import scala.util.{Success, Try}
-
+import scala.util.{ Success, Try }
 
 object VoyageManifestParser {
   def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
@@ -40,7 +39,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): PortCode = value match {
         case str: JsString => PortCode(str.value)
-        case _ => PortCode("")
+        case _             => PortCode("")
       }
     }
 
@@ -49,19 +48,19 @@ object VoyageManifestParser {
 
       def read(value: JsValue): EeaFlag = value match {
         case str: JsString => EeaFlag(str.value)
-        case _ => EeaFlag("")
+        case _             => EeaFlag("")
       }
     }
 
     implicit object PaxAgeJsonFormat extends RootJsonFormat[Option[PaxAge]] {
       def write(c: Option[PaxAge]): JsNumber = c match {
         case Some(PaxAge(years)) => JsNumber(years)
-        case None => JsNumber(-1)
+        case None                => JsNumber(-1)
       }
 
       def read(value: JsValue): Option[PaxAge] = Try(value.convertTo[String].toInt) match {
         case Success(num) if num > 0 => Option(PaxAge(num))
-        case _ => None
+        case _                       => None
       }
     }
 
@@ -70,11 +69,12 @@ object VoyageManifestParser {
 
       def read(value: JsValue): InTransit = value match {
         case str: JsString => InTransit(str.value)
-        case _ => InTransit(false)
+        case _             => InTransit(false)
       }
     }
 
-    implicit val passengerInfoConverter: RootJsonFormat[PassengerInfoJson] = jsonFormat(PassengerInfoJson,
+    implicit val passengerInfoConverter: RootJsonFormat[PassengerInfoJson] = jsonFormat(
+      PassengerInfoJson,
       "DocumentType",
       "DocumentIssuingCountryCode",
       "NationalityCountryEEAFlag",
@@ -91,7 +91,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): EventType = value match {
         case str: JsString => EventType(str.value)
-        case _ => InvalidEventType
+        case _             => InvalidEventType
       }
     }
 
@@ -108,7 +108,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): VoyageNumberLike = value match {
         case str: JsString => VoyageNumber(str.value)
-        case _ => InvalidVoyageNumber
+        case _             => InvalidVoyageNumber
       }
     }
 
@@ -130,16 +130,16 @@ object VoyageManifestParser {
 
     implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] =
       jsonFormat(
-      VoyageManifest,
-      "EventCode",
-      "ArrivalPortCode",
-      "DeparturePortCode",
-      "VoyageNumber",
-      "CarrierCode",
-      "ScheduledDateOfArrival",
-      "ScheduledTimeOfArrival",
-      "PassengerList"
-    )
+        VoyageManifest,
+        "EventCode",
+        "ArrivalPortCode",
+        "DeparturePortCode",
+        "VoyageNumber",
+        "CarrierCode",
+        "ScheduledDateOfArrival",
+        "ScheduledTimeOfArrival",
+        "PassengerList"
+      )
   }
 
 }

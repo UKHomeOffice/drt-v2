@@ -1,4 +1,3 @@
-
 package drt.server.feeds.lhr.forecast
 
 import java.io._
@@ -8,13 +7,15 @@ import javax.mail.search.FromTerm
 
 import org.slf4j.LoggerFactory
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
-case class LHRForecastEmail(mailHost: String,
-                            userName: String,
-                            userPassword: String,
-                            from: String,
-                            mailPort: Int = 993) {
+case class LHRForecastEmail(
+    mailHost: String,
+    userName: String,
+    userPassword: String,
+    from: String,
+    mailPort: Int = 993
+) {
 
   val log = LoggerFactory.getLogger(getClass)
 
@@ -22,8 +23,8 @@ case class LHRForecastEmail(mailHost: String,
     case mp: Multipart =>
       (0 until mp.getCount)
         .map(p => mp.getBodyPart(p)).exists(p => {
-        Option(p.getFileName).exists(f => f.contains(".xlsx"))
-      })
+          Option(p.getFileName).exists(f => f.contains(".xlsx"))
+        })
     case _ => false
   }
 

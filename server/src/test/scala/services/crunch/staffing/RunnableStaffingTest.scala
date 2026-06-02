@@ -2,16 +2,16 @@ package services.crunch.staffing
 
 import org.apache.pekko.Done
 import org.apache.pekko.stream.OverflowStrategy
-import org.apache.pekko.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source, SourceQueueWithComplete }
 import org.apache.pekko.testkit.TestProbe
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{ MinutesContainer, StaffMinute }
 import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import scala.concurrent.Future
 
@@ -26,11 +26,14 @@ class RunnableStaffingTest extends CrunchTestLike {
     val probe = TestProbe()
 
     "When I ask for an update for T1 on 2022-06-17 of 2 minute duration and mocks returning empty values" >> {
-      val queue = startStaffingFlow(updateDate, probe, ShiftAssignments.empty, FixedPointAssignments.empty, StaffMovements.empty)
+      val queue =
+        startStaffingFlow(updateDate, probe, ShiftAssignments.empty, FixedPointAssignments.empty, StaffMovements.empty)
       queue.offer(TerminalUpdateRequest(T1, LocalDate(2022, 6, 17)))
       "I should get a full 24 hours of staff minutes for that date starting from midnight with zeros" >> {
         probe.expectMsg(MinutesContainer(
-          (0 until 1440).map(m => StaffMinute(T1, date.addMinutes(m).millisSinceEpoch, 0, 0, 0, Option(updateDate.millisSinceEpoch)))
+          (0 until 1440).map(m =>
+            StaffMinute(T1, date.addMinutes(m).millisSinceEpoch, 0, 0, 0, Option(updateDate.millisSinceEpoch))
+          )
         ))
 
         success
@@ -42,7 +45,7 @@ class RunnableStaffingTest extends CrunchTestLike {
       val fixedPoints = FixedPointAssignments(Seq(StaffAssignment("", T1, startTime, endTime, 2, None)))
       val movements = StaffMovements(Seq(
         StaffMovement(T1, "", startTime, -1, "123", None, None),
-        StaffMovement(T1, "", SDate(endTime).addMinutes(1).millisSinceEpoch, 1, "123", None, None),
+        StaffMovement(T1, "", SDate(endTime).addMinutes(1).millisSinceEpoch, 1, "123", None, None)
       ))
 
       val queue = startStaffingFlow(updateDate, probe, shifts, fixedPoints, movements)
@@ -50,9 +53,12 @@ class RunnableStaffingTest extends CrunchTestLike {
 
       "I should get the 2 consecutive staff minutes for that date starting from midnight with the values from the mocks" >> {
         probe.expectMsg(MinutesContainer(
-          (0 until 15).map(m => StaffMinute(T1, date.addMinutes(m).millisSinceEpoch, 1, 2, -1, Option(updateDate.millisSinceEpoch))) ++
-            (15 until 1440).map(m => StaffMinute(T1, date.addMinutes(m).millisSinceEpoch, 0, 0, 0, Option(updateDate.millisSinceEpoch))
-          )
+          (0 until 15).map(m =>
+            StaffMinute(T1, date.addMinutes(m).millisSinceEpoch, 1, 2, -1, Option(updateDate.millisSinceEpoch))
+          ) ++
+            (15 until 1440).map(m =>
+              StaffMinute(T1, date.addMinutes(m).millisSinceEpoch, 0, 0, 0, Option(updateDate.millisSinceEpoch))
+            )
         ))
 
         success
@@ -60,17 +66,28 @@ class RunnableStaffingTest extends CrunchTestLike {
     }
   }
 
-   def startStaffingFlow(updateDate: SDateLike,
-                         probe: TestProbe,
-                         shifts: ShiftAssignments,
-                         fixedPoints: FixedPointAssignments,
-                         movements: StaffMovements): SourceQueueWithComplete[TerminalUpdateRequest] = {
+  def startStaffingFlow(
+      updateDate: SDateLike,
+      probe: TestProbe,
+      shifts: ShiftAssignments,
+      fixedPoints: FixedPointAssignments,
+      movements: StaffMovements
+  ): SourceQueueWithComplete[TerminalUpdateRequest] = {
 
-    val someShifts: TerminalUpdateRequest => Future[ShiftAssignments] = (_: TerminalUpdateRequest) => Future.successful(shifts)
-    val someFixedPoints: TerminalUpdateRequest => Future[FixedPointAssignments] = (_: TerminalUpdateRequest) => Future.successful(fixedPoints)
-    val someMovements: TerminalUpdateRequest => Future[StaffMovements] = (_: TerminalUpdateRequest) => Future.successful(movements)
+    val someShifts: TerminalUpdateRequest => Future[ShiftAssignments] =
+      (_: TerminalUpdateRequest) => Future.successful(shifts)
+    val someFixedPoints: TerminalUpdateRequest => Future[FixedPointAssignments] =
+      (_: TerminalUpdateRequest) => Future.successful(fixedPoints)
+    val someMovements: TerminalUpdateRequest => Future[StaffMovements] =
+      (_: TerminalUpdateRequest) => Future.successful(movements)
 
-    val staffFlow = RunnableStaffing.staffMinutesFlow(someShifts, someFixedPoints, someMovements, () => updateDate, (_, _, _) => Future.successful(Done))
+    val staffFlow = RunnableStaffing.staffMinutesFlow(
+      someShifts,
+      someFixedPoints,
+      someMovements,
+      () => updateDate,
+      (_, _, _) => Future.successful(Done)
+    )
     val source = Source.queue[TerminalUpdateRequest](1, OverflowStrategy.fail)
     val queue = staffFlow.to(Sink.actorRef(probe.ref, "Done", _ => ())).runWith(source)
     queue

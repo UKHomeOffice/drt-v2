@@ -1,13 +1,16 @@
 package drt.shared
 
-import java.lang.{Long => JLong}
+import java.lang.{ Long => JLong }
 import java.util.Random
 
 case class UUID(
-                 val i1: Int, val i2: Int,
-                 val i3: Int, val i4: Int,
-                 var l1: JLong, var l2: JLong)
-  extends AnyRef with java.io.Serializable with Comparable[UUID] {
+    val i1: Int,
+    val i2: Int,
+    val i3: Int,
+    val i4: Int,
+    var l1: JLong,
+    var l2: JLong
+) extends AnyRef with java.io.Serializable with Comparable[UUID] {
 
   import UUID._
 
@@ -26,9 +29,14 @@ case class UUID(
    */
 
   def this(mostSigBits: Long, leastSigBits: Long) = {
-    this((mostSigBits >>> 32).toInt, mostSigBits.toInt,
-      (leastSigBits >>> 32).toInt, leastSigBits.toInt,
-      JLong.valueOf(mostSigBits), JLong.valueOf(leastSigBits))
+    this(
+      (mostSigBits >>> 32).toInt,
+      mostSigBits.toInt,
+      (leastSigBits >>> 32).toInt,
+      leastSigBits.toInt,
+      JLong.valueOf(mostSigBits),
+      JLong.valueOf(leastSigBits)
+    )
   }
 
   def getLeastSignificantBits(): Long = {
@@ -43,8 +51,7 @@ case class UUID(
     l1.longValue
   }
 
-  def version(): Int =
-    (i2 & 0xf000) >> 12
+  def version(): Int = (i2 & 0xf000) >> 12
 
   def variant(): Int = {
     if ((i3 & 0x80000000) == 0) {
@@ -147,7 +154,7 @@ object UUID {
   }
 
   // Not implemented (requires messing with MD5 or SHA-1):
-  //def nameUUIDFromBytes(name: Array[Byte]): UUID = ???
+  // def nameUUIDFromBytes(name: Array[Byte]): UUID = ???
 
   def fromString(name: String): UUID = {
     import Integer.parseInt
@@ -155,11 +162,12 @@ object UUID {
     def fail(): Nothing =
       throw new IllegalArgumentException("Invalid UUID string: " + name)
 
-    @inline def parseHex8(his: String, los: String): Int =
-      (parseInt(his, 16) << 16) | parseInt(los, 16)
+    @inline def parseHex8(his: String, los: String): Int = (parseInt(his, 16) << 16) | parseInt(los, 16)
 
-    if (name.length != 36 || name.charAt(8) != '-' ||
-      name.charAt(13) != '-' || name.charAt(18) != '-' || name.charAt(23) != '-')
+    if (
+      name.length != 36 || name.charAt(8) != '-' ||
+      name.charAt(13) != '-' || name.charAt(18) != '-' || name.charAt(23) != '-'
+    )
       fail()
 
     try {

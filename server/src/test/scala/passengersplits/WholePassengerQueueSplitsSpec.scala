@@ -4,25 +4,25 @@ import org.specs2.mutable.Specification
 import passengersplits.WholePassengerQueueSplits._
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues._
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType, PaxTypeAndQueue, PaxTypes}
+import uk.gov.homeoffice.drt.ports.{ ApiPaxTypeAndQueueCount, PaxType, PaxTypeAndQueue, PaxTypes }
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.immutable.{HashMap, Map}
+import scala.collection.immutable.{ HashMap, Map }
 
 class WholePassengerQueueSplitsSpec extends Specification {
   "Given a split with the highest utilisation but zero in current group" >> {
     "When I ask for the highestAlreadyUtilisedNonZero I should get a non-zero current split" >> {
       val splitsTotal: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 10,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 5,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 5
       )
       val splitsSoFar: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 9,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 0,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 0
       )
       val splitsGroup: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 0,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 1,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 1
       )
       val result = highestAlreadyUtilisedNonZero(splitsTotal, splitsSoFar, splitsGroup)
 
@@ -36,21 +36,21 @@ class WholePassengerQueueSplitsSpec extends Specification {
     "I should get back a split totalling the desired group size where the lowest utilised splits have been incremented" >> {
       val splitsTotal: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 51,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 11,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 11
       )
       val splitsSoFar: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 16,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 4,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 4
       )
       val splitsGroup: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 15,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 3,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 3
       )
       val result = increaseToDesiredSize(splitsGroup, 20, splitsTotal, splitsSoFar)
 
       val expected = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 17,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 3,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 3
       )
       result === expected
 
@@ -62,21 +62,21 @@ class WholePassengerQueueSplitsSpec extends Specification {
     "I should get back a split totalling the desired group size where the highest utilised splits have been decremented" >> {
       val splitsTotal: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 51,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 11,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 11
       )
       val splitsSoFar: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 16,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 4,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 4
       )
       val splitsGroup: Map[PaxTypeAndQueue, Int] = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 17,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 5,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 5
       )
       val result = decreaseToDesiredSize(splitsGroup, 20, splitsTotal, splitsSoFar)
 
       val expected = Map(
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 17,
-        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 3,
+        PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 3
       )
       result === expected
 
@@ -88,7 +88,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
     val splits: Map[PaxTypeAndQueue, Int] = Map(
       PaxTypeAndQueue(PaxTypes.NonVisaNational, NonEeaDesk) -> 1,
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 3,
-      PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 18,
+      PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 18
     )
     val distributed = distributePaxOverSplitsAndMinutes(22, 20, splits, 0L)
 
@@ -102,7 +102,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
         PaxTypeAndQueue(PaxTypes.NonVisaNational, NonEeaDesk) -> 0,
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 0,
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 2
-      ),
+      )
     )
   }
 
@@ -115,7 +115,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
       PaxTypeAndQueue(PaxTypes.NonVisaNational, EGate) -> 17,
       PaxTypeAndQueue(PaxTypes.VisaNational, NonEeaDesk) -> 2,
       PaxTypeAndQueue(PaxTypes.VisaNational, EGate) -> 5,
-      PaxTypeAndQueue(PaxTypes.EeaBelowEGateAge, EeaDesk) -> 8,
+      PaxTypeAndQueue(PaxTypes.EeaBelowEGateAge, EeaDesk) -> 8
     )
     val totalPax = splits.values.sum
     val distributed = distributePaxOverSplitsAndMinutes(totalPax, 20, splits, 0L)
@@ -135,13 +135,18 @@ class WholePassengerQueueSplitsSpec extends Specification {
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 17.0, Some(HashMap()), Some(HashMap())),
       ApiPaxTypeAndQueueCount(GBRNationalBelowEgateAge, EeaDesk, 18.0, Some(Map()), Some(HashMap())),
       ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 44.0, Some(Map()), Some(HashMap())),
-      ApiPaxTypeAndQueueCount(GBRNational, EGate, 84.0, Some(Map()), Some(HashMap())))
+      ApiPaxTypeAndQueueCount(GBRNational, EGate, 84.0, Some(Map()), Some(HashMap()))
+    )
     val pcpPax = 174
     val pcpStart = SDate("2023-08-17T22:50:00Z")
     val dayStart = pcpStart.getLocalLastMidnight.millisSinceEpoch
     val dayEnd = pcpStart.getLocalNextMidnight.millisSinceEpoch
     val range = dayStart to dayEnd by 60000L
-    val queueLoads = wholePaxLoadsPerQueuePerMinute(range, processingTime, (_, _) => Open)(pcpPax, wholePaxSplits, (_, _) => List(), pcpStart)
+    val queueLoads = wholePaxLoadsPerQueuePerMinute(
+      range,
+      processingTime,
+      (_, _) => Open
+    )(pcpPax, wholePaxSplits, (_, _) => List(), pcpStart)
 
     queueLoads.values.map(_.map(_._2.size).sum).sum === pcpPax
   }
@@ -150,14 +155,14 @@ class WholePassengerQueueSplitsSpec extends Specification {
     val splits = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 33.3, None, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 33.3, None, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 33.3, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 33.3, None, None)
     )
     val totalPax = 10
 
     val expected = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 3, None, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 4, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 4, None, None)
     )
 
     wholePassengerSplits(totalPax, splits).toSet must_== expected
@@ -168,13 +173,14 @@ class WholePassengerQueueSplitsSpec extends Specification {
       val splits = Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Transfer, 3, None, None),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Transfer, 3, None, None)
       )
       val totalPax = 10
 
       val expected = Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 9, None, None))
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 9, None, None)
+      )
 
       wholePassengerSplits(totalPax, splits).toSet must_== expected
     }
@@ -185,13 +191,14 @@ class WholePassengerQueueSplitsSpec extends Specification {
       val splits = Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Transfer, 3, None, None),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Transfer, 3, None, None)
       )
       val totalPax = 10
 
       val expected = Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 9, None, None))
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 9, None, None)
+      )
 
       wholePassengerSplits(totalPax, splits).toSet must_== expected
     }
@@ -210,14 +217,15 @@ class WholePassengerQueueSplitsSpec extends Specification {
       2 -> List(25d),
       3 -> List(25d),
       4 -> List(25d),
-      5 -> List(25d))
+      5 -> List(25d)
+    )
   }
 
   "Given some splits and a total number of passengers I should get the breakdown of whole passenger loads by minute" >> {
     val splits = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 3, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 3, None, None)
     )
     val totalPax = 10
 
@@ -227,9 +235,14 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val expected = Map(
       EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)),
-      EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0, 20.0)))
+      EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0, 20.0))
+    )
 
-    val result = wholePaxLoadsPerQueuePerMinute(minuteMilli to minuteMilli, processingTime, (_, _) => Open)(totalPax, wholeSplits, (_, _) => List(), firstMinute)
+    val result = wholePaxLoadsPerQueuePerMinute(
+      minuteMilli to minuteMilli,
+      processingTime,
+      (_, _) => Open
+    )(totalPax, wholeSplits, (_, _) => List(), firstMinute)
     result should ===(expected)
   }
 
@@ -237,7 +250,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
     val splits = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 33.3d, None, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 33.3d, None, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 33.3d, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 33.3d, None, None)
     )
     val totalPax = 10
 
@@ -247,9 +260,14 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val expected = Map(
       EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 25.0, 25.0, 30.0, 30.0, 30.0, 30.0)),
-      EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0)))
+      EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0))
+    )
 
-    val result = wholePaxLoadsPerQueuePerMinute(minuteMilli to minuteMilli, processingTime, (_, _) => Open)(totalPax, wholeSplits, (_, _) => List(), firstMinute)
+    val result = wholePaxLoadsPerQueuePerMinute(
+      minuteMilli to minuteMilli,
+      processingTime,
+      (_, _) => Open
+    )(totalPax, wholeSplits, (_, _) => List(), firstMinute)
     result should ===(expected)
   }
 
@@ -262,7 +280,11 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val expected = Map()
 
-    val result = wholePaxLoadsPerQueuePerMinute(0L to 1L, processingTime, (_, _) => Open)(totalPax, wholeSplits, (_, _) => List(), firstMinute)
+    val result = wholePaxLoadsPerQueuePerMinute(
+      0L to 1L,
+      processingTime,
+      (_, _) => Open
+    )(totalPax, wholeSplits, (_, _) => List(), firstMinute)
     result should ===(expected)
   }
 
@@ -281,8 +303,8 @@ class WholePassengerQueueSplitsSpec extends Specification {
         (_, millis) => {
           queueStatusMinutesLookedAt = queueStatusMinutesLookedAt + millis
           Open
-        })(totalPax, wholeSplits, (_, _) => List(), SDate(0L),
-      )
+        }
+      )(totalPax, wholeSplits, (_, _) => List(), SDate(0L))
 
       queueStatusMinutesLookedAt should ===(Set(0L, 60000L))
     }
@@ -299,6 +321,6 @@ class WholePassengerQueueSplitsSpec extends Specification {
     (GBRNationalBelowEgateAge, EeaDesk) -> 30d,
     (B5JPlusNational, EGate) -> 30d,
     (GBRNational, EeaDesk) -> 30d,
-    (GBRNational, EGate) -> 30d,
+    (GBRNational, EGate) -> 30d
   )((paxType, queue))
 }

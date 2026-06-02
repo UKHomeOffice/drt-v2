@@ -2,8 +2,8 @@ package feeds.lgw
 
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.testkit.TestProbe
-import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
+import drt.server.feeds.lgw.{ LGWAzureClient, LGWFeed, ResponseToArrivals }
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed }
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
@@ -45,7 +45,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       gate = None,
       stand = None,
       runway = Some("08R"),
-      baggageReclaim = None,
+      baggageReclaim = None
     )
   }
 
@@ -76,7 +76,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       gate = None,
       stand = None,
       runway = Some("08R"),
-      baggageReclaim = None,
+      baggageReclaim = None
     )
   }
 

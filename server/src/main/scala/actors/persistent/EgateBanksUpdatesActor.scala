@@ -1,6 +1,6 @@
 package actors.persistent
 
-import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
+import actors.persistent.EgateBanksUpdatesActor.{ ReceivedSubscriberAck, SendToSubscriber }
 import actors.serializers.EgateBanksUpdatesMessageConversion
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
@@ -8,39 +8,45 @@ import org.apache.pekko.persistence._
 import org.apache.pekko.stream.QueueOfferResult.Enqueued
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import org.apache.pekko.util.Timeout
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
-import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.Commands.{ AddUpdatesSubscriber, GetState }
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
+import uk.gov.homeoffice.drt.actor.{ PersistentDrtActor, RecoveryActorLike }
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{
+  PortEgateBanksUpdatesMessage,
+  RemoveEgateBanksUpdateMessage,
+  SetEgateBanksUpdateMessage
+}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate, SDateLike }
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success}
-
+import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor, Future }
+import scala.util.{ Failure, Success }
 
 object EgateBanksUpdatesActor {
   case object SendToSubscriber
 
   case object ReceivedSubscriberAck
 
-  def terminalEgatesProvider(egateBanksUpdatesActor: ActorRef)
-                            (implicit timeout: Timeout, ec: ExecutionContext): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) =>
+  def terminalEgatesProvider(egateBanksUpdatesActor: ActorRef)(implicit
+      timeout: Timeout,
+      ec: ExecutionContext
+  ): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) =>
     egateBanksUpdatesActor
       .ask(GetState)
       .mapTo[PortEgateBanksUpdates]
       .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 }
 
-class EgateBanksUpdatesActor(val now: () => SDateLike,
-                             defaults: Map[Terminal, EgateBanksUpdates],
-                             maxForecastDays: Int,
-                            ) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
+class EgateBanksUpdatesActor(
+    val now: () => SDateLike,
+    defaults: Map[Terminal, EgateBanksUpdates],
+    maxForecastDays: Int
+) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = "egate-banks-updates"
@@ -114,7 +120,8 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
       log.info(s"Saving EgateBanksUpdates $updates")
 
       maybeCrunchRequestQueueActor.foreach { requestActor =>
-        (updates.firstMinuteAffected to SDate.now().addDays(maxForecastDays).millisSinceEpoch by MilliTimes.oneHourMillis)
+        (updates.firstMinuteAffected to SDate.now().addDays(maxForecastDays).millisSinceEpoch by
+          MilliTimes.oneHourMillis)
           .map { millis =>
             val date = SDate(millis).toLocalDate
             requestActor ! TerminalUpdateRequest(updates.terminal, date)

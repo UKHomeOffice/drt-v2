@@ -7,11 +7,12 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
-case class StaffMinutesChecker(now: () => SDateLike,
-                               staffingUpdateRequestQueue: ActorRef,
-                               forecastMaxDays: Int,
-                               airportConfig: AirportConfig,
-                              ) {
+case class StaffMinutesChecker(
+    now: () => SDateLike,
+    staffingUpdateRequestQueue: ActorRef,
+    forecastMaxDays: Int,
+    airportConfig: AirportConfig
+) {
   private val log = LoggerFactory.getLogger(getClass)
 
   def calculateForecastStaffMinutes(): Unit = {

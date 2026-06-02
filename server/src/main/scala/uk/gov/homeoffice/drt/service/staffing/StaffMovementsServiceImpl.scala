@@ -1,37 +1,43 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
+import actors.persistent.staffing.StaffMovementsActor.{ AddStaffMovements, RemoveStaffMovements }
 import actors.persistent.staffing.StaffMovementsReadActor
 import org.apache.pekko.Done
-import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, PoisonPill, Props }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
-import drt.shared.{StaffMovement, StaffMovements}
+import drt.shared.{ StaffMovement, StaffMovements }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object StaffMovementsServiceImpl {
   def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
     val actorName = "movements-read-actor-" + UUID.randomUUID().toString
     val expireBefore = () => pointInTime.addDays(-1)
-    system.actorOf(Props(
-      classOf[StaffMovementsReadActor],
-      pointInTime,
-      expireBefore,
-    ), actorName)
+    system.actorOf(
+      Props(
+        classOf[StaffMovementsReadActor],
+        pointInTime,
+        expireBefore
+      ),
+      actorName
+    )
   }
 }
 
-case class StaffMovementsServiceImpl(liveMovementsActor: ActorRef,
-                                     movementsWriteActor: ActorRef,
-                                     pitActor: SDateLike => ActorRef,
-                                    )
-                                    (implicit timeout: Timeout, ec: ExecutionContext) extends StaffMovementsService {
-  override def movementsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]] = {
+case class StaffMovementsServiceImpl(
+    liveMovementsActor: ActorRef,
+    movementsWriteActor: ActorRef,
+    pitActor: SDateLike => ActorRef
+)(implicit timeout: Timeout, ec: ExecutionContext) extends StaffMovementsService {
+  override def movementsForDate(
+      date: LocalDate,
+      maybePointInTime: Option[MillisSinceEpoch]
+  ): Future[Seq[StaffMovement]] = {
     maybePointInTime match {
       case None =>
         liveMovementsForDate(date)

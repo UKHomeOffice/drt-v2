@@ -6,26 +6,29 @@ import actors.persistent.StreamingUpdatesActor
 import org.apache.pekko.actor.PoisonPill
 import org.apache.pekko.pattern.StatusReply.Ack
 import org.apache.pekko.persistence.query.EventEnvelope
-import org.apache.pekko.persistence.{PersistentActor, RecoveryCompleted}
-import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.persistence.{ PersistentActor, RecoveryCompleted }
+import org.apache.pekko.stream.{ Materializer, UniqueKillSwitch }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{ StreamCompleted, StreamInitialized }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, SplitsForArrivalsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{ FlightsWithSplitsDiffMessage, SplitsForArrivalsMessage }
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, splitsForArrivalsFromMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{
+  arrivalsDiffFromMessage,
+  splitsForArrivalsFromMessage
+}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDateLike }
 
-
-class TerminalDayFlightUpdatesActor(year: Int,
-                                    month: Int,
-                                    day: Int,
-                                    terminal: Terminal,
-                                    val now: () => SDateLike,
-                                    val journalType: StreamingJournalLike
-                                   ) extends PersistentActor {
+class TerminalDayFlightUpdatesActor(
+    year: Int,
+    month: Int,
+    day: Int,
+    terminal: Terminal,
+    val now: () => SDateLike,
+    val journalType: StreamingJournalLike
+) extends PersistentActor {
   implicit val mat: Materializer = Materializer.createMaterializer(context)
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
@@ -81,7 +84,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
     case EventEnvelope(_, _, _, diffMessage: SplitsForArrivalsMessage) =>
       applySplitsUpdate(diffMessage)
       sender() ! Ack
-    case _:EventEnvelope =>
+    case _: EventEnvelope =>
       sender() ! Ack
   }
 

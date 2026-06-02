@@ -1,17 +1,17 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
+import actors.persistent.staffing.StaffMovementsActor.{ AddStaffMovements, RemoveStaffMovements }
 import org.apache.pekko.Done
-import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
-import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.actor.{ Actor, ActorRef, ActorSystem, Props }
+import org.apache.pekko.testkit.{ TestKit, TestProbe }
 import org.apache.pekko.util.Timeout
-import drt.shared.{StaffMovement, StaffMovements}
+import drt.shared.{ StaffMovement, StaffMovements }
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
@@ -38,9 +38,11 @@ class StaffMovementsCalculatorImplSpec extends TestKit(ActorSystem("test")) with
   val pitProbe: TestProbe = TestProbe("pit")
 
   "A StaffMovementsServiceImpl" should {
-    val service = StaffMovementsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
+    val service =
+      StaffMovementsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
     "return a list of staff movements for a given date" in {
-      val movements = Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
+      val movements =
+        Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
       MockActor.response = StaffMovements(movements)
       val result = service.movementsForDate(LocalDate(2024, 7, 1), None)
       result.futureValue should ===(movements)
@@ -48,7 +50,8 @@ class StaffMovementsCalculatorImplSpec extends TestKit(ActorSystem("test")) with
     }
 
     "return a list of staff movements for a given point in time" in {
-      val movements = Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
+      val movements =
+        Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
       MockActor.response = StaffMovements(movements)
       val result = service.movementsForDate(LocalDate(2024, 7, 1), Some(SDate("2024-07-01T05:00").millisSinceEpoch))
       result.futureValue should ===(movements)
@@ -57,7 +60,8 @@ class StaffMovementsCalculatorImplSpec extends TestKit(ActorSystem("test")) with
 
     "add a list of staff movements" in {
       MockActor.response = Done
-      val movements = List(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
+      val movements =
+        List(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
       val result = service.addMovements(movements)
       result.futureValue should ===(Done)
       writeProbe.expectMsg(AddStaffMovements(movements))

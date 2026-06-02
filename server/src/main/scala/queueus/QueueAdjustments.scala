@@ -1,10 +1,15 @@
 package queueus
 
 import uk.gov.homeoffice.drt.arrivals.Splits
-import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge}
-import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaBelowEGateAge, EeaMachineReadable, GBRNational, GBRNationalBelowEgateAge}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
+import uk.gov.homeoffice.drt.ports.PaxTypes.{ B5JPlusNational, B5JPlusNationalBelowEGateAge }
+import uk.gov.homeoffice.drt.ports.PaxTypes.{
+  EeaBelowEGateAge,
+  EeaMachineReadable,
+  GBRNational,
+  GBRNationalBelowEgateAge
+}
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk, Queue }
+import uk.gov.homeoffice.drt.ports.{ ApiPaxTypeAndQueueCount, PaxType }
 
 trait QueueAdjustments {
 
@@ -47,7 +52,11 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
     if (desiredAdjustments <= maxAdjustments) desiredAdjustments else maxAdjustments
   }
 
-  def eGateToDesk(ptqcs: Set[ApiPaxTypeAndQueueCount], paxType: PaxType, adjustment: Double): Set[ApiPaxTypeAndQueueCount] = {
+  def eGateToDesk(
+      ptqcs: Set[ApiPaxTypeAndQueueCount],
+      paxType: PaxType,
+      adjustment: Double
+  ): Set[ApiPaxTypeAndQueueCount] = {
 
     val splitsWithDeskQueue =
       if (ptqcs.exists(p => p.queueType == EeaDesk && p.passengerType == paxType) || adjustment == 0.0)
@@ -56,9 +65,9 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
         ptqcs + ApiPaxTypeAndQueueCount(paxType, EeaDesk, 0.0, None, None)
 
     splitsWithDeskQueue.map {
-      case ptqc@ApiPaxTypeAndQueueCount(pt, EGate, pax, _, _) if pt == paxType =>
+      case ptqc @ ApiPaxTypeAndQueueCount(pt, EGate, pax, _, _) if pt == paxType =>
         ptqc.copy(paxCount = pax - adjustment)
-      case ptqc@ApiPaxTypeAndQueueCount(pt, EeaDesk, pax, _, _) if pt == paxType =>
+      case ptqc @ ApiPaxTypeAndQueueCount(pt, EeaDesk, pax, _, _) if pt == paxType =>
         ptqc.copy(paxCount = pax + adjustment)
 
       case other => other

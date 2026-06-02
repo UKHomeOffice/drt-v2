@@ -1,12 +1,12 @@
 package services
 
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpRequest, HttpResponse }
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class OOHCheckerSpec extends CrunchTestLike {
   sequential
@@ -149,7 +149,8 @@ class OOHCheckerSpec extends CrunchTestLike {
 
     override def sendAndReceive: HttpRequest => Future[HttpResponse] = {
 
-      _: HttpRequest => Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, bankHolidaySuccessJson)))
+      _: HttpRequest =>
+        Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, bankHolidaySuccessJson)))
     }
   }
 

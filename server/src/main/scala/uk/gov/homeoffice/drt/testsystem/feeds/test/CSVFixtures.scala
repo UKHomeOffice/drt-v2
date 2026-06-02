@@ -1,8 +1,8 @@
 package uk.gov.homeoffice.drt.testsystem.feeds.test
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, LiveArrival }
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -57,7 +57,7 @@ object CSVFixtures {
         gate = None,
         stand = Option(fields(Stand)),
         runway = None,
-        baggageReclaim = None,
+        baggageReclaim = None
       ))
     })
 
@@ -66,9 +66,10 @@ object CSVFixtures {
     maybeArrivals
   }
 
-  private def timeToSDateOnDate(forDate: String)(time: String): Option[MillisSinceEpoch] = SDate.tryParseString(forDate + "T" + time + "Z")
-    .toOption
-    .map(_.millisSinceEpoch)
+  private def timeToSDateOnDate(forDate: String)(time: String): Option[MillisSinceEpoch] =
+    SDate.tryParseString(forDate + "T" + time + "Z")
+      .toOption
+      .map(_.millisSinceEpoch)
 
   private def csvPathToRows(fileName: String): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(fileName)

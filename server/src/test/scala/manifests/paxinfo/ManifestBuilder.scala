@@ -1,9 +1,9 @@
 package manifests.paxinfo
 
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventTypes, VoyageNumber }
 import uk.gov.homeoffice.drt.models._
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ PaxAge, PortCode }
 
 object ManifestBuilder {
 
@@ -11,15 +11,24 @@ object ManifestBuilder {
     manifestWithPassengerAgesAndNats(ages.map(a => (Nationality("GBR"), a)), scheduledDateString)
 
   def manifestWithPassengerAgesAndNats(natAge: List[(Nationality, Int)], scheduledDateString: String): VoyageManifest =
-    manifestWithPassengerAgesNatsAndIds(natAge.map {
-      case (nat, age) => (nat, age, None)
-    }, scheduledDateString)
+    manifestWithPassengerAgesNatsAndIds(
+      natAge.map {
+        case (nat, age) => (nat, age, None)
+      },
+      scheduledDateString
+    )
 
-  def manifestWithPassengerAgesNatsAndIds(natAgeId: List[(Nationality, Int, Option[String])], scheduledDateString: String): VoyageManifest =
-    manifestForPassengers(natAgeId.map {
-      case (nationality, age, id) =>
-        passengerBuilder(nationality.code, age, id)
-    }, scheduledDateString)
+  def manifestWithPassengerAgesNatsAndIds(
+      natAgeId: List[(Nationality, Int, Option[String])],
+      scheduledDateString: String
+  ): VoyageManifest =
+    manifestForPassengers(
+      natAgeId.map {
+        case (nationality, age, id) =>
+          passengerBuilder(nationality.code, age, id)
+      },
+      scheduledDateString
+    )
 
   def manifestForPassengers(passengers: List[PassengerInfoJson], scheduledDateString: String): VoyageManifest =
     VoyageManifest(
@@ -37,12 +46,12 @@ object ManifestBuilder {
     manifestWithPassengerAgesAndNats(nats.map(n => (Nationality(n), 22)), scheduledDateString)
 
   def passengerBuilder(
-                        nationality: String = "GBR",
-                        age: Int = 33,
-                        id: Option[String] = None,
-                        disembarkationPortCode: String = "TST",
-                        inTransit: String = "N"
-                      ): PassengerInfoJson =
+      nationality: String = "GBR",
+      age: Int = 33,
+      id: Option[String] = None,
+      disembarkationPortCode: String = "TST",
+      inTransit: String = "N"
+  ): PassengerInfoJson =
 
     passengerBuilderWithOptions(
       Option(Nationality(nationality)),
@@ -52,15 +61,15 @@ object ManifestBuilder {
       inTransit
     )
 
-
   def passengerBuilderWithOptions(
-                        nationality: Option[Nationality] = None,
-                        age: Option[PaxAge] = None,
-                        id: Option[String] = None,
-                        disembarkationPortCode: Option[PortCode] = None,
-                        inTransit: String = "N"
-                      ): PassengerInfoJson = {
-    PassengerInfoJson(Option(DocumentType("P")),
+      nationality: Option[Nationality] = None,
+      age: Option[PaxAge] = None,
+      id: Option[String] = None,
+      disembarkationPortCode: Option[PortCode] = None,
+      inTransit: String = "N"
+  ): PassengerInfoJson = {
+    PassengerInfoJson(
+      Option(DocumentType("P")),
       nationality.getOrElse(Nationality("")),
       EeaFlag("EEA"),
       age,

@@ -1,10 +1,10 @@
 package manifests.queues
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals.CarrierCode
 
 import scala.io.Source
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 case class CarrierFastTrackSplit(iataCode: CarrierCode, icaoCode: CarrierCode, fastTrackSplit: Double)
 
@@ -18,10 +18,12 @@ object FastTrackFromCSV {
       .getLines()
       .drop(1)
 
-    csvLines.map(l => Try {
-      val row = l.split(",")
-      CarrierFastTrackSplit(CarrierCode(row(0)), CarrierCode(row(1)), row(3).toDouble)
-    }).collect {
+    csvLines.map(l =>
+      Try {
+        val row = l.split(",")
+        CarrierFastTrackSplit(CarrierCode(row(0)), CarrierCode(row(1)), row(3).toDouble)
+      }
+    ).collect {
       case Success(s) => s
     }.toSeq
   }

@@ -2,12 +2,13 @@ package services
 
 import scala.collection.immutable
 
-
-case class ProcessedQueue(sla: Int,
-                          numberOfMinutes: Int,
-                          allBatches: List[ProcessedBatchOfWork],
-                          leftover: BatchOfWork,
-                          override val queueByMinute: List[Double]) extends ProcessedWorkLike {
+case class ProcessedQueue(
+    sla: Int,
+    numberOfMinutes: Int,
+    allBatches: List[ProcessedBatchOfWork],
+    leftover: BatchOfWork,
+    override val queueByMinute: List[Double]
+) extends ProcessedWorkLike {
   val completedBatches: List[ProcessedBatchOfWork] = allBatches.map(p => p.copy(batch = p.batch.completed))
 
   override lazy val waits: List[Int] =
@@ -26,7 +27,8 @@ case class ProcessedQueue(sla: Int,
 
   lazy val totalWait: Double = completedBatches.map(_.totalWait).sum + leftoverWaits
 
-  def leftoverExcessWaits(sla: Int): Double = leftover.loads.map(w => w.load * Math.max(0, (numberOfMinutes - w.createdAt) - sla)).sum
+  def leftoverExcessWaits(sla: Int): Double =
+    leftover.loads.map(w => w.load * Math.max(0, (numberOfMinutes - w.createdAt) - sla)).sum
 
   lazy val incompleteBatchWaits: List[(Int, Int)] =
     leftover.loads.flatMap { work =>

@@ -1,32 +1,34 @@
 package controllers.application
 
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.util.ByteString
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
-import drt.users.{KeyCloakClient, KeyCloakGroups}
+import drt.users.{ KeyCloakClient, KeyCloakGroups }
 import play.api.http.HttpEntity
 import play.api.mvc._
 import services.exports.StaffRequirementExports
 import services.metrics.Metrics
-import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
+import uk.gov.homeoffice.drt.auth.Roles.{ ForecastView, ManageUsers }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.minutesInADay
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.Future
 
-
-class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class ExportsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Forwarded-Access-Token")
-      .getOrElse(throw new Exception("X-Forwarded-Access-Token missing from headers, we need this to query the Key Cloak API."))
+      .getOrElse(throw new Exception(
+        "X-Forwarded-Access-Token missing from headers, we need this to query the Key Cloak API."
+      ))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
       .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
@@ -49,10 +51,12 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
       client
         .getGroups
         .flatMap(groupList => KeyCloakGroups(groupList, client).usersWithGroupsCsvContent)
-        .map(csvContent => Result(
-          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=users-with-groups.csv")),
-          HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))
-        ))
+        .map(csvContent =>
+          Result(
+            ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=users-with-groups.csv")),
+            HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))
+          )
+        )
     }
   }
 
@@ -67,12 +71,18 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
       ctrl.userService.selectUser(userEmail.trim).flatMap { userRow =>
         val minutesInSlot: Int = userRow.flatMap(_.staff_planning_interval_minutes).getOrElse(60)
         val numberOfSlots = minutesInADay / minutesInSlot
-        val rowHeaders = Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
-        val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(ctrl.applicationService.terminalStaffMinutesProvider(terminal))
+        val rowHeaders =
+          Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
+        val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(
+          ctrl.applicationService.terminalStaffMinutesProvider(terminal)
+        )
         val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, minutesInSlot)
 
         StaffRequirementExports
-          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
+          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(
+            start.toLocalDate,
+            end.toLocalDate
+          )
           .mapAsync(1) {
             case (date, minutes) => makeHourlyStaffing(date, minutes)
           }
@@ -85,33 +95,41 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
           }
           .map { csvData =>
             val intervalDesc = if (minutesInSlot == 60) "hourly" else s"every-$minutesInSlot-minutes"
-            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-$intervalDesc-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+            val fileName =
+              f"${airportConfig.portCode}-$terminal-forecast-export-$intervalDesc-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }
       }
     }
   }
 
-  def exportForecastWeekHeadlinesToCSV(startDay: String,
-                                       terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
+  def exportForecastWeekHeadlinesToCSV(
+      startDay: String,
+      terminalName: String
+  ): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
     Action.async {
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
         val start = SDate(startDay.toLong, europeLondonTimeZone)
         val end = start.addDays(sixMonthsDays)
-        val queuesForDateRange = ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal).toSeq
+        val queuesForDateRange =
+          ctrl.applicationService.queuesForDateRangeAndTerminal(start.toLocalDate, end.toLocalDate, terminal).toSeq
         val queueNames = Queues.inOrder(queuesForDateRange).map(Queues.displayName)
         val rowHeaders = Seq("Date", "Total pax") ++ queueNames ++ Seq("Total workload")
         val makeHeadlines = StaffRequirementExports.toPassengerHeadlines(queuesForDateRange)
 
         StaffRequirementExports
-          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
+          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(
+            start.toLocalDate,
+            end.toLocalDate
+          )
           .map {
             case (date, minutes) => makeHeadlines(date, minutes)
           }
           .prepend(Source(List(rowHeaders))).runWith(Sink.seq).map(r => r.transpose.map(_.mkString(",")).mkString("\n"))
           .map { csvData =>
-            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+            val fileName =
+              f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }
 

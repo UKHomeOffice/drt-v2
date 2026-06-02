@@ -3,18 +3,18 @@ package controllers
 import org.apache.pekko.stream.scaladsl.StreamConverters
 import play.api.Configuration
 import play.api.http.HttpEntity
-import play.api.mvc.{InjectedController, ResponseHeader, Result}
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
+import play.api.mvc.{ InjectedController, ResponseHeader, Result }
+import software.amazon.awssdk.auth.credentials.{ AwsBasicCredentials, StaticCredentialsProvider }
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.awssdk.services.s3.model.{GetObjectRequest, GetObjectResponse}
+import software.amazon.awssdk.services.s3.model.{ GetObjectRequest, GetObjectResponse }
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.jdk.FutureConverters._
 
-class S3FileController @Inject()(implicit val config: Configuration, ec: ExecutionContext) extends InjectedController {
+class S3FileController @Inject() (implicit val config: Configuration, ec: ExecutionContext) extends InjectedController {
 
   val accessKey = config.getOptional[String]("s3.data.credentials.access_key_id").getOrElse("")
   val secretKey = config.getOptional[String]("s3.data.credentials.secret_key").getOrElse("")
@@ -31,7 +31,6 @@ class S3FileController @Inject()(implicit val config: Configuration, ec: Executi
       .credentialsProvider(credentialsProvider)
       .build()
 
-
   def getFile(fileName: String) = Action.async {
     val getObjectRequest: GetObjectRequest =
       GetObjectRequest
@@ -40,14 +39,17 @@ class S3FileController @Inject()(implicit val config: Configuration, ec: Executi
         .key(s"$prefixFolder/$fileName")
         .build()
 
-
     s3Client
       .getObject(getObjectRequest, AsyncResponseTransformer.toBytes[GetObjectResponse]).asScala
       .map { response =>
         val contentType = response.response().contentType()
         Result(
           header = ResponseHeader(OK, Map("Content-Type" -> contentType)),
-          body = HttpEntity.Streamed(StreamConverters.fromInputStream(() => response.asInputStream()), None, Some(contentType))
+          body = HttpEntity.Streamed(
+            StreamConverters.fromInputStream(() => response.asInputStream()),
+            None,
+            Some(contentType)
+          )
         )
       }
   }

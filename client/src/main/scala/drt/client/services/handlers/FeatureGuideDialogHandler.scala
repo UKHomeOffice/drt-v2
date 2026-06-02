@@ -1,9 +1,9 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ Action, ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions.RetryActionAfter
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue

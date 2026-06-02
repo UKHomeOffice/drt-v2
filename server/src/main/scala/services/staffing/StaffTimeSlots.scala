@@ -1,11 +1,11 @@
 package services.staffing
 
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 object StaffTimeSlots {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -35,7 +35,10 @@ object StaffTimeSlots {
     }
   }
 
-  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: ShiftAssignments, slots: StaffTimeSlotsForTerminalMonth): ShiftAssignments = {
+  def replaceShiftMonthWithTimeSlotsForMonth(
+      existingShifts: ShiftAssignments,
+      slots: StaffTimeSlotsForTerminalMonth
+  ): ShiftAssignments = {
     val slotSdate = SDate(slots.monthMillis, europeLondonTimeZone)
 
     val shiftsExcludingNewMonth = existingShifts

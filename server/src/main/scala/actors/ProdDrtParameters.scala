@@ -1,12 +1,12 @@
 package actors
 
 import com.google.inject.Inject
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import play.api.Configuration
 import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.{ Files, Paths }
 import scala.concurrent.duration._
 
 trait DrtParameters {
@@ -55,7 +55,7 @@ trait DrtParameters {
   val lcyLiveUsername: String
   val lcyLivePassword: String
 
-  //ignore ACL flight removals X seconds after the end of the day.
+  // ignore ACL flight removals X seconds after the end of the day.
   val maybeRemovalCutOffSeconds: Option[FiniteDuration]
 
   val usePassengerPredictions: Boolean
@@ -87,7 +87,7 @@ object DrtParameters {
   }
 }
 
-case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParameters {
+case class ProdDrtParameters @Inject() (config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val gateWalkTimesFilePath: Option[String] =
@@ -101,7 +101,8 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val aclUsername: Option[String] = config.getOptional[String]("acl.username")
   override val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
 
-  override val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
+  override val useNationalityBasedProcessingTimes: Boolean =
+    config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
   override val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
 
@@ -121,7 +122,8 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
 
   override val maybeLGWNamespace: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.namespace")
   override val maybeLGWSASToKey: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.sas_to_Key")
-  override val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
+  override val maybeLGWServiceBusUri: Option[String] =
+    config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
 
   override val maybeGlaLiveUrl: Option[String] = config.getOptional[String]("feeds.gla.url")
   override val maybeGlaLiveToken: Option[String] = config.getOptional[String]("feeds.gla.token")
@@ -131,21 +133,25 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val useApiPaxNos: Boolean = config.get[Boolean]("feature-flags.use-api-pax-nos")
   override val displayRedListInfo: Boolean = config.get[Boolean]("feature-flags.display-red-list-info")
 
-  override val enableToggleDisplayWaitTimes: Boolean = config.get[Boolean]("feature-flags.enable-toggle-display-wait-times")
+  override val enableToggleDisplayWaitTimes: Boolean =
+    config.get[Boolean]("feature-flags.enable-toggle-display-wait-times")
   override val adjustEGateUseByUnderAge: Boolean = config.get[Boolean]("feature-flags.adjust-egates-use-by-u12s")
 
   override val lcyLiveEndPointUrl: String = config.get[String]("feeds.lcy.live.endPointUrl")
   override val lcyLiveUsername: String = config.get[String]("feeds.lcy.live.username")
   override val lcyLivePassword: String = config.get[String]("feeds.lcy.live.password")
 
-  //ignore ACL flight removals X seconds after the end of the day.
-  override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s.seconds)
+  // ignore ACL flight removals X seconds after the end of the day.
+  override val maybeRemovalCutOffSeconds: Option[FiniteDuration] =
+    config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s.seconds)
 
   override val usePassengerPredictions: Boolean = config.get[Boolean]("feature-flags.use-passenger-predictions")
 
-  override val legacyFeedArrivalsBeforeDate: SDateLike = SDate(config.get[String]("feeds.legacy-feed-arrivals-before-datetime"))
+  override val legacyFeedArrivalsBeforeDate: SDateLike =
+    SDate(config.get[String]("feeds.legacy-feed-arrivals-before-datetime"))
 
-  override val enablePreRetentionPeriodDataDeletion: Boolean = config.get[Boolean]("feature-flags.enable-pre-retention-period-data-deletion")
+  override val enablePreRetentionPeriodDataDeletion: Boolean =
+    config.get[Boolean]("feature-flags.enable-pre-retention-period-data-deletion")
 
   override val retainDataForYears: Int = config.get[Int]("data-retention.retain-data-for-years")
 
@@ -153,7 +159,8 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
 
   override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 
-  override val enableShiftPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
+  override val enableShiftPlanningChange: Boolean =
+    config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
 
   override val disableDeploymentFairXmax: Boolean = config.get[Boolean]("feature-flags.disable-deployment-fair-xmax")
 

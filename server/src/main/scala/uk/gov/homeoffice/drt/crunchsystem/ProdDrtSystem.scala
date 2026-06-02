@@ -2,28 +2,29 @@ package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
 import com.google.inject.Inject
-import manifests.{ManifestLookup, ManifestLookupLike}
+import manifests.{ ManifestLookup, ManifestLookupLike }
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
 import slickdb._
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.db.dao._
-import uk.gov.homeoffice.drt.db.tables.{UserTable, UserTableLike}
+import uk.gov.homeoffice.drt.db.tables.{ UserTable, UserTableLike }
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
-import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService, QueueConfig}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.service.{ ActorsServiceService, FeedService, ProdFeedService, QueueConfig }
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDateLike }
 
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 @Singleton
-case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters, now: () => SDateLike)
-                                  (implicit val materializer: Materializer,
-                                   val ec: ExecutionContext,
-                                   val system: ActorSystem,
-                                   val timeout: Timeout) extends DrtSystemInterface {
+case class ProdDrtSystem @Inject() (airportConfig: AirportConfig, params: DrtParameters, now: () => SDateLike)(implicit
+    val materializer: Materializer,
+    val ec: ExecutionContext,
+    val system: ActorSystem,
+    val timeout: Timeout
+) extends DrtSystemInterface {
 
   lazy override val aggregatedDb: AggregatedDbTables = AggregatedDbTables(config.get[String]("database-type"))
 
@@ -44,7 +45,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     removalMessageCutOff = params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder = paxFeedSourceOrder,
     terminalSplits = splitsCalculator.terminalSplits,
-    updateLiveView = updateFlightsLiveView,
+    updateLiveView = updateFlightsLiveView
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(aggregatedDb)
@@ -69,7 +70,8 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val shiftMetaInfoService: ShiftMetaInfoService = ShiftMetaInfoServiceImpl(ShiftMetaInfoDao(aggregatedDb))
 
-  override val shiftStaffRollingService: IShiftStaffRollingService = ShiftStaffRollingService(ShiftStaffRollingDao(aggregatedDb))
+  override val shiftStaffRollingService: IShiftStaffRollingService =
+    ShiftStaffRollingService(ShiftStaffRollingDao(aggregatedDb))
 
   lazy override val actorService: ActorsServiceLike = ActorsServiceService(
     journalType = StreamingJournal.forConfig(config),
@@ -77,7 +79,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     now = now,
     forecastMaxDays = params.forecastMaxDays,
     flightLookups = flightLookups,
-    minuteLookups = minuteLookups,
+    minuteLookups = minuteLookups
   )
 
   lazy val feedService: FeedService = ProdFeedService(
@@ -91,14 +93,14 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     manifestLookups = manifestLookups,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
     params.forecastMaxDays,
-    params.legacyFeedArrivalsBeforeDate,
+    params.legacyFeedArrivalsBeforeDate
   )
 
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
     manifestLookups,
-    airportConfig.terminalsForDate,
+    airportConfig.terminalsForDate
   )
 
   override def run(): Unit = applicationService.run()

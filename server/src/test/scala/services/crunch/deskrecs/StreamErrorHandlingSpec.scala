@@ -2,18 +2,18 @@ package services.crunch.deskrecs
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.ActorAttributes
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import services.StreamSupervision
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 object SomeAwesomeObject {
   def source(implicit ec: ExecutionContext): Source[Int, NotUsed] = Source(List(1, 2, 3))
     .mapAsync(1) {
       case number if number == 2 => Future(throw new Exception("boom"))
-      case number => Future(number)
+      case number                => Future(number)
     }
     .withAttributes(ActorAttributes.supervisionStrategy(StreamSupervision.resumeWithLog(getClass.getName)))
 }

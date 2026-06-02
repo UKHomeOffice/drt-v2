@@ -1,7 +1,7 @@
 package actors.serializers
 
 import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates._
-import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.redlist.{ RedListUpdate, RedListUpdates, SetRedListUpdate }
 
 object RedListUpdatesMessageConversion {
   def setUpdatesToMessage(updates: SetRedListUpdate): SetRedListUpdateMessage =

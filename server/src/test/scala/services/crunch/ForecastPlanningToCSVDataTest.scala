@@ -5,7 +5,7 @@ import drt.shared.Forecast
 import org.specs2.mutable.Specification
 import services.CSVData
 import uk.gov.homeoffice.drt.ports.Queues
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 class ForecastPlanningToCSVDataTest extends Specification {
 
@@ -18,15 +18,18 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val t0045Millis = day1Midnight.addMinutes(45).millisSinceEpoch
       val t0100Millis = day1Midnight.addMinutes(60).millisSinceEpoch
 
-      val forecast = ForecastPeriod(15, Map(
-        t0000Millis -> Seq(
-          ForecastTimeSlot(t0000Millis, 1, 2),
-          ForecastTimeSlot(t0015Millis, 3, 4),
-          ForecastTimeSlot(t0030Millis, 5, 6),
-          ForecastTimeSlot(t0045Millis, 7, 8),
-          ForecastTimeSlot(t0100Millis, 9, 10)
+      val forecast = ForecastPeriod(
+        15,
+        Map(
+          t0000Millis -> Seq(
+            ForecastTimeSlot(t0000Millis, 1, 2),
+            ForecastTimeSlot(t0015Millis, 3, 4),
+            ForecastTimeSlot(t0030Millis, 5, 6),
+            ForecastTimeSlot(t0045Millis, 7, 8),
+            ForecastTimeSlot(t0100Millis, 9, 10)
+          )
         )
-      ))
+      )
 
       val result = CSVData.forecastPeriodToCsv(forecast)
 
@@ -74,29 +77,32 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val d3t0045Millis = day3Midnight.addMinutes(45).millisSinceEpoch
       val d3t0100Millis = day3Midnight.addMinutes(60).millisSinceEpoch
 
-      val forecast = ForecastPeriod(15, Map(
-        d1t0000Millis -> Seq(
-          ForecastTimeSlot(d1t0000Millis, 1, 2),
-          ForecastTimeSlot(d1t0015Millis, 3, 4),
-          ForecastTimeSlot(d1t0030Millis, 5, 6),
-          ForecastTimeSlot(d1t0045Millis, 7, 8),
-          ForecastTimeSlot(d1t0100Millis, 9, 10)
-        ),
-        d2t0000Millis -> Seq(
-          ForecastTimeSlot(d2t0000Millis, 1, 2),
-          ForecastTimeSlot(d2t0015Millis, 3, 4),
-          ForecastTimeSlot(d2t0030Millis, 5, 6),
-          ForecastTimeSlot(d2t0045Millis, 7, 8),
-          ForecastTimeSlot(d2t0100Millis, 9, 10)
-        ),
-        d3t0000Millis -> Seq(
-          ForecastTimeSlot(d3t0000Millis, 1, 2),
-          ForecastTimeSlot(d3t0015Millis, 3, 4),
-          ForecastTimeSlot(d3t0030Millis, 5, 6),
-          ForecastTimeSlot(d3t0045Millis, 7, 8),
-          ForecastTimeSlot(d3t0100Millis, 9, 10)
+      val forecast = ForecastPeriod(
+        15,
+        Map(
+          d1t0000Millis -> Seq(
+            ForecastTimeSlot(d1t0000Millis, 1, 2),
+            ForecastTimeSlot(d1t0015Millis, 3, 4),
+            ForecastTimeSlot(d1t0030Millis, 5, 6),
+            ForecastTimeSlot(d1t0045Millis, 7, 8),
+            ForecastTimeSlot(d1t0100Millis, 9, 10)
+          ),
+          d2t0000Millis -> Seq(
+            ForecastTimeSlot(d2t0000Millis, 1, 2),
+            ForecastTimeSlot(d2t0015Millis, 3, 4),
+            ForecastTimeSlot(d2t0030Millis, 5, 6),
+            ForecastTimeSlot(d2t0045Millis, 7, 8),
+            ForecastTimeSlot(d2t0100Millis, 9, 10)
+          ),
+          d3t0000Millis -> Seq(
+            ForecastTimeSlot(d3t0000Millis, 1, 2),
+            ForecastTimeSlot(d3t0015Millis, 3, 4),
+            ForecastTimeSlot(d3t0030Millis, 5, 6),
+            ForecastTimeSlot(d3t0045Millis, 7, 8),
+            ForecastTimeSlot(d3t0100Millis, 9, 10)
+          )
         )
-      ))
+      )
 
       val result = CSVData.forecastPeriodToCsv(forecast)
 
@@ -118,37 +124,47 @@ class ForecastPlanningToCSVDataTest extends Specification {
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
     "Then I should get back a rectangular List of Lists of ForecastTimeSlot Options containing 100 slots each" >> {
 
-    val forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z")).days
+      val forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] =
+        forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z")).days
 
-    val result = Forecast.handleBSTToUTC(forecastPeriodDays).toList.map(_._2.length)
+      val result = Forecast.handleBSTToUTC(forecastPeriodDays).toList.map(_._2.length)
 
-    val expected = 100 :: 100 :: Nil
+      val expected = 100 :: 100 :: Nil
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
     "Then row headings should include 2 entries for 1am" >> {
 
-    val forecastPeriod = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z"))
+      val forecastPeriod = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z"))
 
-    val result = Forecast.timeSlotStartTimes(forecastPeriod, CSVData.millisToHoursAndMinutesString).take(12)
+      val result = Forecast.timeSlotStartTimes(forecastPeriod, CSVData.millisToHoursAndMinutesString).take(12)
 
-    val expected = List(
-      "00:00", "00:15", "00:30", "00:45",
-      "01:00", "01:15", "01:30", "01:45",
-      "01:00", "01:15", "01:30", "01:45"
-    )
-    result === expected
-  }
+      val expected = List(
+        "00:00",
+        "00:15",
+        "00:30",
+        "00:45",
+        "01:00",
+        "01:15",
+        "01:30",
+        "01:45",
+        "01:00",
+        "01:15",
+        "01:30",
+        "01:45"
+      )
+      result === expected
+    }
 
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
     "Then I should get a CSV with two rows for 1am with empty values for all days other than the timezone change day" >> {
-    val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z"))
-    val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
+      val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z"))
+      val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
 
-    val expected =
-      s"""|,28/10 - available,28/10 - required,28/10 - difference,29/10 - available,29/10 - required,29/10 - difference
+      val expected =
+        s"""|,28/10 - available,28/10 - required,28/10 - difference,29/10 - available,29/10 - required,29/10 - difference
           |00:00,1,1,0,1,1,0
           |00:15,1,1,0,1,1,0
           |00:30,1,1,0,1,1,0
@@ -250,16 +266,16 @@ class ForecastPlanningToCSVDataTest extends Specification {
           |23:30,1,1,0,1,1,0
           |23:45,1,1,0,1,1,0""".stripMargin
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC starting before the switch date " +
     "Then I should get a CSV with two rows for 1am with empty values for all days other than the timezone change day" >> {
-    val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(3, SDate("2018-10-27T00:00:00Z"))
-    val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
+      val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(3, SDate("2018-10-27T00:00:00Z"))
+      val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
 
-    val expected =
-      s"""|,27/10 - available,27/10 - required,27/10 - difference,28/10 - available,28/10 - required,28/10 - difference,29/10 - available,29/10 - required,29/10 - difference
+      val expected =
+        s"""|,27/10 - available,27/10 - required,27/10 - difference,28/10 - available,28/10 - required,28/10 - difference,29/10 - available,29/10 - required,29/10 - difference
           |00:00,1,1,0,1,1,0,1,1,0
           |00:15,1,1,0,1,1,0,1,1,0
           |00:30,1,1,0,1,1,0,1,1,0
@@ -361,17 +377,17 @@ class ForecastPlanningToCSVDataTest extends Specification {
           |23:30,1,1,0,1,1,0,1,1,0
           |23:45,1,1,0,1,1,0,1,1,0""".stripMargin
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a ForecastPeriod which includes a period that spans a timezone change from UTC to BST " +
     "Then then the switch over day should have blank entries for the period between 1am and 2am" >> {
 
-    val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(3, SDate("2019-03-30T00:00:00Z"))
-    val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
+      val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(3, SDate("2019-03-30T00:00:00Z"))
+      val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
 
-    val expected =
-      s"""|,30/03 - available,30/03 - required,30/03 - difference,31/03 - available,31/03 - required,31/03 - difference,01/04 - available,01/04 - required,01/04 - difference
+      val expected =
+        s"""|,30/03 - available,30/03 - required,30/03 - difference,31/03 - available,31/03 - required,31/03 - difference,01/04 - available,01/04 - required,01/04 - difference
           |00:00,1,1,0,1,1,0,1,1,0
           |00:15,1,1,0,1,1,0,1,1,0
           |00:30,1,1,0,1,1,0,1,1,0
@@ -469,8 +485,8 @@ class ForecastPlanningToCSVDataTest extends Specification {
           |23:30,1,1,0,1,1,0,1,1,0
           |23:45,1,1,0,1,1,0,1,1,0""".stripMargin
 
-    result === expected
-  }
+      result === expected
+    }
 
   def forecastForPeriodStartingOnDay(daysToAdd: Int, startDate: SDateLike): ForecastPeriod = {
     val forecastStart = startDate.getLocalLastMidnight

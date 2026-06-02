@@ -1,7 +1,7 @@
 package drt.shared.coachTime
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
+import drt.shared.redlist.{ LhrRedListDates, LhrTerminalTypes }
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals._
 
@@ -13,7 +13,8 @@ object LhrCoachWalkTime {
   )
 }
 
-case class LhrCoachWalkTime(lhrRedListDates: LhrRedListDates, coachTransfers: List[CoachTransfer]) extends CoachWalkTime {
+case class LhrCoachWalkTime(lhrRedListDates: LhrRedListDates, coachTransfers: List[CoachTransfer])
+    extends CoachWalkTime {
   private val lhrTerminalTypes: LhrTerminalTypes = LhrTerminalTypes(lhrRedListDates)
 
   def walkTime(flight: Arrival): Option[MillisSinceEpoch] = {

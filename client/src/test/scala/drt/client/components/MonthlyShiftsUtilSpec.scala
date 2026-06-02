@@ -5,7 +5,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared._
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 import utest._
 
 object MonthlyShiftsUtilSpec extends TestSuite {
@@ -72,7 +72,15 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       )
       val shiftAssignments = ShiftAssignments(Seq.empty)
 
-      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(firstDay, dayRange, terminal, Seq(shift), shiftAssignments, Map.empty, interval)
+      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(
+        firstDay,
+        dayRange,
+        terminal,
+        Seq(shift),
+        shiftAssignments,
+        Map.empty,
+        interval
+      )
 
       assert(result.nonEmpty)
       assert(result.head.shiftSummary.name == "Morning")
@@ -104,7 +112,15 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       )
       val shiftAssignments = ShiftAssignments(Seq.empty)
 
-      val result = MonthlyShiftsUtil.generateShiftSummaries(firstDay, dayRange, terminal, Seq(shift), shiftAssignments, Map.empty, interval)
+      val result = MonthlyShiftsUtil.generateShiftSummaries(
+        firstDay,
+        dayRange,
+        terminal,
+        Seq(shift),
+        shiftAssignments,
+        Map.empty,
+        interval
+      )
 
       assert(result.nonEmpty)
       assert(result.head.shiftSummary.name == "Morning")
@@ -194,7 +210,15 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val shifts = ShiftAssignments(Seq.empty)
       val interval = 60
 
-      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(viewingDate, dayRange, terminal, staffShifts, shifts, Map.empty, interval)
+      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(
+        viewingDate,
+        dayRange,
+        terminal,
+        staffShifts,
+        shifts,
+        Map.empty,
+        interval
+      )
 
       assert(result.size == 2)
       assert(result.head.shiftSummary.name == "Morning")
@@ -230,16 +254,53 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         SDate(2023, 10, 1, 22).millisSinceEpoch -> 4,
         SDate(2023, 10, 1, 23).millisSinceEpoch -> 4,
         SDate(2023, 10, 1).millisSinceEpoch -> 4,
-        SDate(2023, 10, 1, 1).millisSinceEpoch -> 4,
+        SDate(2023, 10, 1, 1).millisSinceEpoch -> 4
       )
 
-      val result = MonthlyShiftsUtil.createStaffTableEntries(LocalDate(2023, 10, 1), 1, interval, shiftDetails, recStaff)
+      val result =
+        MonthlyShiftsUtil.createStaffTableEntries(LocalDate(2023, 10, 1), 1, interval, shiftDetails, recStaff)
 
       val expected = Seq(
-        StaffTableEntry(1, 0, "Night", 4, 5, SDate(2023, 10, 1, 22).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 22, 0), ShiftDateTime(2023, 10, 1, 23, 0)),
-        StaffTableEntry(1, 1, "Night", 4, 5, SDate(2023, 10, 1, 23).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 23, 0), ShiftDateTime(2023, 10, 2, 0, 0)),
-        StaffTableEntry(1, 2, "Night", 4, 5, SDate(2023, 10, 1, 0).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 0, 0), ShiftDateTime(2023, 10, 1, 1, 0)),
-        StaffTableEntry(1, 3, "Night", 4, 5, SDate(2023, 10, 1, 1).millisSinceEpoch, ShiftDateTime(2023, 10, 1, 1, 0), ShiftDateTime(2023, 10, 1, 2, 0))
+        StaffTableEntry(
+          1,
+          0,
+          "Night",
+          4,
+          5,
+          SDate(2023, 10, 1, 22).millisSinceEpoch,
+          ShiftDateTime(2023, 10, 1, 22, 0),
+          ShiftDateTime(2023, 10, 1, 23, 0)
+        ),
+        StaffTableEntry(
+          1,
+          1,
+          "Night",
+          4,
+          5,
+          SDate(2023, 10, 1, 23).millisSinceEpoch,
+          ShiftDateTime(2023, 10, 1, 23, 0),
+          ShiftDateTime(2023, 10, 2, 0, 0)
+        ),
+        StaffTableEntry(
+          1,
+          2,
+          "Night",
+          4,
+          5,
+          SDate(2023, 10, 1, 0).millisSinceEpoch,
+          ShiftDateTime(2023, 10, 1, 0, 0),
+          ShiftDateTime(2023, 10, 1, 1, 0)
+        ),
+        StaffTableEntry(
+          1,
+          3,
+          "Night",
+          4,
+          5,
+          SDate(2023, 10, 1, 1).millisSinceEpoch,
+          ShiftDateTime(2023, 10, 1, 1, 0),
+          ShiftDateTime(2023, 10, 1, 2, 0)
+        )
       )
 
       assert(result.size == expected.size)

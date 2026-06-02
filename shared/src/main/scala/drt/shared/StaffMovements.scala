@@ -2,14 +2,28 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 
 object StaffMovements {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
       val uuid = UUID.randomUUID().toString()
-      StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.start, assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) ::
-        StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.end, -assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) :: Nil
+      StaffMovement(
+        assignment.terminal,
+        assignment.name + " start",
+        time = assignment.start,
+        assignment.numberOfStaff,
+        uuid,
+        createdBy = assignment.createdBy
+      ) ::
+        StaffMovement(
+          assignment.terminal,
+          assignment.name + " end",
+          time = assignment.end,
+          -assignment.numberOfStaff,
+          uuid,
+          createdBy = assignment.createdBy
+        ) :: Nil
     }).sortBy(_.time)
   }
 
@@ -22,9 +36,11 @@ object StaffMovements {
       .sum
   }
 
-  def terminalStaffAt(shiftAssignments: ShiftAssignments)
-                     (movements: Seq[StaffMovement])
-                     (terminalName: Terminal, dateTime: SDateLike, msToSd: MillisSinceEpoch => SDateLike): Int = {
+  def terminalStaffAt(shiftAssignments: ShiftAssignments)(movements: Seq[StaffMovement])(
+      terminalName: Terminal,
+      dateTime: SDateLike,
+      msToSd: MillisSinceEpoch => SDateLike
+  ): Int = {
     val baseStaff = shiftAssignments.terminalStaffAt(terminalName, dateTime, msToSd)
 
     val movementAdjustments = adjustmentsAt(movements.filter(_.terminal == terminalName))(dateTime)
@@ -54,8 +70,7 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     copy(movements = unexpiredPairsOfMovements)
   }
 
-  def forDay(day: LocalDate)
-            (implicit toSDate: LocalDate => SDateLike): Seq[StaffMovement] = {
+  def forDay(day: LocalDate)(implicit toSDate: LocalDate => SDateLike): Seq[StaffMovement] = {
     val startOfDayMillis = day.getLocalLastMidnight.millisSinceEpoch
     val endOfDayMillis = day.getLocalNextMidnight.millisSinceEpoch
 
@@ -67,9 +82,11 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
       .toSeq
   }
 
-  def areInWindow(startOfDayMillis: MillisSinceEpoch,
-                  endOfDayMillis: MillisSinceEpoch,
-                  movementsPair: Seq[StaffMovement]): Boolean = {
+  def areInWindow(
+      startOfDayMillis: MillisSinceEpoch,
+      endOfDayMillis: MillisSinceEpoch,
+      movementsPair: Seq[StaffMovement]
+  ): Boolean = {
     val chronologicalMovementsPair = movementsPair.sortBy(_.time).toList
 
     chronologicalMovementsPair match {
@@ -86,9 +103,11 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     }
   }
 
-  def isInWindow(startOfDayMillis: MillisSinceEpoch,
-                 endOfDayMillis: MillisSinceEpoch,
-                 movementMillis: MillisSinceEpoch): Boolean = {
+  def isInWindow(
+      startOfDayMillis: MillisSinceEpoch,
+      endOfDayMillis: MillisSinceEpoch,
+      movementMillis: MillisSinceEpoch
+  ): Boolean = {
     startOfDayMillis <= movementMillis && movementMillis <= endOfDayMillis
   }
 }

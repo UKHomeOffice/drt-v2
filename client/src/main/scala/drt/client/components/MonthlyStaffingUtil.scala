@@ -10,25 +10,31 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.mutable
 
 object MonthlyStaffingUtil {
-  def slotsFromShiftAssignments(shiftAssignments: ShiftAssignments, terminal: Terminal, viewingDate: SDateLike, timeSlotMinutes: Int, dayRange: String): Seq[Seq[Any]] =
+  def slotsFromShiftAssignments(
+      shiftAssignments: ShiftAssignments,
+      terminal: Terminal,
+      viewingDate: SDateLike,
+      timeSlotMinutes: Int,
+      dayRange: String
+  ): Seq[Seq[Any]] =
     dayRange match {
       case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
-        case Some(slotDateTime) =>
-          shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-        case None => "-"
-      })
+          case Some(slotDateTime) =>
+            shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+          case None => "-"
+        })
 
       case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
-        case Some(slotDateTime) =>
-          shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-        case None => "-"
-      })
+          case Some(slotDateTime) =>
+            shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+          case None => "-"
+        })
 
       case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map {
-        case Some(slotDateTime) =>
-          shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-        case None => "-"
-      }.map(Seq(_))
+          case Some(slotDateTime) =>
+            shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+          case None => "-"
+        }.map(Seq(_))
     }
 
   private def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
@@ -36,7 +42,8 @@ object MonthlyStaffingUtil {
   }
 
   lazy val dayTimeSlot: ((SDateLike, Int)) => Seq[Option[SDateLike]] = memoize {
-    case (viewingDate, timeSlotMinutes) => timeZoneSafeTimeSlots(slotsInDay(viewingDate, timeSlotMinutes), timeSlotMinutes)
+    case (viewingDate, timeSlotMinutes) =>
+      timeZoneSafeTimeSlots(slotsInDay(viewingDate, timeSlotMinutes), timeSlotMinutes)
   }
 
   lazy val daysInWeekByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
@@ -99,9 +106,9 @@ object MonthlyStaffingUtil {
   private def staffPlanningHeadingPrefix(dayRangeType: Option[String]): String = {
     val headingPrefix = dayRangeType match {
       case Some("monthly") => "Monthly"
-      case Some("weekly") => "Weekly"
-      case Some("daily") => "Daily"
-      case _ => "Monthly"
+      case Some("weekly")  => "Weekly"
+      case Some("daily")   => "Daily"
+      case _               => "Monthly"
     }
     s"$headingPrefix staff planning"
   }
@@ -109,7 +116,7 @@ object MonthlyStaffingUtil {
   private def staffPlanningHeadingPeriod(viewingDate: SDateLike, dayRangeType: Option[String]): String = {
     val headingPeriod = dayRangeType match {
       case Some("monthly") => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
-      case Some("weekly") =>
+      case Some("weekly")  =>
         val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
         val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
         if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
@@ -118,7 +125,7 @@ object MonthlyStaffingUtil {
         } else
           s"${firstDayOfWeek.`dayOfWeek-DD-Month-YYYY`} to ${lastDayOfWeek.`dayOfWeek-DD-Month-YYYY`}"
       case Some("daily") => s"${viewingDate.`dayOfWeek-DD-Month-YYYY`}"
-      case _ => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+      case _             => s"${viewingDate.getMonthString} ${viewingDate.getFullYear}"
     }
     headingPeriod
   }
@@ -138,8 +145,7 @@ object MonthlyStaffingUtil {
 
     if (itsARegularDayInOctober(slots, slotsInRegularDay)) {
       handleBstToUtcChange(slots, slotsPerHour)
-    }
-    else if (itsTheDayWeSwitchToBst(slots, slotsInRegularDay))
+    } else if (itsTheDayWeSwitchToBst(slots, slotsInRegularDay))
       handleUtcToBstDay(slots, slotsPerHour)
     else
       slots.map(Option(_))
@@ -184,9 +190,9 @@ object MonthlyStaffingUtil {
     .toSet
 
   def dateListToString(dates: List[String]): String = dates.map(_.toInt).sorted match {
-    case Nil => ""
+    case Nil         => ""
     case head :: Nil => head.toString
-    case dateList => dateList.dropRight(1).mkString(", ") + " and " + dateList.last
+    case dateList    => dateList.dropRight(1).mkString(", ") + " and " + dateList.last
   }
 
   def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] = {

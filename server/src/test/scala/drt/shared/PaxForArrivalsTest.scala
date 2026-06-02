@@ -2,29 +2,41 @@ package drt.shared
 
 import drt.shared.FlightsApi.PaxForArrivals
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, Passengers }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 
 class PaxForArrivalsTest extends Specification {
   "When I ask to extract the historic api nos" >> {
     "Given an arrival with no passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC")).toArrival(LiveFeedSource)
+      val arrival =
+        ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC")).toArrival(LiveFeedSource)
       "I should get an empty PaxForArrivals" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals.empty
       }
     }
 
     "Given an arrival with live api passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC"), totalPax = Option(100)).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.arrival(
+        iata = "BA0001",
+        terminal = T1,
+        origin = PortCode("ABC"),
+        totalPax = Option(100)
+      ).toArrival(LiveFeedSource)
       "I should get an empty PaxForArrivals" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals.empty
       }
     }
 
     "Given an arrival with live & historic api passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC")).toArrival(LiveFeedSource).copy(
-        PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None), HistoricApiFeedSource -> Passengers(Option(100), None)))
+      val arrival = ArrivalGenerator.arrival(
+        iata = "BA0001",
+        terminal = T1,
+        origin = PortCode("ABC")
+      ).toArrival(LiveFeedSource).copy(
+        PassengerSources =
+          Map(ApiFeedSource -> Passengers(Option(100), None), HistoricApiFeedSource -> Passengers(Option(100), None))
+      )
       "I should get a PaxForArrivals with HistoricApiFeedSource with 100 passengers" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals(Map(
           arrival.unique -> Map[FeedSource, Passengers](HistoricApiFeedSource -> Passengers(Option(100), None))
@@ -81,7 +93,10 @@ class PaxForArrivalsTest extends Specification {
       }
 
       "One existing flight with passengers that match the existing passengers plus another source" >> {
-        val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PassengerSources = livePax.updated(ForecastFeedSource, Passengers(Option(2), None))), Set())))
+        val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(
+          arrival.copy(PassengerSources = livePax.updated(ForecastFeedSource, Passengers(Option(2), None))),
+          Set()
+        )))
 
         "Then I should get an empty FlightsWithSplits" >> {
           val updated = paxForArrivals.diff(flights, 1L)
@@ -99,7 +114,6 @@ class PaxForArrivalsTest extends Specification {
           updated === ArrivalsDiff(Seq(expectedArrival), Seq())
         }
       }
-
 
     }
   }

@@ -4,32 +4,40 @@ import actors.serializers.ManifestMessageConversion
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.Props
 import org.apache.pekko.persistence.SaveSnapshotSuccess
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.models.{ManifestKey, VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.models.{ ManifestKey, VoyageManifest, VoyageManifests }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike, UtcDate }
 
 object DayManifestActor {
   def props(date: UtcDate, terminals: LocalDate => Iterable[Terminal]): Props =
     Props(new DayManifestActor(date.year, date.month, date.day, None, terminals))
 
-  def propsPointInTime(date: UtcDate, pointInTime: MillisSinceEpoch, terminals: LocalDate => Iterable[Terminal]): Props =
+  def propsPointInTime(
+      date: UtcDate,
+      pointInTime: MillisSinceEpoch,
+      terminals: LocalDate => Iterable[Terminal]
+  ): Props =
     Props(new DayManifestActor(date.year, date.month, date.day, Option(pointInTime), terminals))
 }
 
-
-class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointInTime: Option[MillisSinceEpoch], terminalsForDate: LocalDate => Iterable[Terminal])
-  extends RecoveryActorLike {
+class DayManifestActor(
+    year: Int,
+    month: Int,
+    day: Int,
+    override val maybePointInTime: Option[MillisSinceEpoch],
+    terminalsForDate: LocalDate => Iterable[Terminal]
+) extends RecoveryActorLike {
 
   def now: () => SDate.JodaSDate = () => SDate.now()
 
   val loggerSuffix: String = maybePointInTime match {
-    case None => ""
+    case None      => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
   }
 
@@ -61,10 +69,10 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
 
-    case vmm@VoyageManifestsMessage(Some(createdAt), _) =>
+    case vmm @ VoyageManifestsMessage(Some(createdAt), _) =>
       maybePointInTime match {
         case Some(pit) if pit < createdAt =>
-        case _ =>
+        case _                            =>
           state = state ++ ManifestMessageConversion.voyageManifestsFromMessage(vmm).toMap
       }
   }

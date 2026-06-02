@@ -1,18 +1,18 @@
 package serialization
 
 import drt.shared.CrunchApi._
-import drt.shared.{DrtPortConfigs, FixedPointAssignments, FlightUpdatesAndRemovals, PortState, StaffAssignment, TM}
+import drt.shared.{ DrtPortConfigs, FixedPointAssignments, FlightUpdatesAndRemovals, PortState, StaffAssignment, TM }
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.feeds.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.feeds.{ FeedStatusFailure, FeedStatusSuccess, FeedStatuses }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.services.AirportInfoService
 import upickle.default._
@@ -55,7 +55,7 @@ class JsonSerializationSpec extends Specification {
         EeaBelowEGateAge,
         NonVisaNational,
         B5JPlusNational,
-        B5JPlusNationalBelowEGateAge,
+        B5JPlusNationalBelowEGateAge
       )
 
       val asJson: Seq[String] = allPaxTypes.map((pt: PaxType) => write(pt))
@@ -118,13 +118,19 @@ class JsonSerializationSpec extends Specification {
           PreviousPort = None,
           Scheduled = 0L,
           PcpTime = None,
-          FeedSources = Set(AclFeedSource, LiveFeedSource)),
+          FeedSources = Set(AclFeedSource, LiveFeedSource)
+        ),
         Set(
           Splits(
             Set(
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None, None),
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None, None)
-            ), Historical, None, Percentage))
+            ),
+            Historical,
+            None,
+            Percentage
+          )
+        )
       )
       val flightsWithSplits = SortedMap(flightWithSplits.apiFlight.unique -> flightWithSplits)
 
@@ -183,14 +189,20 @@ class JsonSerializationSpec extends Specification {
         PassengerSources = Map()
       )
       val splits = Set(Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)),
+        Set(ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.NonEeaDesk,
+          1,
+          Option(Map(Nationality("tw") -> 7.0)),
+          None
+        )),
         Historical,
         None,
         Percentage
       ))
       val updatesAndRemovals = FlightUpdatesAndRemovals(
         Map(1L -> ArrivalsDiff(Seq(arrival), Seq(UniqueArrival(100, T1, 60000L, PortCode("STN"))))),
-        Map(1L -> SplitsForArrivals(Map(arrival.unique -> splits))),
+        Map(1L -> SplitsForArrivals(Map(arrival.unique -> splits)))
       )
       val cu = PortStateUpdates(
         0L,
@@ -198,7 +210,7 @@ class JsonSerializationSpec extends Specification {
         0L,
         updatesAndRemovals,
         Seq(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
-        Seq(StaffMinute(T1, 0L, 1, 1,1,None))
+        Seq(StaffMinute(T1, 0L, 1, 1, 1, None))
       )
 
       val asJson: String = write(cu)

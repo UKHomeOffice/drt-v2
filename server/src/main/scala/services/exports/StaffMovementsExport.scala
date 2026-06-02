@@ -11,7 +11,8 @@ object StaffMovementsExport {
       s"${m.terminal},${m.reason},${SDate(m.time).toLocalDateTimeString},${m.delta},${m.createdBy.getOrElse("")}"
     }.mkString("\n")
 
-  def toCSVWithHeader(movements: Seq[StaffMovement], terminal: Terminal): String = headerRow + "\n" + toCSV(movements, terminal)
+  def toCSVWithHeader(movements: Seq[StaffMovement], terminal: Terminal): String = headerRow + "\n" +
+    toCSV(movements, terminal)
 
   private def headerRow = "Terminal,Reason,Time,Staff Change,Made by"
 

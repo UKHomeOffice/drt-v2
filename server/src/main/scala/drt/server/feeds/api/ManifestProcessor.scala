@@ -1,17 +1,13 @@
 package drt.server.feeds.api
 
-import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
+import drt.server.feeds.{ DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import uk.gov.homeoffice.drt.models._
 
-import scala.concurrent.{ExecutionContext, Future}
-
-
-
-
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait ManifestProcessor {
   def process(uniqueArrivalKeys: Seq[UniqueArrivalKey], processedAt: MillisSinceEpoch): Future[Done]
@@ -19,10 +15,10 @@ trait ManifestProcessor {
   def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done]
 }
 
-case class DbManifestProcessor(manifestForArrivalKey: UniqueArrivalKey => Future[Option[VoyageManifest]],
-                               persistManifests: ManifestsFeedResponse => Future[Done],
-                              )
-                              (implicit ec: ExecutionContext, mat: Materializer) extends ManifestProcessor {
+case class DbManifestProcessor(
+    manifestForArrivalKey: UniqueArrivalKey => Future[Option[VoyageManifest]],
+    persistManifests: ManifestsFeedResponse => Future[Done]
+)(implicit ec: ExecutionContext, mat: Materializer) extends ManifestProcessor {
   override def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done] =
     persistManifests(ManifestsFeedSuccess(DqManifests(processedAt, Seq())))
 

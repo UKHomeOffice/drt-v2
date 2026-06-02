@@ -2,18 +2,18 @@ package services.healthcheck
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.models.CrunchMinute
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ SDateLike, UtcDate }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
-case class DeskUpdatesHealthCheck(now: () => SDateLike,
-                                  flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                                  crunchMinutes: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed]
-                                 )
-                                 (implicit ec: ExecutionContext, mat: Materializer) {
+case class DeskUpdatesHealthCheck(
+    now: () => SDateLike,
+    flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+    crunchMinutes: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed]
+)(implicit ec: ExecutionContext, mat: Materializer) {
   private def dateToConsider = now().toUtcDate
 
   def healthy(): Future[Option[Boolean]] = {
@@ -41,7 +41,7 @@ case class DeskUpdatesHealthCheck(now: () => SDateLike,
             Option(desksHaveBeenUpdated)
           } else None
       }
-      .collect { case Some(g) => g}
+      .collect { case Some(g) => g }
       .flatMapConcat(identity)
       .runWith(Sink.seq)
       .map(_.headOption)

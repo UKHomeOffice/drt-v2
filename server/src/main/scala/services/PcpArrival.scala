@@ -1,6 +1,6 @@
 package services
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.prediction.arrival.WalkTimeModelAndFeatures
 import uk.gov.homeoffice.drt.time.MilliDate
@@ -12,8 +12,7 @@ object PcpArrival {
 
   private type FlightWalkTime = Arrival => Long
 
-  def pcpFrom(firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)
-             (arrival: Arrival): MilliDate = {
+  def pcpFrom(firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)(arrival: Arrival): MilliDate = {
     val bestChoxTimeMillis: Long = arrival.bestArrivalTime(considerPredictions = true)
     val walkTimeMillis = arrival.Predictions.predictions
       .get(WalkTimeModelAndFeatures.targetName)

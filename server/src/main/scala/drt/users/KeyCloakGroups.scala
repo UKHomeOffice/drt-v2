@@ -1,10 +1,9 @@
 package drt.users
 
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import drt.shared.KeyCloakApi.{ KeyCloakGroup, KeyCloakUser }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 
 case class KeyCloakGroups(groups: List[KeyCloakGroup], client: KeyCloakClient) {
   def usersWithGroupsCsvContent: Future[String] = {

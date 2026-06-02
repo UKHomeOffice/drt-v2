@@ -33,7 +33,7 @@ class ArrivalStatsDaoTest extends AnyWordSpec with Matchers with BeforeAndAfter 
         capacity = 1000,
         pax = 2000,
         averageLoad = 95.0,
-        createdAt = SDate(2020, 1, 1).millisSinceEpoch,
+        createdAt = SDate(2020, 1, 1).millisSinceEpoch
       )
 
       Await.result(arrivalStatsDao.addOrUpdate(row), 1.second) should be(1)

@@ -1,14 +1,14 @@
 package drt.client.components
 
 import clientmacros.tojs.JSMacro
-import drt.client.logger.{Logger, LoggerFactory}
-import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
-import japgolly.scalajs.react.{Children, JsComponent}
+import drt.client.logger.{ Logger, LoggerFactory }
+import japgolly.scalajs.react.component.Js.{ RawMounted, UnmountedWithRawType }
+import japgolly.scalajs.react.{ Children, JsComponent }
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
-import scala.scalajs.js.{Dictionary, undefined}
+import scala.scalajs.js.{ undefined, Dictionary }
 
 /**
  * Sets some helpful defaults for your data set
@@ -68,10 +68,12 @@ object ChartJSComponent {
     var height: js.UndefOr[Int] = js.native
   }
 
-  case class ChartJsProps(data: js.Object,
-                          width: Option[Int],
-                          height: Option[Int],
-                          options: js.UndefOr[js.Object] = js.undefined) {
+  case class ChartJsProps(
+      data: js.Object,
+      width: Option[Int],
+      height: Option[Int],
+      options: js.UndefOr[js.Object] = js.undefined
+  ) {
     def toJs: Props = {
       val props = (new js.Object).asInstanceOf[Props]
       props.data = data
@@ -109,25 +111,31 @@ object ChartJSComponent {
   }
 
   case class ChartJsDataSet(
-                             data: js.Array[Double],
-                             hoverBorderColor: js.UndefOr[String] = js.undefined,
-                             label: js.UndefOr[String] = js.undefined,
-                             backgroundColor: js.UndefOr[String] = js.undefined,
-                             borderColor: js.UndefOr[String] = js.undefined,
-                             borderWidth: js.UndefOr[Int] = js.undefined,
-                             hoverBackgroundColor: js.UndefOr[String] = js.undefined,
-                             `type`: js.UndefOr[String] = js.undefined,
-                             pointRadius: js.UndefOr[Int] = js.undefined,
-                             yAxisID: js.UndefOr[String] = js.undefined,
-                             tension: js.UndefOr[Double] = js.undefined,
-                             fill: js.UndefOr[Boolean] = js.undefined,
-                           ) {
+      data: js.Array[Double],
+      hoverBorderColor: js.UndefOr[String] = js.undefined,
+      label: js.UndefOr[String] = js.undefined,
+      backgroundColor: js.UndefOr[String] = js.undefined,
+      borderColor: js.UndefOr[String] = js.undefined,
+      borderWidth: js.UndefOr[Int] = js.undefined,
+      hoverBackgroundColor: js.UndefOr[String] = js.undefined,
+      `type`: js.UndefOr[String] = js.undefined,
+      pointRadius: js.UndefOr[Int] = js.undefined,
+      yAxisID: js.UndefOr[String] = js.undefined,
+      tension: js.UndefOr[Double] = js.undefined,
+      fill: js.UndefOr[Boolean] = js.undefined
+  ) {
 
     def toJs: js.Object = JSMacro[ChartJsDataSet](this)
   }
 
   object ChartJsDataSet {
-    def bar(label: String, data: Seq[Double], colour: RGBA, backgroundColour: Option[RGBA] = None, yAxisID: Option[String] = None): ChartJsDataSet =
+    def bar(
+        label: String,
+        data: Seq[Double],
+        colour: RGBA,
+        backgroundColour: Option[RGBA] = None,
+        yAxisID: Option[String] = None
+    ): ChartJsDataSet =
       ChartJsDataSet(
         data = data.toJSArray,
         label = label,
@@ -138,17 +146,18 @@ object ChartJSComponent {
         hoverBorderColor = colour.asStringWithAlpha(1),
         `type` = "bar",
         yAxisID = yAxisID.orUndefined,
-        fill = true,
+        fill = true
       )
 
-    def line(label: String,
-             data: Seq[Double],
-             colour: RGBA,
-             backgroundColour: Option[RGBA] = None,
-             pointRadius: Option[Int] = None,
-             yAxisID: Option[String] = None,
-             fill: Option[Boolean] = None
-            ): ChartJsDataSet =
+    def line(
+        label: String,
+        data: Seq[Double],
+        colour: RGBA,
+        backgroundColour: Option[RGBA] = None,
+        pointRadius: Option[Int] = None,
+        yAxisID: Option[String] = None,
+        fill: Option[Boolean] = None
+    ): ChartJsDataSet =
       ChartJsDataSet(
         data = data.toJSArray,
         label = label,
@@ -159,17 +168,18 @@ object ChartJSComponent {
         pointRadius = pointRadius.orUndefined,
         yAxisID = yAxisID.orUndefined,
         tension = 0.2,
-        fill = fill.orUndefined,
+        fill = fill.orUndefined
       )
   }
 
-  case class ChartJsOptions(scales: js.UndefOr[Dictionary[js.Any]] = js.undefined,
-                            plugins: js.UndefOr[Dictionary[js.Any]] = js.undefined,
-                            responsive: js.UndefOr[Boolean] = js.undefined,
-                            maintainAspectRatio: js.UndefOr[Boolean] = js.undefined,
-                            aspectRatio: js.UndefOr[Double] = js.undefined,
-                            layout: js.UndefOr[Dictionary[js.Any]] = js.undefined,
-                           ) {
+  case class ChartJsOptions(
+      scales: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+      plugins: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+      responsive: js.UndefOr[Boolean] = js.undefined,
+      maintainAspectRatio: js.UndefOr[Boolean] = js.undefined,
+      aspectRatio: js.UndefOr[Double] = js.undefined,
+      layout: js.UndefOr[Dictionary[js.Any]] = js.undefined
+  ) {
     def toJs: js.Object = JSMacro[ChartJsOptions](this)
   }
 
@@ -185,11 +195,11 @@ object ChartJSComponent {
         "title" -> js.Dictionary(
           "display" -> true,
           "text" -> title,
-          "align" -> "start",
+          "align" -> "start"
         ),
         "legend" -> js.Dictionary(
           "display" -> displayLegend,
-          "align" -> "end",
+          "align" -> "end"
         )
       )
 
@@ -197,8 +207,10 @@ object ChartJSComponent {
     }
   }
 
-  case class ChartJsData(datasets: js.Array[js.Object],
-                         labels: js.UndefOr[js.Array[String]] = js.undefined) {
+  case class ChartJsData(
+      datasets: js.Array[js.Object],
+      labels: js.UndefOr[js.Array[String]] = js.undefined
+  ) {
     def toJs: js.Object = JSMacro[ChartJsData](this)
   }
 
@@ -213,7 +225,10 @@ object ChartJSComponent {
       ChartJsData(datasets.map(_.toJs).toJSArray, labels.map(_.toJSArray).orUndefined)
 
     def apply(labels: Seq[String], data: Seq[Double], dataSetLabel: String, `type`: String): ChartJsData =
-      ChartJsData(js.Array(ChartJsDataSet(data.toJSArray, label = dataSetLabel, `type` = `type`).toJs), labels.toJSArray)
+      ChartJsData(
+        js.Array(ChartJsDataSet(data.toJSArray, label = dataSetLabel, `type` = `type`).toJs),
+        labels.toJSArray
+      )
   }
 
   val log: Logger = LoggerFactory.getLogger("ChartJSComponent")

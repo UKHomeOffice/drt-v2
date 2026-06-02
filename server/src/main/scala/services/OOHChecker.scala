@@ -3,11 +3,11 @@ package services
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import org.apache.pekko.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
+import org.apache.pekko.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, Uri }
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import uk.gov.homeoffice.drt.time.SDateLike
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -29,7 +29,10 @@ case class OOHChecker(bankHolidayClient: BankHolidayApiClient) {
   private def isWeekend(localTime: SDateLike): Boolean = localTime.getDayOfWeek >= 6
 }
 
-case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit system: ActorSystem, materializer: Materializer) {
+case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit
+    system: ActorSystem,
+    materializer: Materializer
+) {
 
   import BankHolidayParserProtocol._
 

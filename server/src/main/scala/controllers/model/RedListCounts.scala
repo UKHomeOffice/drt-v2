@@ -1,13 +1,12 @@
 package controllers.model
 
-
 import drt.shared.RedListPassengers
-import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, RootJsonFormat, enrichAny}
+import spray.json.{ enrichAny, DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, RootJsonFormat }
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 case class RedListCounts(passengers: Iterable[RedListPassengers]) extends FlightUpdates
 
@@ -20,7 +19,7 @@ object RedListCountsJsonFormats {
 
     override def read(json: JsValue): SDateLike = json match {
       case JsNumber(value) => SDate(value.toLong)
-      case unexpected => throw new Exception(s"Failed to parse SDate. Expected JsNumber. Got ${unexpected.getClass}")
+      case unexpected      => throw new Exception(s"Failed to parse SDate. Expected JsNumber. Got ${unexpected.getClass}")
     }
   }
 
@@ -29,7 +28,7 @@ object RedListCountsJsonFormats {
 
     override def read(json: JsValue): PortCode = json match {
       case JsString(value) => PortCode(value)
-      case unexpected => throw new Exception(s"Failed to parse String. Expected String. Got ${unexpected.getClass}")
+      case unexpected      => throw new Exception(s"Failed to parse String. Expected String. Got ${unexpected.getClass}")
     }
   }
 

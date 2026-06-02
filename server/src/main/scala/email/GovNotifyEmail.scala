@@ -1,8 +1,8 @@
 package email
 
 import com.google.inject.Inject
-import drt.shared.{NegativeFeedback, PositiveFeedback}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.shared.{ NegativeFeedback, PositiveFeedback }
+import org.slf4j.{ Logger, LoggerFactory }
 import slickdb.DropInRow
 import uk.gov.service.notify.NotificationClient
 
@@ -10,8 +10,7 @@ import java.util
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.util.Try
 
-
-class GovNotifyEmail @Inject()(apiKey: String) {
+class GovNotifyEmail @Inject() (apiKey: String) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -30,7 +29,7 @@ class GovNotifyEmail @Inject()(apiKey: String) {
       "dropInDate" -> dropIn.getDate,
       "startTime" -> dropIn.getStartTime,
       "endTime" -> dropIn.getEndTime,
-      "meetingLink" -> dropIn.meetingLink.getOrElse(""),
+      "meetingLink" -> dropIn.meetingLink.getOrElse("")
     ).asJava
   }
 
@@ -42,7 +41,7 @@ class GovNotifyEmail @Inject()(apiKey: String) {
       "dropInDate" -> dropIn.getDate,
       "startTime" -> dropIn.getStartTime,
       "endTime" -> dropIn.getEndTime,
-      "meetingLink" -> dropIn.meetingLink.getOrElse(""),
+      "meetingLink" -> dropIn.meetingLink.getOrElse("")
     ).asJava
   }
 
@@ -50,7 +49,7 @@ class GovNotifyEmail @Inject()(apiKey: String) {
     Map(
       "url" -> feedbackData.url,
       "email" -> feedbackData.email,
-      "portCode" -> feedbackData.portCode,
+      "portCode" -> feedbackData.portCode
     ).asJava
   }
 
@@ -61,16 +60,23 @@ class GovNotifyEmail @Inject()(apiKey: String) {
       "url" -> feedbackData.url,
       "whatUserWasDoing" -> feedbackData.whatUserWasDoing,
       "whatWentWrong" -> feedbackData.whatWentWrong,
-      "whatToImprove" -> feedbackData.whatToImprove,
+      "whatToImprove" -> feedbackData.whatToImprove
     ).asJava
   }
 
-  def sendRequest(reference: String, emailAddress: String, templateId: String, personalisation: util.Map[String, String]): Try[Any] = {
+  def sendRequest(
+      reference: String,
+      emailAddress: String,
+      templateId: String,
+      personalisation: util.Map[String, String]
+  ): Try[Any] = {
     Try(
-      client.sendEmail(templateId,
+      client.sendEmail(
+        templateId,
         emailAddress,
         personalisation,
-        reference)
+        reference
+      )
     ).recover {
       case e => log.error(s"Unable to sendEmail", e)
     }

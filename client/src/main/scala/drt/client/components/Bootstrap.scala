@@ -1,14 +1,14 @@
 package drt.client.components
 
 import diode.UseValueEq
-import japgolly.scalajs.react.{CtorType, _}
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.{ CtorType, _ }
+import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
 import japgolly.scalajs.react.vdom.html_<^._
 import scalacss.DevDefaults._
 
 /**
-  * Common Bootstrap components for scalajs-react
-  */
+ * Common Bootstrap components for scalajs-react
+ */
 object Bootstrap {
 
   // shorthand for styles
@@ -32,7 +32,8 @@ object Bootstrap {
 
     val component: Component[Props, Unit, Unit, CtorType.PropsAndChildren] = ScalaComponent.builder[Props]("Panel")
       .renderPC((_, p, c) =>
-        <.div(^.className := Styles.panelDefaultStr, //todo style cleanup bss.panelOpt(p.style),
+        <.div(
+          ^.className := Styles.panelDefaultStr, // todo style cleanup bss.panelOpt(p.style),
           <.div(^.className := bss.panelHeadingStr, p.heading),
           <.div(^.className := bss.panelBodyStr, c)
         )

@@ -3,7 +3,7 @@ package services.arrivals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import org.specs2.mutable.Specification
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class EdiArrivalTerminalCSVSpec extends Specification {
 
@@ -36,7 +36,6 @@ class EdiArrivalTerminalCSVSpec extends Specification {
   "Given an invalid path" >> {
     "Then I should get a Failure" >> {
       val url = getClass.getClassLoader.getResource("bad-filename.csv")
-
 
       val result = EdiArrivalTerminalCsvMapper(url)
 
@@ -118,8 +117,5 @@ class EdiArrivalTerminalCSVSpec extends Specification {
       result === expected
     }
   }
-
-
-
 
 }

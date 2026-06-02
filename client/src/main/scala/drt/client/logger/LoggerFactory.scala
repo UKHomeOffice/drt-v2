@@ -20,7 +20,6 @@ trait Logger {
   def disableServerLogging(): Unit
 }
 
-
 object LoggerFactory {
   private[logger] def createLogger(name: String): Unit = {}
 

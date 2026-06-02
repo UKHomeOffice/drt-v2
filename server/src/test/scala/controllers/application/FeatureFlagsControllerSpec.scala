@@ -5,7 +5,7 @@ import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
+import play.api.test.{ FakeRequest, Helpers }
 import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
 
 class FeatureFlagsControllerSpec extends PlaySpec {
@@ -28,10 +28,12 @@ class FeatureFlagsControllerSpec extends PlaySpec {
 
       val controller = new FeatureFlagsController(Helpers.stubControllerComponents(), drtSystemInterface)
 
-      val result = controller.getFeatureFlags.apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+      val result = controller.getFeatureFlags.apply(FakeRequest().withHeaders(
+        "X-Forwarded-Email" -> "test@test.com",
         "X-Forwarded-Preferred-Username" -> "test",
         "X-Forwarded-User" -> "test",
-        "X-Forwarded-Groups" -> s"TEST"))
+        "X-Forwarded-Groups" -> s"TEST"
+      ))
 
       status(result) mustBe OK
 

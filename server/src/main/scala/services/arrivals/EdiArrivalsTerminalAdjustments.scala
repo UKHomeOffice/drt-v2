@@ -1,8 +1,8 @@
 package services.arrivals
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
+import uk.gov.homeoffice.drt.ports.Terminals.{ A1, A2 }
 
 object EdiArrivalsTerminalAdjustments extends ArrivalsAdjustmentsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)

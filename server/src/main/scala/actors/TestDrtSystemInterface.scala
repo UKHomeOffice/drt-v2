@@ -1,15 +1,15 @@
 package actors
 
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
 import org.apache.pekko.stream.KillSwitch
 import drt.server.feeds.FeedPoller.Enable
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import play.api.Configuration
-import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
+import uk.gov.homeoffice.drt.crunchsystem.{ ActorsServiceLike, PersistentStateActors }
 import uk.gov.homeoffice.drt.db.AggregateDbH2
-import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
+import uk.gov.homeoffice.drt.service.{ ApplicationService, FeedService }
 import uk.gov.homeoffice.drt.testsystem.RestartActor
-import uk.gov.homeoffice.drt.time.{MilliDate => _}
+import uk.gov.homeoffice.drt.time.{ MilliDate => _ }
 
 import scala.collection.SortedSet
 import scala.concurrent.ExecutionContext
@@ -18,17 +18,19 @@ trait TestDrtSystemActorsLike {
   val restartActor: ActorRef
 }
 
-case class TestDrtSystemActors(applicationService: ApplicationService,
-                               feedService: FeedService,
-                               actorService: ActorsServiceLike,
-                               persistentActors: PersistentStateActors,
-                               config: Configuration)
-                              (implicit system: ActorSystem, ec: ExecutionContext) extends TestDrtSystemActorsLike {
+case class TestDrtSystemActors(
+    applicationService: ApplicationService,
+    feedService: FeedService,
+    actorService: ActorsServiceLike,
+    persistentActors: PersistentStateActors,
+    config: Configuration
+)(implicit system: ActorSystem, ec: ExecutionContext) extends TestDrtSystemActorsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val clearAggDb = () => AggregateDbH2.dropAndCreateH2Tables()
 
-  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, clearAggDb)), name = "TestActor-ResetData")
+  override val restartActor: ActorRef =
+    system.actorOf(Props(new RestartActor(startSystem, clearAggDb)), name = "TestActor-ResetData")
 
   restartActor ! RestartActor.AddResetActors(Seq(
     feedService.forecastBaseFeedArrivalsActor,
@@ -56,7 +58,7 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
         SortedSet(),
         SortedSet(),
         SortedSet(),
-        SortedSet(),
+        SortedSet()
       )
     )
 
@@ -65,5 +67,3 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
     crunchInputs.killSwitches
   }
 }
-
-

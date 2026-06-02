@@ -1,12 +1,11 @@
 package services
 
-import org.slf4j.{Logger, LoggerFactory}
-import services.workload.{QueueProcessor, QueuePassenger}
+import org.slf4j.{ Logger, LoggerFactory }
+import services.workload.{ QueuePassenger, QueueProcessor }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
-
+import scala.util.{ Failure, Success, Try }
 
 trait ProcessedWorkLike {
   val util: List[Double]
@@ -21,11 +20,13 @@ trait ProcessedWorkLike {
   def incrementExcessWait(toAdd: Double): ProcessedWorkLike
 }
 
-case class ProcessedWork(util: List[Double],
-                         waits: List[Int],
-                         residual: IndexedSeq[Double],
-                         totalWait: Double,
-                         excessWait: Double) extends ProcessedWorkLike {
+case class ProcessedWork(
+    util: List[Double],
+    waits: List[Int],
+    residual: IndexedSeq[Double],
+    totalWait: Double,
+    excessWait: Double
+) extends ProcessedWorkLike {
   override def incrementTotalWait(toAdd: Double): ProcessedWorkLike = this.copy(totalWait = totalWait + toAdd)
 
   override def incrementExcessWait(toAdd: Double): ProcessedWorkLike = this.copy(excessWait = excessWait + toAdd)
@@ -46,14 +47,17 @@ object OptimiserWithFlexibleProcessors {
   val targetWidth = 60
   val rollingBuffer = 120
 
-  def crunchWholePax(useFairXmax: Boolean)
-                    (passengerLoads: Iterable[Iterable[Double]],
-                     minDesks: Iterable[Int],
-                     maxDesks: Iterable[Int],
-                     config: OptimiserConfig,
-                    ): Try[OptimizerCrunchResult] = {
+  def crunchWholePax(useFairXmax: Boolean)(
+      passengerLoads: Iterable[Iterable[Double]],
+      minDesks: Iterable[Int],
+      maxDesks: Iterable[Int],
+      config: OptimiserConfig
+  ): Try[OptimizerCrunchResult] = {
     val processorsCount = config.processors.processorsByMinute.length
-    assert(processorsCount == passengerLoads.size, s"processors by minute ($processorsCount) needs to match workload length (${passengerLoads.size})")
+    assert(
+      processorsCount == passengerLoads.size,
+      s"processors by minute ($processorsCount) needs to match workload length (${passengerLoads.size})"
+    )
     val indexedWork = passengerLoads.map(_.sum).toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
@@ -65,7 +69,7 @@ object OptimiserWithFlexibleProcessors {
         (0.75 * config.sla).round.toInt,
         targetWidth,
         rollingBuffer,
-        config.processors,
+        config.processors
       )
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
@@ -74,7 +78,17 @@ object OptimiserWithFlexibleProcessors {
 
     val start = SDate.now().millisSinceEpoch
     for {
-      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
+      desks <- tryOptimiseWin(
+        indexedWork,
+        indexedMinDesks,
+        bestMaxDesks,
+        config.sla,
+        weightChurn,
+        weightPax,
+        weightStaff,
+        weightSla,
+        config.processors
+      )
     } yield {
       val actualCapacity = desks.zipWithIndex.map {
         case (c, idx) => List(config.processors.forMinute(idx).capacityForServers(c) * 60)
@@ -95,12 +109,14 @@ object OptimiserWithFlexibleProcessors {
     i.map(_ * ratio).toList
   }
 
-  def leftwardDesks(work: IndexedSeq[Double],
-                    xmin: IndexedSeq[Int],
-                    xmax: IndexedSeq[Int],
-                    blockSize: Int,
-                    backlog: Double,
-                    processors: WorkloadProcessorsProvider): IndexedSeq[Int] = {
+  def leftwardDesks(
+      work: IndexedSeq[Double],
+      xmin: IndexedSeq[Int],
+      xmax: IndexedSeq[Int],
+      blockSize: Int,
+      backlog: Double,
+      processors: WorkloadProcessorsProvider
+  ): IndexedSeq[Int] = {
     val workWithMinMaxDesks: Iterator[((IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int])), Int)] =
       work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize))).zip(work.indices)
 
@@ -110,7 +126,10 @@ object OptimiserWithFlexibleProcessors {
         val capacity = capacityWithMinimumLimit(processors.forMinute(minute), 1)
         var guess = List(((bl + workBlock.sum) / (blockSize * capacity)).round.toInt, xmaxBlock.head).min
 
-        while (cumulativeSum(workBlock.map(_ - processors.forMinute(minute).capacityForServers(guess))).min < 0 - bl && guess > xminBlock.head) {
+        while (
+          cumulativeSum(workBlock.map(_ - processors.forMinute(minute).capacityForServers(guess))).min < 0 - bl &&
+          guess > xminBlock.head
+        ) {
           guess = guess - 1
         }
 
@@ -128,14 +147,16 @@ object OptimiserWithFlexibleProcessors {
   def capacityWithMinimumLimit(processors: WorkloadProcessors, minimumLimit: Int): Int =
     processors.capacityForServers(minimumLimit) match {
       case c if c == 0 => 1
-      case c => c
+      case c           => c
     }
 
-  def legacyTryProcessWork(work: IndexedSeq[Double],
-                           capacity: IndexedSeq[Int],
-                           sla: Int,
-                           qstart: IndexedSeq[Double],
-                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
+  def legacyTryProcessWork(
+      work: IndexedSeq[Double],
+      capacity: IndexedSeq[Int],
+      sla: Int,
+      qstart: IndexedSeq[Double],
+      processors: WorkloadProcessorsProvider
+  ): Try[ProcessedWorkLike] = {
 
     if (capacity.length != work.length) {
       Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
@@ -179,13 +200,15 @@ object OptimiserWithFlexibleProcessors {
     }
   }
 
-  def rollingFairXmax(work: IndexedSeq[Double],
-                      xmin: IndexedSeq[Int],
-                      blockSize: Int,
-                      sla: Int,
-                      targetWidth: Int,
-                      rollingBuffer: Int,
-                      processors: WorkloadProcessorsProvider): IndexedSeq[Int] = {
+  def rollingFairXmax(
+      work: IndexedSeq[Double],
+      xmin: IndexedSeq[Int],
+      blockSize: Int,
+      sla: Int,
+      targetWidth: Int,
+      rollingBuffer: Int,
+      processors: WorkloadProcessorsProvider
+  ): IndexedSeq[Int] = {
     val workWithOverrun = work ++ List.fill(targetWidth)(0d)
     val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
 
@@ -215,11 +238,13 @@ object OptimiserWithFlexibleProcessors {
         winXmax = lowerLimit
       else {
         do {
-          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog, winProcessors)
-          val trialProcessExcessWait = legacyTryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
-            case Success(pw) => pw.excessWait
-            case Failure(t) => throw t
-          }
+          val trialDesks =
+            leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog, winProcessors)
+          val trialProcessExcessWait =
+            legacyTryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
+              case Success(pw) => pw.excessWait
+              case Failure(t)  => throw t
+            }
           if (trialProcessExcessWait > 0) {
             winXmax = List(winXmax + 1, guessMax).min
             hasExcessWait = true
@@ -239,7 +264,12 @@ object OptimiserWithFlexibleProcessors {
     result
   }
 
-  def runningAverage(work: Iterable[Double], windowLength: Int, processors: WorkloadProcessorsProvider, startMinute: Int): Seq[Int] = {
+  def runningAverage(
+      work: Iterable[Double],
+      windowLength: Int,
+      processors: WorkloadProcessorsProvider,
+      startMinute: Int
+  ): Seq[Int] = {
     val slidingAverages = work
       .sliding(windowLength)
       .map(_.sum / windowLength).toList
@@ -251,7 +281,7 @@ object OptimiserWithFlexibleProcessors {
 
   def cumulativeSum(values: Iterable[Double]): Iterable[Double] = values
     .foldLeft(List[Double]()) {
-      case (Nil, element) => List(element)
+      case (Nil, element)          => List(element)
       case (head :: tail, element) => element + head :: head :: tail
     }.reverse
 
@@ -266,24 +296,26 @@ object OptimiserWithFlexibleProcessors {
     val desksPrefixed = churnStart +: desks
     (1 until desksPrefixed.length)
       .foldLeft(0) {
-        case (acc, idx) if desksPrefixed(idx - 1) < desksPrefixed(idx) => acc + (desksPrefixed(idx) - desksPrefixed(idx - 1))
+        case (acc, idx) if desksPrefixed(idx - 1) < desksPrefixed(idx) =>
+          acc + (desksPrefixed(idx) - desksPrefixed(idx - 1))
         case (acc, _) => acc
       }
   }
 
-  def cost(work: IndexedSeq[Double],
-           sla: Int,
-           weightChurn: Double,
-           weightPax: Double,
-           weightStaff: Double,
-           weightSla: Double,
-           qStart: IndexedSeq[Double],
-           previousDesksOpen: Int,
-           processors: WorkloadProcessorsProvider)
-          (capacity: IndexedSeq[Int]): Cost = {
+  def cost(
+      work: IndexedSeq[Double],
+      sla: Int,
+      weightChurn: Double,
+      weightPax: Double,
+      weightStaff: Double,
+      weightSla: Double,
+      qStart: IndexedSeq[Double],
+      previousDesksOpen: Int,
+      processors: WorkloadProcessorsProvider
+  )(capacity: IndexedSeq[Int]): Cost = {
     var simRes = legacyTryProcessWork(work, capacity, sla, qStart, processors) match {
       case Success(pw) => pw
-      case Failure(t) => throw t
+      case Failure(t)  => throw t
     }
 
     var finalCapacity = capacity.takeRight(1).head
@@ -312,7 +344,7 @@ object OptimiserWithFlexibleProcessors {
         .zip(backlog.zip(meanWaits))
         .map {
           case (true, (x, y)) => x * y
-          case _ => 0
+          case _              => 0
         }.sum
 
       simRes = simRes.incrementTotalWait(totalWaitIncrease).incrementExcessWait(excessWaitIncrease)
@@ -336,11 +368,13 @@ object OptimiserWithFlexibleProcessors {
     //    .sorted.reverse
     .sortBy(x => (x - x0).abs)
 
-  def branchBound(startingX: IndexedSeq[Int],
-                  cost: IndexedSeq[Int] => Cost,
-                  xmin: IndexedSeq[Int],
-                  xmax: IndexedSeq[Int],
-                  concavityLimit: Int): Iterable[Int] = {
+  def branchBound(
+      startingX: IndexedSeq[Int],
+      cost: IndexedSeq[Int] => Cost,
+      xmin: IndexedSeq[Int],
+      xmax: IndexedSeq[Int],
+      concavityLimit: Int
+  ): Iterable[Int] = {
     val desks = startingX.iterator.to(mutable.IndexedSeq)
     var incumbent = startingX
     val minutes = desks.length
@@ -379,11 +413,13 @@ object OptimiserWithFlexibleProcessors {
     desks
   }
 
-  def branchBoundBinarySearch(startingX: IndexedSeq[Int],
-                              cost: IndexedSeq[Int] => Cost,
-                              xmin: IndexedSeq[Int],
-                              xmax: IndexedSeq[Int],
-                              concavityLimit: Int): Iterable[Int] = {
+  def branchBoundBinarySearch(
+      startingX: IndexedSeq[Int],
+      cost: IndexedSeq[Int] => Cost,
+      xmin: IndexedSeq[Int],
+      xmax: IndexedSeq[Int],
+      concavityLimit: Int
+  ): Iterable[Int] = {
     val desks = startingX.iterator.to(mutable.IndexedSeq)
     var incumbent = startingX
     val minutes = desks.length
@@ -425,15 +461,17 @@ object OptimiserWithFlexibleProcessors {
     desks
   }
 
-  def tryOptimiseWin(work: IndexedSeq[Double],
-                     minDesks: IndexedSeq[Int],
-                     maxDesks: IndexedSeq[Int],
-                     sla: Int,
-                     weightChurn: Double,
-                     weightPax: Double,
-                     weightStaff: Double,
-                     weightSla: Double,
-                     processors: WorkloadProcessorsProvider): Try[IndexedSeq[Int]] = {
+  def tryOptimiseWin(
+      work: IndexedSeq[Double],
+      minDesks: IndexedSeq[Int],
+      maxDesks: IndexedSeq[Int],
+      sla: Int,
+      weightChurn: Double,
+      weightPax: Double,
+      weightStaff: Double,
+      weightSla: Double,
+      processors: WorkloadProcessorsProvider
+  ): Try[IndexedSeq[Int]] = {
     if (work.length != minDesks.length) {
       Failure(new Exception(s"work & minDesks are not equal length: ${work.length} vs ${minDesks.length}"))
     } else if (work.length != maxDesks.length) {
@@ -461,12 +499,14 @@ object OptimiserWithFlexibleProcessors {
         }
         .iterator.to(mutable.IndexedSeq)
 
-      def myCost(costWork: IndexedSeq[Double],
-                 costQStart: IndexedSeq[Double],
-                 previousDesksOpen: Int,
-                 windowProcessors: WorkloadProcessorsProvider)
-                (capacity: IndexedSeq[Int]): Cost =
-        cost(costWork,
+      def myCost(
+          costWork: IndexedSeq[Double],
+          costQStart: IndexedSeq[Double],
+          previousDesksOpen: Int,
+          windowProcessors: WorkloadProcessorsProvider
+      )(capacity: IndexedSeq[Int]): Cost =
+        cost(
+          costWork,
           sla,
           weightChurn,
           weightPax,
@@ -474,7 +514,8 @@ object OptimiserWithFlexibleProcessors {
           weightSla,
           costQStart,
           previousDesksOpen,
-          windowProcessors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
+          windowProcessors
+        )(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
 
       var shouldStop = false
 
@@ -486,7 +527,13 @@ object OptimiserWithFlexibleProcessors {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
+        branchBound(
+          blockGuess,
+          myCost(currentWork, qStart, lastDesksOpen, currentProcessors),
+          xminCondensed,
+          xmaxCondensed,
+          concavityLimit
+        )
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
           .foreach {
@@ -499,9 +546,15 @@ object OptimiserWithFlexibleProcessors {
           val stop = winStart + winStep
           val workToProcess = work.slice(winStart, stop)
           val desksToProcess = desks.slice(winStart, stop)
-          qStart = legacyTryProcessWork(workToProcess, desksToProcess.toIndexedSeq, sla, qStart, processors.forWindow(winStart, stop)) match {
+          qStart = legacyTryProcessWork(
+            workToProcess,
+            desksToProcess.toIndexedSeq,
+            sla,
+            qStart,
+            processors.forWindow(winStart, stop)
+          ) match {
             case Success(pw) => pw.residual
-            case Failure(t) => throw t
+            case Failure(t)  => throw t
           }
           lastDesksOpen = desks(stop)
           winStart = winStart + winStep

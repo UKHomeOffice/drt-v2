@@ -1,16 +1,16 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess }
 import drt.shared._
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, LiveArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.models.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventTypes, LiveArrival, VoyageNumber }
+import uk.gov.homeoffice.drt.models.{ ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest }
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
+import uk.gov.homeoffice.drt.ports.{ PaxTypeAndQueue, PortCode, Queues }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.collection.immutable.{ List, Seq, SortedMap }
 import scala.concurrent.duration._
 
 class PCPPaxNosSpec extends CrunchTestLike {
@@ -27,11 +27,21 @@ class PCPPaxNosSpec extends CrunchTestLike {
   )
 
   val manifests: ManifestsFeedResponse =
-    ManifestsFeedSuccess(DqManifests(0, Set(
-      VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"),
-        CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
-        VoyageManifestGenerator.xOfPaxType(100, VoyageManifestGenerator.euPassport))
-    )))
+    ManifestsFeedSuccess(DqManifests(
+      0,
+      Set(
+        VoyageManifest(
+          EventTypes.DC,
+          defaultAirportConfig.portCode,
+          PortCode("JFK"),
+          VoyageNumber("0001"),
+          CarrierCode("BA"),
+          ManifestDateOfArrival("2019-11-20"),
+          ManifestTimeOfArrival("00:00"),
+          VoyageManifestGenerator.xOfPaxType(100, VoyageManifestGenerator.euPassport)
+        )
+      )
+    ))
 
   "Given flights with API and live feed passenger numbers then we should use the live feed passenger numbers" >> {
 
@@ -40,7 +50,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
-      ),
+      )
     ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))

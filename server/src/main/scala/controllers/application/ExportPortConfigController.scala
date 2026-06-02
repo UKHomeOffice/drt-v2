@@ -1,21 +1,23 @@
 package controllers.application
 
 import com.google.inject.Inject
-import drt.shared.api.{WalkTime, WalkTimes}
+import drt.shared.api.{ WalkTime, WalkTimes }
 import org.apache.pekko.pattern.ask
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{ EgateBanksUpdates, PortEgateBanksUpdates }
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{PaxTypes, Queues, Terminals}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
+import uk.gov.homeoffice.drt.ports.{ PaxTypes, Queues, Terminals }
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate }
 
 import scala.concurrent.Future
 
-class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with WalkTimeLike {
+class ExportPortConfigController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) with WalkTimeLike {
   private def updatesByTerminalF: Future[Map[Terminals.Terminal, EgateBanksUpdates]] = {
-    val eGateBanks: Future[PortEgateBanksUpdates] = ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
+    val eGateBanks: Future[PortEgateBanksUpdates] =
+      ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
     eGateBanks.map(_.updatesByTerminal)
   }
 
@@ -26,8 +28,8 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val eGatesCsv = updatesByTerminal.map { case (k, v) =>
         v.updates.map { updates =>
           s"$k,${SDate(updates.effectiveFrom).prettyDateTime},${bankSizeString(updates.banks.length)}: ${
-            updates.banks.map { bank => s"${bank.openCount}/${bank.maxCapacity}" }.mkString(" ")
-          }"
+              updates.banks.map { bank => s"${bank.openCount}/${bank.maxCapacity}" }.mkString(" ")
+            }"
         }.mkString("\n")
       }.mkString("\n")
       val eGatesHeader = "E-gates schedule"
@@ -115,7 +117,8 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
   private def defaultWalkTime(terminal: Terminals.Terminal): String = {
     val walkTimeHeader = "Walk times"
-    val walkTimeString = s"Default walk time (minutes),${airportConfig.defaultWalkTimeMillis(terminal) / MilliTimes.oneMinuteMillis}"
+    val walkTimeString =
+      s"Default walk time (minutes),${airportConfig.defaultWalkTimeMillis(terminal) / MilliTimes.oneMinuteMillis}"
     Seq(walkTimeHeader, walkTimeString).mkString("\n")
   }
 
@@ -185,7 +188,8 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     } yield Ok(
       s"""$eGateConfig
          |
-         |$terminalConfig""".stripMargin)
+         |$terminalConfig""".stripMargin
+    )
 
   }
 }

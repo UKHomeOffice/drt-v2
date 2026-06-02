@@ -1,14 +1,14 @@
 package actors.routing.minutes
 
-import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
+import actors.routing.minutes.MinutesActorLike.{ ManifestLookup, ManifestsUpdate }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.ActorRef
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.models.{VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.models.{ VoyageManifest, VoyageManifests }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, UtcDate }
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 
 case class MockManifestsLookup(probe: ActorRef, terminals: LocalDate => Iterable[Terminal]) {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
@@ -24,6 +24,8 @@ case class MockManifestsLookup(probe: ActorRef, terminals: LocalDate => Iterable
 
   def update: ManifestsUpdate = (date: UtcDate, manifests: VoyageManifests) => {
     probe ! (date, manifests)
-    Future(manifests.manifests.map(_.scheduled.toLocalDate).flatMap(d => terminals(SDate(date).toLocalDate).map(TerminalUpdateRequest(_, d))).toSet)
+    Future(manifests.manifests.map(_.scheduled.toLocalDate).flatMap(d =>
+      terminals(SDate(date).toLocalDate).map(TerminalUpdateRequest(_, d))
+    ).toSet)
   }
 }

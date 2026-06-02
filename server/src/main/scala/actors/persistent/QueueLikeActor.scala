@@ -1,19 +1,21 @@
 package actors.persistent
 
 import org.apache.pekko.persistence._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
-import uk.gov.homeoffice.drt.protobuf.serialisation.CrunchRequestMessageConversion.{terminalUpdateRequestToMessage, terminalUpdateRequestsFromMessage}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.serialisation.CrunchRequestMessageConversion.{
+  terminalUpdateRequestToMessage,
+  terminalUpdateRequestsFromMessage
+}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
-
 
 case object GetArrivals
 
@@ -21,7 +23,8 @@ object QueueLikeActor {
   case object Tick
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike, terminals: LocalDate => Iterable[Terminal]) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike, terminals: LocalDate => Iterable[Terminal])
+    extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
@@ -30,7 +33,8 @@ abstract class QueueLikeActor(val now: () => SDateLike, terminals: LocalDate => 
 
   val state: mutable.SortedSet[TerminalUpdateRequest] = mutable.SortedSet()
 
-  private val requestsFromMessage: CrunchRequestMessage => Seq[TerminalUpdateRequest] = terminalUpdateRequestsFromMessage(terminals)
+  private val requestsFromMessage: CrunchRequestMessage => Seq[TerminalUpdateRequest] =
+    terminalUpdateRequestsFromMessage(terminals)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
@@ -50,11 +54,12 @@ abstract class QueueLikeActor(val now: () => SDateLike, terminals: LocalDate => 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
-      state ++= requests
-        .map(requestsFromMessage)
-        .collect {
-          case r: TerminalUpdateRequest => r
-        }
+      state ++=
+        requests
+          .map(requestsFromMessage)
+          .collect {
+            case r: TerminalUpdateRequest => r
+          }
   }
 
   override def stateToMessage: GeneratedMessage =
@@ -82,7 +87,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, terminals: LocalDate => 
         year = Option(cr.date.year),
         month = Option(cr.date.month),
         day = Option(cr.date.day),
-        terminalName = None,
+        terminalName = None
       ))
 
     case _: SaveSnapshotSuccess =>

@@ -1,20 +1,22 @@
 package services.prediction
 
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.slf4j.LoggerFactory
 import services.prediction.ArrivalPredictions.arrivalsByKey
-import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.actor.PredictionModelActor.{ Models, WithId }
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, ArrivalsDiff, UniqueArrival }
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
-import scala.concurrent.{ExecutionContext, Future}
-
+import scala.concurrent.duration.{ DurationLong, FiniteDuration }
+import scala.concurrent.{ ExecutionContext, Future }
 
 object ArrivalPredictions {
-  def arrivalsByKey(arrivals: Iterable[Arrival], keys: Arrival => Iterable[WithId]): List[(WithId, Iterable[UniqueArrival])] = {
+  def arrivalsByKey(
+      arrivals: Iterable[Arrival],
+      keys: Arrival => Iterable[WithId]
+  ): List[(WithId, Iterable[UniqueArrival])] = {
     arrivals
       .flatMap(a => keys(a).map(k => (k, a.unique)))
       .groupBy(_._1)
@@ -23,14 +25,14 @@ object ArrivalPredictions {
   }
 }
 
-case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
-                              getModels: WithId => Future[Models],
-                              modelThresholds: Map[String, Int],
-                              minimumImprovementPctThreshold: Int,
-                              now: () => SDateLike,
-                              staleFrom: FiniteDuration,
-                             )
-                             (implicit ec: ExecutionContext, mat: Materializer) {
+case class ArrivalPredictions(
+    modelKeys: Arrival => Iterable[WithId],
+    getModels: WithId => Future[Models],
+    modelThresholds: Map[String, Int],
+    minimumImprovementPctThreshold: Int,
+    now: () => SDateLike,
+    staleFrom: FiniteDuration
+)(implicit ec: ExecutionContext, mat: Materializer) {
   private val log = LoggerFactory.getLogger(getClass)
 
   val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
@@ -42,7 +44,10 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
         }
     }
 
-  def applyPredictionsByKey(arrivals: Map[UniqueArrival, Arrival], idsToArrivalKey: List[(WithId, Iterable[UniqueArrival])]): Future[Iterable[Arrival]] =
+  def applyPredictionsByKey(
+      arrivals: Map[UniqueArrival, Arrival],
+      idsToArrivalKey: List[(WithId, Iterable[UniqueArrival])]
+  ): Future[Iterable[Arrival]] =
     Source(idsToArrivalKey)
       .foldAsync(arrivals) {
         case (arrivalsAcc, (key, uniqueArrivals)) =>
@@ -62,7 +67,12 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
         .map { arrival =>
           models.models.values.foldLeft(arrival) {
             case (arrival, model: ArrivalModelAndFeatures) =>
-              model.updatePrediction(arrival, minimumImprovementPctThreshold, modelThresholds.get(model.targetName), now())
+              model.updatePrediction(
+                arrival,
+                minimumImprovementPctThreshold,
+                modelThresholds.get(model.targetName),
+                now()
+              )
             case (arrival, unknownModel) =>
               log.error(s"Unknown model type ${unknownModel.getClass}")
               arrival

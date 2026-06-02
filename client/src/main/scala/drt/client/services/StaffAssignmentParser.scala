@@ -6,18 +6,19 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.Try
 
-
 object StaffAssignmentHelper {
 
   import JSDateConversions._
 
-  def tryStaffAssignment(name: String,
-                         terminalName: String,
-                         startDate: String,
-                         startTime: String,
-                         endTime: String,
-                         numberOfStaff: String,
-                         createdBy: Option[String]): Try[StaffAssignment] = {
+  def tryStaffAssignment(
+      name: String,
+      terminalName: String,
+      startDate: String,
+      startTime: String,
+      endTime: String,
+      numberOfStaff: String,
+      createdBy: Option[String]
+  ): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
@@ -34,11 +35,26 @@ object StaffAssignmentHelper {
       staffDelta: Int <- staffDeltaTry
     } yield {
       val endTime = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt).millisSinceEpoch
-      StaffAssignment(name, Terminal(terminalName), startDt.millisSinceEpoch, endTime, staffDelta, createdBy = createdBy)
+      StaffAssignment(
+        name,
+        Terminal(terminalName),
+        startDt.millisSinceEpoch,
+        endTime,
+        staffDelta,
+        createdBy = createdBy
+      )
     }
   }
 
-  def tryStaffAssignment(name: String, terminalName: String, startDate: String, startTime: String, lengthOfTimeMinutes: Int, numberOfStaff: String, createdBy: Option[String]): Try[StaffAssignment] = {
+  def tryStaffAssignment(
+      name: String,
+      terminalName: String,
+      startDate: String,
+      startTime: String,
+      lengthOfTimeMinutes: Int,
+      numberOfStaff: String,
+      createdBy: Option[String]
+  ): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
@@ -54,7 +70,14 @@ object StaffAssignmentHelper {
     } yield {
       val endDt = startDt.addMinutes(lengthOfTimeMinutes)
       val endTime = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt).millisSinceEpoch
-      StaffAssignment(name, Terminal(terminalName), startDt.millisSinceEpoch, endTime, staffDelta, createdBy = createdBy)
+      StaffAssignment(
+        name,
+        Terminal(terminalName),
+        startDt.millisSinceEpoch,
+        endTime,
+        staffDelta,
+        createdBy = createdBy
+      )
     }
   }
 
@@ -64,7 +87,8 @@ object StaffAssignmentHelper {
     s"${assignment.name},${assignment.terminal},${startDate.ddMMyyString},${startDate.toHoursAndMinutes},${endDate.toHoursAndMinutes},${assignment.numberOfStaff}"
   }
 
-  def fixedPointsFormat(fixedPoints: FixedPointAssignments): String = fixedPoints.assignments.map(fixedPointFormat).mkString("\n")
+  def fixedPointsFormat(fixedPoints: FixedPointAssignments): String =
+    fixedPoints.assignments.map(fixedPointFormat).mkString("\n")
 
   def fixedPointFormat(assignment: StaffAssignmentLike): String = {
     val startDate: SDateLike = SDate(assignment.start)
@@ -72,7 +96,13 @@ object StaffAssignmentHelper {
     s"${assignment.name}, ${startDate.toHoursAndMinutes}, ${endDate.toHoursAndMinutes}, ${assignment.numberOfStaff}"
   }
 
-  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDateLike, endDt: SDateLike): SDateLike =
+  private def adjustEndDateIfEndTimeIsBeforeStartTime(
+      d: Int,
+      m: Int,
+      y: Int,
+      startDt: SDateLike,
+      endDt: SDateLike
+  ): SDateLike =
     if (endDt.millisSinceEpoch < startDt.millisSinceEpoch)
       SDate(y, m, d, endDt.getHours, endDt.getMinutes).addDays(1)
     else
@@ -93,6 +123,14 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
     .filter(_.length == 6)
     .map {
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
-        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta, None)
+        StaffAssignmentHelper.tryStaffAssignment(
+          description,
+          terminalName,
+          startDay,
+          startTime,
+          endTime,
+          staffNumberDelta,
+          None
+        )
     }
 }

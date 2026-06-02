@@ -3,9 +3,9 @@ package services
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ DateRange, LocalDate, UtcDate }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -21,13 +21,16 @@ class LocalDateStreamSpec extends Specification {
     "give an empty collection when the source provider is an empty stream" in {
       val utcStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[Int]), NotUsed] = (_, _) => Source.empty
       val localDateStream = LocalDateStream(utcStream, startBufferDays, endBufferDays, transformData)
-      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1)).runWith(Sink.seq), 1.second)
+      val result =
+        Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1)).runWith(Sink.seq), 1.second)
       result === Seq()
     }
     "give a single element collection when the source provider is a single element stream" in {
-      val utcStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[Int]), NotUsed] = (_, _) => Source(List((UtcDate(2020, 1, 1), List(1, 2, 3))))
+      val utcStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[Int]), NotUsed] =
+        (_, _) => Source(List((UtcDate(2020, 1, 1), List(1, 2, 3))))
       val localDateStream = LocalDateStream(utcStream, startBufferDays, endBufferDays, transformData)
-      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1)).runWith(Sink.seq), 1.second)
+      val result =
+        Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1)).runWith(Sink.seq), 1.second)
       result === Seq((LocalDate(2020, 1, 1), "2020-01-01 1,2,3"))
     }
     "give a single element collection when the source provider is a two element stream" in {
@@ -35,7 +38,8 @@ class LocalDateStreamSpec extends Specification {
         Source(DateRange(start, end).map(d => (d, List(1, 2, 3))))
 
       val localDateStream = LocalDateStream(utcStream, startBufferDays, endBufferDays, transformData)
-      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 2)).runWith(Sink.seq), 1.second)
+      val result =
+        Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 2)).runWith(Sink.seq), 1.second)
       result === Seq((LocalDate(2020, 1, 1), "2020-01-01 1,2,3,1,2,3"))
     }
   }

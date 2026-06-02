@@ -4,35 +4,34 @@ import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import spray.json.{JsValue, enrichAny}
+import spray.json.{ enrichAny, JsValue }
 import drt.shared.DrtPortConfigs
 import org.apache.pekko.event.Logging
 import org.apache.pekko.http.scaladsl.Http
-import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
-import play.api.{Configuration, Environment}
-import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
+import play.api.{ Configuration, Environment }
+import services.{ ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker }
 import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao.{ IABFeatureDao, IUserFeedbackDao }
 import uk.gov.homeoffice.drt.db.serialisers.UserRowSerialisation
 import uk.gov.homeoffice.drt.jsonformats.UserPreferencesJsonFormat
 import uk.gov.homeoffice.drt.keycloak._
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.service.staffing.{IShiftStaffRollingService, ShiftMetaInfoService, ShiftsService}
+import uk.gov.homeoffice.drt.service.staffing.{ IShiftStaffRollingService, ShiftMetaInfoService, ShiftsService }
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate, SDateLike }
 import spray.json._
 import UserPreferencesJsonFormat._
 
 import java.sql.Timestamp
-import java.util.{Calendar, TimeZone}
+import java.util.{ Calendar, TimeZone }
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 
 object AirportConfigProvider {
   def apply(config: Configuration): AirportConfig = {
@@ -91,8 +90,8 @@ trait ShiftStaffRollingProviderLike {
   val shiftStaffRollingService: IShiftStaffRollingService
 }
 
-class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
-  extends AuthController(cc, ctrl) with KeyCloakAuthTokenParserProtocol {
+class Application @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
+    extends AuthController(cc, ctrl) with KeyCloakAuthTokenParserProtocol {
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
@@ -160,10 +159,11 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       .map(_.sortBy(_.createdAt)(Ordering[Timestamp].reverse).headOption)
       .map {
         case Some(latestFeedback) => latestFeedback.createdAt.after(cutoffTime)
-        case None => false
+        case None                 => false
       }
 
-    val bannerClosedAtF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.flatMap(_.feedback_banner_closed_at))
+    val bannerClosedAtF: Future[Option[Timestamp]] =
+      ctrl.userService.selectUser(userEmail.trim).map(_.flatMap(_.feedback_banner_closed_at))
 
     for {
       feedbackExist <- feedbackExistF
@@ -186,8 +186,10 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def isNewFeatureAvailableSinceLastLogin: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-    val latestFeatureDateF: Future[Option[Timestamp]] = ctrl.featureGuideService.selectAll.map(_.headOption.map(_.uploadTime))
-    val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
+    val latestFeatureDateF: Future[Option[Timestamp]] =
+      ctrl.featureGuideService.selectAll.map(_.headOption.map(_.uploadTime))
+    val latestLoginDateF: Future[Option[Timestamp]] =
+      ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
     for {
       latestFeatureDate <- latestFeatureDateF
       latestLoginDate <- latestLoginDateF
@@ -240,7 +242,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     val feedsHealthCheckGracePeriod = config.get[Int]("health-check.feeds-grace-period-minutes").minutes
     val feedLastCheckThresholds: Map[FeedSource, FiniteDuration] = Map(
       AclFeedSource -> 7.days,
-      ForecastFeedSource -> 7.days,
+      ForecastFeedSource -> 7.days
     )
 
     val feedsToMonitor = ctrl.feedService.feedActorsForPort
@@ -248,9 +250,18 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       .values.toList
 
     HealthChecker(Seq(
-      FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
-      ActorResponseTimeHealthCheck(ctrl.actorService.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
-    )
+      FeedsHealthCheck(
+        feedsToMonitor,
+        defaultLastCheckThreshold,
+        feedLastCheckThresholds,
+        now,
+        feedsHealthCheckGracePeriod
+      ),
+      ActorResponseTimeHealthCheck(
+        ctrl.actorService.portStateActor,
+        healthyResponseTimeSeconds * MilliTimes.oneSecondMillis
+      )
+    ))
   } else {
     HealthChecker(Seq())
   }
@@ -258,12 +269,11 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def healthCheck: Action[AnyContent] = Action.async { _ =>
     healthChecker.checksPassing.map {
       case true => Ok("health check ok")
-      case _ => InternalServerError("health check failed")
+      case _    => InternalServerError("health check failed")
     }
   }
 
   def apiLogin: Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
-
     def postStringValOrElse(key: String): Option[String] = {
       request.body.get(key).map(_.head)
     }
@@ -312,7 +322,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
     result match {
       case Some(f) => f.map(t => t)
-      case None =>
+      case None    =>
         disabledFeatureResponse
     }
   }
@@ -320,7 +330,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def logging: Action[Map[String, Seq[String]]] = auth {
     Action(parse.tolerantFormUrlEncoded) {
       implicit request =>
-
         def postStringValOrElse(key: String, default: String): String = {
           request.body.get(key).map(_.head).getOrElse(default)
         }
@@ -339,11 +348,14 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
           "logLevel" -> logLevel
         )
 
-        log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
-          logMessage.map {
-            case (value, key) => s"$key: $value"
-          }.mkString(", ")
-        }")
+        log.log(
+          Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel),
+          s"Client Error: ${
+              logMessage.map {
+                case (value, key) => s"$key: $value"
+              }.mkString(", ")
+            }"
+        )
 
         Ok("logged successfully")
     }

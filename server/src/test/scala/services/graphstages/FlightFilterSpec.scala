@@ -2,11 +2,11 @@ package services.graphstages
 
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, ArrivalStatus }
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
+import uk.gov.homeoffice.drt.ports.{ LiveFeedSource, PortCode }
+import uk.gov.homeoffice.drt.redlist.{ RedListUpdate, RedListUpdates }
 
 class FlightFilterSpec extends Specification {
   val redListedZimbabwe: RedListUpdates = RedListUpdates(Map(0L -> RedListUpdate(0L, Map("Zimbabwe" -> "ZWE"), List())))
@@ -34,21 +34,25 @@ class FlightFilterSpec extends Specification {
   }
   "Not cancelled filter" >> {
     "Given a flight with a scheduled status, the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
+      val fws =
+        ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
       FlightFilter.notCancelledFilter.apply(fws, redListedZimbabwe) === true
     }
     "Given a flight with a cancelled status, the filter should return false to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("cancelled")).toArrival(LiveFeedSource), Set())
+      val fws =
+        ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("cancelled")).toArrival(LiveFeedSource), Set())
       FlightFilter.notCancelledFilter.apply(fws, redListedZimbabwe) === false
     }
   }
   "Not redirected filter" >> {
     "Given a flight with a scheduled status, the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
+      val fws =
+        ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
       FlightFilter.notDivertedFilter.apply(fws, redListedZimbabwe) === true
     }
     "Given a flight with a cancelled status, the filter should return false to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("diverted")).toArrival(LiveFeedSource), Set())
+      val fws =
+        ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("diverted")).toArrival(LiveFeedSource), Set())
       FlightFilter.notDivertedFilter.apply(fws, redListedZimbabwe) === false
     }
   }
@@ -74,5 +78,13 @@ class FlightFilterSpec extends Specification {
   }
 
   private def fws(origin: PortCode, terminal: Terminal): ApiFlightWithSplits =
-    ApiFlightWithSplits(ArrivalGenerator.live(schDt = "2021-06-01T12:00", totalPax = Option(10), origin = origin, terminal = terminal).toArrival(LiveFeedSource), Set())
+    ApiFlightWithSplits(
+      ArrivalGenerator.live(
+        schDt = "2021-06-01T12:00",
+        totalPax = Option(10),
+        origin = origin,
+        terminal = terminal
+      ).toArrival(LiveFeedSource),
+      Set()
+    )
 }

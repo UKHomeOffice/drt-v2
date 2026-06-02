@@ -3,8 +3,8 @@ package drt.server.feeds.common
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals }
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals.FeedArrival
 import uk.gov.homeoffice.drt.time.SDate
 

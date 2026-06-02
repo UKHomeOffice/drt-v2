@@ -4,11 +4,15 @@ import actors.StreamingJournalLike
 import actors.persistent.staffing.GetFeedStatuses
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.Props
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatuses}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage}
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStatuses }
+import uk.gov.homeoffice.drt.ports.{ ApiFeedSource, FeedSource }
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{ FeedStatusMessage, FlightStateSnapshotMessage }
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestStateSnapshotMessage
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusesFromFeedStatusesMessage, feedStatusesFromSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{
+  feedStatusFromFeedStatusMessage,
+  feedStatusesFromFeedStatusesMessage,
+  feedStatusesFromSnapshotMessage
+}
 
 trait StreamingFeedStatusUpdates {
   val sourceType: FeedSource
@@ -28,19 +32,20 @@ trait StreamingFeedStatusUpdates {
             .map(feedStatusesFromFeedStatusesMessage)
             .map(fs => FeedSourceStatuses(ApiFeedSource, fs))
       },
-      (state, msg) => msg match {
-        case feedStatusMessage: FeedStatusMessage =>
-          val newStatus = feedStatusFromFeedStatusMessage(feedStatusMessage)
-          val updated = state match {
-            case Some(feedSourceStatuses) => feedSourceStatuses.copy(
-              feedStatuses = feedSourceStatuses.feedStatuses.add(newStatus)
-            )
-            case None => FeedSourceStatuses(sourceType, FeedStatuses(List(), None, None, None).add(newStatus))
-          }
-          (Option(updated), NotUsed)
-        case _ =>
-          (state, NotUsed)
-      },
+      (state, msg) =>
+        msg match {
+          case feedStatusMessage: FeedStatusMessage =>
+            val newStatus = feedStatusFromFeedStatusMessage(feedStatusMessage)
+            val updated = state match {
+              case Some(feedSourceStatuses) => feedSourceStatuses.copy(
+                  feedStatuses = feedSourceStatuses.feedStatuses.add(newStatus)
+                )
+              case None => FeedSourceStatuses(sourceType, FeedStatuses(List(), None, None, None).add(newStatus))
+            }
+            (Option(updated), NotUsed)
+          case _ =>
+            (state, NotUsed)
+        },
       (getState, getSender) => {
         case GetFeedStatuses =>
           val statuses = getState().getOrElse(FeedSourceStatuses(sourceType, FeedStatuses(List(), None, None, None)))

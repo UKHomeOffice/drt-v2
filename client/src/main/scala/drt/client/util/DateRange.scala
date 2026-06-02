@@ -1,7 +1,7 @@
 package drt.client.util
 
 import drt.client.services.JSDateConversions.SDate
-import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, UtcDate }
 
 object DateRange {
   def apply(start: LocalDate, end: LocalDate): Seq[LocalDate] =

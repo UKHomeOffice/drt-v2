@@ -2,9 +2,9 @@ package drt.server.feeds
 
 import org.apache.pekko.actor.typed
 import org.apache.pekko.actor.typed.Behavior
-import org.apache.pekko.actor.typed.scaladsl.{Behaviors, TimerScheduler}
-import drt.server.feeds.Feed.{EnabledFeedWithFrequency, FeedTick, Tick}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.actor.typed.scaladsl.{ Behaviors, TimerScheduler }
+import drt.server.feeds.Feed.{ EnabledFeedWithFrequency, FeedTick, Tick }
+import org.slf4j.{ Logger, LoggerFactory }
 
 object FeedPoller {
   private val log: Logger = LoggerFactory.getLogger(getClass)
@@ -25,7 +25,9 @@ object FeedPoller {
     Behaviors.withTimers { timers =>
       Behaviors.receiveMessage {
         case Enable(feed) =>
-          log.info(s"Received feed. Will poll every ${feed.interval.toSeconds}s, starting in ${feed.initialDelay.toSeconds}s")
+          log.info(
+            s"Received feed. Will poll every ${feed.interval.toSeconds}s, starting in ${feed.initialDelay.toSeconds}s"
+          )
           timers.startTimerAtFixedRate("polling", ScheduledCheck, feed.initialDelay, feed.interval)
           enabled(feed, timers)
 
@@ -36,7 +38,10 @@ object FeedPoller {
     }
   }
 
-  private def enabled(feed: EnabledFeedWithFrequency[typed.ActorRef[FeedTick]], timers: TimerScheduler[Command]): Behavior[Command] =
+  private def enabled(
+      feed: EnabledFeedWithFrequency[typed.ActorRef[FeedTick]],
+      timers: TimerScheduler[Command]
+  ): Behavior[Command] =
     Behaviors.receiveMessage[Command] {
       case Enable(newFeed) =>
         log.info(s"Received new feed. Replacing polling at ${newFeed.interval.toSeconds}s")

@@ -1,22 +1,21 @@
 package actors.daily
 
-import drt.shared.CrunchApi.{DeskRecMinute, MinutesContainer}
-import org.apache.pekko.actor.{ActorRef, PoisonPill}
+import drt.shared.CrunchApi.{ DeskRecMinute, MinutesContainer }
+import org.apache.pekko.actor.{ ActorRef, PoisonPill }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
-import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue, QueueDesk}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
+import uk.gov.homeoffice.drt.ports.Queues.{ EeaDesk, NonEeaDesk, Queue, QueueDesk }
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 import uk.gov.homeoffice.drt.service.QueueConfig
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import scala.collection.SortedMap
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-
+import scala.concurrent.{ Await, Future }
 
 class TerminalDayQueuesActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
@@ -36,7 +35,10 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     val mockQueues1 = MockQueues(SortedMap(LocalDate(2025, 6, 1) -> Map(T1 -> Seq(QueueDesk))))
     val mockQueues2 = MockQueues(SortedMap(LocalDate(2025, 6, 1) -> Map(T1 -> Seq(EeaDesk, NonEeaDesk))))
     def actorForConfig(queues: MockQueues): ActorRef = {
-      system.actorOf(TerminalDayQueuesActor.props(None, queues.queuesForDateAndTerminal)(terminal, date.toUtcDate, myNow))
+      system.actorOf(TerminalDayQueuesActor.props(
+        None,
+        queues.queuesForDateAndTerminal
+      )(terminal, date.toUtcDate, myNow))
     }
 
     "When it the queue config changes" >> {
@@ -44,7 +46,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val drms = Seq(
         DeskRecMinute(terminal, EeaDesk, date.millisSinceEpoch, 1, 2, 3, 4, None),
         DeskRecMinute(terminal, NonEeaDesk, date.millisSinceEpoch, 1, 2, 3, 4, None),
-        DeskRecMinute(terminal, QueueDesk, date.millisSinceEpoch, 1, 2, 3, 4, None),
+        DeskRecMinute(terminal, QueueDesk, date.millisSinceEpoch, 1, 2, 3, 4, None)
       )
       Await.ready(actorBeforeChange.ask(MinutesContainer(drms)).mapTo[Set[Long]], 1.second)
       val probe = TestProbe("red-list")
@@ -57,7 +59,8 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       Await.ready(actorAfterChange.ask(MinutesContainer(drms)).mapTo[Set[Long]], 1.second)
 
       "It should only return queues for the new config" >> {
-        val result = Await.result(actorAfterChange.ask(GetState).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]], 1.second)
+        val result =
+          Await.result(actorAfterChange.ask(GetState).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]], 1.second)
         val resultQueues = result.map(_.minutes).getOrElse(Seq.empty).map(_.toMinute.queue)
         resultQueues.toSet === Set(EeaDesk, NonEeaDesk)
       }
@@ -121,8 +124,10 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     }
   }
 
-  private def sendMinutesAndGetState(minutesContainer: MinutesContainer[CrunchMinute, TQM],
-                                     actor: ActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
+  private def sendMinutesAndGetState(
+      minutesContainer: MinutesContainer[CrunchMinute, TQM],
+      actor: ActorRef
+  ): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
     actor.ask(minutesContainer).flatMap { _ =>
       actor.ask(GetState).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
     }
@@ -133,7 +138,11 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
-    val mockQueues = MockQueues(SortedMap(LocalDate(date.getFullYear, date.getMonth, date.getDate) -> Map(terminal -> Seq(EeaDesk, NonEeaDesk, QueueDesk))))
-    system.actorOf(TerminalDayQueuesActor.props(None, mockQueues.queuesForDateAndTerminal)(terminal, date.toUtcDate, () => date))
+    val mockQueues = MockQueues(SortedMap(LocalDate(date.getFullYear, date.getMonth, date.getDate) ->
+      Map(terminal -> Seq(EeaDesk, NonEeaDesk, QueueDesk))))
+    system.actorOf(TerminalDayQueuesActor.props(
+      None,
+      mockQueues.queuesForDateAndTerminal
+    )(terminal, date.toUtcDate, () => date))
   }
 }

@@ -4,25 +4,25 @@ import drt.server.feeds.Feed.FeedTick
 import org.apache.pekko.actor.typed.ActorRef
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import org.apache.pekko.http.scaladsl.model.headers.RawHeader
-import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ HttpRequest, HttpResponse }
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import org.slf4j.{Logger, LoggerFactory}
-import spray.json.{DefaultJsonProtocol, JsArray, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival, VoyageNumber}
+import org.slf4j.{ Logger, LoggerFactory }
+import spray.json.{ DefaultJsonProtocol, JsArray, RootJsonFormat }
+import uk.gov.homeoffice.drt.arrivals.{ FeedArrival, FlightCode, LiveArrival, VoyageNumber }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def source(source: Source[FeedTick, ActorRef[FeedTick]],
-             fetchArrivals: () => Future[Seq[FeedArrival]],
-            )
-            (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef[FeedTick]] =
+  def source(
+      source: Source[FeedTick, ActorRef[FeedTick]],
+      fetchArrivals: () => Future[Seq[FeedArrival]]
+  )(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef[FeedTick]] =
     source.mapAsync(1)(_ => {
       log.info(s"Requesting live feed.")
       fetchArrivals()
@@ -34,20 +34,21 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
         }
     })
 
-  def apply[A <: AzinqArrival](uri: String,
-                               username: String,
-                               password: String,
-                               token: String,
-                               httpRequest: HttpRequest => Future[HttpResponse],
-                              )
-                              (implicit ec: ExecutionContext, mat: Materializer, json: RootJsonFormat[A]): () => Future[Seq[FeedArrival]] = {
+  def apply[A <: AzinqArrival](
+      uri: String,
+      username: String,
+      password: String,
+      token: String,
+      httpRequest: HttpRequest => Future[HttpResponse]
+  )(implicit ec: ExecutionContext, mat: Materializer, json: RootJsonFormat[A]): () => Future[Seq[FeedArrival]] = {
     val request = HttpRequest(
       uri = uri,
       headers = List(
         RawHeader("token", token),
         RawHeader("username", username),
-        RawHeader("password", password),
-      ))
+        RawHeader("password", password)
+      )
+    )
 
     () =>
       httpRequest(request)
@@ -89,7 +90,7 @@ trait AzinqArrival {
   lazy val (carrierCode, voyageNumberLike, maybeSuffix) = FlightCode.flightCodeToParts(AirlineIATA + FlightNumber)
   lazy val voyageNumber: VoyageNumber = voyageNumberLike match {
     case vn: VoyageNumber => vn
-    case _ => throw new Exception(s"Failed to parse voyage number from ${AirlineIATA + FlightNumber}")
+    case _                => throw new Exception(s"Failed to parse voyage number from ${AirlineIATA + FlightNumber}")
   }
 
   def toArrival: FeedArrival = {
@@ -113,7 +114,7 @@ trait AzinqArrival {
       gate = GateCode,
       stand = StandCode,
       runway = runway,
-      baggageReclaim = CarouselCode,
+      baggageReclaim = CarouselCode
     )
   }
 

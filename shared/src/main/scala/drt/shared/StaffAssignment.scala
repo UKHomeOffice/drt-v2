@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
-import upickle.default.{macroRW, ReadWriter => RW}
+import upickle.default.{ macroRW, ReadWriter => RW }
 
 import scala.concurrent.duration.DurationInt
 
@@ -29,12 +29,14 @@ object StaffAssignmentLike {
   implicit val rw: RW[StaffAssignmentLike] = RW.merge(StaffAssignment.rw)
 }
 
-case class StaffAssignment(name: String,
-                           terminal: Terminal,
-                           start: MillisSinceEpoch,
-                           end: MillisSinceEpoch,
-                           numberOfStaff: Int,
-                           createdBy: Option[String]) extends StaffAssignmentLike {
+case class StaffAssignment(
+    name: String,
+    terminal: Terminal,
+    start: MillisSinceEpoch,
+    end: MillisSinceEpoch,
+    numberOfStaff: Int,
+    createdBy: Option[String]
+) extends StaffAssignmentLike {
   override val maybeUuid: Option[String] = None
 
   override def splitIntoSlots(slotMinutes: Int): Seq[StaffAssignment] =
@@ -80,7 +82,8 @@ object ShiftAssignments {
     ShiftAssignments(assignments.map(a => TM(a.terminal, a.start) -> a).toMap)
 }
 
-case class ShiftAssignments(indexedAssignments: Map[TM, StaffAssignmentLike]) extends StaffAssignmentsLike with HasExpireables[ShiftAssignments] {
+case class ShiftAssignments(indexedAssignments: Map[TM, StaffAssignmentLike]) extends StaffAssignmentsLike
+    with HasExpireables[ShiftAssignments] {
   lazy val assignments: Seq[StaffAssignmentLike] = indexedAssignments.values.toSeq
 
   def terminalStaffAt(terminalName: Terminal, date: SDateLike, msToSd: MillisSinceEpoch => SDateLike): Int = {
@@ -89,7 +92,7 @@ case class ShiftAssignments(indexedAssignments: Map[TM, StaffAssignmentLike]) ex
     assignments
       .filter { assignment =>
         assignment.startMinutesSinceEpoch <= dateMinutesSinceEpoch &&
-          dateMinutesSinceEpoch <= assignment.endMinutesSinceEpoch && assignment.terminal == terminalName
+        dateMinutesSinceEpoch <= assignment.endMinutesSinceEpoch && assignment.terminal == terminalName
       }
       .map(_.numberOfStaff)
       .sum
@@ -124,8 +127,8 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignmentLike]) extends 
     assignments
       .filter { assignment =>
         assignment.terminal == terminalName &&
-          hoursAndMinutes >= msToSd(assignment.start).toHoursAndMinutes &&
-          hoursAndMinutes <= msToSd(assignment.end).toHoursAndMinutes
+        hoursAndMinutes >= msToSd(assignment.start).toHoursAndMinutes &&
+        hoursAndMinutes <= msToSd(assignment.end).toHoursAndMinutes
       }
       .map(_.numberOfStaff)
       .sum

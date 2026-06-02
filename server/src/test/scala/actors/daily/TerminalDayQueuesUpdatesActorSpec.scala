@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.daily.ReadJournalTypes.ReadJournalWithEvents
-import actors.{InMemoryStreamingJournal, StreamingJournalLike}
-import org.apache.pekko.actor.{ActorRef, Props}
+import actors.{ InMemoryStreamingJournal, StreamingJournalLike }
+import org.apache.pekko.actor.{ ActorRef, Props }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.MinutesContainer
@@ -10,13 +10,13 @@ import scalapb.GeneratedMessage
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
 import uk.gov.homeoffice.drt.testsystem.TestActors.TestTerminalDayQueuesActor
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{ Await, ExecutionContextExecutor, Future }
 
 class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
@@ -25,20 +25,48 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   val day: SDateLike = SDate(s"${date}T00:00")
 
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, day.millisSinceEpoch, 1, 2, 3, 4, None)
-  val crunchMinuteMessage: CrunchMinuteMessage = CrunchMinuteMessage(Option(terminal.toString), Option(queue.toString), Option(day.millisSinceEpoch), Option(1.0), Option(2.0), Option(3), Option(4), None, None, None, None, Option(day.millisSinceEpoch))
+  val crunchMinuteMessage: CrunchMinuteMessage = CrunchMinuteMessage(
+    Option(terminal.toString),
+    Option(queue.toString),
+    Option(day.millisSinceEpoch),
+    Option(1.0),
+    Option(2.0),
+    Option(3),
+    Option(4),
+    None,
+    None,
+    None,
+    None,
+    Option(day.millisSinceEpoch)
+  )
 
   "Given a TerminalDayQueueMinuteUpdatesActor" >> {
     implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
-    val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.toUtcDate, terminal, (_, _) => Seq.empty, () => day, None)))
+    val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(
+      day.toUtcDate,
+      terminal,
+      (_, _) => Seq.empty,
+      () => day,
+      None
+    )))
     val probe = TestProbe()
     val journal = InMemoryStreamingJournal
-    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear, day.getMonth, day.getDate, terminal, () => day, journal, probe.ref)))
+    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](
+      day.getFullYear,
+      day.getMonth,
+      day.getDate,
+      terminal,
+      () => day,
+      journal,
+      probe.ref
+    )))
     val minute2 = day.addMinutes(1).millisSinceEpoch
 
     "When I send it two crunch minutes consecutively" >> {
       val eventualAcks = Future.sequence(Seq(
         queuesActor.ask(MinutesContainer(Seq(crunchMinute))),
-        queuesActor.ask(MinutesContainer(Seq(crunchMinute.copy(minute = minute2))))))
+        queuesActor.ask(MinutesContainer(Seq(crunchMinute.copy(minute = minute2))))
+      ))
       Await.ready(eventualAcks, 5.second)
 
       "I should only see the second" >> {
@@ -55,16 +83,17 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   }
 }
 
-class TestTerminalDayQueuesUpdatesActor[T <: ReadJournalWithEvents](year: Int,
-                                                                    month: Int,
-                                                                    day: Int,
-                                                                    terminal: Terminal,
-                                                                    now: () => SDateLike,
-                                                                    journalType: StreamingJournalLike,
-                                                                    probe: ActorRef) extends TerminalDayQueuesUpdatesActor(year, month, day, terminal, now, journalType) {
+class TestTerminalDayQueuesUpdatesActor[T <: ReadJournalWithEvents](
+    year: Int,
+    month: Int,
+    day: Int,
+    terminal: Terminal,
+    now: () => SDateLike,
+    journalType: StreamingJournalLike,
+    probe: ActorRef
+) extends TerminalDayQueuesUpdatesActor(year, month, day, terminal, now, journalType) {
   override def updateState(minuteMessages: Seq[GeneratedMessage], removalMessages: Seq[GeneratedMessage]): Unit = {
     super.updateState(minuteMessages, removalMessages)
     probe ! updates
   }
 }
-

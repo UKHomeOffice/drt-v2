@@ -3,23 +3,23 @@ package services.liveviews
 import org.apache.pekko.Done
 import org.slf4j.LoggerFactory
 import slick.dbio.DBIO
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, UniqueArrival }
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.FlightDao
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, PortCode }
 import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.time.UtcDate
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object FlightsLiveView {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def updateAndRemove(flightDao: FlightDao,
-                              aggregatedDb: AggregatedDbTables,
-                              portCode: PortCode,
-                             )
-                             (implicit ec: ExecutionContext): (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
+  def updateAndRemove(
+      flightDao: FlightDao,
+      aggregatedDb: AggregatedDbTables,
+      portCode: PortCode
+  )(implicit ec: ExecutionContext): (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
     val batchInsertOrUpdate = flightDao.insertOrUpdateMulti(portCode)
     val remove = flightDao.removeMulti(portCode)
 
@@ -31,12 +31,12 @@ object FlightsLiveView {
         }
   }
 
-  def updateCapacityForDate(airportConfig: AirportConfig,
-                            aggregatedDb: AggregatedDbTables,
-                            feedService: FeedService,
-                            uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
-                           )
-                           (implicit ec: ExecutionContext): UtcDate => Future[Done] = {
+  def updateCapacityForDate(
+      airportConfig: AirportConfig,
+      aggregatedDb: AggregatedDbTables,
+      feedService: FeedService,
+      uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits]
+  )(implicit ec: ExecutionContext): UtcDate => Future[Done] = {
     val flightsForDate: UtcDate => Future[Seq[ApiFlightWithSplits]] = {
       val getFlights = FlightDao().getForUtcDate(airportConfig.portCode)
       (d: UtcDate) => aggregatedDb.run(getFlights(d))
@@ -45,7 +45,7 @@ object FlightsLiveView {
     val uniqueFlightsForDate = PassengersLiveView.uniqueFlightsForDate(
       flights = flightsForDate,
       baseArrivals = feedService.aclArrivalsForDate,
-      uniqueFlights = uniqueFlights,
+      uniqueFlights = uniqueFlights
     )
 
     val getCapacities = PassengersLiveView.capacityForDate(uniqueFlightsForDate)

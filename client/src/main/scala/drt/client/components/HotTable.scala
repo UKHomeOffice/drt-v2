@@ -1,14 +1,14 @@
 package drt.client.components
 
-import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.logger.{ Logger, LoggerFactory }
 import drt.shared.CrunchApi.MillisSinceEpoch
-import japgolly.scalajs.react.component.Js.{Component, RawMounted, UnmountedWithRawType}
+import japgolly.scalajs.react.component.Js.{ Component, RawMounted, UnmountedWithRawType }
 import japgolly.scalajs.react.component.Scala.Unmounted
-import japgolly.scalajs.react.{Children, CtorType, JsComponent, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{ Children, CtorType, JsComponent, Reusability, ScalaComponent }
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object HotTable {
 
@@ -23,12 +23,14 @@ object HotTable {
     var settings: js.Dictionary[js.Any] = js.native
   }
 
-  case class Props(data: Seq[Seq[Any]],
-                   colHeadings: Seq[String],
-                   rowHeadings: Seq[String],
-                   afterChanges: Seq[(Int, Int, Any, Any)] => Unit,
-                   colWidths: String = "2em",
-                   lastDataRefresh: MillisSinceEpoch) {
+  case class Props(
+      data: Seq[Seq[Any]],
+      colHeadings: Seq[String],
+      rowHeadings: Seq[String],
+      afterChanges: Seq[(Int, Int, Any, Any)] => Unit,
+      colWidths: String = "2em",
+      lastDataRefresh: MillisSinceEpoch
+  ) {
     val raw: RawProps = {
       import js.JSConverters._
 
@@ -61,7 +63,7 @@ object HotTable {
         "colHeaders" -> colHeadings.toJSArray,
         "afterChange" -> afterChangesCallback,
         "colWidth" -> colWidths,
-        "licenseKey" -> "non-commercial-and-evaluation",
+        "licenseKey" -> "non-commercial-and-evaluation"
       )
 
       props
@@ -74,7 +76,8 @@ object HotTable {
     def render(props: Props): UnmountedWithRawType[RawProps, Null, RawMounted[RawProps, Null]] = rawComponent(props.raw)
   }
 
-  val rawComponent: Component[RawProps, Null, CtorType.Props] = JsComponent[RawProps, Children.None, Null](HotTableComponent)
+  val rawComponent: Component[RawProps, Null, CtorType.Props] =
+    JsComponent[RawProps, Children.None, Null](HotTableComponent)
 
   val component = ScalaComponent.builder[Props]("HotTable")
     .renderBackend[Backend]

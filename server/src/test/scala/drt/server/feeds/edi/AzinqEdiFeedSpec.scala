@@ -2,7 +2,7 @@ package drt.server.feeds.edi
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.model.StatusCodes.OK
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse }
 import org.apache.pekko.stream.Materializer
 import drt.server.feeds.AzinqFeed
 import org.specs2.mutable.Specification
@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.A2
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class AzinqEdiFeedSpec extends Specification {
   val system: ActorSystem = ActorSystem("azinq-edi")
@@ -31,7 +31,13 @@ class AzinqEdiFeedSpec extends Specification {
       import scala.concurrent.ExecutionContext.Implicits.global
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A")))))
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A"))))
+      )
 
       Await.result(feed(), 1.second) === List(arrival)
     }
@@ -39,7 +45,13 @@ class AzinqEdiFeedSpec extends Specification {
       import scala.concurrent.ExecutionContext.Implicits.global
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("FRT", "A")))))
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("FRT", "A"))))
+      )
 
       Await.result(feed(), 1.second) === List()
     }
@@ -47,7 +59,13 @@ class AzinqEdiFeedSpec extends Specification {
       import scala.concurrent.ExecutionContext.Implicits.global
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "D")))))
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "D"))))
+      )
 
       Await.result(feed(), 1.second) === List()
     }
@@ -56,7 +74,13 @@ class AzinqEdiFeedSpec extends Specification {
       import scala.concurrent.ExecutionContext.Implicits.global
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("","A")))))
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("", "A"))))
+      )
 
       Await.result(feed(), 1.second) === List()
     }
@@ -83,9 +107,8 @@ class AzinqEdiFeedSpec extends Specification {
     gate = Some(""),
     stand = None,
     runway = None,
-    baggageReclaim = Some(""),
+    baggageReclaim = Some("")
   )
-
 
   def json(terminal: String, departureArrivalType: String): String =
     s"""[

@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.db
 
-import slick.dbio.{DBIOAction, NoStream}
+import slick.dbio.{ DBIOAction, NoStream }
 import slickdb._
 
 import scala.concurrent.Future

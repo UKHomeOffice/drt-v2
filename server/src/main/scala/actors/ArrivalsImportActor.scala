@@ -2,8 +2,8 @@ package actors
 
 import org.apache.pekko.actor.Actor
 import org.apache.pekko.persistence.SaveSnapshotFailure
-import drt.server.feeds.{GetFeedImportArrivals, StoreFeedImportArrivals}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.server.feeds.{ GetFeedImportArrivals, StoreFeedImportArrivals }
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.arrivals.FeedArrival
 

@@ -1,10 +1,10 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ Action, ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.models.UserPreferences
 
 import scala.concurrent.Future
@@ -22,24 +22,25 @@ class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) exten
   implicit val portDashboardIntervalMinutesRW: ReadWriter[Map[String, Int]] =
     readwriter[String].bimap[Map[String, Int]](
       _.map { case (port, value) => s"$port:$value" }.mkString(";"),
-      s => if (s.isEmpty) Map.empty[String, Int]
-      else s.split(";").map(_.split(":") match {
-        case Array(port, value) => port -> value.toInt
-      }).toMap
+      s =>
+        if (s.isEmpty) Map.empty[String, Int]
+        else s.split(";").map(_.split(":") match {
+          case Array(port, value) => port -> value.toInt
+        }).toMap
     )
 
   implicit val portDashboardTerminalsRW: ReadWriter[Map[String, Set[String]]] =
     readwriter[String].bimap[Map[String, Set[String]]](
       _.map { case (key, values) => s"$key:${values.mkString(",")}" }.mkString(";"),
-      s => if (s.isEmpty) Map.empty[String, Set[String]]
-      else s.split(";").map(_.split(":") match {
-        case Array(key) if value.isEmpty  => key -> Set.empty[String]
-        case Array(key, values) => key -> values.split(",").toSet.filter(_.nonEmpty)
-      }).toMap
+      s =>
+        if (s.isEmpty) Map.empty[String, Set[String]]
+        else s.split(";").map(_.split(":") match {
+          case Array(key) if value.isEmpty => key -> Set.empty[String]
+          case Array(key, values)          => key -> values.split(",").toSet.filter(_.nonEmpty)
+        }).toMap
     )
 
-  override
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+  override protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetUserPreferences =>
       val apiCallEffect = Effect(DrtApi.get("data/user-preferences")
@@ -50,7 +51,6 @@ class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) exten
             Future(RetryActionAfter(GetUserPreferences, PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
-
 
     case SetUserPreferences(userPreferences) => updated(Ready(userPreferences))
 

@@ -1,17 +1,16 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ Action, ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.handlers.UserFeedbackRow._
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 import upickle.default._
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-
 
 case class GetUserFeedback() extends Action
 

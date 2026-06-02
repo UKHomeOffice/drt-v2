@@ -5,9 +5,16 @@ import org.apache.pekko.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
 import drt.shared._
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents, Request }
 import services.exports.StaffMovementsExport
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
+import uk.gov.homeoffice.drt.auth.Roles.{
+  BorderForceStaff,
+  FixedPointsEdit,
+  FixedPointsView,
+  StaffEdit,
+  StaffMovementsEdit,
+  StaffMovementsExport => StaffMovementsExportRole
+}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.staffing._
@@ -15,11 +22,12 @@ import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
 import scala.concurrent.Future
 
-
-class StaffingController @Inject()(cc: ControllerComponents,
-                                   ctrl: DrtSystemInterface,
-                                   fixedPointsService: FixedPointsService,
-                                   movementsService: StaffMovementsService) extends AuthController(cc, ctrl) {
+class StaffingController @Inject() (
+    cc: ControllerComponents,
+    ctrl: DrtSystemInterface,
+    fixedPointsService: FixedPointsService,
+    movementsService: StaffMovementsService
+) extends AuthController(cc, ctrl) {
   def getFixedPoints: Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))

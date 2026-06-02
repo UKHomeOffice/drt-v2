@@ -3,26 +3,28 @@ package services.exports.flights
 import actors.persistent.arrivals.ArrivalsReadActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import org.apache.pekko.NotUsed
-import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, PoisonPill }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.exports.Exports
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, UniqueArrival }
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import java.util.UUID
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.postfixOps
 
-case class ArrivalFeedExport(paxFeedSourceOrder: List[FeedSource])
-                            (implicit system: ActorSystem, executionContext: ExecutionContext) {
+case class ArrivalFeedExport(paxFeedSourceOrder: List[FeedSource])(implicit
+    system: ActorSystem,
+    executionContext: ExecutionContext
+) {
 
   val lineEnding = "\n"
 
@@ -31,14 +33,20 @@ case class ArrivalFeedExport(paxFeedSourceOrder: List[FeedSource])
       csvData.map(_.mkString(",")).mkString(lineEnding) + lineEnding
     else lineEnding
 
-  def flightsForDay(day: MillisSinceEpoch, terminal: Terminal, fs: FeedSource, persistenceId: String): Future[Option[String]] = {
+  def flightsForDay(
+      day: MillisSinceEpoch,
+      terminal: Terminal,
+      fs: FeedSource,
+      persistenceId: String
+  ): Future[Option[String]] = {
     val exportDay = SDate(day)
 
     val snapshotDate = SDate(day).getLocalNextMidnight.addDays(1).addHours(12)
 
     val feedActor: ActorRef = system
       .actorOf(
-        ArrivalsReadActor.props(snapshotDate, persistenceId, fs), name = s"arrival-read-$fs-${UUID.randomUUID()}"
+        ArrivalsReadActor.props(snapshotDate, persistenceId, fs),
+        name = s"arrival-read-$fs-${UUID.randomUUID()}"
       )
 
     feedActor
@@ -61,10 +69,11 @@ case class ArrivalFeedExport(paxFeedSourceOrder: List[FeedSource])
       None
   }
 
-  def arrivalsToCsvRows(terminal: Terminal,
-                        arrivals: SortedMap[UniqueArrival, Arrival],
-                        exportDay: SDateLike
-                       ): Iterable[List[String]] = {
+  def arrivalsToCsvRows(
+      terminal: Terminal,
+      arrivals: SortedMap[UniqueArrival, Arrival],
+      exportDay: SDateLike
+  ): Iterable[List[String]] = {
 
     val arrivalsForDay = arrivals
       .values
@@ -77,26 +86,27 @@ case class ArrivalFeedExport(paxFeedSourceOrder: List[FeedSource])
           a,
           Exports.millisToLocalIsoDateOnly,
           Exports.millisToLocalDateTimeString,
-          paxFeedSourceOrder,
+          paxFeedSourceOrder
         )
       )
     csvData
   }
 
   def isScheduledForExportDay(arrival: Arrival, day: SDateLike): Boolean =
-    arrival.Scheduled > day.getLocalLastMidnight.millisSinceEpoch && arrival.Scheduled < day.getLocalNextMidnight.millisSinceEpoch
-
+    arrival.Scheduled > day.getLocalLastMidnight.millisSinceEpoch &&
+      arrival.Scheduled < day.getLocalNextMidnight.millisSinceEpoch
 
   def headingsSource: Source[Option[String], NotUsed] = Source(
     List(Option(ArrivalToCsv.arrivalHeadingsWithTransfer + lineEnding))
   )
 
-  def flightsDataSource(startDate: SDateLike,
-                        numberOfDays: Int,
-                        terminal: Terminal,
-                        fs: FeedSource,
-                        persistenceId: String
-                       ): Source[Option[String], NotUsed] =
+  def flightsDataSource(
+      startDate: SDateLike,
+      numberOfDays: Int,
+      terminal: Terminal,
+      fs: FeedSource,
+      persistenceId: String
+  ): Source[Option[String], NotUsed] =
     Source(0 until numberOfDays)
       .mapAsync(1)(day => {
         flightsForDay(startDate.addDays(day).millisSinceEpoch, terminal, fs, persistenceId)

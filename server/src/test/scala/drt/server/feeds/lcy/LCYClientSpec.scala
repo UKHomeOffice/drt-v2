@@ -1,14 +1,14 @@
 package drt.server.feeds.lcy
 
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpRequest, HttpResponse }
 import drt.server.feeds.common.ProdHttpClient
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedSuccess }
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class LCYClientSpec extends CrunchTestLike with Mockito {
 
@@ -18,81 +18,84 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
     val lcyClient: LCYClient = LCYClient(httpClient, "someUser", "someSoapEndPoint", "someUsername", "somePassword")
   }
 
-  "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" in new Context {
+  "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" in
+    new Context {
 
-    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseTwoFlightXml)))
+      httpClient.sendRequest(anyObject[HttpRequest]) returns
+        Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseTwoFlightXml)))
 
-    val flight1: LCYFlight = LCYFlight(
-      "MMD",
-      "5055",
-      "SGD",
-      "LCY",
-      "MT",
-      "LND",
-      "2019-11-18T13:00:00.000Z",
-      arrival = true,
-      international = true,
-      Option("2019-11-18T12:47:00.000Z"),
-      Option("2019-11-18T12:49:00.000Z"),
-      None,
-      Option("2019-11-18T12:47:00.000Z"),
-      Option("MT"),
-      None,
-      Option(14),
-      None
-    )
+      val flight1: LCYFlight = LCYFlight(
+        "MMD",
+        "5055",
+        "SGD",
+        "LCY",
+        "MT",
+        "LND",
+        "2019-11-18T13:00:00.000Z",
+        arrival = true,
+        international = true,
+        Option("2019-11-18T12:47:00.000Z"),
+        Option("2019-11-18T12:49:00.000Z"),
+        None,
+        Option("2019-11-18T12:47:00.000Z"),
+        Option("MT"),
+        None,
+        Option(14),
+        None
+      )
 
-    val flight2 = LCYFlight(
-      "AFP",
-      "24",
-      "TOJ",
-      "LCY",
-      "JC",
-      "LND",
-      "2019-12-03T14:50:00.000Z",
-      arrival = true,
-      international = true,
-      None,
-      Option("2019-12-03T12:12:00.000Z"),
-      None,
-      Option("2019-12-03T12:08:00.000Z"),
-      Option("JC"),
-      None,
-      None,
-      None
-    )
+      val flight2 = LCYFlight(
+        "AFP",
+        "24",
+        "TOJ",
+        "LCY",
+        "JC",
+        "LND",
+        "2019-12-03T14:50:00.000Z",
+        arrival = true,
+        international = true,
+        None,
+        Option("2019-12-03T12:12:00.000Z"),
+        None,
+        Option("2019-12-03T12:08:00.000Z"),
+        Option("JC"),
+        None,
+        None,
+        None
+      )
 
+      val result = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+      val expected = List(
+        LCYFlightTransform.lcyFlightToArrival(flight1),
+        LCYFlightTransform.lcyFlightToArrival(flight2)
+      )
 
-    val result = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
-    val expected = List(
-      LCYFlightTransform.lcyFlightToArrival(flight1),
-      LCYFlightTransform.lcyFlightToArrival(flight2)
-    )
+      result === expected
+    }
 
-    result === expected
-  }
+  "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" in
+    new Context {
+      httpClient.sendRequest(anyObject[HttpRequest]) returns
+        Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, rateLimitReachedResponse)))
 
-  "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" in new Context {
-    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, rateLimitReachedResponse)))
+      val result = Await.result(lcyClient.initialFlights, 1.second)
 
-    val result = Await.result(lcyClient.initialFlights, 1.second)
-
-    result must haveClass[ArrivalsFeedFailure]
-  }
+      result must haveClass[ArrivalsFeedFailure]
+    }
 
   "Given a mock client returning an invalid XML response I should get an ArrivalFeedFailure " in new Context {
 
-    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, invalidXmlResponse)))
-
+    httpClient.sendRequest(anyObject[HttpRequest]) returns
+      Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, invalidXmlResponse)))
 
     val result = Await.result(lcyClient.initialFlights, 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
 
-
   "Given a LCYFlight with 0 for passenger fields, I should see 0 pax, 0 max pax and 0 transfer pax." in new Context {
-    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseZeroPaxFlightXml)))
+    httpClient.sendRequest(anyObject[HttpRequest]) returns
+      Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseZeroPaxFlightXml)))
 
     val result = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
@@ -104,7 +107,6 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
 
     actMax === expected
   }
-
 
   val lcySoapResponseTwoFlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
@@ -200,7 +202,6 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
       |</s:Envelope>
     """.stripMargin
 
-
   val lcySoapResponseZeroPaxFlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |   <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -253,7 +254,6 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
       |   </s:Body>
       |</s:Envelope>
     """.stripMargin
-
 
   val rateLimitReachedResponse: String =
     """

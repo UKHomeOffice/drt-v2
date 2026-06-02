@@ -1,9 +1,9 @@
 package drt.client.components.scenarios
 
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
+import uk.gov.homeoffice.drt.ports.{ PaxTypesAndQueues, Queues }
 import uk.gov.homeoffice.drt.time.LocalDate
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 class SimulationFormFieldsSpec extends TestSuite {
   val tests: Tests = Tests {
@@ -78,7 +78,8 @@ class SimulationFormFieldsSpec extends TestSuite {
       }
 
       "Then I should get a valid query string back" - {
-        val expected = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1"
+        val expected =
+          "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1"
 
         assert(result == expected)
       }
@@ -89,7 +90,10 @@ class SimulationFormFieldsSpec extends TestSuite {
         Terminal("T1"),
         LocalDate(2020, 2, 2),
         Option(1.0),
-        Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> Option(60), PaxTypesAndQueues.eeaMachineReadableToEGate -> Option(30)),
+        Map(
+          PaxTypesAndQueues.eeaMachineReadableToDesk -> Option(60),
+          PaxTypesAndQueues.eeaMachineReadableToEGate -> Option(30)
+        ),
         Map(Queues.EGate -> Option(1), Queues.NonEeaDesk -> Option(1)),
         6,
         IndexedSeq.fill(5)(Option(5)),
@@ -125,15 +129,15 @@ class SimulationFormFieldsSpec extends TestSuite {
       }
 
       "The I should get a valid query string back" - {
-        val expected = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
-          "eGateOpenHours=1,2&" +
-          "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
-          "EGate_min=1&NonEeaDesk_min=1&" +
-          "EGate_max=3&NonEeaDesk_max=3&" +
-          "EGate_sla=10&EeaDesk_sla=15"
+        val expected =
+          "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
+            "eGateOpenHours=1,2&" +
+            "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
+            "EGate_min=1&NonEeaDesk_min=1&" +
+            "EGate_max=3&NonEeaDesk_max=3&" +
+            "EGate_sla=10&EeaDesk_sla=15"
         assert(result == expected)
       }
     }
   }
 }
-

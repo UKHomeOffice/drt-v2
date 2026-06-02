@@ -4,7 +4,7 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{ Callback, ScalaComponent }
 
 object ConfirmDialog {
   case class ConfirmParams(actionText: String, onConfirm: () => Callback, onCancel: () => Callback)
@@ -17,7 +17,7 @@ object ConfirmDialog {
           MuiDialogTitle()(props.actionText),
           MuiDialogActions()(
             MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> props.onCancel()),
-            MuiButton(color = Color.primary, variant = "outlined")("Confirm", ^.onClick --> props.onConfirm()),
+            MuiButton(color = Color.primary, variant = "outlined")("Confirm", ^.onClick --> props.onConfirm())
           )
         )
       }

@@ -1,12 +1,11 @@
 package feeds.lhr.forecast
 
 import com.typesafe.config.ConfigFactory
-import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastXLSExtractor}
+import drt.server.feeds.lhr.forecast.{ LHRForecastEmail, LHRForecastXLSExtractor }
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
-
 
 class LHRMailForecastFeedSpec extends Specification {
 
@@ -19,7 +18,8 @@ class LHRMailForecastFeedSpec extends Specification {
       val imapUsername = ConfigFactory.load().getString("feeds.lhr.forecast.imap_username")
       val imapPassword = ConfigFactory.load().getString("feeds.lhr.forecast.imap_password")
       val imapFromAddress = ConfigFactory.load().getString("feeds.lhr.forecast.from_address")
-      val latest = LHRForecastEmail(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort).maybeLatestForecastFile
+      val latest =
+        LHRForecastEmail(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort).maybeLatestForecastFile
 
       latest.isDefined === true
     }
@@ -30,16 +30,64 @@ class LHRMailForecastFeedSpec extends Specification {
       val result = LHRForecastXLSExtractor
         .rows(path)
         .map(r =>
-          (r.scheduledDate.millisSinceEpoch, r.flightCode, r.origin, r.internationalDomestic, r.totalPax, r.transferPax, r.terminal)
+          (
+            r.scheduledDate.millisSinceEpoch,
+            r.flightCode,
+            r.origin,
+            r.internationalDomestic,
+            r.totalPax,
+            r.transferPax,
+            r.terminal
+          )
         )
         .toSet
 
       val expected = Set(
-        (SDate("2018-02-07T06:40", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "UA 0958", "ORD", "INTERNATIONAL", 100, 20, "T2"),
-        (SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "QF 0001", "SYD", "INTERNATIONAL", 180, 80, "T3"),
-        (SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "EY 0011", "AUH", "INTERNATIONAL", 100, 30, "T4"),
-        (SDate("2018-02-07T07:00", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "BA 0246", "GRU", "INTERNATIONAL", 100, 50, "T5"),
-        (SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "BA 0294", "ORD", "INTERNATIONAL", 100, 40, "T5")
+        (
+          SDate("2018-02-07T06:40", DateTimeZone.forID(europeLondonId)).millisSinceEpoch,
+          "UA 0958",
+          "ORD",
+          "INTERNATIONAL",
+          100,
+          20,
+          "T2"
+        ),
+        (
+          SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch,
+          "QF 0001",
+          "SYD",
+          "INTERNATIONAL",
+          180,
+          80,
+          "T3"
+        ),
+        (
+          SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch,
+          "EY 0011",
+          "AUH",
+          "INTERNATIONAL",
+          100,
+          30,
+          "T4"
+        ),
+        (
+          SDate("2018-02-07T07:00", DateTimeZone.forID(europeLondonId)).millisSinceEpoch,
+          "BA 0246",
+          "GRU",
+          "INTERNATIONAL",
+          100,
+          50,
+          "T5"
+        ),
+        (
+          SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch,
+          "BA 0294",
+          "ORD",
+          "INTERNATIONAL",
+          100,
+          40,
+          "T5"
+        )
       )
 
       result === expected
@@ -51,7 +99,15 @@ class LHRMailForecastFeedSpec extends Specification {
       val result = LHRForecastXLSExtractor
         .rows(path)
         .map(r =>
-          (r.scheduledDate.millisSinceEpoch, r.flightCode, r.origin, r.internationalDomestic, r.totalPax, r.transferPax, r.terminal)
+          (
+            r.scheduledDate.millisSinceEpoch,
+            r.flightCode,
+            r.origin,
+            r.internationalDomestic,
+            r.totalPax,
+            r.transferPax,
+            r.terminal
+          )
         )
         .toSet
 

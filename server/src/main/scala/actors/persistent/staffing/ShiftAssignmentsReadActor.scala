@@ -2,8 +2,8 @@ package actors.persistent.staffing
 
 import actors.persistent.staffing.ShiftAssignmentsMessageParser.shiftMessagesToShiftAssignments
 import org.apache.pekko.actor.Props
-import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
-import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
+import org.apache.pekko.persistence.{ Recovery, SnapshotSelectionCriteria }
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ ShiftStateSnapshotMessage, ShiftsMessage }
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object ShiftAssignmentsReadActor {
@@ -12,7 +12,12 @@ object ShiftAssignmentsReadActor {
 }
 
 class ShiftAssignmentsReadActor(persistentId: String, pointInTime: SDateLike, expireBefore: () => SDateLike)
-  extends ShiftAssignmentsActorLike(persistentId, () => pointInTime, expireBefore, LegacyShiftAssignmentsActor.snapshotInterval) {
+    extends ShiftAssignmentsActorLike(
+      persistentId,
+      () => pointInTime,
+      expireBefore,
+      LegacyShiftAssignmentsActor.snapshotInterval
+    ) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToShiftAssignments(snapshot.shifts)
   }

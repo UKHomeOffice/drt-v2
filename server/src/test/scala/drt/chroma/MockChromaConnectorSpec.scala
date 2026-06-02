@@ -2,22 +2,22 @@ package drt.chroma
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
-import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
+import com.typesafe.config.{ Config, ConfigFactory }
+import drt.chroma.chromafetcher.ChromaFetcher.{ ChromaLiveFlight, ChromaToken }
+import drt.chroma.chromafetcher.{ ChromaFetcher, ChromaFlightMarshallers }
 import drt.http.WithSendAndReceive
 import drt.server.feeds.chroma.ChromaLiveFeed
-import drt.server.feeds.{ArrivalsFeedFailure, Feed}
+import drt.server.feeds.{ ArrivalsFeedFailure, Feed }
 import org.specs2.matcher.MatchResult
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.jdk.CollectionConverters.MapHasAsJava
 import scala.language.reflectiveCalls
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 class MockChromaConnectorSpec extends CrunchTestLike {
   test =>
@@ -34,20 +34,30 @@ class MockChromaConnectorSpec extends CrunchTestLike {
       override lazy val config: Config = mockConfig
       private val pipeline = tokenPipeline _
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
-        HttpResponse().withEntity(
-          HttpEntity(ContentTypes.`application/json`,
-            """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
-              |"token_type":"bearer","expires_in":86399}""".stripMargin))
-      }
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) =>
+        Future {
+          HttpResponse().withEntity(
+            HttpEntity(
+              ContentTypes.`application/json`,
+              """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
+              |"token_type":"bearer","expires_in":86399}""".stripMargin
+            )
+          )
+        }
 
       val response: Future[ChromaToken] = {
-        pipeline(HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity))
+        pipeline(HttpRequest(
+          method = HttpMethods.POST,
+          uri = tokenUrl,
+          entity = chromaTokenRequestCredentials.toEntity
+        ))
       }
 
       def await: MatchResult[ChromaToken] = Await.result(response, 1.second) must equalTo(ChromaToken(
         "LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
-        "bearer", 86399))
+        "bearer",
+        86399
+      ))
     }
 
     sut.await
@@ -57,9 +67,10 @@ class MockChromaConnectorSpec extends CrunchTestLike {
     val fetcher = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
       override lazy val config: Config = mockConfig
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
-        HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
-      }
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) =>
+        Future {
+          HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, """bad json here""".stripMargin))
+        }
     }
 
     val probe = TestProbe()
@@ -79,18 +90,24 @@ class MockChromaConnectorSpec extends CrunchTestLike {
       override val url: String = "https://edibf.edinburghairport.com/edi/chroma/live/edi"
       private val pipeline: Future[Try[Seq[ChromaLiveFlight]]] = currentFlights
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => Future {
-        req.uri.path match {
-          case Uri.Path("/edi/chroma/token") => {
-            HttpResponse().withEntity(
-              HttpEntity(ContentTypes.`application/json`,
-                """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
-                  |"token_type":"bearer","expires_in":86399}""".stripMargin))
-          }
-          case Uri.Path("/edi/chroma/live/edi") =>
-            HttpResponse(status = StatusCodes.OK,
-              entity = HttpEntity(ContentTypes.`application/json`,
-                """
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) =>
+        Future {
+          req.uri.path match {
+            case Uri.Path("/edi/chroma/token") => {
+              HttpResponse().withEntity(
+                HttpEntity(
+                  ContentTypes.`application/json`,
+                  """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
+                  |"token_type":"bearer","expires_in":86399}""".stripMargin
+                )
+              )
+            }
+            case Uri.Path("/edi/chroma/live/edi") =>
+              HttpResponse(
+                status = StatusCodes.OK,
+                entity = HttpEntity(
+                  ContentTypes.`application/json`,
+                  """
                   |[
                   |  {
                   |    "Operator": "Tnt Airways Sa",
@@ -137,9 +154,11 @@ class MockChromaConnectorSpec extends CrunchTestLike {
                   |    "SchDT": "2016-08-04T05:15:00Z"
                   |  }
                   |  ]
-                """.stripMargin))
+                """.stripMargin
+                )
+              )
+          }
         }
-      }
 
       val response: Future[Try[Seq[ChromaLiveFlight]]] = {
         pipeline

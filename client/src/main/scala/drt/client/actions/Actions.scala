@@ -3,21 +3,21 @@ package drt.client.actions
 import diode.Action
 import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
-import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{ FileUploadState, StaffAdjustmentDialogueState }
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
-import drt.shared.api.{ForecastAccuracy, WalkTimes}
+import drt.shared.api.{ ForecastAccuracy, WalkTimes }
 import org.scalajs.dom.File
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, UniqueArrival }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
-import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey}
+import uk.gov.homeoffice.drt.egates.{ PortEgateBanksUpdates, SetEgateBanksUpdate }
+import uk.gov.homeoffice.drt.models.{ FlightManifestSummary, ManifestKey }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
-import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.ports.config.slas.{ SlaConfigs, SlasUpdate }
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, AirportInfo, FeedSource, PortCode }
+import uk.gov.homeoffice.drt.redlist.{ RedListUpdates, SetRedListUpdate }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike, UtcDate }
 
 import scala.collection.immutable.HashSet
 import scala.concurrent.duration.FiniteDuration
@@ -86,7 +86,8 @@ object Actions {
 
   case class UpdateContactDetails(contactDetails: ContactDetails) extends Action
 
-  case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
+  case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String])
+      extends Action
 
   case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminal: Terminal) extends Action
 
@@ -94,7 +95,8 @@ object Actions {
 
   case class GetFixedPoints(viewMode: ViewMode) extends Action
 
-  case class SetShiftAssignments(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+  case class SetShiftAssignments(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String])
+      extends Action
 
   case class GetDayOfShiftAssignments(viewMode: ViewMode) extends Action
 
@@ -110,7 +112,12 @@ object Actions {
 
   case class RemoveStaffMovements(uUID: String) extends Action
 
-  case class RecordClientSideStaffMovement(terminal: Terminal, startMinute: MillisSinceEpoch, endMinute: MillisSinceEpoch, staff: Int) extends Action
+  case class RecordClientSideStaffMovement(
+      terminal: Terminal,
+      startMinute: MillisSinceEpoch,
+      endMinute: MillisSinceEpoch,
+      staff: Int
+  ) extends Action
 
   case class SetStaffMovementsAndPollIfLiveView(viewMode: ViewMode, staffMovements: StaffMovements) extends Action
 
@@ -144,7 +151,8 @@ object Actions {
 
   case class GetArrivalSourcesForPointInTime(pointInTime: SDateLike, unique: UniqueArrival) extends Action
 
-  case class UpdateArrivalSources(uniqueArrival: UniqueArrival, arrivalSources: List[Option[FeedSourceArrival]]) extends Action
+  case class UpdateArrivalSources(uniqueArrival: UniqueArrival, arrivalSources: List[Option[FeedSourceArrival]])
+      extends Action
 
   case object RemoveArrivalSources extends Action
 
@@ -231,6 +239,5 @@ object Actions {
   case class UpdateNationalityFlaggerInputText(value: String) extends Action
 
   case class UpdateFlightHighlight(flightHighlight: FlightHighlight) extends Action
-
 
 }

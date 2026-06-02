@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
-import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
+import drt.server.feeds.{ DqManifests, ManifestsFeedSuccess }
 import drt.shared.ShiftAssignments
 import drt.staff.ImportStaff
 import module.NoCSRFAction
@@ -15,31 +15,31 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import org.joda.time.DateTime
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.passengerInfoResponseConverter
 import play.api.http.HeaderNames
-import play.api.mvc.{Action, _}
+import play.api.mvc.{ Action, _ }
 import spray.json._
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightCode, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{ ArrivalsDiff, FlightCode, LiveArrival }
 import uk.gov.homeoffice.drt.db.tables.VoyageManifestPassengerInfoRow
-import uk.gov.homeoffice.drt.models.{VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.models.{ VoyageManifest, VoyageManifests }
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.feeds.test.CSVFixtures
-import uk.gov.homeoffice.drt.testsystem.{MockRoles, TestDrtSystem}
+import uk.gov.homeoffice.drt.testsystem.{ MockRoles, TestDrtSystem }
 import uk.gov.homeoffice.drt.time.SDate
 
 import java.sql.Timestamp
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction)
-  extends AbstractController(cc) with StaffShiftsJson {
+class TestController @Inject() (cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction)
+    extends AbstractController(cc) with StaffShiftsJson {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
@@ -98,7 +98,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
             gate = Option(flight.Gate),
             stand = Option(flight.Stand),
             runway = Option(flight.RunwayID),
-            baggageReclaim = Option(flight.BaggageReclaimId),
+            baggageReclaim = Option(flight.BaggageReclaimId)
           )
           saveArrival(arrival).map(_ => Created)
         case None =>
@@ -128,7 +128,9 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
-          log.info(s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber} ${vm.ScheduledDateOfArrival} ${vm.ScheduledTimeOfArrival}")
+          log.info(
+            s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber} ${vm.ScheduledDateOfArrival} ${vm.ScheduledTimeOfArrival}"
+          )
           saveVoyageManifest(vm)
             .flatMap { _ =>
               val date = SDate(s"${vm.ScheduledDateOfArrival.date}T${vm.ScheduledTimeOfArrival.time}")
@@ -152,7 +154,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
                   passenger.NationalityCountryCode.map(_.code).getOrElse(""),
                   passenger.PassengerIdentifier.getOrElse(""),
                   passenger.InTransitFlag.isInTransit,
-                  "",
+                  ""
                 )
               }
               import ctrl.aggregatedDb.profile.api._

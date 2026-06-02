@@ -4,12 +4,16 @@ import actors.serializers.PortStateMessageConversion._
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, UniqueArrival }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, StaffMinuteMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{
+  CrunchMinuteMessage,
+  CrunchStateSnapshotMessage,
+  StaffMinuteMessage
+}
 import uk.gov.homeoffice.drt.time.MilliDate
 
 import scala.collection.immutable.SortedMap
@@ -21,14 +25,39 @@ class PortStateMessageConversionSpec extends Specification {
         val validMinuteMilli = 0L
         val invalidMinuteMilli = 60001L
         val crunchMinutes = Seq(
-          CrunchMinuteMessage(Option("T1"), Option(Queues.EeaDesk.toString), Option(validMinuteMilli), Option(1), Option(0), Option(0), Option(0), None, None, None, None),
-          CrunchMinuteMessage(Option("T1"), Option(Queues.EeaDesk.toString), Option(invalidMinuteMilli), Option(2), Option(0), Option(0), Option(0), None, None, None, None)
+          CrunchMinuteMessage(
+            Option("T1"),
+            Option(Queues.EeaDesk.toString),
+            Option(validMinuteMilli),
+            Option(1),
+            Option(0),
+            Option(0),
+            Option(0),
+            None,
+            None,
+            None,
+            None
+          ),
+          CrunchMinuteMessage(
+            Option("T1"),
+            Option(Queues.EeaDesk.toString),
+            Option(invalidMinuteMilli),
+            Option(2),
+            Option(0),
+            Option(0),
+            Option(0),
+            None,
+            None,
+            None,
+            None
+          )
         )
         val staffMinutes = Seq(
           StaffMinuteMessage(Option("T1"), Option(validMinuteMilli), Option(1), Option(0), Option(0), None),
           StaffMinuteMessage(Option("T1"), Option(invalidMinuteMilli), Option(2), Option(0), Option(0), None)
         )
-        val state = snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None)
+        val state =
+          snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None)
 
         val correctedMillis = MilliDate(invalidMinuteMilli).millisSinceEpoch
         val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(
@@ -40,7 +69,8 @@ class PortStateMessageConversionSpec extends Specification {
           StaffMinute(T1, correctedMillis, 2, 0, 0, None)
         ).map(m => (m.key, m))
 
-        val expected = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
+        val expected =
+          PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
 
         state === expected
       }
@@ -63,7 +93,7 @@ class PortStateMessageConversionSpec extends Specification {
         maybeDeployedPaxInQueue = Option(47),
         actDesks = Option(1),
         actWait = Option(10),
-        lastUpdated = Option(1200L),
+        lastUpdated = Option(1200L)
       )
       val serialised = PortStateMessageConversion.crunchMinuteToMessage(cm)
 

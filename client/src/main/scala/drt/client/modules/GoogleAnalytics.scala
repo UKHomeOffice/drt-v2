@@ -12,31 +12,40 @@ object GoogleEventTracker {
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
 
   def sendPageView(title: String, url: String): Unit = {
-      if (trackingCode.nonEmpty) {
-        GoogleAnalytics.gtag("event", "page_view", js.Dictionary(
+    if (trackingCode.nonEmpty) {
+      GoogleAnalytics.gtag(
+        "event",
+        "page_view",
+        js.Dictionary(
           "page_title" -> title,
-          "page_location" -> url,
-        ))
-      }
+          "page_location" -> url
+        )
+      )
+    }
   }
 
-  def sendEvent(event : IAnalyticsEvent) : Unit = {
+  def sendEvent(event: IAnalyticsEvent): Unit = {
     sendEvent(event.category, event.action, event.label)
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {
-    if (trackingCode.nonEmpty) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label))
+    if (trackingCode.nonEmpty)
+      GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label))
   }
 
   def sendEvent(category: String, action: String, label: String, value: String): Unit = {
-    if (trackingCode.nonEmpty) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label, "value" -> value))
+    if (trackingCode.nonEmpty) GoogleAnalytics.gtag(
+      "event",
+      s"${port}_$category",
+      js.Dictionary("action" -> action, "label" -> label, "value" -> value)
+    )
   }
 
   def sendError(description: String, fatal: Boolean): Unit = {
-    if (trackingCode.nonEmpty) GoogleAnalytics.gtag("event", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
+    if (trackingCode.nonEmpty)
+      GoogleAnalytics.gtag("event", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
   }
 }
-
 
 @js.native
 @JSGlobalScope

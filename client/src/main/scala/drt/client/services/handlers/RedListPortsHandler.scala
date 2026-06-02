@@ -1,16 +1,16 @@
 package drt.client.services.handlers
 
 import diode.Implicits.runAfterImpl
-import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.read
 
 import scala.collection.immutable.HashSet
 import scala.concurrent.Future
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class RedListPortsHandler[M](modelRW: ModelRW[M, Pot[HashSet[PortCode]]]) extends PotActionHandler(modelRW) {

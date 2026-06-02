@@ -1,20 +1,26 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import actors.persistent.staffing.StaffingUtil.{generateDailyAssignments, getOverridingAssignments, newAssignments, staffAssignmentsSlotSummaries, updateWithShiftDefaultStaff}
-import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
+import actors.persistent.staffing.StaffingUtil.{
+  generateDailyAssignments,
+  getOverridingAssignments,
+  newAssignments,
+  staffAssignmentsSlotSummaries,
+  updateWithShiftDefaultStaff
+}
+import drt.shared.{ ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM }
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.{Shift, ShiftStaffRolling}
+import uk.gov.homeoffice.drt.{ Shift, ShiftStaffRolling }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
-import uk.gov.homeoffice.drt.util.ShiftUtil.{currentLocalDate, localDateFromString}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
+import uk.gov.homeoffice.drt.util.ShiftUtil.{ currentLocalDate, localDateFromString }
 import upickle.default.write
 
 import javax.inject._
 import scala.collection.immutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.implicitConversions
 
 trait StaffShiftsJson extends DefaultJsonProtocol {
@@ -59,20 +65,20 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
         endTime = fields("endTime").convertTo[String],
         endDate = fields.get("endDate") match {
           case Some(JsArray(elements)) if elements.isEmpty => None
-          case Some(JsNull) => None
-          case Some(value) => Some(value.convertTo[LocalDate])
-          case None => None
+          case Some(JsNull)                                => None
+          case Some(value)                                 => Some(value.convertTo[LocalDate])
+          case None                                        => None
         },
         staffNumber = fields("staffNumber").convertTo[Int],
         frequency = fields.get("frequency").flatMap {
           case JsString(value) => Some(value)
-          case JsNull => None
-          case _ => None
+          case JsNull          => None
+          case _               => None
         },
         createdBy = fields.get("createdBy").flatMap {
           case JsString(value) => Some(value)
-          case JsNull => None
-          case _ => None
+          case JsNull          => None
+          case _               => None
         },
         createdAt = fields("createdAt").convertTo[Long]
       )
@@ -90,10 +96,11 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
   }
 }
 
-class ShiftsController @Inject()(cc: ControllerComponents,
-                                 ctrl: DrtSystemInterface,
-                                 shiftAssignmentsService: ShiftAssignmentsService,
-                                )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
+class ShiftsController @Inject() (
+    cc: ControllerComponents,
+    ctrl: DrtSystemInterface,
+    shiftAssignmentsService: ShiftAssignmentsService
+)(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
   def getShifts(terminal: String): Action[AnyContent] = Action.async {
     ctrl.shiftsService.getShifts(ctrl.airportConfig.portCode.iata, terminal).map { shifts =>
@@ -102,13 +109,23 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   }
 
   def getActiveShiftsForViewRange(terminal: String, dayRange: String, date: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getActiveShiftsForViewRange(ctrl.airportConfig.portCode.iata, terminal, Option(dayRange), Option(date)).map { shifts =>
+    ctrl.shiftsService.getActiveShiftsForViewRange(
+      ctrl.airportConfig.portCode.iata,
+      terminal,
+      Option(dayRange),
+      Option(date)
+    ).map { shifts =>
       Ok(shifts.toJson.compactPrint)
     }
   }
 
   def getActiveShiftsForCurrentViewRange(terminal: String, dayRange: String): Action[AnyContent] = Action.async {
-    ctrl.shiftsService.getActiveShiftsForViewRange(ctrl.airportConfig.portCode.iata, terminal, Option(dayRange), None).map { shifts =>
+    ctrl.shiftsService.getActiveShiftsForViewRange(
+      ctrl.airportConfig.portCode.iata,
+      terminal,
+      Option(dayRange),
+      None
+    ).map { shifts =>
       Ok(shifts.toJson.compactPrint)
     }
   }
@@ -192,7 +209,8 @@ class ShiftsController @Inject()(cc: ControllerComponents,
             overridingShifts,
             futureExistingShift,
             updatedNewShift,
-            allShiftAssignments)
+            allShiftAssignments
+          )
           shiftAssignmentsService.updateShiftAssignments(updatedAssignments).map { s =>
             ctrl.shiftStaffRollingService.upsertShiftStaffRolling(shiftStaffingRollingWhileEditing(updatedNewShift))
             Ok(write(s))
@@ -217,14 +235,24 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       ctrl.shiftsService.getOverlappingStaffShifts(previousShift.port, previousShift.terminal, previousShift)
         .flatMap { overridingShifts =>
           val overridingAssignments: Seq[StaffAssignment] = getOverridingAssignments(overridingShifts, previousShift)
-          val overridingShiftAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(overridingAssignments)
+          val overridingShiftAssignments: Map[TM, StaffAssignment] =
+            staffAssignmentsSlotSummaries(overridingAssignments)
           val updatedAssignments = previousShiftSplitDailyAssignments.map {
             case (tm, prevAssignment) =>
               val updatedAssignment = existingAllAssignments.get(tm) match {
                 case Some(existingAssignment) =>
-                  if (existingAssignment.numberOfStaff - prevAssignment.numberOfStaff == overridingShiftAssignments.get(tm).map(_.numberOfStaff).getOrElse(0))
-                    StaffAssignment(existingAssignment.name, existingAssignment.terminal, existingAssignment.start,
-                      existingAssignment.end, existingAssignment.numberOfStaff - prevAssignment.numberOfStaff, existingAssignment.createdBy)
+                  if (
+                    existingAssignment.numberOfStaff - prevAssignment.numberOfStaff ==
+                      overridingShiftAssignments.get(tm).map(_.numberOfStaff).getOrElse(0)
+                  )
+                    StaffAssignment(
+                      existingAssignment.name,
+                      existingAssignment.terminal,
+                      existingAssignment.start,
+                      existingAssignment.end,
+                      existingAssignment.numberOfStaff - prevAssignment.numberOfStaff,
+                      existingAssignment.createdBy
+                    )
                   else
                     existingAssignment
                 case None =>
@@ -254,19 +282,33 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     request.body.asText.map { text =>
       try {
         val newShift = shiftFromJson(text)
-        ctrl.shiftsService.getShift(newShift.port, newShift.terminal, previousName, newShift.startDate, newShift.startTime).flatMap {
+        ctrl.shiftsService.getShift(
+          newShift.port,
+          newShift.terminal,
+          previousName,
+          newShift.startDate,
+          newShift.startTime
+        ).flatMap {
           case Some(previousShift) =>
             ctrl.shiftsService.updateShift(previousShift, newShift).flatMap { updatedNewShift =>
               updateAssignments(previousShift, None, updatedNewShift)
             }
           case None =>
-            ctrl.shiftsService.latestStaffShiftForADate(newShift.port, newShift.terminal, newShift.startDate, newShift.startTime).flatMap {
+            ctrl.shiftsService.latestStaffShiftForADate(
+              newShift.port,
+              newShift.terminal,
+              newShift.startDate,
+              newShift.startTime
+            ).flatMap {
               case Some(previousShift) =>
-                ctrl.shiftsService.createNewShiftWhileEditing(previousShift, newShift).flatMap { case (updatedNewShift, futureExistingShift) =>
-                  updateAssignments(previousShift, futureExistingShift, updatedNewShift)
+                ctrl.shiftsService.createNewShiftWhileEditing(previousShift, newShift).flatMap {
+                  case (updatedNewShift, futureExistingShift) =>
+                    updateAssignments(previousShift, futureExistingShift, updatedNewShift)
                 }
               case None =>
-                Future.successful(BadRequest(s"Previous shift not found for update: $previousName on ${newShift.startDate}"))
+                Future.successful(
+                  BadRequest(s"Previous shift not found for update: $previousName on ${newShift.startDate}")
+                )
             }.recoverWith {
               case e: Exception =>
                 log.error(s"Failed to find previous shift for update: ", e.printStackTrace())
@@ -279,20 +321,27 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
   }
 
-  def removeShift(terminal: String, previousName: String, startDate: String, startTime: String): Action[AnyContent] = Action.async { request =>
-    try {
-      val startDateLocal = localDateFromString(startDate)
-      ctrl.shiftsService.getShift(ctrl.airportConfig.portCode.iata, terminal, previousName, startDateLocal, startTime).flatMap {
-        case Some(previousShift) =>
-          ctrl.shiftsService.deleteShift(previousShift).flatMap { deletedShift =>
-            updateAssignmentsWithDelete(previousShift)
-          }
-        case None =>
-          Future.successful(BadRequest(s"Previous shift not found for deletion: $previousName on ${startDate}"))
+  def removeShift(terminal: String, previousName: String, startDate: String, startTime: String): Action[AnyContent] =
+    Action.async { request =>
+      try {
+        val startDateLocal = localDateFromString(startDate)
+        ctrl.shiftsService.getShift(
+          ctrl.airportConfig.portCode.iata,
+          terminal,
+          previousName,
+          startDateLocal,
+          startTime
+        ).flatMap {
+          case Some(previousShift) =>
+            ctrl.shiftsService.deleteShift(previousShift).flatMap { deletedShift =>
+              updateAssignmentsWithDelete(previousShift)
+            }
+          case None =>
+            Future.successful(BadRequest(s"Previous shift not found for deletion: $previousName on ${startDate}"))
 
+        }
+      } catch {
+        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
       }
-    } catch {
-      case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
     }
-  }
 }

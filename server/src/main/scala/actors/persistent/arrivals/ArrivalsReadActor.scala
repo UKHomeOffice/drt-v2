@@ -1,8 +1,8 @@
 package actors.persistent.arrivals
 
 import org.apache.pekko.actor.Props
-import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.persistence.{ Recovery, SnapshotSelectionCriteria }
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -14,7 +14,7 @@ object ArrivalsReadActor {
 }
 
 class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, feedSource: FeedSource)
-  extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
+    extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
   override def persistenceId: String = persistenceIdString
 
   def now: () => SDateLike = () => pointInTime
@@ -26,7 +26,7 @@ class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, fee
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff@FlightsDiffMessage(Some(createdMillis), _, _, _) =>
+    case diff @ FlightsDiffMessage(Some(createdMillis), _, _, _) =>
       if (createdMillis <= pointInTime.millisSinceEpoch) consumeDiffsMessage(diff)
     case _ =>
   }

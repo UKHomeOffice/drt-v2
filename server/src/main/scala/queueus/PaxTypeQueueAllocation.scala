@@ -3,14 +3,18 @@ package queueus
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals.Splits
-import uk.gov.homeoffice.drt.models.{ManifestLike, ManifestPassengerProfile, PaxTypeAllocator}
+import uk.gov.homeoffice.drt.models.{ ManifestLike, ManifestPassengerProfile, PaxTypeAllocator }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxAge, PaxType, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{ ApiPaxTypeAndQueueCount, PaxAge, PaxType, PaxTypeAndQueue }
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
-  def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, Iterable[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
-    val queueAllocatorForFlight: PaxType => Seq[(Queue, Double)] = queueAllocator.forTerminalAndManifest(terminal, manifest)
+  def toQueues(
+      terminal: Terminal,
+      manifest: ManifestLike
+  ): Map[Queue, Iterable[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
+    val queueAllocatorForFlight: PaxType => Seq[(Queue, Double)] =
+      queueAllocator.forTerminalAndManifest(terminal, manifest)
     val paxTypeAllocatorForFlight = paxTypeAllocator
     manifest.uniquePassengers.flatMap(mpp => {
       val paxType = paxTypeAllocatorForFlight(mpp)
@@ -31,17 +35,17 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
             val paxTypeAndQueue = PaxTypeAndQueue(paxType, queue)
             val ptqc: ApiPaxTypeAndQueueCount = soFar.get(paxTypeAndQueue) match {
               case Some(apiPaxTypeAndQueueCount) => apiPaxTypeAndQueueCount.copy(
-                paxCount = apiPaxTypeAndQueueCount.paxCount + paxCount,
-                nationalities = incrementNationalityCount(mpp, paxCount, apiPaxTypeAndQueueCount),
-                ages = incrementAgeCount(mpp, paxCount, apiPaxTypeAndQueueCount)
-              )
+                  paxCount = apiPaxTypeAndQueueCount.paxCount + paxCount,
+                  nationalities = incrementNationalityCount(mpp, paxCount, apiPaxTypeAndQueueCount),
+                  ages = incrementAgeCount(mpp, paxCount, apiPaxTypeAndQueueCount)
+                )
               case None => ApiPaxTypeAndQueueCount(
-                paxType,
-                queue,
-                paxCount,
-                Option(Map(mpp.nationality -> paxCount)),
-                mpp.age.map(age => Map(age -> paxCount))
-              )
+                  paxType,
+                  queue,
+                  paxCount,
+                  Option(Map(mpp.nationality -> paxCount)),
+                  mpp.age.map(age => Map(age -> paxCount))
+                )
             }
             soFar + (paxTypeAndQueue -> ptqc)
         }
@@ -50,16 +54,22 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
     Splits(splits, manifest.source, manifest.maybeEventType, PaxNumbers)
   }
 
-  def incrementNationalityCount(mpp: ManifestPassengerProfile,
-                                paxCount: Double,
-                                apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Option[Map[Nationality, Double]] =
+  def incrementNationalityCount(
+      mpp: ManifestPassengerProfile,
+      paxCount: Double,
+      apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount
+  ): Option[Map[Nationality, Double]] =
     apiPaxTypeAndQueueCount.nationalities.map(nats => {
       val existingOfNationality: Double = nats.getOrElse(mpp.nationality, 0)
       val newNats: Map[Nationality, Double] = nats + (mpp.nationality -> (existingOfNationality + paxCount))
       Option(newNats)
     }).getOrElse(Option(Map(mpp.nationality -> paxCount)))
 
-  def incrementAgeCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Option[Map[PaxAge, Double]] =
+  def incrementAgeCount(
+      mpp: ManifestPassengerProfile,
+      paxCount: Double,
+      apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount
+  ): Option[Map[PaxAge, Double]] =
     mpp.age.map(age => {
       apiPaxTypeAndQueueCount.ages.map((paxAges: Map[PaxAge, Double]) => {
         val existingOfAge: Double = paxAges.getOrElse(age, 0)

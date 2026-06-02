@@ -2,15 +2,15 @@ package drt.client.services.handlers
 
 import diode.Implicits.runAfterImpl
 import diode.data._
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
-import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, PortEgateBanksUpdates}
-import upickle.default.{read, write}
+import drt.client.services.{ DrtApi, PollDelay }
+import uk.gov.homeoffice.drt.egates.{ DeleteEgateBanksUpdates, PortEgateBanksUpdates }
+import upickle.default.{ read, write }
 
 import scala.concurrent.Future
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 

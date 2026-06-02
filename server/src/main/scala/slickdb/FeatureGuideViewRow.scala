@@ -5,7 +5,7 @@ import slick.lifted.ProvenShape
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 
 import java.sql.Timestamp
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class FeatureGuideViewRow(email: String, fileId: Int, viewTime: Timestamp)
 
@@ -33,7 +33,8 @@ case class FeatureGuideViewTable(tables: AggregatedDbTables) extends FeatureGuid
   val userFeatureView = TableQuery[FeatureGuideView]
 
   def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = {
-    val insertOrUpdateAction = userFeatureView.insertOrUpdate(FeatureGuideViewRow(email, fileId, new Timestamp(System.currentTimeMillis())))
+    val insertOrUpdateAction =
+      userFeatureView.insertOrUpdate(FeatureGuideViewRow(email, fileId, new Timestamp(System.currentTimeMillis())))
     tables.run(insertOrUpdateAction).map(_ => "success")
   }
 
@@ -42,6 +43,5 @@ case class FeatureGuideViewTable(tables: AggregatedDbTables) extends FeatureGuid
     val fileViewed = tables.run(selectAction).map(_.map(_.toString))
     fileViewed
   }
-
 
 }

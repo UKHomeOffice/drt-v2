@@ -13,42 +13,42 @@ class AclTerminalMappingSpec extends Specification {
 
         val portAclTerminalToExpectedTerminal = Map(
           "BFS" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "BHX" -> Map(
             "1I" -> T1,
-            "2I" -> T2,
+            "2I" -> T2
           ),
           "BRS" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "EDI" -> Map(
             "1I" -> A2
           ),
           "EMA" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "GLA" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "LCY" -> Map(
-            "Ter" -> T1,
+            "Ter" -> T1
           ),
           "LGW" -> Map(
             "1I" -> S,
-            "2I" -> N,
+            "2I" -> N
           ),
           "LHR" -> Map(
             "2I" -> T2,
             "3I" -> T3,
             "4I" -> T4,
-            "5I" -> T5,
+            "5I" -> T5
           ),
           "LPL" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "LTN" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "MAN" -> Map(
             "T1" -> T1,
@@ -56,10 +56,10 @@ class AclTerminalMappingSpec extends Specification {
             "T3" -> T3
           ),
           "NCL" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           ),
           "STN" -> Map(
-            "1I" -> T1,
+            "1I" -> T1
           )
         )
 
@@ -79,39 +79,39 @@ class AclTerminalMappingSpec extends Specification {
         val portAclTerminalToExpectedTerminal = Map(
           "BHX" -> Map(
             "1D" -> T1,
-            "2D" -> T2,
+            "2D" -> T2
           ),
           "BFS" -> Map(
-            "1D" -> T1,
+            "1D" -> T1
           ),
           "BRS" -> Map(
-            "1D" -> T1,
+            "1D" -> T1
           ),
           "EMA" -> Map(
-            "1D" -> T1,
+            "1D" -> T1
           ),
           "GLA" -> Map(
-            "1D" -> T1,
+            "1D" -> T1
           ),
           "LCY" -> Map(
-            "MainApron" -> T1,
+            "MainApron" -> T1
           ),
           "LGW" -> Map(
             "1D" -> S,
-            "2D" -> N,
+            "2D" -> N
           ),
           "LHR" -> Map(
             "2D" -> T2,
-            "5D" -> T5,
+            "5D" -> T5
           ),
           "LPL" -> Map(
-            "1D" -> T1,
+            "1D" -> T1
           ),
           "LTN" -> Map(
-            "1D" -> T1,
+            "1D" -> T1
           ),
           "STN" -> Map(
-            "CTA" -> T1,
+            "CTA" -> T1
           )
         )
 
@@ -126,6 +126,5 @@ class AclTerminalMappingSpec extends Specification {
       }
     }
   }
-
 
 }

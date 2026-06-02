@@ -9,8 +9,8 @@ class CommonStyle extends StyleSheet.Inline with ScalaCssReactImplicits {
   def theme: Theme = createTheme(
     options = ThemeOptions(
       typography = TypographyOptions(
-        fontSize = 14,
-      ),
+        fontSize = 14
+      )
     )
   )
 }

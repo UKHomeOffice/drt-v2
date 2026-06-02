@@ -4,12 +4,12 @@ import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import io.kinoplan.scalajs.react.bridge.WithProps
 import io.kinoplan.scalajs.react.material.ui.core.MuiTooltip
-import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
+import io.kinoplan.scalajs.react.material.ui.core.system.{ SxProps, ThemeProvider }
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
+import japgolly.scalajs.react.vdom.html_<^.{ <, ^, _ }
+import japgolly.scalajs.react.{ CtorType, _ }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object DataQualityIndicator {
@@ -26,18 +26,21 @@ object DataQualityIndicator {
         scope.modState(s => s.copy(showTooltip = !s.showTooltip))
       }
 
-      val tooltip: String => WithProps = tt => MuiTooltip(
-        title = tt,
-        placement = "bottom-end",
-        onOpen = (_: ReactEventFromHtml) => Callback {
-          GoogleEventTracker.sendEvent(props.terminal.toString, "Info button click", "Data quality", props.dq.text)
-        },
-        open = state.showTooltip,
-        onClose = (_: ReactEventFromHtml) => scope.modState(s => s.copy(showTooltip = false)),
-        sx = SxProps(Map("fontSize" -> "inherit")),
-      )
+      val tooltip: String => WithProps = tt =>
+        MuiTooltip(
+          title = tt,
+          placement = "bottom-end",
+          onOpen = (_: ReactEventFromHtml) =>
+            Callback {
+              GoogleEventTracker.sendEvent(props.terminal.toString, "Info button click", "Data quality", props.dq.text)
+            },
+          open = state.showTooltip,
+          onClose = (_: ReactEventFromHtml) => scope.modState(s => s.copy(showTooltip = false)),
+          sx = SxProps(Map("fontSize" -> "inherit"))
+        )
 
-      def dfnTooltip = <.dfn(^.className := "data-quality-indicator question-hover",
+      def dfnTooltip = <.dfn(
+        ^.className := "data-quality-indicator question-hover",
         props.dq.text,
         props.dq.maybeTooltip.map { tt =>
           <.span(^.className := "data-quality__more-info", tooltip(tt)(<.div()))
@@ -47,7 +50,7 @@ object DataQualityIndicator {
         },
         ^.onPointerOut ==> { _ =>
           scope.modState(s => s.copy(showTooltip = false))
-        },
+        }
       )
 
       def iconTooltip = <.span(
@@ -60,7 +63,7 @@ object DataQualityIndicator {
                 handleOnClick
               },
               MuiIcons(Info)(fontSize = "small")
-            )),
+            ))
           )
         }
       )
@@ -69,12 +72,17 @@ object DataQualityIndicator {
         ThemeProvider(DrtReactTheme)(
           if (props.icon) iconTooltip else dfnTooltip
         ),
-        ^.className := s"data-quality data-quality__${props.dq.`type`} ${props.classPrefix}-${props.dq.`type`}",
+        ^.className := s"data-quality data-quality__${props.dq.`type`} ${props.classPrefix}-${props.dq.`type`}"
       )
     }
     .build
 
-  def apply(dq: FlightComponents.DataQuality, terminal: Terminal, classPrefix: String, icon: Boolean): Unmounted[Props, State, Unit] =
+  def apply(
+      dq: FlightComponents.DataQuality,
+      terminal: Terminal,
+      classPrefix: String,
+      icon: Boolean
+  ): Unmounted[Props, State, Unit] =
     component(Props(dq, terminal, classPrefix, icon))
 
 }

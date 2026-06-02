@@ -3,14 +3,14 @@ package services.exports
 import drt.shared.CrunchApi.StaffMinute
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.models.CrunchMinute
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk, NonEeaDesk }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class StaffRequirementExportsSpec extends Specification {
   "groupByXMinutes" should {
@@ -20,7 +20,8 @@ class StaffRequirementExportsSpec extends Specification {
         StaffMinute(T1, start.addMinutes(m).millisSinceEpoch, 0, 0, 0, None)
       }
 
-      def fifteenMins(start: SDateLike): Seq[Long] = (start.millisSinceEpoch to start.addMinutes(14).millisSinceEpoch by oneMinuteMillis).toList
+      def fifteenMins(start: SDateLike): Seq[Long] =
+        (start.millisSinceEpoch to start.addMinutes(14).millisSinceEpoch by oneMinuteMillis).toList
 
       val grouped = StaffRequirementExports.groupByMinutes(minutes, 15).view.mapValues(_.map(_.minute)).toMap
       val expected = Map(
@@ -40,8 +41,23 @@ class StaffRequirementExportsSpec extends Specification {
         StaffMinute(T1, start.addMinutes(fp).millisSinceEpoch, 0, fp, 0, None)
       }
       val crunch = (0 to 14).flatMap { m =>
-        Seq(EeaDesk, EGate, NonEeaDesk).map (queue =>
-          CrunchMinute(T1, queue, start.addMinutes(m).millisSinceEpoch, 0d, 0d, m, 0, None, None, None, None, None, None, None),
+        Seq(EeaDesk, EGate, NonEeaDesk).map(queue =>
+          CrunchMinute(
+            T1,
+            queue,
+            start.addMinutes(m).millisSinceEpoch,
+            0d,
+            0d,
+            m,
+            0,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None
+          )
         )
       }
 
@@ -60,20 +76,80 @@ class StaffRequirementExportsSpec extends Specification {
         StaffMinute(T1, SDate("2023-09-26T00:00", europeLondonTimeZone).millisSinceEpoch, 15, 2, 0, None),
         StaffMinute(T1, SDate("2023-09-26T00:01", europeLondonTimeZone).millisSinceEpoch, 16, 3, 0, None),
         StaffMinute(T1, SDate("2023-09-26T12:15", europeLondonTimeZone).millisSinceEpoch, 11, 2, 0, None),
-        StaffMinute(T1, SDate("2023-09-26T12:17", europeLondonTimeZone).millisSinceEpoch, 10, 4, 0, None),
+        StaffMinute(T1, SDate("2023-09-26T12:17", europeLondonTimeZone).millisSinceEpoch, 10, 4, 0, None)
       )
       val crunch = Seq(
-        CrunchMinute(T1, EeaDesk, SDate("2023-09-26T00:00", europeLondonTimeZone).millisSinceEpoch, 0d, 0d, 10, 0, None, None, None, None, None, None, None),
-        CrunchMinute(T1, EeaDesk, SDate("2023-09-26T00:01", europeLondonTimeZone).millisSinceEpoch, 0d, 0d, 11, 0, None, None, None, None, None, None, None),
-        CrunchMinute(T1, EeaDesk, SDate("2023-09-26T12:15", europeLondonTimeZone).millisSinceEpoch, 0d, 0d, 12, 0, None, None, None, None, None, None, None),
-        CrunchMinute(T1, EeaDesk, SDate("2023-09-26T12:17", europeLondonTimeZone).millisSinceEpoch, 0d, 0d, 13, 0, None, None, None, None, None, None, None),
+        CrunchMinute(
+          T1,
+          EeaDesk,
+          SDate("2023-09-26T00:00", europeLondonTimeZone).millisSinceEpoch,
+          0d,
+          0d,
+          10,
+          0,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None
+        ),
+        CrunchMinute(
+          T1,
+          EeaDesk,
+          SDate("2023-09-26T00:01", europeLondonTimeZone).millisSinceEpoch,
+          0d,
+          0d,
+          11,
+          0,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None
+        ),
+        CrunchMinute(
+          T1,
+          EeaDesk,
+          SDate("2023-09-26T12:15", europeLondonTimeZone).millisSinceEpoch,
+          0d,
+          0d,
+          12,
+          0,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None
+        ),
+        CrunchMinute(
+          T1,
+          EeaDesk,
+          SDate("2023-09-26T12:17", europeLondonTimeZone).millisSinceEpoch,
+          0d,
+          0d,
+          13,
+          0,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None
+        )
       )
       import scala.concurrent.ExecutionContext.Implicits.global
       val getColumns = StaffRequirementExports.toHourlyStaffing(_ => Future.successful(staff), 720)
       Await.result(getColumns(LocalDate(2023, 9, 26), crunch), 1.second) === List(
         ("26/09 - available", "26/09 - required", "26/09 - difference"),
         ("16", "14", "2"),
-        ("11", "17", "-6"),
+        ("11", "17", "-6")
       )
     }
   }

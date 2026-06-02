@@ -2,11 +2,11 @@ package drt.server.feeds.legacy.bhx
 
 import jakarta.xml.ws.BindingProvider
 import org.slf4j.Logger
-import uk.co.bhx.online.flightinformation.{FlightInformation, FlightInformationSoap}
+import uk.co.bhx.online.flightinformation.{ FlightInformation, FlightInformationSoap }
 
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait BHXFeedConfig {
   val log: Logger
@@ -17,7 +17,8 @@ trait BHXFeedConfig {
 
   def serviceSoap(endPointUrl: String): FlightInformationSoap = {
     Try {
-      val service: FlightInformation = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
+      val service: FlightInformation =
+        new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
       log.debug(s"Initialising BHX Feed with ${service.getWSDLDocumentLocation.toString} " +
         s"[connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
       service.getFlightInformationSoap match {
@@ -31,7 +32,7 @@ trait BHXFeedConfig {
       }
     } match {
       case Success(flightInformationSoap) => flightInformationSoap
-      case Failure(t) =>
+      case Failure(t)                     =>
         log.error(s"Failed to start BHX feed: ${t.getMessage}", t)
         throw new RuntimeException("Failed to start BHX feed.", t)
     }

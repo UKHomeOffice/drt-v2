@@ -4,9 +4,9 @@ import controllers.ArrivalGenerator
 import drt.shared._
 import org.specs2.mutable.Specification
 import services.crunch.TestDefaults
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, FlightsWithSplits }
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
 
@@ -26,7 +26,7 @@ class SimulationParamsSpec extends Specification {
     eGateBankSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
     crunchOffsetMinutes = 0,
-    eGateOpenHours = Seq(),
+    eGateOpenHours = Seq()
   )
 
   "Given I am applying a simulation to an airport config" >> {
@@ -41,14 +41,20 @@ class SimulationParamsSpec extends Specification {
 
     "The original airport config processing times should be used if replacements are not supplied" >> {
 
-      val simulationWithMissingProcTimes = simulation.copy(processingTimes = Map(eeaMachineReadableToDesk -> 30,
-        eeaMachineReadableToEGate -> 30))
+      val simulationWithMissingProcTimes = simulation.copy(processingTimes =
+        Map(
+          eeaMachineReadableToDesk -> 30,
+          eeaMachineReadableToEGate -> 30
+        )
+      )
 
-      val testConfigWithProcTimes = testConfig.copy(terminalProcessingTimes = Map(terminal -> Map(
-        eeaMachineReadableToDesk -> 1.0,
-        eeaMachineReadableToEGate -> 1.0,
-        eeaNonMachineReadableToDesk -> 1.0
-      )))
+      val testConfigWithProcTimes = testConfig.copy(terminalProcessingTimes =
+        Map(terminal -> Map(
+          eeaMachineReadableToDesk -> 1.0,
+          eeaMachineReadableToEGate -> 1.0,
+          eeaNonMachineReadableToDesk -> 1.0
+        ))
+      )
 
       val expected = Map(
         eeaMachineReadableToDesk -> 0.5,
@@ -106,7 +112,10 @@ class SimulationParamsSpec extends Specification {
   "Given I am applying a passenger weighting of 1 to some flights then the passenger numbers should be the same" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
-    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100),transPax = Option(50)).toArrival(LiveFeedSource), Set())
+    val flightWithSplits = ApiFlightWithSplits(
+      ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource),
+      Set()
+    )
     val flights = FlightsWithSplits(Seq(flightWithSplits))
 
     val result = weightingOfOne.applyPassengerWeighting(flights, paxFeedSourceOrder)
@@ -130,14 +139,16 @@ class SimulationParamsSpec extends Specification {
     val weightingOfTwo = simulation.copy(passengerWeighting = 1.5)
 
     val fws = FlightsWithSplits(List(
-      ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
+      ApiFlightWithSplits(
+        ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource),
+        Set()
+      )
     ))
 
     val result = weightingOfTwo.applyPassengerWeighting(fws, paxFeedSourceOrder)
 
     sumPcpPax(result) === (sumPcpPax(fws) * 1.5).toInt
   }
-
 
   private def sumPcpPax(result: FlightsWithSplits): Int =
     result.flights.values

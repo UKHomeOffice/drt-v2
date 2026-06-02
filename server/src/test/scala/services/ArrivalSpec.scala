@@ -3,8 +3,8 @@ package services
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
 import services.crunch.TestDefaults
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, PaxSource}
-import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, ArrivalStatus, Passengers, PaxSource }
+import uk.gov.homeoffice.drt.ports.{ FeedSource, LiveFeedSource }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
@@ -36,17 +36,17 @@ class ArrivalSpec extends Specification {
 
     "When I ask for the min pcp time " +
       "I should get 2019-01-01 noon" >> {
-      val expectedStart = SDate(pcpTime).millisSinceEpoch
+        val expectedStart = SDate(pcpTime).millisSinceEpoch
 
-      pcpRange.min === expectedStart
-    }
+        pcpRange.min === expectedStart
+      }
 
     "When I ask for the max pcp time " +
       "I should get 2019-01-01 noon:04" >> {
-      val expectedEnd = SDate(pcpTime).addMinutes(4).millisSinceEpoch
+        val expectedEnd = SDate(pcpTime).addMinutes(4).millisSinceEpoch
 
-      pcpRange.max === expectedEnd
-    }
+        pcpRange.max === expectedEnd
+      }
   }
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 99 pax " >> {
@@ -62,17 +62,17 @@ class ArrivalSpec extends Specification {
 
     "When I ask for the min pcp time " +
       "I should get 2019-01-01 noon" >> {
-      val expectedStart = SDate(pcpTime).millisSinceEpoch
+        val expectedStart = SDate(pcpTime).millisSinceEpoch
 
-      pcpRange.min === expectedStart
-    }
+        pcpRange.min === expectedStart
+      }
 
     "When I ask for the max pcp time " +
       "I should get 2019-01-01 noon:04" >> {
-      val expectedEnd = SDate(pcpTime).addMinutes(4).millisSinceEpoch
+        val expectedEnd = SDate(pcpTime).addMinutes(4).millisSinceEpoch
 
-      pcpRange.max === expectedEnd
-    }
+        pcpRange.max === expectedEnd
+      }
   }
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 101 pax " >> {
@@ -89,17 +89,17 @@ class ArrivalSpec extends Specification {
 
     "When I ask for the min pcp time " +
       "I should get 2019-01-01 noon" >> {
-      val expectedStart = SDate(pcpTime).millisSinceEpoch
+        val expectedStart = SDate(pcpTime).millisSinceEpoch
 
-      pcpRange.min === expectedStart
-    }
+        pcpRange.min === expectedStart
+      }
 
     "When I ask for the max pcp time " +
       "I should get 2019-01-01 noon:05" >> {
-      val expectedEnd = SDate(pcpTime).addMinutes(5).millisSinceEpoch
+        val expectedEnd = SDate(pcpTime).addMinutes(5).millisSinceEpoch
 
-      pcpRange.max === expectedEnd
-    }
+        pcpRange.max === expectedEnd
+      }
   }
 
   "When asking if a flight is relevant to a time period" >> {
@@ -108,12 +108,12 @@ class ArrivalSpec extends Specification {
     "Given none of the flights times are inside the range then it should not be relevant" >> {
       val expected = false
       val arrival = ArrivalGenerator.live(
-          schDt = "2020-10-22T10:00Z",
-          estDt = "2020-10-22T10:00Z",
-          estChoxDt = "2020-10-22T10:00Z",
-          actDt = "2020-10-22T10:00Z",
-          actChoxDt = "2020-10-22T10:00Z"
-        ).toArrival(LiveFeedSource)
+        schDt = "2020-10-22T10:00Z",
+        estDt = "2020-10-22T10:00Z",
+        estChoxDt = "2020-10-22T10:00Z",
+        actDt = "2020-10-22T10:00Z",
+        actChoxDt = "2020-10-22T10:00Z"
+      ).toArrival(LiveFeedSource)
         .copy(PcpTime = Option(SDate("2020-10-22T10:00Z").millisSinceEpoch))
 
       val result = arrival.isRelevantToPeriod(startTime, endTime, paxFeedSourceOrder)
@@ -122,10 +122,14 @@ class ArrivalSpec extends Specification {
     "Given any of the flights times are inside the range then it should be relevant" >> {
 
       val flightWithScheduledTimeInRange = ArrivalGenerator.live(schDt = "2020-10-22T12:00Z").toArrival(LiveFeedSource)
-      val flightWithEstTimeInRange = ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", estDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
-      val flightWithEstChoxTimeInRange = ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", estChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
-      val flightWithActTimeInRange = ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", actDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
-      val flightWithActChoxTimeInRange = ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+      val flightWithEstTimeInRange =
+        ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", estDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+      val flightWithEstChoxTimeInRange =
+        ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", estChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+      val flightWithActTimeInRange =
+        ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", actDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+      val flightWithActChoxTimeInRange =
+        ArrivalGenerator.live(schDt = "2020-10-22T11:00Z", actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
       val flightWithPcpTimeInRange = ArrivalGenerator.live(schDt = "2020-10-22T11:00Z").toArrival(LiveFeedSource)
         .copy(PcpTime = Option(SDate("2020-10-22T13:00Z").millisSinceEpoch))
 
@@ -147,14 +151,19 @@ class ArrivalSpec extends Specification {
     "When flight Actual Chox time exists" >> {
       "display status should be On Chocks" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10), actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+          .live(
+            totalPax = Option(10),
+            actDt = "2020-10-22T13:00Z",
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("On Chocks")
       }
     }
     "When flight Actual time exists and Actual Chox time does not exists" >> {
       "display status should be Landed" >> {
-        val arrival: Arrival = ArrivalGenerator.live(totalPax = Option(10), actDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+        val arrival: Arrival =
+          ArrivalGenerator.live(totalPax = Option(10), actDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Landed")
       }
@@ -162,7 +171,11 @@ class ArrivalSpec extends Specification {
     "When flight Estimated Arrival is more than 15 minutes later than scheduled time" >> {
       "display status should be Delayed" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:20Z").toArrival(LiveFeedSource)
+          .live(
+            totalPax = Option(10),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:20Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Delayed")
       }
@@ -170,7 +183,11 @@ class ArrivalSpec extends Specification {
     "When flight Estimated Arrival is less than 15 minutes later than scheduled time" >> {
       "display status should be Expected" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z").toArrival(LiveFeedSource)
+          .live(
+            totalPax = Option(10),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:10Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Expected")
       }
@@ -178,12 +195,14 @@ class ArrivalSpec extends Specification {
     "When flight status is redirected" >> {
       "display status should be Diverted" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10),
+          .live(
+            totalPax = Option(10),
             status = ArrivalStatus("redirected"),
             schDt = "2020-10-22T13:00Z",
             estDt = "2020-10-22T13:10Z",
             actDt = "2020-10-22T13:00Z",
-            actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
@@ -191,12 +210,14 @@ class ArrivalSpec extends Specification {
     "When flight status is DIVERTED" >> {
       "display status should be Diverted" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10),
+          .live(
+            totalPax = Option(10),
             status = ArrivalStatus("DIVERTED"),
             schDt = "2020-10-22T13:00Z",
             estDt = "2020-10-22T13:10Z",
             actDt = "2020-10-22T13:00Z",
-            actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
@@ -204,12 +225,14 @@ class ArrivalSpec extends Specification {
     "When flight status is CANCELLED" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10),
+          .live(
+            totalPax = Option(10),
             status = ArrivalStatus("CANCELLED"),
             schDt = "2020-10-22T13:00Z",
             estDt = "2020-10-22T13:10Z",
             actDt = "2020-10-22T13:00Z",
-            actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
@@ -217,12 +240,14 @@ class ArrivalSpec extends Specification {
     "When flight status is C" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10),
+          .live(
+            totalPax = Option(10),
             status = ArrivalStatus("C"),
             schDt = "2020-10-22T13:00Z",
             estDt = "2020-10-22T13:10Z",
             actDt = "2020-10-22T13:00Z",
-            actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
@@ -230,12 +255,14 @@ class ArrivalSpec extends Specification {
     "When flight status is Canceled" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10),
+          .live(
+            totalPax = Option(10),
             status = ArrivalStatus("Canceled"),
             schDt = "2020-10-22T13:00Z",
             estDt = "2020-10-22T13:10Z",
             actDt = "2020-10-22T13:00Z",
-            actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
@@ -243,14 +270,19 @@ class ArrivalSpec extends Specification {
     "When flight status is Deleted / Removed Flight Record" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator
-          .live(totalPax = Option(10), status = ArrivalStatus("Deleted / Removed Flight Record")).toArrival(LiveFeedSource)
+          .live(
+            totalPax = Option(10),
+            status = ArrivalStatus("Deleted / Removed Flight Record")
+          ).toArrival(LiveFeedSource)
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
   }
   "Arrival equality" >> {
-    val arrivalWithPcp = ArrivalGenerator.live().toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-06-01T12:00").millisSinceEpoch))
+    val arrivalWithPcp = ArrivalGenerator.live().toArrival(LiveFeedSource).copy(PcpTime =
+      Option(SDate("2021-06-01T12:00").millisSinceEpoch)
+    )
     "Arrivals should be considered equal when" >> {
       "They are identical apart from one having a PCP time and the other not" >> {
         val arrivalWithoutPcp = arrivalWithPcp.copy(PcpTime = None)
@@ -272,10 +304,16 @@ class ArrivalSpec extends Specification {
   }
   "Difference from scheduled time" >> {
     "Given an arrival scheduled at 12:00, and landing at 12:10 I expect the difference to be 10 minutes" >> {
-      ArrivalGenerator.live(schDt = "2021-08-08T12:00", actDt = "2021-08-08T12:10").toArrival(LiveFeedSource).differenceFromScheduled === Option(10.minutes)
+      ArrivalGenerator.live(
+        schDt = "2021-08-08T12:00",
+        actDt = "2021-08-08T12:10"
+      ).toArrival(LiveFeedSource).differenceFromScheduled === Option(10.minutes)
     }
     "Given an arrival scheduled at 12:00, and landing at 11:50 I expect the difference to be -10 minutes" >> {
-      ArrivalGenerator.live(schDt = "2021-08-08T12:00", actDt = "2021-08-08T11:50").toArrival(LiveFeedSource).differenceFromScheduled === Option(-10.minutes)
+      ArrivalGenerator.live(
+        schDt = "2021-08-08T12:00",
+        actDt = "2021-08-08T11:50"
+      ).toArrival(LiveFeedSource).differenceFromScheduled === Option(-10.minutes)
     }
     "Given an arrival scheduled at 12:00 but no landing time I expect None for the differenceFromScheduled" >> {
       ArrivalGenerator.live(schDt = "2021-08-08T12:00").toArrival(LiveFeedSource).differenceFromScheduled === None
@@ -286,12 +324,14 @@ class ArrivalSpec extends Specification {
     "Given an arrival with no passengers" >> {
       "I expect the best estimate to be None" >> {
         val arrival = ArrivalGenerator
-          .live(totalPax = Option(10),
+          .live(
+            totalPax = Option(10),
             status = ArrivalStatus("C"),
             schDt = "2020-10-22T13:00Z",
             estDt = "2020-10-22T13:10Z",
             actDt = "2020-10-22T13:00Z",
-            actChoxDt = "2020-10-22T13:00Z").toArrival(LiveFeedSource)
+            actChoxDt = "2020-10-22T13:00Z"
+          ).toArrival(LiveFeedSource)
         arrival.bestPaxEstimate(paxFeedSourceOrder) === PaxSource(LiveFeedSource, Passengers(Option(10), None))
       }
     }

@@ -2,7 +2,6 @@ package services
 
 import uk.gov.homeoffice.drt.egates.WorkloadProcessor
 
-
 object WorkloadProcessorsProvider {
   def apply(processorsOverTime: Iterable[Seq[WorkloadProcessor]]): WorkloadProcessorsProvider =
     WorkloadProcessorsProvider(processorsOverTime.map(processor => WorkloadProcessors(processor)).toIndexedSeq)
@@ -18,7 +17,8 @@ case class WorkloadProcessorsProvider(processorsByMinute: IndexedSeq[WorkloadPro
     processorsByMinute(index)
   }
 
-  def forWindow(start: Int, end: Int): WorkloadProcessorsProvider = WorkloadProcessorsProvider(processorsByMinute.slice(start, end))
+  def forWindow(start: Int, end: Int): WorkloadProcessorsProvider =
+    WorkloadProcessorsProvider(processorsByMinute.slice(start, end))
 }
 
 case class WorkloadProcessors(processors: Iterable[WorkloadProcessor]) {
@@ -41,6 +41,6 @@ case class WorkloadProcessors(processors: Iterable[WorkloadProcessor]) {
 
   val forWorkload: PartialFunction[Double, Int] = {
     case noWorkload if noWorkload <= 0 => 0
-    case someWorkload => capacityByWorkload.getOrElse(someWorkload.ceil.toInt, maxCapacity)
+    case someWorkload                  => capacityByWorkload.getOrElse(someWorkload.ceil.toInt, maxCapacity)
   }
 }

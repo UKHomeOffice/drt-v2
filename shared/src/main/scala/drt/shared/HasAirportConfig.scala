@@ -1,9 +1,8 @@
 package drt.shared
 
-import drt.shared.airportconfig.{Test, Test2}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportConfigLike, PortCode}
+import drt.shared.airportconfig.{ Test, Test2 }
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, AirportConfigLike, PortCode }
 import upickle.default._
-
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])
 

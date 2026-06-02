@@ -2,20 +2,22 @@ package uk.gov.homeoffice.drt.crunchsystem
 
 import actors.ManifestLookups
 import actors.persistent._
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
-
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 
 object ProdPersistentStateActors {
-  def apply(system: ActorSystem,
-            now: () => SDateLike,
-            manifestLookups: ManifestLookups,
-            terminals: LocalDate => Iterable[Terminal],
-           ): PersistentStateActors = new PersistentStateActors {
+  def apply(
+      system: ActorSystem,
+      now: () => SDateLike,
+      manifestLookups: ManifestLookups,
+      terminals: LocalDate => Iterable[Terminal]
+  ): PersistentStateActors = new PersistentStateActors {
     override val manifestsRouterActor: ActorRef =
       system.actorOf(
-        Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
+        Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
+        name = "voyage-manifests-router-actor"
+      )
 
     override val mergeArrivalsQueueActor: ActorRef =
       system.actorOf(Props(new MergeArrivalsQueueActor(now, terminals)), "merge-arrivals-queue-actor")

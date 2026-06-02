@@ -2,10 +2,10 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, MilliDate, SDateLike, UtcDate }
 
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, LocalDateTime, ZoneId}
+import java.time.{ Instant, LocalDateTime, ZoneId }
 import scala.language.implicitConversions
 import scala.util.Try
 
@@ -21,7 +21,8 @@ object JSDateConversions {
 
   implicit def longToMilliDate(millis: MillisSinceEpoch): MilliDate = MilliDate(millis)
 
-  implicit def localDateTimeToMillis(ldt: LocalDateTime): MillisSinceEpoch = ldt.atZone(europeLondonZoneId).toInstant.toEpochMilli
+  implicit def localDateTimeToMillis(ldt: LocalDateTime): MillisSinceEpoch =
+    ldt.atZone(europeLondonZoneId).toInstant.toEpochMilli
 
   implicit val longToSDateLocal: MillisSinceEpoch => SDateLike =
     millis => JSSDate(LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), europeLondonZoneId))
@@ -70,7 +71,8 @@ object JSDateConversions {
 
       def getZone: String = europeLondon
 
-      override def getTimeZoneOffsetMillis: MillisSinceEpoch = mdate.atZone(europeLondonZoneId).getOffset.getTotalSeconds * 1000
+      override def getTimeZoneOffsetMillis: MillisSinceEpoch =
+        mdate.atZone(europeLondonZoneId).getOffset.getTotalSeconds * 1000
 
       def startOfTheMonth: SDateLike = SDate(mdate.getYear, mdate.getMonthValue, 1, 0, 0, 0)
 
@@ -85,19 +87,22 @@ object JSDateConversions {
 
     def apply(millis: MillisSinceEpoch): SDateLike = JSSDate(millis)
 
-    /** **
+    /**
+     * **
      * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
      */
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s: Int = 0, ms: Int = 0): SDateLike =
       JSSDate(LocalDateTime.of(y, m, d, h, mm, s, ms * 1000000))
 
-    /** *
+    /**
+     * *
      * dateString is an ISO parseable datetime representation, with optional timezone
      *
      * @param dateString
      * @return
      */
-    def apply(dateString: String): SDateLike = parse(dateString).getOrElse(throw new IllegalArgumentException(s"Could not parse date string: $dateString"))
+    def apply(dateString: String): SDateLike =
+      parse(dateString).getOrElse(throw new IllegalArgumentException(s"Could not parse date string: $dateString"))
 
     def parse(dateString: String): Option[SDateLike] =
       if (dateString.length <= 10)

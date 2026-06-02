@@ -1,14 +1,14 @@
 package controllers
 
 import play.api.routing.sird._
-import play.api.routing.{Router, SimpleRouter}
+import play.api.routing.{ Router, SimpleRouter }
 import router.Routes
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 @Singleton
-class TestRouter @Inject()(testController: TestController) extends SimpleRouter {
+class TestRouter @Inject() (testController: TestController) extends SimpleRouter {
 
   val router: Router = Router.from {
 
@@ -29,17 +29,16 @@ class TestRouter @Inject()(testController: TestController) extends SimpleRouter 
     case GET(p"/test/shifts/$port/$terminal") => testController.getShifts(port, terminal)
   }
 
-
   override def routes: Router.Routes = router.routes
 
 }
 
 @Singleton
-class AppRouter @Inject()(defaultRoutes: Routes) extends SimpleRouter {
+class AppRouter @Inject() (defaultRoutes: Routes) extends SimpleRouter {
   def routes: Router.Routes = defaultRoutes.routes
 }
 
 @Singleton
-class CombinedRouter @Inject()(defaultRoutes: Routes, testRouter: TestRouter) extends SimpleRouter {
+class CombinedRouter @Inject() (defaultRoutes: Routes, testRouter: TestRouter) extends SimpleRouter {
   def routes: Router.Routes = defaultRoutes.routes.orElse(testRouter.routes)
 }

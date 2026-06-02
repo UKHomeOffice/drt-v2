@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.client.actions.Actions.{DeleteEgateBanksUpdate, SaveEgateBanksUpdate}
+import drt.client.actions.Actions.{ DeleteEgateBanksUpdate, SaveEgateBanksUpdate }
 import drt.client.components.ConfirmDialog.ConfirmParams
 import drt.client.components.styles.DrtReactTheme
 import drt.client.services.JSDateConversions.SDate
@@ -11,15 +11,14 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Add, Delete, Edit}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ Add, Delete, Edit }
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CallbackTo, ReactEventFromInput, ScalaComponent}
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, SetEgateBanksUpdate}
+import japgolly.scalajs.react.{ CallbackTo, ReactEventFromInput, ScalaComponent }
+import uk.gov.homeoffice.drt.egates.{ EgateBank, EgateBanksUpdate, EgateBanksUpdates, SetEgateBanksUpdate }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.scalajs.js
-
 
 object EgatesScheduleEditor {
   val maxGatesPerBank = 15
@@ -30,9 +29,14 @@ object EgatesScheduleEditor {
     def setEffectiveFrom(newMillis: MillisSinceEpoch): Editing = copy(update = update.copy(effectiveFrom = newMillis))
   }
 
-  case class State(updates: Iterable[EgateBanksUpdate], editing: Option[Editing], confirm: Option[ConfirmParams]) extends UseValueEq
+  case class State(updates: Iterable[EgateBanksUpdate], editing: Option[Editing], confirm: Option[ConfirmParams])
+      extends UseValueEq
 
-  def apply(terminal: Terminal, egatesUpdates: EgateBanksUpdates, newUpdatesTemplate: IndexedSeq[EgateBank]): Unmounted[Props, State, Unit] = {
+  def apply(
+      terminal: Terminal,
+      egatesUpdates: EgateBanksUpdates,
+      newUpdatesTemplate: IndexedSeq[EgateBank]
+  ): Unmounted[Props, State, Unit] = {
     val comp = ScalaComponent
       .builder[Props]("EgatesScheduleEditor")
       .initialStateFromProps(p => State(p.initialUpdates.updates, None, None))
@@ -40,56 +44,63 @@ object EgatesScheduleEditor {
         val setDate: ReactEventFromInput => CallbackTo[Unit] = e => {
           e.persist()
           scope.modState { currentState =>
-            val updatedEditing = currentState.editing.map(editing => editing.setEffectiveFrom(SDate(e.target.value).millisSinceEpoch))
+            val updatedEditing =
+              currentState.editing.map(editing => editing.setEffectiveFrom(SDate(e.target.value).millisSinceEpoch))
             currentState.copy(editing = updatedEditing)
           }
         }
-        val addBank: () => ReactEventFromInput => CallbackTo[Unit] = () => e => {
-          e.persist()
-          scope.modState { currentState =>
-            val maybeUpdatedEditing = currentState.editing.map { editing =>
-              editing.copy(update = editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(maxGatesPerBank)(true))))
-            }
-            currentState.copy(editing = maybeUpdatedEditing)
-          }
-        }
-        val removeBank: (Int) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx) => e => {
-          e.persist()
-          scope.modState { currentState =>
-            val maybeUpdatedEditing = currentState.editing.map { editing =>
-              val updatedBanks = editing.update.banks.zipWithIndex.collect {
-                case (bank, idx) if idx != bankIdx => bank
+        val addBank: () => ReactEventFromInput => CallbackTo[Unit] = () =>
+          e => {
+            e.persist()
+            scope.modState { currentState =>
+              val maybeUpdatedEditing = currentState.editing.map { editing =>
+                editing.copy(update =
+                  editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(maxGatesPerBank)(true)))
+                )
               }
-              editing.copy(update = editing.update.copy(banks = updatedBanks))
+              currentState.copy(editing = maybeUpdatedEditing)
             }
-            currentState.copy(editing = maybeUpdatedEditing)
           }
-        }
-        val setGate: (Int, Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIdx, gateIsOn) => e => {
-          e.persist()
-          scope.modState { currentState =>
-            val maybeUpdatedEditing = currentState.editing.map { editing =>
-              val bankToUpdate: EgateBank = editing.update.banks(bankIdx)
-              val updatedGates = bankToUpdate.gates.updated(gateIdx, gateIsOn)
-              val updatedBank = bankToUpdate.copy(gates = updatedGates)
-              val updatedBanks = editing.update.banks.updated(bankIdx, updatedBank)
-              editing.copy(update = editing.update.copy(banks = updatedBanks))
+        val removeBank: (Int) => ReactEventFromInput => CallbackTo[Unit] = bankIdx =>
+          e => {
+            e.persist()
+            scope.modState { currentState =>
+              val maybeUpdatedEditing = currentState.editing.map { editing =>
+                val updatedBanks = editing.update.banks.zipWithIndex.collect {
+                  case (bank, idx) if idx != bankIdx => bank
+                }
+                editing.copy(update = editing.update.copy(banks = updatedBanks))
+              }
+              currentState.copy(editing = maybeUpdatedEditing)
             }
-            currentState.copy(editing = maybeUpdatedEditing)
           }
-        }
-        val setGates: (Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIsOn) => e => {
-          e.persist()
-          scope.modState { currentState =>
-            val maybeUpdatedEditing = currentState.editing.map { editing =>
-              val bankToUpdate: EgateBank = editing.update.banks(bankIdx)
-              val updatedBank = bankToUpdate.copy(gates = IndexedSeq.fill(bankToUpdate.maxCapacity)(gateIsOn))
-              val updatedBanks = editing.update.banks.updated(bankIdx, updatedBank)
-              editing.copy(update = editing.update.copy(banks = updatedBanks))
+        val setGate: (Int, Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIdx, gateIsOn) =>
+          e => {
+            e.persist()
+            scope.modState { currentState =>
+              val maybeUpdatedEditing = currentState.editing.map { editing =>
+                val bankToUpdate: EgateBank = editing.update.banks(bankIdx)
+                val updatedGates = bankToUpdate.gates.updated(gateIdx, gateIsOn)
+                val updatedBank = bankToUpdate.copy(gates = updatedGates)
+                val updatedBanks = editing.update.banks.updated(bankIdx, updatedBank)
+                editing.copy(update = editing.update.copy(banks = updatedBanks))
+              }
+              currentState.copy(editing = maybeUpdatedEditing)
             }
-            currentState.copy(editing = maybeUpdatedEditing)
           }
-        }
+        val setGates: (Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIsOn) =>
+          e => {
+            e.persist()
+            scope.modState { currentState =>
+              val maybeUpdatedEditing = currentState.editing.map { editing =>
+                val bankToUpdate: EgateBank = editing.update.banks(bankIdx)
+                val updatedBank = bankToUpdate.copy(gates = IndexedSeq.fill(bankToUpdate.maxCapacity)(gateIsOn))
+                val updatedBanks = editing.update.banks.updated(bankIdx, updatedBank)
+                editing.copy(update = editing.update.copy(banks = updatedBanks))
+              }
+              currentState.copy(editing = maybeUpdatedEditing)
+            }
+          }
 
         val cancelEdit: CallbackTo[Unit] = scope.modState(_.copy(editing = None))
 
@@ -97,9 +108,15 @@ object EgatesScheduleEditor {
           scope.modState { state =>
             val updatedChangeSets = state.editing match {
               case Some(editSet) =>
-                SPACircuit.dispatch(SaveEgateBanksUpdate(SetEgateBanksUpdate(terminal, editSet.originalDate, editSet.update)))
+                SPACircuit.dispatch(SaveEgateBanksUpdate(SetEgateBanksUpdate(
+                  terminal,
+                  editSet.originalDate,
+                  editSet.update
+                )))
                 val withoutOriginal = state.updates
-                  .filter(cs => cs.effectiveFrom != editSet.update.effectiveFrom && cs.effectiveFrom != editSet.originalDate)
+                  .filter(cs =>
+                    cs.effectiveFrom != editSet.update.effectiveFrom && cs.effectiveFrom != editSet.originalDate
+                  )
                 withoutOriginal ++ Iterable(editSet.update)
               case None =>
                 state.updates
@@ -108,20 +125,23 @@ object EgatesScheduleEditor {
           }
 
         def deleteUpdates(effectiveFrom: MillisSinceEpoch): CallbackTo[Unit] = scope.modState { state =>
-          state.copy(confirm = Option(ConfirmParams(
-            "Are you sure you want to delete e-Gates change?",
-            () => {
-              SPACircuit.dispatch(DeleteEgateBanksUpdate(terminal, effectiveFrom))
-              scope.modState(_.copy(updates = state.updates.filter(_.effectiveFrom != effectiveFrom)))
-            },
-            () => scope.modState(_.copy(confirm = None))
-          )))
+          state.copy(confirm =
+            Option(ConfirmParams(
+              "Are you sure you want to delete e-Gates change?",
+              () => {
+                SPACircuit.dispatch(DeleteEgateBanksUpdate(terminal, effectiveFrom))
+                scope.modState(_.copy(updates = state.updates.filter(_.effectiveFrom != effectiveFrom)))
+              },
+              () => scope.modState(_.copy(confirm = None))
+            ))
+          )
         }
 
         val today = SDate.now().getLocalLastMidnight.millisSinceEpoch
 
         ThemeProvider(DrtReactTheme)(
-          <.div(^.className := "terminal-config",
+          <.div(
+            ^.className := "terminal-config",
             s.confirm.map(ConfirmDialog(_)).toTagMod,
             <.h3(s"$terminal"),
             s.editing match {
@@ -129,47 +149,78 @@ object EgatesScheduleEditor {
                 MuiDialog(open = s.editing.isDefined, maxWidth = "sm")(
                   MuiDialogTitle()(s"${if (editing.originalDate == today) "Add" else "Edit"} EGates change"),
                   MuiDialogContent()(
-                    <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px", "padding" -> "8px"),
+                    <.div(
+                      ^.style := js.Dictionary(
+                        "display" -> "flex",
+                        "flexDirection" -> "column",
+                        "gap" -> "16px",
+                        "padding" -> "8px"
+                      ),
                       MuiTextField(
                         label = VdomNode("Date the changes take effect"),
-                        fullWidth = true,
+                        fullWidth = true
                       )(
                         ^.`type` := "datetime-local",
                         ^.defaultValue := SDate(editing.update.effectiveFrom).toLocalDateTimeString,
                         ^.onChange ==> setDate
                       ),
-                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank()),
+                      MuiButton(
+                        color = Color.secondary,
+                        variant = "contained",
+                        size = "small"
+                      )(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank()),
                       editing.update.banks.zipWithIndex.map { case (egateBank, bankIdx) =>
                         MuiGrid(item = true, container = true, spacing = 1)(
-                          <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px", "padding" -> "8px", "alignItems" -> "center"),
+                          <.div(
+                            ^.style := js.Dictionary(
+                              "display" -> "flex",
+                              "gap" -> "16px",
+                              "padding" -> "8px",
+                              "alignItems" -> "center"
+                            ),
                             s"Bank ${bankIdx + 1}",
-                            MuiButton(color = Color.secondary, variant = "contained", size = "small")(MuiIcons(Delete)(fontSize = "small"), ^.onClick ==> removeBank(bankIdx))
+                            MuiButton(color = Color.secondary, variant = "contained", size = "small")(
+                              MuiIcons(Delete)(fontSize = "small"),
+                              ^.onClick ==> removeBank(bankIdx)
+                            )
                           ),
                           MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
                             MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
-                              MuiGrid(item = true, justify = "center", alignContent = "left")(<.span("All", ^.textAlign := "center", ^.display := "block")),
+                              MuiGrid(
+                                item = true,
+                                justify = "center",
+                                alignContent = "left"
+                              )(<.span("All", ^.textAlign := "center", ^.display := "block")),
                               MuiGrid(item = true)(
                                 MuiCheckbox(indeterminate = !egateBank.isFullyOpen && !egateBank.isClosed)(
                                   ^.checked := egateBank.isFullyOpen,
-                                  ^.onChange ==> setGates(bankIdx, !egateBank.isFullyOpen))
-                              )),
+                                  ^.onChange ==> setGates(bankIdx, !egateBank.isFullyOpen)
+                                )
+                              )
+                            ),
                             egateBank.gates.zipWithIndex.map { case (gateIsOn, gateIdx) =>
                               MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
-                                MuiGrid(item = true, justify = "center", alignContent = "left")(<.span(gateIdx + 1, ^.textAlign := "center", ^.display := "block")),
+                                MuiGrid(
+                                  item = true,
+                                  justify = "center",
+                                  alignContent = "left"
+                                )(<.span(gateIdx + 1, ^.textAlign := "center", ^.display := "block")),
                                 MuiGrid(item = true)(
                                   MuiCheckbox()(
                                     ^.checked := gateIsOn,
                                     ^.onChange ==> setGate(bankIdx, gateIdx, !gateIsOn)
-                                  )))
+                                  )
+                                )
+                              )
                             }.toTagMod
-                          ),
+                          )
                         )
                       }.toTagMod
                     )
                   ),
                   MuiDialogActions()(
                     MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> cancelEdit),
-                    MuiButton(color = Color.primary, variant = "outlined")("Save", ^.onClick --> saveEdit),
+                    MuiButton(color = Color.primary, variant = "outlined")("Save", ^.onClick --> saveEdit)
                   )
                 )
               case None => EmptyVdom
@@ -181,32 +232,40 @@ object EgatesScheduleEditor {
                 MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
                   MuiButton(color = Color.secondary, variant = "contained")(
                     "Add e-Gates change",
-                    ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today)))))),
+                    ^.onClick --> scope.modState(_.copy(editing =
+                      Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today))
+                    ))
+                  )
+                )
               ),
               s.updates.toList.sortBy(_.effectiveFrom).reverseIterator.map { updates =>
                 val date = SDate(updates.effectiveFrom)
                 MuiGrid(container = true, item = true, spacing = 1)(
                   MuiGrid(item = true, xs = 4)(MuiTypography(variant = "body1")(s"${date.prettyDateTime}")),
                   MuiGrid(item = true, xs = 4)(
-                    <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "8px"),
+                    <.div(
+                      ^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "8px"),
                       updates.banks.zipWithIndex.map { case (bank, idx) =>
                         val open = bank.gates.count(_ == true) match {
-                          case 0 => "all closed"
+                          case 0                           => "all closed"
                           case n if n == bank.gates.length => "all open"
-                          case n => s"$n open"
+                          case n                           => s"$n open"
                         }
                         MuiTypography(variant = "body1")(s"Bank ${idx + 1}: ${bank.gates.length} gates, $open")
                       }.toTagMod
                     )
                   ),
                   MuiGrid(item = true, xs = 4)(
-                    <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
+                    <.div(
+                      ^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
                       MuiButton(color = Color.secondary, variant = "contained", size = "small")(
                         MuiIcons(Edit)(fontSize = "small"),
-                        ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
+                        ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))
+                      ),
                       MuiButton(color = Color.secondary, variant = "contained", size = "small")(
                         MuiIcons(Delete)(fontSize = "small"),
-                        ^.onClick --> deleteUpdates(updates.effectiveFrom)),
+                        ^.onClick --> deleteUpdates(updates.effectiveFrom)
+                      )
                     )
                   )
                 )

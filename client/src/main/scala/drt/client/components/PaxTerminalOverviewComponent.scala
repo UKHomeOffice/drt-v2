@@ -1,12 +1,10 @@
 package drt.client.components
 
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-
-
 
 @js.native
 trait IPaxTerminalOverview extends js.Object {
@@ -22,15 +20,15 @@ trait IPaxTerminalOverview extends js.Object {
 
 object IPaxTerminalOverview {
   def apply(
-             terminal: String,
-             desks: Int,
-             staff: Int,
-             flights: js.Array[Integer],
-             ragStatus: String,
-             chartData: ChartData,
-             pressure: js.Array[Pressure],
-             estimates: js.Array[PeriodQueuePaxCounts]
-           ): IPaxTerminalOverview = {
+      terminal: String,
+      desks: Int,
+      staff: Int,
+      flights: js.Array[Integer],
+      ragStatus: String,
+      chartData: ChartData,
+      pressure: js.Array[Pressure],
+      estimates: js.Array[PeriodQueuePaxCounts]
+  ): IPaxTerminalOverview = {
     val p = (new js.Object).asInstanceOf[IPaxTerminalOverview]
     p.terminal = terminal
     p.desks = desks

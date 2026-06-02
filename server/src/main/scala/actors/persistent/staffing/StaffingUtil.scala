@@ -1,11 +1,11 @@
 package actors.persistent.staffing
 
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 object StaffingUtil {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -19,19 +19,40 @@ object StaffingUtil {
     }
 
     val startDate = SDate(shift.startDate.year, shift.startDate.month, shift.startDate.day, 0, 0, europeLondonTimeZone)
-    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(startDate.addMonths(6))
+    val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day, 0, 0, europeLondonTimeZone)).getOrElse(
+      startDate.addMonths(6)
+    )
 
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
       val currentDate: SDateLike = startDate.addDays(day)
-      val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
+      val startMillis = SDate(
+        currentDate.getFullYear,
+        currentDate.getMonth,
+        currentDate.getDate,
+        startHH,
+        startMM,
+        europeLondonTimeZone
+      ).millisSinceEpoch
       val isShiftEndAfterMidNight = endHH < startHH || (endHH == startHH && endMM < startMM)
       val endMillis = if (isShiftEndAfterMidNight) {
-        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
-          europeLondonTimeZone).addDays(1).millisSinceEpoch
+        SDate(
+          currentDate.getFullYear,
+          currentDate.getMonth,
+          currentDate.getDate,
+          endHH,
+          endMM,
+          europeLondonTimeZone
+        ).addDays(1).millisSinceEpoch
       } else {
-        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
-          europeLondonTimeZone).millisSinceEpoch
+        SDate(
+          currentDate.getFullYear,
+          currentDate.getMonth,
+          currentDate.getDate,
+          endHH,
+          endMM,
+          europeLondonTimeZone
+        ).millisSinceEpoch
       }
 
       StaffAssignment(
@@ -45,9 +66,11 @@ object StaffingUtil {
     }
   }
 
-  def newAssignments(shiftAssignments: Seq[StaffAssignment],
-                     overlappingAssignments: Seq[StaffAssignment],
-                     existingAssignments: Seq[StaffAssignment]): Map[TM, StaffAssignment] = {
+  def newAssignments(
+      shiftAssignments: Seq[StaffAssignment],
+      overlappingAssignments: Seq[StaffAssignment],
+      existingAssignments: Seq[StaffAssignment]
+  ): Map[TM, StaffAssignment] = {
 
     val newSlots: Map[TM, StaffAssignment] =
       shiftAssignments
@@ -111,13 +134,13 @@ object StaffingUtil {
         tm -> combinedAssignment
       }
 
-
-  def updateAssignmentsForShiftChange(previousShift: Shift,
-                                      overridingShift: Seq[Shift],
-                                      futureExistingShift: Option[Shift],
-                                      newShift: Shift,
-                                      allShifts: ShiftAssignments
-                                     ): Seq[StaffAssignmentLike] = {
+  def updateAssignmentsForShiftChange(
+      previousShift: Shift,
+      overridingShift: Seq[Shift],
+      futureExistingShift: Option[Shift],
+      newShift: Shift,
+      allShifts: ShiftAssignments
+  ): Seq[StaffAssignmentLike] = {
 
     val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
     val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(newShiftsStaff)
@@ -126,7 +149,8 @@ object StaffingUtil {
     val futureExistingShiftStaff: Seq[StaffAssignment] = futureExistingShift
       .map(generateDailyAssignments)
       .getOrElse(Seq.empty)
-    val futureExistingShiftSplitDailyAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(futureExistingShiftStaff)
+    val futureExistingShiftSplitDailyAssignments: Map[TM, StaffAssignment] =
+      staffAssignmentsSlotSummaries(futureExistingShiftStaff)
     val isTimeChange = previousShift.startTime != newShift.startTime || previousShift.endTime != newShift.endTime
     val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
     val updatedNewShiftsAssignments = getUpdatedNewShiftsAssignments(
@@ -152,9 +176,10 @@ object StaffingUtil {
       updatedNewShiftsAssignments
   }
 
-  def getOverridingAssignments(overridingShift: Seq[Shift],
-                               newShift: Shift
-                              ): Seq[StaffAssignment] = {
+  def getOverridingAssignments(
+      overridingShift: Seq[Shift],
+      newShift: Shift
+  ): Seq[StaffAssignment] = {
     overridingShift
       .filterNot(s =>
         s.port == newShift.port &&
@@ -165,14 +190,15 @@ object StaffingUtil {
       .flatMap(os => generateDailyAssignments(os))
   }
 
-  private def getUpdatedNewShiftsAssignments(newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
-                                             existingAllAssignments: Map[TM, StaffAssignmentLike],
-                                             overridingShiftAssignments: Map[TM, StaffAssignment],
-                                             futureExistingShiftSplitDailyAssignments: Map[TM, StaffAssignment],
-                                             previousShift: Shift,
-                                             newShift: Shift,
-                                             isTimeChange: Boolean
-                                            ): Seq[StaffAssignmentLike] = {
+  private def getUpdatedNewShiftsAssignments(
+      newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
+      existingAllAssignments: Map[TM, StaffAssignmentLike],
+      overridingShiftAssignments: Map[TM, StaffAssignment],
+      futureExistingShiftSplitDailyAssignments: Map[TM, StaffAssignment],
+      previousShift: Shift,
+      newShift: Shift,
+      isTimeChange: Boolean
+  ): Seq[StaffAssignmentLike] = {
     def findOverridingShift(assignment: StaffAssignment): Option[Int] =
       overridingShiftAssignments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff)
 
@@ -228,24 +254,34 @@ object StaffingUtil {
     SDate(startDate.year, startDate.month, startDate.day, 0, 0, europeLondonTimeZone).millisSinceEpoch
   }
 
-  private def timeChangeMerge(overridingShiftAssignments: Map[TM, StaffAssignment],
-                              newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
-                              updatedNewShiftsAssignments: Seq[StaffAssignmentLike],
-                              existingAllAssignments: Map[TM, StaffAssignmentLike],
-                              previousShift: Shift,
-                              newShift: Shift
-                             ): Seq[StaffAssignmentLike] = {
+  private def timeChangeMerge(
+      overridingShiftAssignments: Map[TM, StaffAssignment],
+      newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
+      updatedNewShiftsAssignments: Seq[StaffAssignmentLike],
+      existingAllAssignments: Map[TM, StaffAssignmentLike],
+      previousShift: Shift,
+      newShift: Shift
+  ): Seq[StaffAssignmentLike] = {
     val timeChangedOverridingShiftAssignments: Seq[StaffAssignmentLike] =
       overridingShiftAssignments.map {
         case (tm, overridingAssignment) =>
-          updatedNewShiftsAssignments.find(a => a.terminal == overridingAssignment.terminal && a.start == overridingAssignment.start) match {
+          updatedNewShiftsAssignments.find(a =>
+            a.terminal == overridingAssignment.terminal && a.start == overridingAssignment.start
+          ) match {
             case Some(updatedAssignments) => updatedAssignments
-            case None =>
+            case None                     =>
               existingAllAssignments.get(tm) match {
                 case Some(existingAssignment) =>
-                  if ((existingAssignment.numberOfStaff == overridingAssignment.numberOfStaff + previousShift.staffNumber) && existingAssignment.start > getMillisSinceEpoch(newShift.startDate))
+                  if (
+                    (existingAssignment.numberOfStaff ==
+                      overridingAssignment.numberOfStaff + previousShift.staffNumber) &&
+                    existingAssignment.start > getMillisSinceEpoch(newShift.startDate)
+                  )
                     overridingAssignment
-                  else if (existingAssignment.numberOfStaff == overridingAssignment.numberOfStaff + newShift.staffNumber && existingAssignment.start > getMillisSinceEpoch(newShift.startDate))
+                  else if (
+                    existingAssignment.numberOfStaff == overridingAssignment.numberOfStaff + newShift.staffNumber &&
+                    existingAssignment.start > getMillisSinceEpoch(newShift.startDate)
+                  )
                     overridingAssignment
                   else existingAssignment
                 case None => overridingAssignment
@@ -262,8 +298,11 @@ object StaffingUtil {
     }
   }
 
-
-  def updateWithShiftDefaultStaff(shifts: Seq[Shift], overlaps: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateWithShiftDefaultStaff(
+      shifts: Seq[Shift],
+      overlaps: Seq[Shift],
+      allShifts: ShiftAssignments
+  ): Seq[StaffAssignmentLike] = {
     val allShiftsStaff: Seq[StaffAssignment] =
       shifts.flatMap(generateDailyAssignments)
 
@@ -282,9 +321,11 @@ object StaffingUtil {
 
   }
 
-  def updateAssignmentsForNewShift(newShift: Shift,
-                                   overlappingShift: Seq[Shift],
-                                   allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateAssignmentsForNewShift(
+      newShift: Shift,
+      overlappingShift: Seq[Shift],
+      allShifts: ShiftAssignments
+  ): Seq[StaffAssignmentLike] = {
 
     val newShiftsStaff: Seq[StaffAssignment] = generateDailyAssignments(newShift)
     val newShiftSplitDailyAssignments: Map[TM, StaffAssignment] = staffAssignmentsSlotSummaries(newShiftsStaff)
@@ -301,11 +342,12 @@ object StaffingUtil {
     updatedNewShiftsAssignments
   }
 
-  private def getUpdatedNewShiftAssignments(newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
-                                            existingAllAssignments: Map[TM, StaffAssignmentLike],
-                                            overlappingShiftAssignments: Map[TM, StaffAssignment],
-                                            newShift: Shift,
-                                           ): Seq[StaffAssignmentLike] = {
+  private def getUpdatedNewShiftAssignments(
+      newShiftSplitDailyAssignments: Map[TM, StaffAssignment],
+      existingAllAssignments: Map[TM, StaffAssignmentLike],
+      overlappingShiftAssignments: Map[TM, StaffAssignment],
+      newShift: Shift
+  ): Seq[StaffAssignmentLike] = {
     def findOverlappingShift(assignment: StaffAssignment): Option[Int] =
       overlappingShiftAssignments.get(TM(assignment.terminal, assignment.start)).map(_.numberOfStaff)
 
@@ -324,7 +366,8 @@ object StaffingUtil {
               if (existing.numberOfStaff != 0)
                 existing
               else
-                assignment)
+                assignment
+            )
           case None => assignment
         }
     }.toSeq.sortBy(_.start)

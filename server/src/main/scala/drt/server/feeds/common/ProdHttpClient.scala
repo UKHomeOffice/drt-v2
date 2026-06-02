@@ -2,7 +2,7 @@ package drt.server.feeds.common
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
-import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ HttpRequest, HttpResponse }
 
 import scala.concurrent.Future
 

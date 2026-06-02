@@ -75,7 +75,7 @@ class QueueCapacitySpec extends Specification {
       val passengers = Iterable(
         Iterable(1.0),
         Iterable(),
-        Iterable(),
+        Iterable()
       )
       val desks = List(1, 1, 1)
       val result = QueueCapacity(desks).processPassengers(sla, passengers)
@@ -89,19 +89,19 @@ class QueueCapacitySpec extends Specification {
     "Given two 1 minute-load passengers in the first minute with one desk open, the wait time should be" +
       "zero, 1, zero as the second passenger is processed in the second minute and then there are no passengers" +
       "waiting in the 3rd minute" >> {
-      val passengers = Iterable(
-        Iterable(1d, 1d),
-        Iterable(),
-        Iterable(),
-      )
-      val desks = List(1, 1, 1)
-      val result = QueueCapacity(desks).processPassengers(sla, passengers)
+        val passengers = Iterable(
+          Iterable(1d, 1d),
+          Iterable(),
+          Iterable()
+        )
+        val desks = List(1, 1, 1)
+        val result = QueueCapacity(desks).processPassengers(sla, passengers)
 
-      val expectedWaits = List(0, 1, 0)
-      val expectedLeftover = BatchOfWork(List())
+        val expectedWaits = List(0, 1, 0)
+        val expectedLeftover = BatchOfWork(List())
 
-      result.waits === expectedWaits && result.leftover === expectedLeftover
-    }
+        result.waits === expectedWaits && result.leftover === expectedLeftover
+      }
   }
 
 }

@@ -2,7 +2,7 @@ package feeds.gla
 
 import org.apache.pekko.actor.typed.ActorRef
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds._
 import drt.server.feeds.gla.GlaFeed
@@ -48,7 +48,7 @@ class GlaFeedSpec extends CrunchTestLike {
       url = sys.env.getOrElse("GLA_LIVE_URL", ""),
       token = sys.env.getOrElse("GLA_LIVE_TOKEN", ""),
       password = sys.env.getOrElse("GLA_LIVE_PASSWORD", ""),
-      username = sys.env.getOrElse("GLA_LIVE_USERNAME", ""),
+      username = sys.env.getOrElse("GLA_LIVE_USERNAME", "")
     )
 
     prodFeed.runWith(Sink.seq)
@@ -59,55 +59,56 @@ class GlaFeedSpec extends CrunchTestLike {
 
   "Given a mock json response containing a single valid flight " +
     "I should get a stream with that flight in it " >> {
-    val mockFeed = mockFeedWithResponse(firstJsonExample)
+      val mockFeed = mockFeedWithResponse(firstJsonExample)
 
-    val probe = TestProbe()
+      val probe = TestProbe()
 
-    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
-    actorSource ! Feed.Tick
+      val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+      actorSource ! Feed.Tick
 
-    probe.fishForMessage(1.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
-      case _ => false
+      probe.fishForMessage(1.seconds) {
+        case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch =>
+          true
+        case _ => false
+      }
+
+      success
     }
-
-    success
-  }
 
   "Given a mock json response containing feed with an arrival and a departure " +
     "I should only get the arrival in the end result " >> {
-    val dsd = "2019-11-13T17:34:00+00:00"
-    val mockFeed = mockFeedWithResponse(containingADepartureJson(dsd))
+      val dsd = "2019-11-13T17:34:00+00:00"
+      val mockFeed = mockFeedWithResponse(containingADepartureJson(dsd))
 
-    val probe = TestProbe()
+      val probe = TestProbe()
 
-    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
-    actorSource ! Feed.Tick
+      val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+      actorSource ! Feed.Tick
 
-    probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(a, _) if a.size == 1 && !a.exists(_.scheduled == SDate(dsd).millisSinceEpoch) => true
-      case _ => false
+      probe.fishForMessage(1.seconds) {
+        case ArrivalsFeedSuccess(a, _) if a.size == 1 && !a.exists(_.scheduled == SDate(dsd).millisSinceEpoch) => true
+        case _                                                                                                 => false
+      }
+
+      success
     }
-
-    success
-  }
 
   "Given a mock json response containing invalid json " +
     "I should get an ArrivalsFeedFailure" >> {
-    val mockFeed = mockFeedWithResponse("bad json")
+      val mockFeed = mockFeedWithResponse("bad json")
 
-    val probe = TestProbe()
+      val probe = TestProbe()
 
-    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
-    actorSource ! Feed.Tick
+      val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+      actorSource ! Feed.Tick
 
-    probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedFailure(_, _) => true
-      case _ => false
+      probe.fishForMessage(1.seconds) {
+        case ArrivalsFeedFailure(_, _) => true
+        case _                         => false
+      }
+
+      success
     }
-
-    success
-  }
 
   "Given a feed connection failure then I should get back an ArrivalsFeedFailure." >> {
     val mockFeed = AzinqFeed.source(
@@ -128,7 +129,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedFailure(_, _) => true
-      case _ => false
+      case _                         => false
     }
 
     success
@@ -157,7 +158,7 @@ class GlaFeedSpec extends CrunchTestLike {
       gate = Some("G"),
       stand = Some("ST"),
       runway = Some("3"),
-      baggageReclaim = Some("2"),
+      baggageReclaim = Some("2")
     )
     val probe = TestProbe()
     val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
@@ -165,7 +166,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
-      case _ => false
+      case _                                      => false
     }
 
     success
@@ -194,7 +195,7 @@ class GlaFeedSpec extends CrunchTestLike {
       gate = Some("GATE"),
       stand = Some("STAND"),
       runway = Some("4"),
-      baggageReclaim = Some("2"),
+      baggageReclaim = Some("2")
     )
 
     val probe = TestProbe()
@@ -203,12 +204,11 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
-      case _ => false
+      case _                                      => false
     }
 
     success
   }
-
 
   "Given a GLA feed item with 0 for ActPax and MaxPax then we should 0 in the arrival" >> {
     val mockFeed = mockFeedWithResponse(exampleWith0s)
@@ -219,7 +219,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(arrival :: Nil, _) => (arrival.totalPax, arrival.maxPax) === ((Some(0), Some(0)))
-      case _ => false
+      case _                                      => false
     }
 
     success
@@ -248,7 +248,7 @@ class GlaFeedSpec extends CrunchTestLike {
       gate = None,
       stand = None,
       runway = None,
-      baggageReclaim = None,
+      baggageReclaim = None
     )
 
     val probe = TestProbe()
@@ -257,7 +257,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
-      case _ => false
+      case _                                      => false
     }
 
     success

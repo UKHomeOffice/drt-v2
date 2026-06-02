@@ -1,10 +1,15 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
+import drt.client.actions.Actions.{
+  RequestMissingHistoricSplits,
+  RequestMissingPaxNos,
+  RequestRecalculateArrivals,
+  RequestRecalculateSplits
+}
 import drt.client.components.ToolTips._
 import drt.client.components.styles.DrtReactTheme
-import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
@@ -17,12 +22,11 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{ Callback, CtorType, ScalaComponent }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{PortFeedUpload, SuperAdmin}
-import uk.gov.homeoffice.drt.feeds.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.auth.Roles.{ PortFeedUpload, SuperAdmin }
+import uk.gov.homeoffice.drt.feeds.{ FeedStatusFailure, FeedStatusSuccess, FeedStatuses }
 import uk.gov.homeoffice.drt.ports._
-
 
 object FeedsStatusPage {
 
@@ -32,7 +36,6 @@ object FeedsStatusPage {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StatusPage")
     .render_P { props =>
-
       val modelRcp = SPACircuit.connect(_.feedStatuses)
 
       def checkFeed(feedSource: FeedSource): Callback = Callback {
@@ -56,7 +59,6 @@ object FeedsStatusPage {
       }
 
       modelRcp { proxy =>
-
         val statuses = proxy()
 
         val statusContentPot = for {
@@ -66,20 +68,33 @@ object FeedsStatusPage {
         } yield {
           val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
 
-          val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
+          val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++
+            allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
 
           val isCiriumAsPortLive = airportConfig.noLivePortFeed && airportConfig.aclDisabled
 
           allFeedStatusesSeq.map(feed => {
-            val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
+            val ragStatus = FeedStatuses.ragStatus(
+              SDate.now().millisSinceEpoch,
+              feed.feedSource.maybeLastUpdateThreshold,
+              feed.feedStatuses
+            )
 
             val manualCheckAllowed = feed.feedSource == AclFeedSource && user.hasRole(PortFeedUpload)
 
-            <.div(^.className := s"feed-status $ragStatus",
+            <.div(
+              ^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")
                 <.h3(<.div(^.className := "flex-horizontally", feed.feedSource.displayName, apiDataTooltip))
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "contained", size = "small", color = Color.secondary)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(
+                  feed.feedSource.displayName,
+                  " ",
+                  MuiButton(variant = "contained", size = "small", color = Color.secondary)(
+                    MuiIcons(RefreshOutlined)(),
+                    ^.onClick --> checkFeed(feed.feedSource)
+                  )
+                )
               else if (isCiriumAsPortLive)
                 <.h3("Live arrival")
               else
@@ -87,30 +102,41 @@ object FeedsStatusPage {
               if (isCiriumAsPortLive)
                 <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isCiriumAsPortLive)))
               else
-                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
-              {
+                <.div(
+                  ^.className := s"feed-status-description",
+                  <.p(feed.feedSource.description(isLiveFeedAvailable))
+                ), {
                 val times = Seq(
                   (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
                   (("Checked", "When we last checked for new data"), feed.feedStatuses.lastSuccessAt),
                   (("Failed", "When we last experienced a failure with the feed"), feed.feedStatuses.lastFailureAt)
                 )
-                <.ul(^.className := "times-summary", times.zipWithIndex.map {
-                  case (((label, description), maybeSDate), idx) =>
-                    val className = if (idx == times.length - 1) "last" else ""
-                    <.li(
-                      ^.className := className,
-                      <.div(^.className := "vert-align",
-                        <.div(<.div(Tippy.describe(s"times-summary-$label", <.span(description), <.h4(label))), <.div(s"${
-                          maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
-                        }"))))
-                }.toVdomArray)
+                <.ul(
+                  ^.className := "times-summary",
+                  times.zipWithIndex.map {
+                    case (((label, description), maybeSDate), idx) =>
+                      val className = if (idx == times.length - 1) "last" else ""
+                      <.li(
+                        ^.className := className,
+                        <.div(
+                          ^.className := "vert-align",
+                          <.div(
+                            <.div(Tippy.describe(s"times-summary-$label", <.span(description), <.h4(label))),
+                            <.div(s"${
+                                maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
+                              }")
+                          )
+                        )
+                      )
+                  }.toVdomArray
+                )
               },
               <.div(^.className := "clear"),
               <.h4("Recent connections"),
               <.ul(
                 feed.feedStatuses.statuses.sortBy(_.date).reverseMap {
                   case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
-                  case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
+                  case FeedStatusFailure(date, _)       => <.li(s"${displayTime(date)}: Connection failed")
                 }.toVdomArray
               )
             )
@@ -123,7 +149,8 @@ object FeedsStatusPage {
           if (user.hasRole(SuperAdmin)) <.div(
             <.br(),
             <.h2("Crunch"),
-            <.div(^.className := "crunch-actions-container",
+            <.div(
+              ^.className := "crunch-actions-container",
               ThemeProvider(DrtReactTheme)(
                 MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
@@ -136,16 +163,20 @@ object FeedsStatusPage {
                 ),
                 MuiButton(variant = "contained", color = Color.secondary)(
                   <.div("Lookup missing forecast pax nos", ^.onClick --> requestMissingPaxNos())
-                ),
+                )
               )
             )
-          ) else EmptyVdom
+          )
+          else EmptyVdom
         }
 
         <.div(
-          MuiTypography(variant = "h1")(s"Feeds status: ${props.airportConfigPot.get.portCode} (${getAirportByCode(props.airportConfigPot.get.portCode.toString())
-            .getOrElse(props.airportConfigPot.get.portName)})"),
-          <.div(^.className := "feed-status-container",
+          MuiTypography(variant =
+            "h1"
+          )(s"Feeds status: ${props.airportConfigPot.get.portCode} (${getAirportByCode(props.airportConfigPot.get.portCode.toString())
+              .getOrElse(props.airportConfigPot.get.portName)})"),
+          <.div(
+            ^.className := "feed-status-container",
             statusContentPot.getOrElse(EmptyVdom)
           ),
           crunchControlsPot.getOrElse(EmptyVdom)
@@ -171,5 +202,6 @@ object FeedsStatusPage {
     else s"$days days ago"
   }
 
-  def apply(loggedInUserPot: Pot[LoggedInUser], airportConfigPot: Pot[AirportConfig]): VdomElement = component(Props(loggedInUserPot, airportConfigPot))
+  def apply(loggedInUserPot: Pot[LoggedInUser], airportConfigPot: Pot[AirportConfig]): VdomElement =
+    component(Props(loggedInUserPot, airportConfigPot))
 }

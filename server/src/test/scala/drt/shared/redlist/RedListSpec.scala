@@ -2,10 +2,10 @@ package drt.shared.redlist
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
-class RedListSpec extends Specification{
+class RedListSpec extends Specification {
   val date20210807: SDateLike = SDate("2021-08-07T00:00", europeLondonTimeZone)
   val date20210808: SDateLike = SDate("2021-08-08T00:00", europeLondonTimeZone)
   val countriesRemovedFrom20210808: Set[String] = Set("Bahrain", "India", "Qatar", "United Arab Emirates")
@@ -88,6 +88,6 @@ class RedListSpec extends Specification{
     "Uruguay" -> "URY",
     "Venezuela" -> "VEN",
     "Zambia" -> "ZMB",
-    "Zimbabwe" -> "ZWE",
+    "Zimbabwe" -> "ZWE"
   )
 }

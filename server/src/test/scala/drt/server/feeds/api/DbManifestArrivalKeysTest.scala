@@ -1,16 +1,16 @@
 package drt.server.feeds.api
 
-import drt.server.feeds.api.DbHelper.{addJsonRecord, addPaxRecord, addZipRecord}
+import drt.server.feeds.api.DbHelper.{ addJsonRecord, addPaxRecord, addZipRecord }
 import org.specs2.specification.BeforeEach
 import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.AggregateDbH2
-import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow}
+import uk.gov.homeoffice.drt.db.tables.{ ProcessedJsonRow, ProcessedZipRow }
 import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import java.sql.Timestamp
 import scala.concurrent.Await
@@ -18,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 class DbManifestArrivalKeysTest
-  extends CrunchTestLike with BeforeEach {
+    extends CrunchTestLike with BeforeEach {
 
   override def before(): Any = {
     clearDatabase()
@@ -56,7 +56,8 @@ class DbManifestArrivalKeysTest
       val processedAt = new Timestamp(date.millisSinceEpoch)
 
       createProcessedPassengerJsonZip("1.zip", "1.json", lhr, jfk, date, voyageNumber = 1, paxCount = 5, processedAt)
-      val nextKeys = Await.result(DbManifestArrivalKeys(AggregateDbH2, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
+      val nextKeys =
+        Await.result(DbManifestArrivalKeys(AggregateDbH2, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
 
       nextKeys === (None, Iterable())
     }
@@ -67,33 +68,62 @@ class DbManifestArrivalKeysTest
       val laterProcessedAt = new Timestamp(date.addMinutes(1).millisSinceEpoch)
 
       createProcessedPassengerJsonZip("1.zip", "1.json", lhr, jfk, date, voyageNumber = 1, paxCount = 5, processedAt)
-      createProcessedPassengerJsonZip("2.zip", "2.json", lhr, jfk, date, voyageNumber = 99, paxCount = 5, laterProcessedAt)
+      createProcessedPassengerJsonZip(
+        "2.zip",
+        "2.json",
+        lhr,
+        jfk,
+        date,
+        voyageNumber = 99,
+        paxCount = 5,
+        laterProcessedAt
+      )
 
-      val nextKeys = Await.result(DbManifestArrivalKeys(AggregateDbH2, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
+      val nextKeys =
+        Await.result(DbManifestArrivalKeys(AggregateDbH2, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
 
-      nextKeys === (Option(laterProcessedAt.getTime), Iterable(UniqueArrivalKey(PortCode(lhr), PortCode(jfk), VoyageNumber(99), date)))
+      nextKeys ===
+        (
+          Option(laterProcessedAt.getTime),
+          Iterable(UniqueArrivalKey(PortCode(lhr), PortCode(jfk), VoyageNumber(99), date))
+        )
     }
   }
 
-  private def createProcessedPassengerJsonZip(zipName: String, jsonName: String, arrivalPort: String, departurePort: String, scheduled: SDateLike, voyageNumber: Int, paxCount: Int, processedAt: Timestamp): Unit = {
+  private def createProcessedPassengerJsonZip(
+      zipName: String,
+      jsonName: String,
+      arrivalPort: String,
+      departurePort: String,
+      scheduled: SDateLike,
+      voyageNumber: Int,
+      paxCount: Int,
+      processedAt: Timestamp
+  ): Unit = {
     addZipRecord(AggregateDbH2, ProcessedZipRow(zipName, true, processedAt, None))
-    addJsonRecord(AggregateDbH2, ProcessedJsonRow(
-      zip_file_name = zipName,
-      json_file_name = jsonName,
-      suspicious_date = false,
-      success = true,
-      processed_at = processedAt,
-      arrival_port_code = Option(arrivalPort),
-      departure_port_code = Option(departurePort),
-      voyage_number = Option(voyageNumber),
-      carrier_code = Option("BA"),
-      scheduled = Option(new Timestamp(scheduled.millisSinceEpoch)),
-      event_code = Option("DC"),
-      non_interactive_total_count = None,
-      non_interactive_trans_count = None,
-      interactive_total_count = None,
-      interactive_trans_count = None))
+    addJsonRecord(
+      AggregateDbH2,
+      ProcessedJsonRow(
+        zip_file_name = zipName,
+        json_file_name = jsonName,
+        suspicious_date = false,
+        success = true,
+        processed_at = processedAt,
+        arrival_port_code = Option(arrivalPort),
+        departure_port_code = Option(departurePort),
+        voyage_number = Option(voyageNumber),
+        carrier_code = Option("BA"),
+        scheduled = Option(new Timestamp(scheduled.millisSinceEpoch)),
+        event_code = Option("DC"),
+        non_interactive_total_count = None,
+        non_interactive_trans_count = None,
+        interactive_total_count = None,
+        interactive_trans_count = None
+      )
+    )
 
-    (0 until paxCount).foreach (id => addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, id.toString, jsonName))
+    (0 until paxCount).foreach(id =>
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, id.toString, jsonName)
+    )
   }
 }

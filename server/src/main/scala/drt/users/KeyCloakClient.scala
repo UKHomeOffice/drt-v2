@@ -3,21 +3,23 @@ package drt.users
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
+import org.apache.pekko.http.scaladsl.model.headers.{ Accept, Authorization, OAuth2BearerToken }
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
 import drt.http.WithSendAndReceive
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import org.slf4j.{Logger, LoggerFactory}
-import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
+import drt.shared.KeyCloakApi.{ KeyCloakGroup, KeyCloakUser }
+import org.slf4j.{ Logger, LoggerFactory }
+import spray.json.{ DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 
-abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit val system: ActorSystem, mat: Materializer)
-  extends WithSendAndReceive with KeyCloakUserParserProtocol {
+abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit
+    val system: ActorSystem,
+    mat: Materializer
+) extends WithSendAndReceive with KeyCloakUserParserProtocol {
 
   import system.dispatcher
   import KeyCloakUserParserProtocol.KeyCloakUserFormatParser._
@@ -28,7 +30,9 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
 
   def logResponse(requestName: String, resp: HttpResponse): HttpResponse = {
     if (resp.status.isFailure)
-      log.error(s"Error when calling $requestName on KeyCloak API Status code: ${resp.status} Response:<${resp.entity.toString}>")
+      log.error(
+        s"Error when calling $requestName on KeyCloak API Status code: ${resp.status} Response:<${resp.entity.toString}>"
+      )
 
     resp
   }
@@ -133,7 +137,4 @@ trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSuppo
   implicit val keyCloakGroupFormat: RootJsonFormat[KeyCloakGroup] = jsonFormat3(KeyCloakGroup)
 }
 
-
 object KeyCloakUserParserProtocol extends KeyCloakUserParserProtocol
-
-

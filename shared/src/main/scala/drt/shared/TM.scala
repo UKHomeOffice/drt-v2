@@ -1,12 +1,12 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import uk.gov.homeoffice.drt.arrivals.{WithTerminal, WithTimeAccessor}
+import drt.shared.CrunchApi.{ MillisSinceEpoch, StaffMinute }
+import uk.gov.homeoffice.drt.arrivals.{ WithTerminal, WithTimeAccessor }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import upickle.default.{ReadWriter, macroRW}
+import upickle.default.{ macroRW, ReadWriter }
 
 case class TM(terminal: Terminal, minute: MillisSinceEpoch)
-  extends Ordered[TM] with WithTimeAccessor with WithTerminal[TM] {
+    extends Ordered[TM] with WithTimeAccessor with WithTerminal[TM] {
   override def compare(that: TM): Int = this.minute.compare(that.minute) match {
     case 0 => terminal.compare(that.terminal)
     case c => c

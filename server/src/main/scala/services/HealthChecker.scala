@@ -5,28 +5,28 @@ import actors.persistent.staffing.GetFeedStatuses
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatuses}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStatuses }
 import uk.gov.homeoffice.drt.ports.FeedSource
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
-import scala.concurrent.{ExecutionContext, Future}
-
+import scala.concurrent.duration.{ DurationLong, FiniteDuration }
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait HealthCheck {
   def isPassing: Future[Boolean]
 }
 
-case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
-                            defaultLastCheckThreshold: FiniteDuration,
-                            feedLastCheckThresholds: Map[FeedSource, FiniteDuration],
-                            now: () => SDateLike,
-                            gracePeriod: FiniteDuration)
-                           (implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext) extends HealthCheck {
+case class FeedsHealthCheck(
+    feedActorsForPort: List[ActorRef],
+    defaultLastCheckThreshold: FiniteDuration,
+    feedLastCheckThresholds: Map[FeedSource, FiniteDuration],
+    now: () => SDateLike,
+    gracePeriod: FiniteDuration
+)(implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val startTime: MillisSinceEpoch = now().millisSinceEpoch
@@ -58,9 +58,10 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
       .map(_.isEmpty)
 }
 
-case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
-                                        healthyResponseTimeMillis: Int)
-                                       (implicit ec: ExecutionContext, timeout: Timeout) extends HealthCheck {
+case class ActorResponseTimeHealthCheck(
+    portStateActor: ActorRef,
+    healthyResponseTimeMillis: Int
+)(implicit ec: ExecutionContext, timeout: Timeout) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def isPassing: Future[Boolean] = {
@@ -74,7 +75,8 @@ case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
         val took = requestEnd - requestStart.millisSinceEpoch
         val isWithingThreshold = took < healthyResponseTimeMillis
 
-        if (isWithingThreshold) log.info(s"Health check passed: Port state request took ${took}ms (<${healthyResponseTimeMillis}ms)")
+        if (isWithingThreshold)
+          log.info(s"Health check passed: Port state request took ${took}ms (<${healthyResponseTimeMillis}ms)")
         else log.error(s"Health check failed: Port state request took ${took}ms (>${healthyResponseTimeMillis}ms)")
 
         isWithingThreshold

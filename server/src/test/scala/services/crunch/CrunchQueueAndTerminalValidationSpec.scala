@@ -5,12 +5,12 @@ import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{ SplitRatio, SplitRatios, SplitSources }
+import uk.gov.homeoffice.drt.ports.Terminals.{ InvalidTerminal, T1 }
+import uk.gov.homeoffice.drt.ports.{ PaxTypeAndQueue, PaxTypes, Queues }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.collection.immutable.{ List, Seq, SortedMap }
 import scala.concurrent.duration._
 
 class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
@@ -40,7 +40,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
               )),
               terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
               queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk)))
-            )))
+            )
+          ))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

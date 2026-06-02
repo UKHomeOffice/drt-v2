@@ -1,6 +1,6 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, ModelRW}
+import diode.{ ActionResult, ModelRW }
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 
 class ShowActualDesksAndQueuesHandler[M](modelRW: ModelRW[M, Boolean]) extends LoggingActionHandler(modelRW) {

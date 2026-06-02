@@ -7,36 +7,39 @@ import com.google.inject.Inject
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands
-import uk.gov.homeoffice.drt.arrivals.{FeedArrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ FeedArrival, UniqueArrival }
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure}
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStatusFailure }
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.SDate
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import java.util.UUID
 import scala.concurrent.Future
 
-
-class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class FeedsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getFeedStatuses: Action[AnyContent] = auth {
     Action.async { _ =>
       ctrl.feedService.getFeedStatus.map((s: Seq[FeedSourceStatuses]) => {
         val safeStatusMessages = s
-          .map(feedSourceStatuses => feedSourceStatuses
-            .copy(feedStatuses = feedSourceStatuses
-              .feedStatuses
-              .copy(feedSourceStatuses.feedStatuses.statuses.map {
-                case f: FeedStatusFailure =>
-                  f.copy(message = "Unable to connect to feed.")
-                case s => s
-              })))
+          .map(feedSourceStatuses =>
+            feedSourceStatuses
+              .copy(feedStatuses =
+                feedSourceStatuses
+                  .feedStatuses
+                  .copy(feedSourceStatuses.feedStatuses.statuses.map {
+                    case f: FeedStatusFailure =>
+                      f.copy(message = "Unable to connect to feed.")
+                    case s => s
+                  })
+              )
+          )
         Ok(write(safeStatusMessages))
       })
     }
@@ -45,7 +48,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
   def checkFeed: Action[AnyContent] = authByRole(Roles.PortFeedUpload) {
     Action { request =>
       request.body.asText match {
-        case None => BadRequest
+        case None       => BadRequest
         case Some(text) =>
           read[FeedSource](text) match {
             case AclFeedSource =>
@@ -68,27 +71,33 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
     }
   }
 
-  def getArrival(number: Int,
-                 terminal: String,
-                 scheduled: MillisSinceEpoch,
-                 origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
+  def getArrival(
+      number: Int,
+      terminal: String,
+      scheduled: MillisSinceEpoch,
+      origin: String
+  ): Action[AnyContent] = authByRole(ArrivalSource) {
     val term = if (ctrl.airportConfig.portCode == PortCode("EDI")) "A2" else terminal
     getAllFeedSourceArrivals(SDate.now().millisSinceEpoch, number, term, scheduled, origin)
   }
 
-  def getArrivalAtPointInTime(pointInTime: MillisSinceEpoch,
-                              number: Int,
-                              terminal: String,
-                              scheduled: MillisSinceEpoch,
-                              origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
+  def getArrivalAtPointInTime(
+      pointInTime: MillisSinceEpoch,
+      number: Int,
+      terminal: String,
+      scheduled: MillisSinceEpoch,
+      origin: String
+  ): Action[AnyContent] = authByRole(ArrivalSource) {
     getAllFeedSourceArrivals(pointInTime, number, terminal, scheduled, origin)
   }
 
-  private def getAllFeedSourceArrivals(pointInTime: MillisSinceEpoch,
-                                       number: Int,
-                                       terminal: String,
-                                       scheduled: MillisSinceEpoch,
-                                       origin: String): Action[AnyContent] =
+  private def getAllFeedSourceArrivals(
+      pointInTime: MillisSinceEpoch,
+      number: Int,
+      terminal: String,
+      scheduled: MillisSinceEpoch,
+      origin: String
+  ): Action[AnyContent] =
     Action.async { _ =>
       getArrivalSources(pointInTime, UniqueArrival(number, terminal, scheduled, origin))
         .map(maybeFeedSources => Ok(write(maybeFeedSources)))
@@ -106,7 +115,8 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
       case (id, source) =>
         val scheduled = SDate(ua.scheduled)
         val actor = actorSystem.actorOf(
-          TerminalDayFeedArrivalActor.props(scheduled.getFullYear,
+          TerminalDayFeedArrivalActor.props(
+            scheduled.getFullYear,
             scheduled.getMonth,
             scheduled.getDate,
             ua.terminal,

@@ -5,13 +5,13 @@ import uk.gov.homeoffice.drt.db.tables.ArrivalStatsRow
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
-case class ArrivalStatsDao(db: AggregatedDbTables,
-                           now: () => SDateLike,
-                           portCode: PortCode,
-                          )
-                          (implicit ec: ExecutionContext) {
+case class ArrivalStatsDao(
+    db: AggregatedDbTables,
+    now: () => SDateLike,
+    portCode: PortCode
+)(implicit ec: ExecutionContext) {
 
   import db.profile.api._
 
@@ -20,10 +20,10 @@ case class ArrivalStatsDao(db: AggregatedDbTables,
       val q = db.arrivalStats
         .filter { s =>
           s.portCode === portCode.iata &&
-            s.terminal === terminal &&
-            s.date === date &&
-            s.daysAhead === daysAhead &&
-            s.dataType === dataType
+          s.terminal === terminal &&
+          s.date === date &&
+          s.daysAhead === daysAhead &&
+          s.dataType === dataType
         }
         .take(1)
         .result

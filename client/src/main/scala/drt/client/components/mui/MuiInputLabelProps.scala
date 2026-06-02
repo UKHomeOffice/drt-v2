@@ -11,9 +11,10 @@ trait MuiInputLabelProps extends js.Object {
 }
 
 object MuiInputLabelProps {
-  def apply(shrink: js.UndefOr[Boolean] = js.undefined,
-            classes: js.UndefOr[js.Object] = js.undefined
-           ): MuiInputLabelProps = {
+  def apply(
+      shrink: js.UndefOr[Boolean] = js.undefined,
+      classes: js.UndefOr[js.Object] = js.undefined
+  ): MuiInputLabelProps = {
     val o: Map[String, Any] = Seq(
       shrink.toOption.map("shrink" -> _),
       classes.toOption.map("classes" -> _)

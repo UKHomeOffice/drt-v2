@@ -4,7 +4,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.egates._
@@ -13,8 +13,8 @@ import upickle.default._
 
 import scala.concurrent.Future
 
-
-class EgateBanksController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class EgateBanksController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
 
   def getEgateBanksUpdates: Action[AnyContent] =
     Action.async { _ =>
@@ -35,9 +35,15 @@ class EgateBanksController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
     }
   }
 
-  def deleteEgateBanksUpdates(terminal: String, effectiveFrom: MillisSinceEpoch): Action[AnyContent] = authByRole(EgateBanksEdit) {
+  def deleteEgateBanksUpdates(
+      terminal: String,
+      effectiveFrom: MillisSinceEpoch
+  ): Action[AnyContent] = authByRole(EgateBanksEdit) {
     Action.async {
-      ctrl.applicationService.egateBanksUpdatesActor.ask(DeleteEgateBanksUpdates(Terminal(terminal), effectiveFrom)).map(_ => Accepted)
+      ctrl.applicationService.egateBanksUpdatesActor.ask(DeleteEgateBanksUpdates(
+        Terminal(terminal),
+        effectiveFrom
+      )).map(_ => Accepted)
     }
   }
 }

@@ -1,14 +1,14 @@
 package drt.server.feeds.lgw
 
-import org.apache.commons.csv.{CSVFormat, CSVParser}
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, VoyageNumber}
+import org.apache.commons.csv.{ CSVFormat, CSVParser }
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, ForecastArrival, VoyageNumber }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -39,7 +39,7 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
               val terminal = Terminal(record.get("Terminal") match {
                 case "North" => "N"
                 case "South" => "S"
-                case _ => ""
+                case _       => ""
               })
               val scheduledString = record.get("Date/Time")
               val scheduledDateAndTime = scheduledString.split(" ")
@@ -67,7 +67,7 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
                 flightCodeSuffix = maybeSuffix.map(_.suffix),
                 origin = origin,
                 previousPort = None,
-                scheduled = scheduled,
+                scheduled = scheduled
               ))
             case _ => None
           }
@@ -77,8 +77,8 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
         case ((arrivals, failedCount), next) =>
           next match {
             case Success(Some(fa)) => (fa :: arrivals, failedCount)
-            case Success(None) => (arrivals, failedCount)
-            case Failure(e) =>
+            case Success(None)     => (arrivals, failedCount)
+            case Failure(e)        =>
               log.error(s"Failed to parse: ${e.getMessage}")
               (arrivals, failedCount + 1)
           }

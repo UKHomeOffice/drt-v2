@@ -3,26 +3,28 @@ package services.exports
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
-import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{ MillisSinceEpoch, StaffMinute }
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ DateRange, SDate, SDateLike, UtcDate }
 
 import scala.collection.immutable
 import scala.collection.immutable.SortedMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object StreamingDesksExport {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def colHeadings(deskTitle: String = "req"): List[String] = List("Pax", "Wait", s"Desks $deskTitle", "Act. wait time", "Act. desks")
+  def colHeadings(deskTitle: String = "req"): List[String] =
+    List("Pax", "Wait", s"Desks $deskTitle", "Act. wait time", "Act. desks")
 
-  private def eGatesHeadings(deskTitle: String): List[String] = List("Pax", "Wait", s"Staff $deskTitle", "Act. wait time", "Act. desks")
+  private def eGatesHeadings(deskTitle: String): List[String] =
+    List("Pax", "Wait", s"Staff $deskTitle", "Act. wait time", "Act. desks")
 
   private def csvHeader(queues: Seq[Queue], deskTitle: String): String = {
 
@@ -36,18 +38,30 @@ object StreamingDesksExport {
   }
 
   def queueHeadings(queues: Seq[Queue]): String = queues.map(queue => Queues.displayName(queue))
-    .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
+    .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(
+      ","
+    )
 
-  def deskDepsTerminalsToCSVStreamWithHeaders(start: SDateLike,
-                                              end: SDateLike,
-                                              terminals: Seq[Terminal],
-                                              exportQueuesInOrder: Seq[Queue],
-                                              crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                              staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                              maybePit: Option[MillisSinceEpoch] = None,
-                                              periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
-    val streams = exportTerminalsDesksToCSVStream(start, end, terminals, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
-      deploymentsCsv, maybePit, periodMinutes
+  def deskDepsTerminalsToCSVStreamWithHeaders(
+      start: SDateLike,
+      end: SDateLike,
+      terminals: Seq[Terminal],
+      exportQueuesInOrder: Seq[Queue],
+      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+      maybePit: Option[MillisSinceEpoch] = None,
+      periodMinutes: Int
+  )(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+    val streams = exportTerminalsDesksToCSVStream(
+      start,
+      end,
+      terminals,
+      exportQueuesInOrder,
+      crunchMinuteLookup,
+      staffMinuteLookup,
+      deploymentsCsv,
+      maybePit,
+      periodMinutes
     )
 
     val header = Source.single(csvHeader(exportQueuesInOrder, "dep"))
@@ -55,16 +69,26 @@ object StreamingDesksExport {
     header.concat(streams)
   }
 
-  def deskRecsTerminalsToCSVStreamWithHeaders(start: SDateLike,
-                                              end: SDateLike,
-                                              terminals: Seq[Terminal],
-                                              exportQueuesInOrder: Seq[Queue],
-                                              crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                              staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                              maybePit: Option[MillisSinceEpoch] = None,
-                                              periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
-    val streams = exportTerminalsDesksToCSVStream(start, end, terminals, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
-      deskRecsCsv, maybePit, periodMinutes
+  def deskRecsTerminalsToCSVStreamWithHeaders(
+      start: SDateLike,
+      end: SDateLike,
+      terminals: Seq[Terminal],
+      exportQueuesInOrder: Seq[Queue],
+      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+      maybePit: Option[MillisSinceEpoch] = None,
+      periodMinutes: Int
+  )(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+    val streams = exportTerminalsDesksToCSVStream(
+      start,
+      end,
+      terminals,
+      exportQueuesInOrder,
+      crunchMinuteLookup,
+      staffMinuteLookup,
+      deskRecsCsv,
+      maybePit,
+      periodMinutes
     )
 
     val header = Source.single(csvHeader(exportQueuesInOrder, "req"))
@@ -72,44 +96,61 @@ object StreamingDesksExport {
     header.concat(streams)
   }
 
-  def deskRecsToCSVStreamWithHeaders(start: SDateLike,
-                                     end: SDateLike,
-                                     terminal: Terminal,
-                                     exportQueuesInOrder: Seq[Queue],
-                                     crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                     staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                     maybePit: Option[MillisSinceEpoch] = None,
-                                     periodMinutes: Int,
-                                    )(implicit ec: ExecutionContext): Source[String, NotUsed] =
+  def deskRecsToCSVStreamWithHeaders(
+      start: SDateLike,
+      end: SDateLike,
+      terminal: Terminal,
+      exportQueuesInOrder: Seq[Queue],
+      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+      maybePit: Option[MillisSinceEpoch] = None,
+      periodMinutes: Int
+  )(implicit ec: ExecutionContext): Source[String, NotUsed] =
     exportDesksToCSVStream(
-      start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, deskRecsCsv, maybePit, periodMinutes
+      start,
+      end,
+      terminal,
+      exportQueuesInOrder,
+      crunchMinuteLookup,
+      staffMinuteLookup,
+      deskRecsCsv,
+      maybePit,
+      periodMinutes
     ).prepend(Source(List(csvHeader(exportQueuesInOrder, "req"))))
 
-
-  def deploymentsToCSVStreamWithHeaders(start: SDateLike,
-                                        end: SDateLike,
-                                        terminal: Terminal,
-                                        exportQueuesInOrder: Seq[Queue],
-                                        crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                        staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                        maybePit: Option[MillisSinceEpoch] = None,
-                                        periodMinutes: Int,
-                                       )(implicit ec: ExecutionContext): Source[String, NotUsed] =
-    exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
-      deploymentsCsv, maybePit, periodMinutes
+  def deploymentsToCSVStreamWithHeaders(
+      start: SDateLike,
+      end: SDateLike,
+      terminal: Terminal,
+      exportQueuesInOrder: Seq[Queue],
+      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+      maybePit: Option[MillisSinceEpoch] = None,
+      periodMinutes: Int
+  )(implicit ec: ExecutionContext): Source[String, NotUsed] =
+    exportDesksToCSVStream(
+      start,
+      end,
+      terminal,
+      exportQueuesInOrder,
+      crunchMinuteLookup,
+      staffMinuteLookup,
+      deploymentsCsv,
+      maybePit,
+      periodMinutes
     ).prepend(Source(List(csvHeader(exportQueuesInOrder, "dep"))))
 
-
-  def exportTerminalsDesksToCSVStream(start: SDateLike,
-                                      end: SDateLike,
-                                      terminals: Seq[Terminal],
-                                      exportQueuesInOrder: Seq[Queue],
-                                      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                      deskExportFn: CrunchMinute => String,
-                                      maybePit: Option[MillisSinceEpoch] = None,
-                                      periodMinutes: Int,
-                                     )(implicit ec: ExecutionContext): Source[String, NotUsed] =
+  def exportTerminalsDesksToCSVStream(
+      start: SDateLike,
+      end: SDateLike,
+      terminals: Seq[Terminal],
+      exportQueuesInOrder: Seq[Queue],
+      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+      deskExportFn: CrunchMinute => String,
+      maybePit: Option[MillisSinceEpoch] = None,
+      periodMinutes: Int
+  )(implicit ec: ExecutionContext): Source[String, NotUsed] =
     DateRange.utcDateRangeSource(start, end)
       .mapAsync(1) { crunchUtcDate =>
         val crunchMinutesFutures = terminals.map { terminal =>
@@ -135,22 +176,22 @@ object StreamingDesksExport {
             combinedCrunchMinutes,
             combinedStaffMinutes,
             deskExportFn,
-            periodMinutes,
+            periodMinutes
           )
         }
       }
 
-
-  def exportDesksToCSVStream(start: SDateLike,
-                             end: SDateLike,
-                             terminal: Terminal,
-                             exportQueuesInOrder: Seq[Queue],
-                             crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                             staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                             deskExportFn: CrunchMinute => String,
-                             maybePit: Option[MillisSinceEpoch] = None,
-                             periodMinutes: Int,
-                            )(implicit ec: ExecutionContext): Source[String, NotUsed] =
+  def exportDesksToCSVStream(
+      start: SDateLike,
+      end: SDateLike,
+      terminal: Terminal,
+      exportQueuesInOrder: Seq[Queue],
+      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+      deskExportFn: CrunchMinute => String,
+      maybePit: Option[MillisSinceEpoch] = None,
+      periodMinutes: Int
+  )(implicit ec: ExecutionContext): Source[String, NotUsed] =
     DateRange.utcDateRangeSource(start, end)
       .mapAsync(1) { crunchUtcDate =>
         for {
@@ -166,20 +207,22 @@ object StreamingDesksExport {
             maybeCMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
             maybeSMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
             deskExportFn,
-            periodMinutes,
+            periodMinutes
           )
         }
       }
 
-  private def generateCsv(terminal: Terminal,
-                          exportQueuesInOrder: Seq[Queue],
-                          utcDate: UtcDate,
-                          start: SDateLike,
-                          end: SDateLike,
-                          crunchMinutes: Iterable[CrunchMinute],
-                          staffMinutes: Iterable[StaffMinute],
-                          deskExportFn: CrunchMinute => String,
-                          periodMinutes: Int): Seq[(MillisSinceEpoch, String)] = {
+  private def generateCsv(
+      terminal: Terminal,
+      exportQueuesInOrder: Seq[Queue],
+      utcDate: UtcDate,
+      start: SDateLike,
+      end: SDateLike,
+      crunchMinutes: Iterable[CrunchMinute],
+      staffMinutes: Iterable[StaffMinute],
+      deskExportFn: CrunchMinute => String,
+      periodMinutes: Int
+  ): Seq[(MillisSinceEpoch, String)] = {
     val portState = PortState(
       List(),
       crunchMinutes,
@@ -191,9 +234,10 @@ object StreamingDesksExport {
 
     val terminalCrunchMinutes = portState
       .crunchSummary(SDate(utcDate), numberOfPeriods, periodMinutes, terminal, exportQueuesInOrder)
-    val terminalCrunchMinutesWithinRange: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = terminalCrunchMinutes.filter {
-      case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
-    }
+    val terminalCrunchMinutesWithinRange: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] =
+      terminalCrunchMinutes.filter {
+        case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
+      }
 
     val terminalStaffMinutes = portState
       .staffSummary(SDate(utcDate), numberOfPeriods, periodMinutes, terminal)
@@ -219,17 +263,29 @@ object StreamingDesksExport {
     }.toSeq
   }
 
-  def terminalsMinutesDesksAndQueuesToCsv(terminals: Seq[Terminal],
-                                          exportQueuesInOrder: Seq[Queue],
-                                          utcDate: UtcDate,
-                                          start: SDateLike,
-                                          end: SDateLike,
-                                          crunchMinutes: Iterable[CrunchMinute],
-                                          staffMinutes: Iterable[StaffMinute],
-                                          deskExportFn: CrunchMinute => String,
-                                          periodMinutes: Int): String = {
+  def terminalsMinutesDesksAndQueuesToCsv(
+      terminals: Seq[Terminal],
+      exportQueuesInOrder: Seq[Queue],
+      utcDate: UtcDate,
+      start: SDateLike,
+      end: SDateLike,
+      crunchMinutes: Iterable[CrunchMinute],
+      staffMinutes: Iterable[StaffMinute],
+      deskExportFn: CrunchMinute => String,
+      periodMinutes: Int
+  ): String = {
     val terminalData = terminals.flatMap { terminal =>
-      generateCsv(terminal, exportQueuesInOrder, utcDate, start, end, crunchMinutes, staffMinutes, deskExportFn, periodMinutes)
+      generateCsv(
+        terminal,
+        exportQueuesInOrder,
+        utcDate,
+        start,
+        end,
+        crunchMinutes,
+        staffMinutes,
+        deskExportFn,
+        periodMinutes
+      )
     }
 
     val groupedByMinute = terminalData.groupBy(_._1).toSeq.sortBy(_._1)
@@ -239,16 +295,28 @@ object StreamingDesksExport {
     }.mkString
   }
 
-  def minutesDesksAndQueuesToCsv(terminal: Terminal,
-                                 exportQueuesInOrder: Seq[Queue],
-                                 utcDate: UtcDate,
-                                 start: SDateLike,
-                                 end: SDateLike,
-                                 crunchMinutes: Iterable[CrunchMinute],
-                                 staffMinutes: Iterable[StaffMinute],
-                                 deskExportFn: CrunchMinute => String,
-                                 periodMinutes: Int): String = {
-    generateCsv(terminal, exportQueuesInOrder, utcDate, start, end, crunchMinutes, staffMinutes, deskExportFn, periodMinutes)
+  def minutesDesksAndQueuesToCsv(
+      terminal: Terminal,
+      exportQueuesInOrder: Seq[Queue],
+      utcDate: UtcDate,
+      start: SDateLike,
+      end: SDateLike,
+      crunchMinutes: Iterable[CrunchMinute],
+      staffMinutes: Iterable[StaffMinute],
+      deskExportFn: CrunchMinute => String,
+      periodMinutes: Int
+  ): String = {
+    generateCsv(
+      terminal,
+      exportQueuesInOrder,
+      utcDate,
+      start,
+      end,
+      crunchMinutes,
+      staffMinutes,
+      deskExportFn,
+      periodMinutes
+    )
       .map(_._2)
       .mkString
   }

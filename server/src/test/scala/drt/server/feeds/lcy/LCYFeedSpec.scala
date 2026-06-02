@@ -1,19 +1,19 @@
 package drt.server.feeds.lcy
 
 import org.apache.pekko.NotUsed
-import org.apache.pekko.actor.{ActorRef, ActorSystem, typed}
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import org.apache.pekko.actor.{ typed, ActorRef, ActorSystem }
+import org.apache.pekko.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpRequest, HttpResponse }
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.common.HttpClient
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
-import org.mockito.Mockito.{times, verify}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed }
+import org.mockito.Mockito.{ times, verify }
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 case class MockHttpClient(probeActor: ActorRef) extends HttpClient {
   def sendRequest(httpRequest: HttpRequest): Future[HttpResponse] = {
@@ -65,12 +65,18 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
   case class LycClientMock(probeActor: ActorRef, responses: Seq[ArrivalsFeedResponse]) extends LcyClientSupport {
     var responseQueue: Seq[ArrivalsFeedResponse] = responses
 
-    override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+    override def initialFlights(implicit
+        actorSystem: ActorSystem,
+        materializer: Materializer
+    ): Future[ArrivalsFeedResponse] = {
       probeActor ! "initialFlights"
       Future.successful(responseQueue.head)
     }
 
-    override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+    override def updateFlights(implicit
+        actorSystem: ActorSystem,
+        materializer: Materializer
+    ): Future[ArrivalsFeedResponse] = {
       probeActor ! "updateFlights"
       Future.successful(responseQueue.head)
     }

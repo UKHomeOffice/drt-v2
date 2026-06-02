@@ -5,13 +5,13 @@ import org.specs2.specification.Before
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, VoyageNumber }
 import uk.gov.homeoffice.drt.db.AggregateDbH2
-import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
+import uk.gov.homeoffice.drt.db.tables.{ ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow }
 import uk.gov.homeoffice.drt.models.DocumentType.Passport
-import uk.gov.homeoffice.drt.models.{ManifestPassengerProfile, UniqueArrivalKey}
+import uk.gov.homeoffice.drt.models.{ ManifestPassengerProfile, UniqueArrivalKey }
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ PaxAge, PortCode }
 import uk.gov.homeoffice.drt.time.SDate
 
 import java.sql.Timestamp
@@ -22,7 +22,8 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
   override def before: Any = {
     AggregateDbH2.dropAndCreateH2Tables()
     val scheduled = SDate("2024-05-15T12:00Z")
-    val processedZipRow = ProcessedZipRow("some-zip", true, new Timestamp(scheduled.millisSinceEpoch), Option("2024-05-15"))
+    val processedZipRow =
+      ProcessedZipRow("some-zip", true, new Timestamp(scheduled.millisSinceEpoch), Option("2024-05-15"))
     val processedJsonRow = ProcessedJsonRow(
       zip_file_name = "some-zip",
       json_file_name = "some-json",
@@ -38,7 +39,7 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
       non_interactive_total_count = Option(0),
       non_interactive_trans_count = Option(0),
       interactive_total_count = Option(1),
-      interactive_trans_count = Option(0),
+      interactive_trans_count = Option(0)
     )
     val passengerRow = VoyageManifestPassengerInfoRow(
       event_code = "DC",
@@ -59,15 +60,17 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
       nationality_country_code = "GBR",
       passenger_identifier = "1",
       in_transit = false,
-      json_file = "some-json",
+      json_file = "some-json"
     )
     import AggregateDbH2.profile.api._
     Await.ready(
       AggregateDbH2.run(DBIO.seq(
         AggregateDbH2.processedZip += processedZipRow,
         AggregateDbH2.processedJson += processedJsonRow,
-        AggregateDbH2.voyageManifestPassengerInfo += passengerRow,
-      )), 1.second)
+        AggregateDbH2.voyageManifestPassengerInfo += passengerRow
+      )),
+      1.second
+    )
   }
 
   "ManifestLookup" should {
@@ -75,7 +78,12 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
       skipped("Postgres queries incompatible with H2")
 
       val manifestLookup = ManifestLookup(AggregateDbH2)
-      val manifest = manifestLookup.maybeBestAvailableManifest(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
+      val manifest = manifestLookup.maybeBestAvailableManifest(
+        PortCode("LHR"),
+        PortCode("JFK"),
+        VoyageNumber(1),
+        SDate("2024-05-15T12:00Z")
+      )
       val expectedKey = UniqueArrivalKey(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
       val expectedManifest = BestAvailableManifest(
         source = Historical,
@@ -85,8 +93,13 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
         carrierCode = CarrierCode("BA"),
         scheduled = SDate("2024-05-15T12:00Z"),
         nonUniquePassengers = Seq(
-          ManifestPassengerProfile(nationality = Nationality("GBR"), documentType = Option(Passport),
-            age = Option(PaxAge(30)), inTransit = false, passengerIdentifier = Option("1"))
+          ManifestPassengerProfile(
+            nationality = Nationality("GBR"),
+            documentType = Option(Passport),
+            age = Option(PaxAge(30)),
+            inTransit = false,
+            passengerIdentifier = Option("1")
+          )
         ),
         maybeEventType = Option(DC)
       )

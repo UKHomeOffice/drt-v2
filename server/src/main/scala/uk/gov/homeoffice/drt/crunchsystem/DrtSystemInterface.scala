@@ -10,37 +10,37 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, NotUsed}
+import org.apache.pekko.{ Done, NotUsed }
 import play.api.Configuration
-import play.api.mvc.{Headers, Session}
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments, TerminalQueueAllocator}
+import play.api.mvc.{ Headers, Session }
+import queueus.{ AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments, TerminalQueueAllocator }
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import services.liveviews.{FlightsLiveView, QueuesLiveView}
+import services.liveviews.{ FlightsLiveView, QueuesLiveView }
 import slickdb.AkkaDbTables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, FlightCode, UniqueArrival }
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
-import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
+import uk.gov.homeoffice.drt.db.dao.{ FlightDao, QueueSlotDao }
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
-import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
+import uk.gov.homeoffice.drt.service.{ ApplicationService, FeedService }
 import uk.gov.homeoffice.drt.time._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait DrtSystemInterface extends UserRoleProviderLike
-  with FeatureGuideProviderLike
-  with DropInProviderLike
-  with UserFeedBackProviderLike
-  with ABFeatureProviderLike
-  with ShiftsProviderLike
-  with ShiftMetaInfoProviderLike
-  with ShiftStaffRollingProviderLike {
+    with FeatureGuideProviderLike
+    with DropInProviderLike
+    with UserFeedBackProviderLike
+    with ABFeatureProviderLike
+    with ShiftsProviderLike
+    with ShiftMetaInfoProviderLike
+    with ShiftStaffRollingProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
@@ -62,20 +62,22 @@ trait DrtSystemInterface extends UserRoleProviderLike
     MlFeedSource,
     ForecastFeedSource,
     HistoricApiFeedSource,
-    AclFeedSource,
-  ) else List(
+    AclFeedSource
+  )
+  else List(
     ScenarioSimulationSource,
     LiveFeedSource,
     ApiFeedSource,
     ForecastFeedSource,
     HistoricApiFeedSource,
-    AclFeedSource,
+    AclFeedSource
   )
 
   private val flightDao = FlightDao()
   private val queueSlotDao = QueueSlotDao()
 
-  lazy val flightsForPcpDateRange: (DateLike, DateLike, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  lazy val flightsForPcpDateRange
+      : (DateLike, DateLike, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightDao.flightsForPcpDateRange(airportConfig.portCode, paxFeedSourceOrder, aggregatedDb.run)
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
@@ -113,18 +115,24 @@ trait DrtSystemInterface extends UserRoleProviderLike
       if (params.adjustEGateUseByUnderAge) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
       else AdjustmentsNoop
 
-    val paxQueueAllocator = paxTypeQueueAllocator(airportConfig.hasTransfer, TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
+    val paxQueueAllocator = paxTypeQueueAllocator(
+      airportConfig.hasTransfer,
+      TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation)
+    )
     SplitsCalculator(paxQueueAllocator, airportConfig.terminalPaxSplits, queueAdjustments)
   }
 
-  private lazy val updateAndRemoveFlights = FlightsLiveView.updateAndRemove(flightDao, aggregatedDb, airportConfig.portCode)
-  lazy val updateCapacityForDate: UtcDate => Future[Done] = FlightsLiveView.updateCapacityForDate(airportConfig, aggregatedDb, feedService, uniqueArrivals)
+  private lazy val updateAndRemoveFlights =
+    FlightsLiveView.updateAndRemove(flightDao, aggregatedDb, airportConfig.portCode)
+  lazy val updateCapacityForDate: UtcDate => Future[Done] =
+    FlightsLiveView.updateCapacityForDate(airportConfig, aggregatedDb, feedService, uniqueArrivals)
 
   lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
     (updates, removals) =>
       updateAndRemoveFlights(updates, removals)
         .flatMap { _ =>
-          val datesAffected = updates.map(f => SDate(f.apiFlight.Scheduled).toUtcDate).toSet ++ removals.map(r => SDate(r.scheduled).toUtcDate).toSet
+          val datesAffected = updates.map(f => SDate(f.apiFlight.Scheduled).toUtcDate).toSet ++
+            removals.map(r => SDate(r.scheduled).toUtcDate).toSet
           Future.sequence(datesAffected.map(updateCapacityForDate)).map(_ => Done)
         }
   }
@@ -144,7 +152,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     persistentStateActors = persistentActors,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
     splitsCalculator = splitsCalculator,
-    uniqueArrivals = uniqueArrivals,
+    uniqueArrivals = uniqueArrivals
   )
 
   def run(): Unit

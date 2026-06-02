@@ -1,11 +1,11 @@
 package module
 
 import actors.DrtParameters
-import com.google.inject.{AbstractModule, Provides}
+import com.google.inject.{ AbstractModule, Provides }
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import controllers.application.exports.{DesksExportController, FlightsExportController}
-import controllers.{AirportConfigProvider, Application, ShiftMetaInfoMigrationController}
+import controllers.application.exports.{ DesksExportController, FlightsExportController }
+import controllers.{ AirportConfigProvider, Application, ShiftMetaInfoMigrationController }
 import drt.server.feeds.AutoShiftStaffing
 import email.GovNotifyEmail
 import org.apache.pekko.actor.ActorSystem
@@ -15,16 +15,16 @@ import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
 import org.apache.pekko.util.Timeout
 import play.api.Configuration
 import play.api.libs.concurrent.PekkoGuiceSupport
-import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
+import uk.gov.homeoffice.drt.crunchsystem.{ DrtSystemInterface, ProdDrtSystem }
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor }
 
 class DrtModule extends AbstractModule with PekkoGuiceSupport {
   lazy val now: () => SDateLike = () => SDate.now()
@@ -73,7 +73,6 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
     bind(classOf[ShiftMetaInfoMigrationController]).asEagerSingleton()
   }
 
-
   @Provides
   def provideTestDrtSystem: TestDrtSystem = drtTestSystem
 
@@ -97,17 +96,17 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
   val legacyShiftAssignmentsService: LegacyShiftAssignmentsService = LegacyShiftAssignmentsServiceImpl(
     provideDrtSystemInterface.actorService.legacyShiftAssignmentsReadActor,
     provideDrtSystemInterface.actorService.legacyShiftAssignmentsSequentialWritesActor,
-    LegacyShiftAssignmentsServiceImpl.pitActor(provideActorSystem),
+    LegacyShiftAssignmentsServiceImpl.pitActor(provideActorSystem)
   )
   val shiftAssignmentsService: ShiftAssignmentsService = ShiftAssignmentsServiceImpl(
     provideDrtSystemInterface.actorService.liveShiftAssignmentsReadActor,
     provideDrtSystemInterface.actorService.shiftAssignmentsSequentialWritesActor,
-    ShiftAssignmentsServiceImpl.pitActor(provideActorSystem),
+    ShiftAssignmentsServiceImpl.pitActor(provideActorSystem)
   )
 
   @Singleton
   val autoShiftStaffing: ActorRef[AutoShiftStaffing.Command] = provideActorSystem
-    .spawn(AutoShiftStaffing(5.minutes, provideDrtSystemInterface , shiftAssignmentsService), "autoShiftStaffing")
+    .spawn(AutoShiftStaffing(5.minutes, provideDrtSystemInterface, shiftAssignmentsService), "autoShiftStaffing")
 
   @Provides
   @Singleton
@@ -124,7 +123,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
   def provideFixedPointsService: FixedPointsService = FixedPointsServiceImpl(
     provideDrtSystemInterface.actorService.liveFixedPointsReadActor,
     provideDrtSystemInterface.actorService.fixedPointsSequentialWritesActor,
-    FixedPointsServiceImpl.pitActor,
+    FixedPointsServiceImpl.pitActor
   )
 
   @Provides
@@ -132,7 +131,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
   def provideStaffMovementsService: StaffMovementsService = StaffMovementsServiceImpl(
     provideDrtSystemInterface.actorService.liveStaffMovementsReadActor,
     provideDrtSystemInterface.actorService.staffMovementsSequentialWritesActor,
-    StaffMovementsServiceImpl.pitActor,
+    StaffMovementsServiceImpl.pitActor
   )
 
   @Provides

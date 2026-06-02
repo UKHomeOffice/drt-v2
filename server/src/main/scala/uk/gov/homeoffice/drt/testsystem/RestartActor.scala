@@ -1,15 +1,15 @@
 package uk.gov.homeoffice.drt.testsystem
 
-import org.apache.pekko.actor.{Actor, ActorLogging, ActorRef, Status}
-import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.actor.{ Actor, ActorLogging, ActorRef, Status }
+import org.apache.pekko.pattern.{ ask, StatusReply }
 import org.apache.pekko.persistence.testkit.scaladsl.PersistenceTestKit
 import org.apache.pekko.stream.KillSwitch
 import org.apache.pekko.util.Timeout
-import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetActors, StartTestSystem}
+import uk.gov.homeoffice.drt.testsystem.RestartActor.{ AddResetActors, StartTestSystem }
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object RestartActor {
   case object StartTestSystem

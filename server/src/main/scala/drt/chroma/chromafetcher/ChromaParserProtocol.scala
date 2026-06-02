@@ -1,8 +1,8 @@
 package drt.chroma.chromafetcher
 
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight, ChromaToken}
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import drt.chroma.chromafetcher.ChromaFetcher.{ ChromaForecastFlight, ChromaLiveFlight, ChromaToken }
+import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
 
 trait ChromaParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val chromaTokenFormat: RootJsonFormat[ChromaToken] = jsonFormat3(ChromaToken)
@@ -11,6 +11,3 @@ trait ChromaParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 }
 
 object ChromaParserProtocol extends ChromaParserProtocol
-
-
-

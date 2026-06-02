@@ -1,7 +1,7 @@
 package drt.client.components
 
 import japgolly.scalajs.react.vdom.VdomElement
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport

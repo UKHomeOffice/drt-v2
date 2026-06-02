@@ -3,7 +3,7 @@ package drt.server.feeds
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models.VoyageManifest
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 sealed trait FeedResponse {
   val createdAt: SDateLike

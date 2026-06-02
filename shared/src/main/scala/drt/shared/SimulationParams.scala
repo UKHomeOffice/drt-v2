@@ -1,33 +1,35 @@
 package drt.shared
 
-import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{ FlightsWithSplits, Passengers }
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
-import upickle.default.{ReadWriter, macroRW}
+import upickle.default.{ macroRW, ReadWriter }
 
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
-case class SimulationParams(terminal: Terminal,
-                            date: LocalDate,
-                            passengerWeighting: Double,
-                            processingTimes: Map[PaxTypeAndQueue, Int],
-                            minDesksByQueue: Map[Queue, Int],
-                            maxDesks: Int,
-                            eGateBankSizes: IndexedSeq[Int],
-                            slaByQueue: Map[Queue, Int],
-                            crunchOffsetMinutes: Int,
-                            eGateOpenHours: Seq[Int],
-                           ) {
+case class SimulationParams(
+    terminal: Terminal,
+    date: LocalDate,
+    passengerWeighting: Double,
+    processingTimes: Map[PaxTypeAndQueue, Int],
+    minDesksByQueue: Map[Queue, Int],
+    maxDesks: Int,
+    eGateBankSizes: IndexedSeq[Int],
+    slaByQueue: Map[Queue, Int],
+    crunchOffsetMinutes: Int,
+    eGateOpenHours: Seq[Int]
+) {
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
-    val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-      case (q, (origMinDesks, origMaxDesks)) =>
-        val newMinDesks = origMinDesks.map(d => minDesksByQueue.getOrElse(q, d))
-        q -> (newMinDesks, origMaxDesks)
-    }
+    val openDesks: Map[Queues.Queue, (List[Int], List[Int])] =
+      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
+        case (q, (origMinDesks, origMaxDesks)) =>
+          val newMinDesks = origMinDesks.map(d => minDesksByQueue.getOrElse(q, d))
+          q -> (newMinDesks, origMaxDesks)
+      }
 
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
@@ -36,16 +38,20 @@ case class SimulationParams(terminal: Terminal,
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
       crunchOffsetMinutes = crunchOffsetMinutes,
-      terminalProcessingTimes = airportConfig.terminalProcessingTimes + (terminal -> airportConfig.terminalProcessingTimes(terminal).map {
-        case (ptq, defaultValue) =>
-          ptq -> processingTimes.get(ptq)
-            .map(s => s.toDouble / 60)
-            .getOrElse(defaultValue)
-      }),
+      terminalProcessingTimes = airportConfig.terminalProcessingTimes +
+        (terminal -> airportConfig.terminalProcessingTimes(terminal).map {
+          case (ptq, defaultValue) =>
+            ptq -> processingTimes.get(ptq)
+              .map(s => s.toDouble / 60)
+              .getOrElse(defaultValue)
+        })
     )
   }
 
-  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits, paxFeedSourceOrder: Seq[FeedSource]): FlightsWithSplits =
+  def applyPassengerWeighting(
+      flightsWithSplits: FlightsWithSplits,
+      paxFeedSourceOrder: Seq[FeedSource]
+  ): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) =>
         val paxSource = fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder)
@@ -78,7 +84,8 @@ object SimulationParams {
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 
     val qMinDesks = queueParams(qsMap, "_min")
-    val qMaxDesks = qsMap.get("terminalDesks").flatMap(_.headOption.map(_.toInt)).getOrElse(throw new Exception("Missing desks"))
+    val qMaxDesks =
+      qsMap.get("terminalDesks").flatMap(_.headOption.map(_.toInt)).getOrElse(throw new Exception("Missing desks"))
     val qSlas = queueParams(qsMap, "_sla")
 
     val procTimes: Map[PaxTypeAndQueue, Int] = PaxTypesAndQueues.inOrder.map(ptq => {
@@ -112,18 +119,18 @@ object SimulationParams {
         crunchOffsetMinutes = crunchOffsetMinutes.toInt,
         eGateOpenHours = eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
           case Success(i) => i
-        },
+        }
       )
     }
 
     maybeParams match {
       case Some(simulationParams) => simulationParams
-      case None =>
+      case None                   =>
         throw new Exception(s"Missing ${
-          maybeSimulationFieldsStrings.collect {
-            case (k, None) => k
-          }.mkString(", ")
-        }")
+            maybeSimulationFieldsStrings.collect {
+              case (k, None) => k
+            }.mkString(", ")
+          }")
     }
 
   }
@@ -137,7 +144,6 @@ object SimulationParams {
       case (k, Some(v)) => k -> v
     }
 }
-
 
 case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchMinute]])
 

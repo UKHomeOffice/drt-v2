@@ -4,12 +4,13 @@ import diode._
 import drt.client.actions.Actions._
 import drt.client.services.DrtApi
 import io.lemonlabs.uri.QueryString
-import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey}
+import uk.gov.homeoffice.drt.models.{ FlightManifestSummary, ManifestKey }
 import upickle.default._
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class FlightManifestSummariesHandler[M](modelRW: ModelRW[M, Map[ManifestKey, FlightManifestSummary]]) extends LoggingActionHandler(modelRW) {
+class FlightManifestSummariesHandler[M](modelRW: ModelRW[M, Map[ManifestKey, FlightManifestSummary]])
+    extends LoggingActionHandler(modelRW) {
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetManifestSummariesForDate(date) =>
       val request = Effect(DrtApi.get(s"manifest-summaries/$date/summary")
@@ -32,7 +33,7 @@ class FlightManifestSummariesHandler[M](modelRW: ModelRW[M, Map[ManifestKey, Fli
 
       effects.headOption match {
         case Some(head) => effectOnly(effects.drop(1).foldLeft(new EffectSeq(head, Seq(), queue))(_ >> _))
-        case None => noChange
+        case None       => noChange
       }
 
     case SetManifestSummaries(manifestSummaries) =>

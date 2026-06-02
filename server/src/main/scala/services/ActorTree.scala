@@ -2,7 +2,6 @@ package services
 
 import org.apache.pekko.actor.ActorSystem
 
-
 object ActorTree {
   def get()(implicit system: ActorSystem): Any = new PrivateMethodExposer(system)('printTree)()
 }
@@ -13,9 +12,10 @@ class PrivateMethodCaller(x: AnyRef, methodName: String) {
     def _parents: Stream[Class[_]] = Stream(x.getClass) #::: _parents.map(_.getSuperclass)
     val parents = _parents.takeWhile(_ != null).toList
     val methods = parents.flatMap(_.getDeclaredMethods)
-    val method = methods.find(_.getName == methodName).getOrElse(throw new IllegalArgumentException("Method " + methodName + " not found"))
+    val method = methods.find(_.getName == methodName).getOrElse(throw new IllegalArgumentException("Method " +
+      methodName + " not found"))
     method.setAccessible(true)
-    method.invoke(x, args : _*)
+    method.invoke(x, args: _*)
   }
 }
 

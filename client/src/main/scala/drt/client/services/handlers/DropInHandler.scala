@@ -1,11 +1,11 @@
 package drt.client.services.handlers
 
 import diode.AnyAction.aType
-import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ Action, ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import drt.shared.DropIn
 import upickle.default.read
 
@@ -17,8 +17,7 @@ case class GetDropIns() extends Action
 case class SetDropIns(dropIns: Seq[DropIn]) extends Action
 
 class DropInHandler[M](modelRW: ModelRW[M, Pot[Seq[DropIn]]]) extends LoggingActionHandler(modelRW) {
-  override
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+  override protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case SetDropIns(dropIns) =>
       updated(Ready(dropIns))

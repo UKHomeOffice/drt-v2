@@ -1,8 +1,8 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, ModelRW}
+import diode.{ ActionResult, ModelRW }
 import drt.client.actions.Actions._
-import drt.client.services.{DrtApi, RootModel}
+import drt.client.services.{ DrtApi, RootModel }
 import upickle.default.write
 
 class AppControlHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {

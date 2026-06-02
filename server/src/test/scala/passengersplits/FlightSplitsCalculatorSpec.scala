@@ -11,7 +11,6 @@ import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.services.PassengerTypeCalculator
 import uk.gov.homeoffice.drt.services.PassengerTypeCalculator.PaxTypeInfo
 
-
 class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables {
   "Information about a passenger and their document type tells us what passenger type they are" >> {
     s2"""$passengerType"""
@@ -33,22 +32,28 @@ class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables
     val israel = "ISR"
     val haiti = "HTI"
     s2"""${
-      "DocumentType" | "DocumentIssuingCountryCode" | "PassengerType" |>
-        "P" ! Germany ! EeaMachineReadable |
-        "P" ! "NZL" ! NonVisaNational |
-        "P" ! "AUS" ! NonVisaNational |
-        "P" ! lebanon ! VisaNational |
-        "P" ! israel ! NonVisaNational |
-        "P" ! haiti ! VisaNational |
-        "I" ! Greece ! EeaNonMachineReadable |
-        "I" ! Italy ! EeaNonMachineReadable |
-        "I" ! Portugal ! EeaNonMachineReadable |
-        "P" ! Latvia ! EeaMachineReadable |
-        "P" ! Latvia ! EeaMachineReadable |
-        "I" ! Slovakia ! EeaNonMachineReadable | {
-        (docType, documentCountry, passengerType) =>
-          PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", Nationality(documentCountry), Option(DocumentType(docType)), None)) must_== passengerType
-      }
-    }"""
+        "DocumentType" | "DocumentIssuingCountryCode" | "PassengerType" |>
+          "P" ! Germany ! EeaMachineReadable |
+          "P" ! "NZL" ! NonVisaNational |
+          "P" ! "AUS" ! NonVisaNational |
+          "P" ! lebanon ! VisaNational |
+          "P" ! israel ! NonVisaNational |
+          "P" ! haiti ! VisaNational |
+          "I" ! Greece ! EeaNonMachineReadable |
+          "I" ! Italy ! EeaNonMachineReadable |
+          "I" ! Portugal ! EeaNonMachineReadable |
+          "P" ! Latvia ! EeaMachineReadable |
+          "P" ! Latvia ! EeaMachineReadable |
+          "I" ! Slovakia ! EeaNonMachineReadable | {
+            (docType, documentCountry, passengerType) =>
+              PassengerTypeCalculator.mostAirports(PaxTypeInfo(
+                None,
+                "N",
+                Nationality(documentCountry),
+                Option(DocumentType(docType)),
+                None
+              )) must_== passengerType
+          }
+      }"""
   }
 }

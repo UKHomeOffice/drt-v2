@@ -1,11 +1,11 @@
 package drt.client.components
 
 import drt.client.components.ChartJSComponent._
-import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Recommended}
+import drt.client.components.TerminalDesksAndQueues.{ Deployments, DeskType, Recommended }
 import drt.client.services.JSDateConversions.SDate
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, ScalaComponent }
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -15,13 +15,14 @@ import scala.scalajs.js.JSConverters._
 
 object QueueChartComponent {
 
-  case class Props(queue: Queue,
-                   queueSummaries: List[(Long, Map[Queue, CrunchMinute])],
-                   sla: Int,
-                   interval: Int,
-                   deskType: DeskType,
-                   title: Option[String] = None
-                  )
+  case class Props(
+      queue: Queue,
+      queueSummaries: List[(Long, Map[Queue, CrunchMinute])],
+      sla: Int,
+      interval: Int,
+      deskType: DeskType,
+      title: Option[String] = None
+  )
 
   case class State(visibleMetrics: Set[String])
 
@@ -46,10 +47,11 @@ object QueueChartComponent {
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("InteractiveQueueChart")
     .initialStateFromProps(p => State.default(p.deskType))
     .renderPS { (scope, props, state) =>
-
       val minutesInADay = 1440
       val intervalRange = minutesInADay / props.interval
-      val labels: Seq[String] = (0 until intervalRange).map(m => SDate.midnightThisMorning().addMinutes(m * props.interval).toHoursAndMinutes)
+      val labels: Seq[String] = (0 until intervalRange).map(m =>
+        SDate.midnightThisMorning().addMinutes(m * props.interval).toHoursAndMinutes
+      )
 
       val staffLabel =
         if (props.deskType == Recommended) "Recommended Staff"
@@ -85,9 +87,9 @@ object QueueChartComponent {
         label = staffLabel,
         data = props.queueSummaries.map {
           case (_, queuesAndMinutes) => props.deskType match {
-            case Recommended => queuesAndMinutes(props.queue).deskRec.toDouble
-            case Deployments => queuesAndMinutes(props.queue).deployedDesks.getOrElse(0).toDouble
-          }
+              case Recommended => queuesAndMinutes(props.queue).deskRec.toDouble
+              case Deployments => queuesAndMinutes(props.queue).deployedDesks.getOrElse(0).toDouble
+            }
         },
         colour = RGBA(200, 200, 200),
         backgroundColour = Option(RGBA(200, 200, 200, 0.2)),
@@ -98,9 +100,9 @@ object QueueChartComponent {
         label = "Wait times",
         data = props.queueSummaries.map {
           case (_, queuesAndMinutes) => props.deskType match {
-            case Recommended => queuesAndMinutes(props.queue).waitTime.toDouble
-            case Deployments => queuesAndMinutes(props.queue).deployedWait.getOrElse(0).toDouble
-          }
+              case Recommended => queuesAndMinutes(props.queue).waitTime.toDouble
+              case Deployments => queuesAndMinutes(props.queue).deployedWait.getOrElse(0).toDouble
+            }
         },
         colour = RGBA.red1,
         backgroundColour = Option(RGBA.red1.copy(alpha = 0.2)),
@@ -151,26 +153,34 @@ object QueueChartComponent {
         scales = js.Dictionary[js.Any](
           "x" -> js.Dictionary("ticks" -> js.Dictionary("autoSkip" -> false)),
           "y" -> js.Dictionary(
-            "type" -> "linear", "display" -> "auto", "position" -> "left",
+            "type" -> "linear",
+            "display" -> "auto",
+            "position" -> "left",
             "title" -> js.Dictionary("text" -> "passengers", "display" -> "auto")
           ),
           "y2" -> js.Dictionary(
-            "type" -> "linear", "display" -> "auto", "position" -> "right",
+            "type" -> "linear",
+            "display" -> "auto",
+            "position" -> "right",
             "title" -> js.Dictionary("text" -> "staff", "display" -> "auto"),
             "grid" -> js.Dictionary("drawOnChartArea" -> false),
             "ticks" -> js.Dictionary(
               "stepSize" -> 1,
               "callback" -> (
-                ((value: js.Any, _: js.Any, _: js.Any) => {
-                  val d = value.toString.toDouble
-                  if (d == d.floor) d.toInt.toString
-                  else ""
-                }): js.Function3[js.Any, js.Any, js.Any, String]
-                )
+                (
+                    (value: js.Any, _: js.Any, _: js.Any) => {
+                      val d = value.toString.toDouble
+                      if (d == d.floor) d.toInt.toString
+                      else ""
+                    }
+                ): js.Function3[js.Any, js.Any, js.Any, String]
+              )
             )
           ),
           "y3" -> js.Dictionary(
-            "type" -> "linear", "display" -> "auto", "position" -> "right",
+            "type" -> "linear",
+            "display" -> "auto",
+            "position" -> "right",
             "suggestedMax" -> props.sla * 2,
             "title" -> js.Dictionary("text" -> "minutes", "display" -> "auto"),
             "grid" -> js.Dictionary("drawOnChartArea" -> false)
@@ -183,9 +193,12 @@ object QueueChartComponent {
         <.h3(s"$chartTitle chart view"),
 
         // Checkboxes
-        <.div(^.className := "chart-controls", ^.style := js.Dynamic.literal(marginBottom = "10px"),
+        <.div(
+          ^.className := "chart-controls",
+          ^.style := js.Dynamic.literal(marginBottom = "10px"),
           metrics.map { m =>
-            <.label(^.style := js.Dynamic.literal(marginRight = "15px", cursor = "pointer"),
+            <.label(
+              ^.style := js.Dynamic.literal(marginRight = "15px", cursor = "pointer"),
               <.input.checkbox(
                 ^.checked := state.visibleMetrics.contains(m.label),
                 ^.onChange ==> toggleMetric(m.label),
@@ -200,7 +213,8 @@ object QueueChartComponent {
         <.h3(s"$chartTitle key for chart"),
 
         // Legend
-        <.div(^.className := "chart-legend-box",
+        <.div(
+          ^.className := "chart-legend-box",
           ^.style := js.Dynamic.literal(
             display = "flex",
             flexWrap = "wrap",
@@ -208,9 +222,11 @@ object QueueChartComponent {
             alignItems = "center"
           ),
           metrics.map { m =>
-            <.div(^.style := js.Dynamic.literal(marginRight = "20px", display = "flex", alignItems = "center"),
+            <.div(
+              ^.style := js.Dynamic.literal(marginRight = "20px", display = "flex", alignItems = "center"),
               <.div(^.style := js.Dynamic.literal(
-                width = "16px", height = "16px",
+                width = "16px",
+                height = "16px",
                 backgroundColor = m.backgroundColour.getOrElse(m.colour).toString,
                 border = s"2px solid ${m.colour.toString}",
                 marginRight = "8px"
@@ -221,7 +237,9 @@ object QueueChartComponent {
         ),
 
         // Chart
-        <.div(^.className := "chart-container", ^.style := js.Dynamic.literal(height = "300px"),
+        <.div(
+          ^.className := "chart-container",
+          ^.style := js.Dynamic.literal(height = "300px"),
           ChartJSComponent(
             ChartJsProps(
               data = ChartJsData(

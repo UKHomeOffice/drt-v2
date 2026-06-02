@@ -4,24 +4,24 @@ import controllers.ArrivalGenerator
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.scalatest.wordspec.AnyWordSpec
-import queueus.{PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus.{ PaxTypeQueueAllocation, TerminalQueueAllocator }
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.VoyageManifestGenerator
-import services.crunch.VoyageManifestGenerator.{euPassport, visa}
+import services.crunch.VoyageManifestGenerator.{ euPassport, visa }
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.db.serialisers.EgateEligibility
-import uk.gov.homeoffice.drt.models.CountryCodes.{Canada, France, UK}
+import uk.gov.homeoffice.drt.models.CountryCodes.{ Canada, France, UK }
 import uk.gov.homeoffice.drt.models.DocumentType.Passport
-import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, ManifestPassengerProfile}
-import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
+import uk.gov.homeoffice.drt.models.{ B5JPlusTypeAllocator, ManifestPassengerProfile }
+import uk.gov.homeoffice.drt.ports.PaxTypes.{ EeaMachineReadable, VisaNational }
 import uk.gov.homeoffice.drt.ports.Queues._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxAge, PaxType, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
+import uk.gov.homeoffice.drt.ports.{ LiveFeedSource, PaxAge, PaxType, PortCode }
 import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class EgateSimulationsTest extends AnyWordSpec {
   val egateUptake = 0.8
@@ -29,24 +29,35 @@ class EgateSimulationsTest extends AnyWordSpec {
     EeaMachineReadable -> Seq((EGate, egateUptake), (EeaDesk, 1 - egateUptake)),
     VisaNational -> Seq((NonEeaDesk, 1.0))
   ))
-  val paxQueueAllocator: PaxTypeQueueAllocation = paxTypeQueueAllocator(hasTransfer = false, TerminalQueueAllocator(paxTypeAllocation))
+  val paxQueueAllocator: PaxTypeQueueAllocation =
+    paxTypeQueueAllocator(hasTransfer = false, TerminalQueueAllocator(paxTypeAllocation))
 
-  val gbEgate: ManifestPassengerProfile = ManifestPassengerProfile(Nationality(UK), Some(Passport), Some(PaxAge(20)), inTransit = false, None)
-  val gbBelowEgate: ManifestPassengerProfile = ManifestPassengerProfile(Nationality(UK), Some(Passport), Some(PaxAge(1)), inTransit = false, None)
-  val euEgate: ManifestPassengerProfile = ManifestPassengerProfile(Nationality(France), Some(Passport), Some(PaxAge(25)), inTransit = false, None)
-  val euBelowEgate: ManifestPassengerProfile = ManifestPassengerProfile(Nationality(France), Some(Passport), Some(PaxAge(2)), inTransit = false, None)
-  val b5jEgate: ManifestPassengerProfile = ManifestPassengerProfile(Nationality(Canada), Some(Passport), Some(PaxAge(50)), inTransit = false, None)
-  val b5jBelowEgate: ManifestPassengerProfile = ManifestPassengerProfile(Nationality(Canada), Some(Passport), Some(PaxAge(5)), inTransit = false, None)
-  val nonEea: ManifestPassengerProfile = ManifestPassengerProfile(Nationality("IND"), Some(Passport), Some(PaxAge(5)), inTransit = false, None)
+  val gbEgate: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality(UK), Some(Passport), Some(PaxAge(20)), inTransit = false, None)
+  val gbBelowEgate: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality(UK), Some(Passport), Some(PaxAge(1)), inTransit = false, None)
+  val euEgate: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality(France), Some(Passport), Some(PaxAge(25)), inTransit = false, None)
+  val euBelowEgate: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality(France), Some(Passport), Some(PaxAge(2)), inTransit = false, None)
+  val b5jEgate: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality(Canada), Some(Passport), Some(PaxAge(50)), inTransit = false, None)
+  val b5jBelowEgate: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality(Canada), Some(Passport), Some(PaxAge(5)), inTransit = false, None)
+  val nonEea: ManifestPassengerProfile =
+    ManifestPassengerProfile(Nationality("IND"), Some(Passport), Some(PaxAge(5)), inTransit = false, None)
 
   "egateEligibleAndUnderAgePct" should {
     "return counts of all types of egate eligibles" in {
       val manifest = Seq(
-        gbEgate, euEgate, b5jEgate,
-        nonEea,
+        gbEgate,
+        euEgate,
+        b5jEgate,
+        nonEea
       )
 
-      val (egateEligibleCount, egateUnderAgeCount) = EgateSimulations.egateEligibleAndUnderAgePct(B5JPlusTypeAllocator)(manifest)
+      val (egateEligibleCount, egateUnderAgeCount) =
+        EgateSimulations.egateEligibleAndUnderAgePct(B5JPlusTypeAllocator)(manifest)
 
       assert(egateEligibleCount == 75)
       assert(egateUnderAgeCount == 0)
@@ -54,11 +65,14 @@ class EgateSimulationsTest extends AnyWordSpec {
 
     "return counts of all types of underage egate" in {
       val manifest = Seq(
-        gbBelowEgate, euBelowEgate, b5jBelowEgate,
-        nonEea,
+        gbBelowEgate,
+        euBelowEgate,
+        b5jBelowEgate,
+        nonEea
       )
 
-      val (egateEligibleCount, egateUnderAgeCount) = EgateSimulations.egateEligibleAndUnderAgePct(B5JPlusTypeAllocator)(manifest)
+      val (egateEligibleCount, egateUnderAgeCount) =
+        EgateSimulations.egateEligibleAndUnderAgePct(B5JPlusTypeAllocator)(manifest)
 
       assert(egateEligibleCount == 0)
       assert(egateUnderAgeCount == 75)
@@ -70,7 +84,8 @@ class EgateSimulationsTest extends AnyWordSpec {
       val egateEligiblePct = 5
       val egateUnderAgePct = 0
       val childParentRatio = 1.0
-      val netEgateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(egateEligiblePct, egateUnderAgePct)
+      val netEgateEligiblePercentage =
+        EgateSimulations.netEgateEligiblePct(childParentRatio)(egateEligiblePct, egateUnderAgePct)
       assert(netEgateEligiblePercentage == 5.0)
     }
 
@@ -78,7 +93,8 @@ class EgateSimulationsTest extends AnyWordSpec {
       val egateEligiblePct = 5
       val egateUnderAgePct = 2
       val childParentRatio = 1.0
-      val netEgateEligiblePercentage = EgateSimulations.netEgateEligiblePct(childParentRatio)(egateEligiblePct, egateUnderAgePct)
+      val netEgateEligiblePercentage =
+        EgateSimulations.netEgateEligiblePct(childParentRatio)(egateEligiblePct, egateUnderAgePct)
       assert(netEgateEligiblePercentage == 3.0) // 5 eligible, 2 underage, so 5 - (2 * 1) = 3 eligible for egates
     }
   }
@@ -93,7 +109,10 @@ class EgateSimulationsTest extends AnyWordSpec {
       )
       uptakes.foreach { case ((eligiblePercentage, egatePaxPercentage), expectedUptake) =>
         val uptake = EgateSimulations.bxUptakePct(eligiblePercentage, egatePaxPercentage)
-        assert(uptake == expectedUptake, s"Expected $expectedUptake for eligible $eligiblePercentage and egate pax $egatePaxPercentage, got $uptake")
+        assert(
+          uptake == expectedUptake,
+          s"Expected $expectedUptake for eligible $eligiblePercentage and egate pax $egatePaxPercentage, got $uptake"
+        )
       }
     }
   }
@@ -113,7 +132,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         portCode,
         _ => Future.successful(Some(liveManifest)),
         _ => Future.successful(Some(historicManifest)),
-        (_, _) => Future.successful(Seq(arrival)),
+        (_, _) => Future.successful(Seq(arrival))
       )
 
       val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
@@ -131,7 +150,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         portCode,
         _ => Future.successful(None),
         _ => Future.successful(Some(historicManifest)),
-        (_, _) => Future.successful(Seq(arrival)),
+        (_, _) => Future.successful(Seq(arrival))
       )
 
       val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
@@ -147,7 +166,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         portCode,
         _ => Future.successful(None),
         _ => Future.successful(None),
-        (_, _) => Future.successful(Seq.empty),
+        (_, _) => Future.successful(Seq.empty)
       )
 
       val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
@@ -164,7 +183,7 @@ class EgateSimulationsTest extends AnyWordSpec {
         portCode,
         _ => Future.successful(None),
         _ => Future.successful(None),
-        (_, _) => Future.successful(Seq(arrival)),
+        (_, _) => Future.successful(Seq(arrival))
       )
 
       val result = Await.result(arrivalsWithManifests(UtcDate(2025, 6, 19), terminal), 1.second)
@@ -193,7 +212,11 @@ class EgateSimulationsTest extends AnyWordSpec {
       }
       val store = (_: UtcDate, _: Terminal, _: Int, _: Double, _: Double) => ()
 
-      val function = EgateSimulations.drtTotalPaxEgateEligiblePctAndUnderAgePctForDate(flightsWithManifests, egateAndDeskPaxForFlight, store)
+      val function = EgateSimulations.drtTotalPaxEgateEligiblePctAndUnderAgePctForDate(
+        flightsWithManifests,
+        egateAndDeskPaxForFlight,
+        store
+      )
       val result = Await.result(function(date, terminal), 1.second)
 
       assert(result == (200, 70d, 30d))
@@ -204,10 +227,11 @@ class EgateSimulationsTest extends AnyWordSpec {
     "calculate the egate percentage based on the total pax in the EGate queue" in {
       val terminal = T1
       val date = UtcDate(2025, 6, 19)
-      val bxQueueTotalsForPortAndDate: (UtcDate, Terminal) => Future[Map[Queue, Int]] = (_, _) => Future.successful(Map(
-        EGate -> 80,
-        QueueDesk -> 20,
-      ))
+      val bxQueueTotalsForPortAndDate: (UtcDate, Terminal) => Future[Map[Queue, Int]] = (_, _) =>
+        Future.successful(Map(
+          EGate -> 80,
+          QueueDesk -> 20
+        ))
 
       val function = EgateSimulations.bxTotalPaxAndEgatePctForDateAndTerminal(bxQueueTotalsForPortAndDate)
       val result = Await.result(function(date, terminal), 1.second)
@@ -218,7 +242,8 @@ class EgateSimulationsTest extends AnyWordSpec {
     "return zero when there are no pax in any queue" in {
       val terminal = T1
       val date = UtcDate(2025, 6, 19)
-      val bxQueueTotalsForPortAndDate: (UtcDate, Terminal) => Future[Map[Queue, Int]] = (_, _) => Future.successful(Map.empty)
+      val bxQueueTotalsForPortAndDate: (UtcDate, Terminal) => Future[Map[Queue, Int]] =
+        (_, _) => Future.successful(Map.empty)
 
       val function = EgateSimulations.bxTotalPaxAndEgatePctForDateAndTerminal(bxQueueTotalsForPortAndDate)
       val result = Await.result(function(date, terminal), 1.second)
@@ -238,7 +263,8 @@ class EgateSimulationsTest extends AnyWordSpec {
       val adultToChildRatio = 1.2
       val uptakePct = 80d
 
-      val cachedEgateEligibleAndUnderAgeForDate: (UtcDate, Terminal) => Future[Option[EgateEligibility]] = (_, _) => Future.successful(None)
+      val cachedEgateEligibleAndUnderAgeForDate: (UtcDate, Terminal) => Future[Option[EgateEligibility]] =
+        (_, _) => Future.successful(None)
       val drtTotalPaxEgateEligiblePctAndUnderAgePctForDate: (UtcDate, Terminal) => Future[(Int, Double, Double)] =
         (_, _) => Future.successful((totalPax, egateEligiblePct, underAgePct))
       val netEligiblePercentage = EgateSimulations.netEgateEligiblePct(adultToChildRatio) _
@@ -246,7 +272,7 @@ class EgateSimulationsTest extends AnyWordSpec {
       val function = EgateSimulations.drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal(uptakePct)(
         cachedEgateEligibleAndUnderAgeForDate,
         drtTotalPaxEgateEligiblePctAndUnderAgePctForDate,
-        netEligiblePercentage,
+        netEligiblePercentage
       )
       val result = Await.result(function(date, terminal), 1.second)
 
@@ -268,7 +294,8 @@ class EgateSimulationsTest extends AnyWordSpec {
       val drtNetEgateEligiblePct = 60d
       val drtActualEgatePct = 10d
 
-      val bxTotalPaxAndEgatePctForDateAndTerminal = (_: UtcDate, _: Terminal) => Future.successful((bxTotalPax, bxEgatePct))
+      val bxTotalPaxAndEgatePctForDateAndTerminal =
+        (_: UtcDate, _: Terminal) => Future.successful((bxTotalPax, bxEgatePct))
       val drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal =
         (_: UtcDate, _: Terminal) => Future.successful((drtTotalPax, drtNetEgateEligiblePct, drtActualEgatePct))
       val bxUptakePct = EgateSimulations.bxUptakePct _
@@ -276,7 +303,8 @@ class EgateSimulationsTest extends AnyWordSpec {
       val function = EgateSimulations.bxAndDrtStatsForDate(
         bxTotalPaxAndEgatePctForDateAndTerminal,
         drtTotalAndEgateEligibleAndActualPercentageForDateAndTerminal,
-        bxUptakePct)
+        bxUptakePct
+      )
       val result = Await.result(function(date, terminal), 1.second)
 
       val expectedBxEgateUptakePct = bxEgatePct / drtNetEgateEligiblePct * 100d

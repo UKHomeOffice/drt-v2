@@ -1,25 +1,25 @@
 package drt.server.feeds.lhr.forecast
 
-
 import drt.server.feeds.common.XlsExtractorUtil._
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.apache.poi.ss.usermodel.DateUtil
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import java.util.TimeZone
 import scala.util.Success
 
-
-case class LHRForecastFlightRow(scheduledDate: SDateLike,
-                                 flightCode: String = "",
-                                 origin: String = "",
-                                 internationalDomestic: String = "",
-                                 totalPax: Int = 0,
-                                 transferPax: Int = 0,
-                                 terminal: String)
+case class LHRForecastFlightRow(
+    scheduledDate: SDateLike,
+    flightCode: String = "",
+    origin: String = "",
+    internationalDomestic: String = "",
+    totalPax: Int = 0,
+    transferPax: Int = 0,
+    terminal: String
+)
 
 object LHRForecastXLSExtractor {
 
@@ -52,7 +52,15 @@ object LHRForecastXLSExtractor {
         val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone(europeLondonId)).getTime)
         val terminal = s"T${sheetNumber + 1}"
 
-        LHRForecastFlightRow(scheduledDate = scheduled, flightCode = flightNumberCell, origin = airportCell, internationalDomestic = internationalDomesticCell, totalPax = totalCell.toInt, transferPax = transferPaxCell.toInt, terminal)
+        LHRForecastFlightRow(
+          scheduledDate = scheduled,
+          flightCode = flightNumberCell,
+          origin = airportCell,
+          internationalDomestic = internationalDomesticCell,
+          totalPax = totalCell.toInt,
+          transferPax = transferPaxCell.toInt,
+          terminal
+        )
       }
     }
 

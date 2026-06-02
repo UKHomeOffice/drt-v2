@@ -1,12 +1,16 @@
 package actors.debug
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.persistence.{ Recovery, SnapshotSelectionCriteria }
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{
+  CrunchDiffMessage,
+  FlightWithSplitsMessage,
+  FlightsWithSplitsDiffMessage
+}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 
 case class DebugState(lastSnapshot: Option[GeneratedMessage], messages: List[GeneratedMessage])
@@ -14,7 +18,6 @@ case class DebugState(lastSnapshot: Option[GeneratedMessage], messages: List[Gen
 case class MessageQuery(numberOfMessages: Int)
 
 case class MessageResponse(messages: List[GeneratedMessage])
-
 
 class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEpoch] = None) extends RecoveryActorLike {
 
@@ -26,7 +29,8 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
 
-    case CrunchDiffMessage(Some(createdAt), _, removals, updates, _, _, _, _) if removals.nonEmpty || updates.nonEmpty =>
+    case CrunchDiffMessage(Some(createdAt), _, removals, updates, _, _, _, _)
+        if removals.nonEmpty || updates.nonEmpty =>
 
       if (createdAt < maybePointInTime.getOrElse(Long.MaxValue)) {
         messages = FlightsWithSplitsDiffMessage(Option(createdAt), removals, updates) :: messages
@@ -35,11 +39,15 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
     case FlightsDiffMessage(Some(createdAt), removals, updates, _) =>
 
       if (createdAt < maybePointInTime.getOrElse(Long.MaxValue)) {
-        val fws = FlightsWithSplitsDiffMessage(Option(createdAt), removals, updates.map(f => FlightWithSplitsMessage(Option(f), Seq())))
+        val fws = FlightsWithSplitsDiffMessage(
+          Option(createdAt),
+          removals,
+          updates.map(f => FlightWithSplitsMessage(Option(f), Seq()))
+        )
         messages = fws :: messages
       }
 
-    case m@FlightsWithSplitsDiffMessage(createdAt, _, _) =>
+    case m @ FlightsWithSplitsDiffMessage(createdAt, _, _) =>
 
       if (createdAt.getOrElse(Long.MinValue) < maybePointInTime.getOrElse(Long.MaxValue)) {
         messages = m :: messages

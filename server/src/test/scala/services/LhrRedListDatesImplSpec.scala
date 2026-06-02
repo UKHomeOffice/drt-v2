@@ -35,33 +35,45 @@ class LhrRedListDatesImplSpec extends Specification {
 
   "LhrRedListDatesImpl.overlapsRedListDates should" >> {
     "return true given a date range starting before and ending after the red list period" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-01T00:00", europeLondonTimeZone),
-        SDate("2022-01-15T00:00", europeLondonTimeZone)) === true
+      LhrRedListDatesImpl.overlapsRedListDates(
+        SDate("2021-01-01T00:00", europeLondonTimeZone),
+        SDate("2022-01-15T00:00", europeLondonTimeZone)
+      ) === true
     }
 
     "return false given a date range falling ending before the red list period starts" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-01T00:00", europeLondonTimeZone),
-        SDate("2021-02-14T00:00", europeLondonTimeZone)) === false
+      LhrRedListDatesImpl.overlapsRedListDates(
+        SDate("2021-01-01T00:00", europeLondonTimeZone),
+        SDate("2021-02-14T00:00", europeLondonTimeZone)
+      ) === false
     }
 
     "return false given a date range falling starting after the red list period ends" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-12-16T00:00", europeLondonTimeZone),
-        SDate("2022-01-15T00:00", europeLondonTimeZone)) === false
+      LhrRedListDatesImpl.overlapsRedListDates(
+        SDate("2021-12-16T00:00", europeLondonTimeZone),
+        SDate("2022-01-15T00:00", europeLondonTimeZone)
+      ) === false
     }
 
     "return true when given a date falling inside the red list period" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-05-01T00:00", europeLondonTimeZone),
-        SDate("2021-06-14T00:00", europeLondonTimeZone)) === true
+      LhrRedListDatesImpl.overlapsRedListDates(
+        SDate("2021-05-01T00:00", europeLondonTimeZone),
+        SDate("2021-06-14T00:00", europeLondonTimeZone)
+      ) === true
     }
 
     "return true given a date range overlapping the start of the red list period" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-01T00:00", europeLondonTimeZone),
-        SDate("2021-02-24T00:00", europeLondonTimeZone)) === true
+      LhrRedListDatesImpl.overlapsRedListDates(
+        SDate("2021-01-01T00:00", europeLondonTimeZone),
+        SDate("2021-02-24T00:00", europeLondonTimeZone)
+      ) === true
     }
 
     "return true given a date range overlapping the end of the red list period" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-10-01T00:00", europeLondonTimeZone),
-        SDate("2022-02-24T00:00", europeLondonTimeZone)) === true
+      LhrRedListDatesImpl.overlapsRedListDates(
+        SDate("2021-10-01T00:00", europeLondonTimeZone),
+        SDate("2022-02-24T00:00", europeLondonTimeZone)
+      ) === true
     }
   }
 

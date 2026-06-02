@@ -1,16 +1,16 @@
 package controllers
 
-import org.apache.pekko.actor.{ActorSystem, Scheduler}
+import org.apache.pekko.actor.{ ActorSystem, Scheduler }
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
-import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
+import drt.shared.CrunchApi.{ ActualDeskStats, DeskStat }
 import org.joda.time.DateTimeZone
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import services.OfferHandler
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -18,9 +18,9 @@ import java.util.TimeZone
 import javax.net.ssl._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.io.{BufferedSource, Source}
+import scala.io.{ BufferedSource, Source }
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object Deskstats {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -42,23 +42,29 @@ object Deskstats {
     }
   }
 
-  def startBlackjack(csvUrl: String,
-                     actualDesksSource: SourceQueueWithComplete[ActualDeskStats],
-                     interval: FiniteDuration,
-                     startFrom: () => SDateLike)(implicit actorSystem: ActorSystem): Any = {
+  def startBlackjack(
+      csvUrl: String,
+      actualDesksSource: SourceQueueWithComplete[ActualDeskStats],
+      interval: FiniteDuration,
+      startFrom: () => SDateLike
+  )(implicit actorSystem: ActorSystem): Any = {
     val initialDelay1Second = 1 * 1000
 
     implicit val scheduler: Scheduler = actorSystem.scheduler
 
     scheduler.schedule(
       initialDelay1Second milliseconds,
-      interval) {
+      interval
+    ) {
       val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom())
       OfferHandler.offerWithRetries(actualDesksSource, ActualDeskStats(actDesks), 5)
     }
   }
 
-  def blackjackDeskstats(blackjackBaseUrl: String, parseSince: SDateLike): Map[Terminal, Map[Queue, Map[Long, DeskStat]]] = {
+  def blackjackDeskstats(
+      blackjackBaseUrl: String,
+      parseSince: SDateLike
+  ): Map[Terminal, Map[Queue, Map[Long, DeskStat]]] = {
     val blackjackFullUrl = blackjackBaseUrl + uriForDate(parseSince)
 
     val sc = SSLContext.getInstance("SSL")
@@ -88,7 +94,7 @@ object Deskstats {
       val cells: Seq[String] = parseCsvLine(line)
       cells.head match {
         case "device" => true
-        case _ =>
+        case _        =>
           val statsDate: SDateLike = parseSDate(cells)
           statsDate.millisSinceEpoch > until
       }
@@ -98,7 +104,8 @@ object Deskstats {
   private def parseSDate(cells: Seq[String]) = {
     val (date, time) = (cells(1), cells(2).take(5))
     val Array(day, month, year) = date.split("/")
-    val statsDate = SDate(s"$year-$month-${day}T$time:00", DateTimeZone.forTimeZone(TimeZone.getTimeZone(europeLondonId)))
+    val statsDate =
+      SDate(s"$year-$month-${day}T$time:00", DateTimeZone.forTimeZone(TimeZone.getTimeZone(europeLondonId)))
     statsDate
   }
 
@@ -144,7 +151,7 @@ object Deskstats {
     val rows = deskstatsContent.split("\n").drop(1).toList
     log.debug(s"DeskStats: Got ${rows.length} relevant rows")
     val parsedRows = rows.map(parseCsvLine).filter(_.length == 12)
-    val dataByTerminal = parsedRows.groupBy(_ (columnIndices("terminal")))
+    val dataByTerminal = parsedRows.groupBy(_(columnIndices("terminal")))
     val dataByTerminalAndQueue =
       dataByTerminal.map {
         case (terminal, rs) =>

@@ -2,35 +2,36 @@ package services.liveviews
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import drt.shared.CrunchApi
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{ MinutesContainer, PassengersMinute }
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.StatusReply.Ack
-import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.pattern.{ ask, StatusReply }
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.Timeout
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, Arrival }
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
-import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
-import uk.gov.homeoffice.drt.db.serialisers.{CapacityHourlySerialiser, PassengersHourlySerialiser}
-import uk.gov.homeoffice.drt.db.tables.{CapacityHourly, PassengersHourly, PassengersHourlyRow}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.db.dao.{ CapacityHourlyDao, PassengersHourlyDao }
+import uk.gov.homeoffice.drt.db.serialisers.{ CapacityHourlySerialiser, PassengersHourlySerialiser }
+import uk.gov.homeoffice.drt.db.tables.{ CapacityHourly, PassengersHourly, PassengersHourlyRow }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate, SDateLike, UtcDate }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object PassengersLiveView {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def minutesContainerToHourlyRows(port: PortCode,
-                                   nowMillis: () => Long,
-                                  ): MinutesContainer[PassengersMinute, TQM] => Iterable[PassengersHourlyRow] =
+  def minutesContainerToHourlyRows(
+      port: PortCode,
+      nowMillis: () => Long
+  ): MinutesContainer[PassengersMinute, TQM] => Iterable[PassengersHourlyRow] =
     container => {
       val updatedAt = nowMillis()
 
@@ -52,14 +53,15 @@ object PassengersLiveView {
               queue,
               date,
               hour,
-              passengers,
+              passengers
             )
             PassengersHourlySerialiser.toRow(hourly, updatedAt)
         }
     }
 
-  def updateLiveView(portCode: PortCode, now: () => SDateLike, db: AggregatedDbTables)
-                    (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]] = {
+  def updateLiveView(portCode: PortCode, now: () => SDateLike, db: AggregatedDbTables)(implicit
+      ec: ExecutionContext
+  ): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]] = {
     val replaceHours = PassengersHourlyDao.replaceHours(portCode)
     val containerToHourlyRows = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
 
@@ -72,8 +74,9 @@ object PassengersLiveView {
       Future.sequence(eventuals).map(_ => Ack)
   }
 
-  def populateHistoricPax(updateForDate: UtcDate => Future[StatusReply[Done]])
-                         (implicit mat: Materializer): Future[Done] = {
+  def populateHistoricPax(updateForDate: UtcDate => Future[StatusReply[Done]])(implicit
+      mat: Materializer
+  ): Future[Done] = {
     val today = SDate.now()
     val oneYearDays = 365
     val historicDaysToPopulate = oneYearDays * 6
@@ -83,9 +86,10 @@ object PassengersLiveView {
       .run()
   }
 
-  def populatePaxForDate(minutesActor: ActorRef,
-                         update: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]])
-                        (implicit ec: ExecutionContext, timeout: Timeout): UtcDate => Future[StatusReply[Done]] =
+  def populatePaxForDate(
+      minutesActor: ActorRef,
+      update: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]]
+  )(implicit ec: ExecutionContext, timeout: Timeout): UtcDate => Future[StatusReply[Done]] =
     utcDate => {
       val sdate = SDate(utcDate)
       val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.addDays(1).addMinutes(-1).millisSinceEpoch)
@@ -94,7 +98,15 @@ object PassengersLiveView {
         .flatMap { container =>
           if (container.minutes.size < MilliTimes.oneDayMillis) {
             val paxMins = MinutesContainer(
-              container.minutes.map(cm => PassengersMinute(cm.terminal, cm.key.queue, cm.minute, Seq.fill(cm.toMinute.paxLoad.round.toInt)(1), None))
+              container.minutes.map(cm =>
+                PassengersMinute(
+                  cm.terminal,
+                  cm.key.queue,
+                  cm.minute,
+                  Seq.fill(cm.toMinute.paxLoad.round.toInt)(1),
+                  None
+                )
+              )
             )
             log.info(s"Populating pax for ${utcDate.toISOString}")
             update(paxMins)
@@ -110,14 +122,15 @@ object PassengersLiveView {
         }
     }
 
-  def updateAndPersistCapacityForDate(capacityForDate: UtcDate => Future[Map[Terminal, Map[Int, Int]]],
-                                      persistCapacityForDate: (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done],
-                                     )
-                                     (implicit ec: ExecutionContext): UtcDate => Future[Done] =
+  def updateAndPersistCapacityForDate(
+      capacityForDate: UtcDate => Future[Map[Terminal, Map[Int, Int]]],
+      persistCapacityForDate: (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done]
+  )(implicit ec: ExecutionContext): UtcDate => Future[Done] =
     date => capacityForDate(date).flatMap(capacity => persistCapacityForDate(date, capacity))
 
-  def persistCapacityForDate(db: AggregatedDbTables, portCode: PortCode)
-                            (implicit ec: ExecutionContext): (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done] = {
+  def persistCapacityForDate(db: AggregatedDbTables, portCode: PortCode)(implicit
+      ec: ExecutionContext
+  ): (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done] = {
     val replaceHours = CapacityHourlyDao.replaceHours(portCode)
     (date, hourlyCapacityByTerminal) => {
       log.info(s"Populating capacities for ${date.toISOString}")
@@ -131,7 +144,7 @@ object PassengersLiveView {
                 terminal = terminal,
                 dateUtc = date,
                 hour = hour,
-                capacity = capForHour,
+                capacity = capForHour
               )
               CapacityHourlySerialiser.toRow(capacityHourly, SDate.now().millisSinceEpoch)
           }
@@ -141,8 +154,9 @@ object PassengersLiveView {
     }
   }
 
-  def capacityForDate(flights: UtcDate => Future[Iterable[ApiFlightWithSplits]])
-                     (implicit ec: ExecutionContext): UtcDate => Future[Map[Terminal, Map[Int, Int]]] =
+  def capacityForDate(flights: UtcDate => Future[Iterable[ApiFlightWithSplits]])(implicit
+      ec: ExecutionContext
+  ): UtcDate => Future[Map[Terminal, Map[Int, Int]]] =
     utcDate => {
       val dayBefore = SDate(utcDate).addDays(-1).toUtcDate
       flights(utcDate)
@@ -154,7 +168,8 @@ object PassengersLiveView {
               capacityAndPcpTimes(fs)
                 .filter {
                   case (pax, pcpTime) =>
-                    def endsInWindow: Boolean = pcpTime.addMinutes((pax.toDouble / Arrival.paxOffPerMinute).floor.toInt).toUtcDate == utcDate
+                    def endsInWindow: Boolean =
+                      pcpTime.addMinutes((pax.toDouble / Arrival.paxOffPerMinute).floor.toInt).toUtcDate == utcDate
 
                     val startsInWindow = pcpTime.toUtcDate == utcDate
                     startsInWindow || endsInWindow
@@ -172,11 +187,11 @@ object PassengersLiveView {
       (flight.apiFlight.MaxPax.getOrElse(0), SDate(flight.apiFlight.PcpTime.getOrElse(0L)))
     )
 
-  def uniqueFlightsForDate(flights: UtcDate => Future[Iterable[ApiFlightWithSplits]],
-                           baseArrivals: UtcDate => Future[ArrivalsState],
-                           uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
-                          )
-                          (implicit ec: ExecutionContext): UtcDate => Future[Iterable[ApiFlightWithSplits]] =
+  def uniqueFlightsForDate(
+      flights: UtcDate => Future[Iterable[ApiFlightWithSplits]],
+      baseArrivals: UtcDate => Future[ArrivalsState],
+      uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits]
+  )(implicit ec: ExecutionContext): UtcDate => Future[Iterable[ApiFlightWithSplits]] =
     utcDate => {
       flights(utcDate)
         .map(_.filterNot(_.apiFlight.Origin.isDomesticOrCta))
@@ -184,12 +199,11 @@ object PassengersLiveView {
         .flatMap(fs => populateMissingMaxPax(utcDate, baseArrivals, fs))
     }
 
-
-  def populateMissingMaxPax(utcDate: UtcDate,
-                            baseArrivals: UtcDate => Future[ArrivalsState],
-                            flights: Iterable[ApiFlightWithSplits],
-                           )
-                           (implicit ec: ExecutionContext): Future[Iterable[ApiFlightWithSplits]] = {
+  def populateMissingMaxPax(
+      utcDate: UtcDate,
+      baseArrivals: UtcDate => Future[ArrivalsState],
+      flights: Iterable[ApiFlightWithSplits]
+  )(implicit ec: ExecutionContext): Future[Iterable[ApiFlightWithSplits]] = {
     val pctWithoutMaxPax = (100 * flights.count(_.apiFlight.MaxPax.isDefined).toDouble / flights.size).round.toInt
     if (pctWithoutMaxPax < 5) {
       Future.successful(flights)
@@ -198,7 +212,7 @@ object PassengersLiveView {
         flights
           .map {
             case flight if flight.apiFlight.MaxPax.nonEmpty => flight
-            case flight =>
+            case flight                                     =>
               val maybeArrival = baseArrivals.arrivals.get(flight.apiFlight.unique)
               val maybeMaxPax = maybeArrival.flatMap(_.MaxPax)
               flight.copy(apiFlight = flight.apiFlight.copy(MaxPax = maybeMaxPax))

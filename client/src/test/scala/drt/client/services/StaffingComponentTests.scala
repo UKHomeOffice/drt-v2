@@ -4,7 +4,7 @@ import drt.client.components.MonthlyStaffingBar.sixMonthsFromFirstOfMonth
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.consecutiveDaysInMonth
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
+import drt.shared.{ StaffTimeSlot, StaffTimeSlotsForTerminalMonth }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDateLike
 import utest._
@@ -12,7 +12,6 @@ import utest._
 object StaffingComponentTests extends TestSuite {
 
   import drt.client.components.MonthlyStaffingComponent._
-
 
   def tests = Tests {
 
@@ -90,81 +89,84 @@ object StaffingComponentTests extends TestSuite {
         "Given a start day of 2017-12-21 and an end day of 2017-12-25 " +
           "Then I should get back a list of days in between" - {
 
-          val startDay = SDate("2017-12-21")
-          val endDay = SDate("2017-12-25")
+            val startDay = SDate("2017-12-21")
+            val endDay = SDate("2017-12-25")
 
-          val result = consecutiveDaysInMonth(startDay, endDay).map(_._1.millisSinceEpoch)
+            val result = consecutiveDaysInMonth(startDay, endDay).map(_._1.millisSinceEpoch)
 
-          val expected = List(
-            SDate("2017-12-21"),
-            SDate("2017-12-22"),
-            SDate("2017-12-23"),
-            SDate("2017-12-24"),
-            SDate("2017-12-25")
-          ).map(_.millisSinceEpoch)
+            val expected = List(
+              SDate("2017-12-21"),
+              SDate("2017-12-22"),
+              SDate("2017-12-23"),
+              SDate("2017-12-24"),
+              SDate("2017-12-25")
+            ).map(_.millisSinceEpoch)
 
-          assert(result == expected)
-        }
+            assert(result == expected)
+          }
       }
     }
     "When asking for quarter hourly slot changes " - {
       "Given slot changes by hour " +
-      "Then I should get back those changes in quarter hourly slots" - {
-        val hourlyChanges: Map[(Int, Int), Int] = Map(
-          (0, 0) -> 0,
-          (1, 0) -> 1
-        )
+        "Then I should get back those changes in quarter hourly slots" - {
+          val hourlyChanges: Map[(Int, Int), Int] = Map(
+            (0, 0) -> 0,
+            (1, 0) -> 1
+          )
 
-        val quarterHourlyChanges = getQuarterHourlySlotChanges(60, hourlyChanges)
-        val expected = Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
+          val quarterHourlyChanges = getQuarterHourlySlotChanges(60, hourlyChanges)
+          val expected =
+            Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
 
-        assert(quarterHourlyChanges == expected)
-      }
+          assert(quarterHourlyChanges == expected)
+        }
 
       "Given slot changes by quarter hour " +
-      "Then I should get back unchanged" - {
-        val quarterHourly: Map[(Int, Int), Int] = Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
-        val quarterHourlyChanges = getQuarterHourlySlotChanges(15, quarterHourly)
-        val expected = Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
+        "Then I should get back unchanged" - {
+          val quarterHourly: Map[(Int, Int), Int] =
+            Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
+          val quarterHourlyChanges = getQuarterHourlySlotChanges(15, quarterHourly)
+          val expected =
+            Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
 
-        assert(quarterHourlyChanges == expected)
-      }
+          assert(quarterHourlyChanges == expected)
+        }
     }
     "When asking for 6 months from first day of month provided" - {
       "Given 2017-06-22 then I should get back 2017-06-01, 2017-07-01, 2017-08-01, 2017-09-01," +
         " 2017-10-01, 2017-11-01," - {
-        val startDate = SDate("2017-06-22")
+          val startDate = SDate("2017-06-22")
 
-        val expected = List(
-          SDate("2017-06-01"),
-          SDate("2017-07-01"),
-          SDate("2017-08-01"),
-          SDate("2017-09-01"),
-          SDate("2017-10-01"),
-          SDate("2017-11-01")
-        )
+          val expected = List(
+            SDate("2017-06-01"),
+            SDate("2017-07-01"),
+            SDate("2017-08-01"),
+            SDate("2017-09-01"),
+            SDate("2017-10-01"),
+            SDate("2017-11-01")
+          )
 
-        val result = sixMonthsFromFirstOfMonth(startDate)
+          val result = sixMonthsFromFirstOfMonth(startDate)
 
-        assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
-      }
+          assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
+        }
       "Given 2017-12-22 then I should get back 2017-12-01, 2018-01-01, 2018-02-01, 2018-03-01," +
         " 2018-04-01, 2018-05-01" - {
-        val startDate = SDate("2017-12-22")
+          val startDate = SDate("2017-12-22")
 
-        val expected = List(
-          SDate("2017-12-01"),
-          SDate("2018-01-01"),
-          SDate("2018-02-01"),
-          SDate("2018-03-01"),
-          SDate("2018-04-01"),
-          SDate("2018-05-01")
-        )
+          val expected = List(
+            SDate("2017-12-01"),
+            SDate("2018-01-01"),
+            SDate("2018-02-01"),
+            SDate("2018-03-01"),
+            SDate("2018-04-01"),
+            SDate("2018-05-01")
+          )
 
-        val result = sixMonthsFromFirstOfMonth(startDate)
+          val result = sixMonthsFromFirstOfMonth(startDate)
 
-        assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
-      }
+          assert(result.map(_.ddMMyyString) == expected.map(_.ddMMyyString))
+        }
     }
     "When converting a table of staff per time slot day to shifts" - {
       "Given one day with 4 time slots with 15 minute time slots then I should get back a list of sfaff timeslots" - {
@@ -182,12 +184,15 @@ object StaffingComponentTests extends TestSuite {
         val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
-          start.millisSinceEpoch, terminal, List(
+          start.millisSinceEpoch,
+          terminal,
+          List(
             StaffTimeSlot(T1, start.millisSinceEpoch, 1, 15 * 60000),
             StaffTimeSlot(T1, start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
             StaffTimeSlot(T1, start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
             StaffTimeSlot(T1, start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000)
-          ))
+          )
+        )
 
         assert(result == expected)
       }
@@ -206,7 +211,9 @@ object StaffingComponentTests extends TestSuite {
         val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
-          start.millisSinceEpoch, terminal, List(
+          start.millisSinceEpoch,
+          terminal,
+          List(
             StaffTimeSlot(T1, start.millisSinceEpoch, 1, 15 * 60000),
             StaffTimeSlot(T1, start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
             StaffTimeSlot(T1, start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
@@ -215,7 +222,8 @@ object StaffingComponentTests extends TestSuite {
             StaffTimeSlot(T1, start.addDays(1).addMinutes(15).millisSinceEpoch, 2, 15 * 60000),
             StaffTimeSlot(T1, start.addDays(1).addMinutes(30).millisSinceEpoch, 2, 15 * 60000),
             StaffTimeSlot(T1, start.addDays(1).addMinutes(45).millisSinceEpoch, 2, 15 * 60000)
-          ))
+          )
+        )
 
         assert(result == expected)
       }
@@ -234,7 +242,9 @@ object StaffingComponentTests extends TestSuite {
         val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 60)
 
         val expected = StaffTimeSlotsForTerminalMonth(
-          start.millisSinceEpoch, terminal, List(
+          start.millisSinceEpoch,
+          terminal,
+          List(
             StaffTimeSlot(T1, start.millisSinceEpoch, 1, 60 * 60000),
             StaffTimeSlot(T1, start.addMinutes(60).millisSinceEpoch, 1, 60 * 60000),
             StaffTimeSlot(T1, start.addMinutes(120).millisSinceEpoch, 1, 60 * 60000),
@@ -260,7 +270,6 @@ object StaffingComponentTests extends TestSuite {
 
         assert(result == expected)
       }
-
 
       "Given 1 day with 1 time slot with 1 staff member and 1 change with 2 staff then the timeslot should contain 2 staff" - {
         val staffTimeSlotDays = Seq(Seq(1))
@@ -326,26 +335,26 @@ object StaffingComponentTests extends TestSuite {
     "When producing staff timeslots for a day" - {
       "Given 2018-01-10 and a time slot length of 15 minutes " +
         "then I should get back 96 fifteen minute time slots starting at midnight" - {
-        val startDate = SDate("2018-01-10")
-        val slotDuration = 15
+          val startDate = SDate("2018-01-10")
+          val slotDuration = 15
 
-        val result = slotsInDay(startDate, slotDuration)
+          val result = slotsInDay(startDate, slotDuration)
 
-        val expected = List.tabulate(96)(i => startDate.addMinutes(i * 15))
+          val expected = List.tabulate(96)(i => startDate.addMinutes(i * 15))
 
-        assert(result == expected)
-      }
+          assert(result == expected)
+        }
       "Given 2018-01-10 and a time slot length of 60 minutes " +
         "then I should get back 24 sixty minute time slots starting at midnight" - {
-        val startDate = SDate("2018-01-10")
-        val slotDuration = 60
+          val startDate = SDate("2018-01-10")
+          val slotDuration = 60
 
-        val result = slotsInDay(startDate, slotDuration)
+          val result = slotsInDay(startDate, slotDuration)
 
-        val expected = List.tabulate(24)(i => startDate.addMinutes(i * 60))
+          val expected = List.tabulate(24)(i => startDate.addMinutes(i * 60))
 
-        assert(result == expected)
-      }
+          assert(result == expected)
+        }
     }
 
     "When checking which days have been updated in the monthly staffing page" - {

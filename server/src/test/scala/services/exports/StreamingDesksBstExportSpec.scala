@@ -3,14 +3,14 @@ package services.exports
 import actors.routing.minutes.MockMinutesLookup
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{ MinutesContainer, StaffMinute }
 import drt.shared.TM
 import services.crunch.CrunchTestLike
-import services.exports.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
+import services.exports.CsvTestHelper.{ dropHeadings, resultStreamToCSV, takeCSVLines }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk, NonEeaDesk }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 class StreamingDesksBstExportSpec extends CrunchTestLike {
 
@@ -74,9 +74,8 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
       StaffMinute(T1, minute5.millisSinceEpoch, shifts, misc, moves),
       StaffMinute(T1, minute6.millisSinceEpoch, shifts, misc, moves),
       StaffMinute(T1, minute7.millisSinceEpoch, shifts, misc, moves),
-      StaffMinute(T1, minute8.millisSinceEpoch, shifts, misc, moves),
+      StaffMinute(T1, minute8.millisSinceEpoch, shifts, misc, moves)
     ))
-
 
     "Given an export spanning 1 local date, I should get back the desk recs for that time period" >> {
 
@@ -109,7 +108,6 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
             |2021-04-06,T1,01:30,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
             |2021-04-06,T1,01:45,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14"""
           .stripMargin
-
 
       result === expected
     }

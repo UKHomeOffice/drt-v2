@@ -2,10 +2,10 @@ package actors.serializers
 
 import manifests.passengers.BestAvailableManifest
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventType, VoyageNumber }
 import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ PaxAge, PortCode }
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest._
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -26,13 +26,14 @@ object ManifestMessageConversion {
     PassengerIdentifier = m.passengerIdentifier
   )
 
-  def manifestPassengerProfileFromMessage(m: ManifestPassengerProfileMessage): ManifestPassengerProfile = ManifestPassengerProfile(
-    nationality = Nationality(correctNationalityBug(m.nationality.getOrElse(""))),
-    documentType = m.documentType.map(DocumentType(_)),
-    age = m.age.flatMap(ageString => Try(ageString.toInt).toOption).map(a => PaxAge(a)),
-    inTransit = m.inTransit.getOrElse(false),
-    passengerIdentifier = m.passengerIdentifier
-  )
+  def manifestPassengerProfileFromMessage(m: ManifestPassengerProfileMessage): ManifestPassengerProfile =
+    ManifestPassengerProfile(
+      nationality = Nationality(correctNationalityBug(m.nationality.getOrElse(""))),
+      documentType = m.documentType.map(DocumentType(_)),
+      age = m.age.flatMap(ageString => Try(ageString.toInt).toOption).map(a => PaxAge(a)),
+      inTransit = m.inTransit.getOrElse(false),
+      passengerIdentifier = m.passengerIdentifier
+    )
 
   def correctNationalityBug(nationality: String): String =
     nationality

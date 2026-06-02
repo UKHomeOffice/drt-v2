@@ -1,9 +1,8 @@
 package drt.client.components.charts
 
-
-import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet, ChartJsOptions, ChartJsProps}
+import drt.client.components.ChartJSComponent.{ ChartJsData, ChartJsDataSet, ChartJsOptions, ChartJsProps }
 import drt.client.components.charts.DataFormat.jsonString
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 import scala.scalajs.js
 import scala.scalajs.js.JSON
@@ -19,7 +18,7 @@ object ChartPropsSpec extends TestSuite {
         borderColor = "rgba(255,99,132,1)",
         borderWidth = 1,
         hoverBackgroundColor = "rgba(255,99,132,0.4)",
-        hoverBorderColor = "rgba(255,99,132,1)",
+        hoverBorderColor = "rgba(255,99,132,1)"
       )
 
       val result = dataSet.toJs
@@ -58,12 +57,15 @@ object ChartPropsSpec extends TestSuite {
             |            "align": "end"
             |        }
             |    }
-            |}""".stripMargin)
+            |}""".stripMargin
+        )
 
       assert(jsonString(result) == jsonString(expected))
     }
 
-    test("Given just some data and labels, then the ChartJSData apply shortcut should create the relevant datasets for me") {
+    test(
+      "Given just some data and labels, then the ChartJSData apply shortcut should create the relevant datasets for me"
+    ) {
       val data = ChartJsData(Seq("one", "two", "three"), Seq(10.0, 1.0, 10.0), "title", "line")
       val result = data.toJs
 
@@ -79,7 +81,8 @@ object ChartPropsSpec extends TestSuite {
             |        }
             |    ],
             |    "labels": [ "one", "two", "three" ]
-            |}""".stripMargin)
+            |}""".stripMargin
+        )
 
       assert(jsonString(result) == jsonString(expected))
     }
@@ -134,7 +137,8 @@ object ChartPropsSpec extends TestSuite {
             |    "options": {},
             |    "width": 300,
             |    "height": 150
-            |}""".stripMargin)
+            |}""".stripMargin
+        )
 
       val resultJson = jsonString(result)
       val expectedJson = jsonString(expected)
@@ -143,4 +147,3 @@ object ChartPropsSpec extends TestSuite {
   }
 
 }
-

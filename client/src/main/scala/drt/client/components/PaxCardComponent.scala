@@ -1,6 +1,6 @@
 package drt.client.components
 import japgolly.scalajs.react.vdom.VdomElement
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 
 import scala.scalajs.js
 import scala.scalajs.js.Date
@@ -32,7 +32,7 @@ trait IPaxCard extends js.Object {
 }
 
 object IPaxCard {
-  def apply(queues: Seq[PortQueue], timeRange: String, startTime : Date, endTime: Date, key: String): IPaxCard = {
+  def apply(queues: Seq[PortQueue], timeRange: String, startTime: Date, endTime: Date, key: String): IPaxCard = {
     val p = (new js.Object).asInstanceOf[IPaxCard]
     p.queues = queues.toJSArray
     p.timeRange = timeRange

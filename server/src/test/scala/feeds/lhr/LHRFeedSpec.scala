@@ -1,13 +1,13 @@
 package feeds.lhr
 
 import org.apache.pekko.pattern.pipe
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
-import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import drt.server.feeds.lhr.{ LHRFlightFeed, LHRLiveFlight }
+import org.apache.commons.csv.{ CSVFormat, CSVParser, CSVRecord }
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T4 }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await
@@ -55,7 +55,7 @@ class LHRFeedSpec extends CrunchTestLike {
             stand = Option("10"),
             maxPax = Option(795),
             runway = None,
-            baggageReclaim = None,
+            baggageReclaim = None
           )
         )
       )
@@ -100,7 +100,7 @@ class LHRFeedSpec extends CrunchTestLike {
             stand = Option("10"),
             maxPax = Option(0),
             runway = None,
-            baggageReclaim = None,
+            baggageReclaim = None
           )
         )
       )
@@ -115,7 +115,6 @@ class LHRFeedSpec extends CrunchTestLike {
       val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
       val csvGetters: Iterator[Int => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
       val lhrFeed = LHRFlightFeed(csvGetters)
-
 
       val probe = TestProbe()
       val flightsSource = Source(List(lhrFeed.copiedToApiFlights))
@@ -132,15 +131,75 @@ class LHRFeedSpec extends CrunchTestLike {
     }
 
     "should consistently return the same flightid for the same flight" in {
-      val flightV1 = LHRLiveFlight(T1, "SA123", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
-      val flightV2 = LHRLiveFlight(T1, "SA123", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
+      val flightV1 = LHRLiveFlight(
+        T1,
+        "SA123",
+        "SAA",
+        "JHB",
+        "LHR",
+        org.joda.time.DateTime.parse("2017-01-01T20:00:00z"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+      )
+      val flightV2 = LHRLiveFlight(
+        T1,
+        "SA123",
+        "SAA",
+        "JHB",
+        "LHR",
+        org.joda.time.DateTime.parse("2017-01-01T20:00:00z"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+      )
 
       flightV1.flightId() === flightV2.flightId()
     }
 
     "should not return the same flightid for different flights" in {
-      val flightv1 = LHRLiveFlight(T1, "SA324", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
-      val flightv2 = LHRLiveFlight(T1, "SA123", "SAA", "JHB", "LHR", org.joda.time.DateTime.parse("2017-01-01T20:00:00z"), None, None, None, None, None, None, None, None)
+      val flightv1 = LHRLiveFlight(
+        T1,
+        "SA324",
+        "SAA",
+        "JHB",
+        "LHR",
+        org.joda.time.DateTime.parse("2017-01-01T20:00:00z"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+      )
+      val flightv2 = LHRLiveFlight(
+        T1,
+        "SA123",
+        "SAA",
+        "JHB",
+        "LHR",
+        org.joda.time.DateTime.parse("2017-01-01T20:00:00z"),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+      )
 
       flightv1.flightId() !== flightv2.flightId()
     }

@@ -8,7 +8,10 @@ import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.ExecutionContext
 
-case class LandingTimesHealthCheck(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed])
-                                  (implicit val ec: ExecutionContext, val mat: Materializer) extends PercentageHealthCheck {
+case class LandingTimesHealthCheck(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed])(
+    implicit
+    val ec: ExecutionContext,
+    val mat: Materializer
+) extends PercentageHealthCheck {
   override val healthyCount: Seq[ApiFlightWithSplits] => Int = _.count(_.apiFlight.Actual.nonEmpty)
 }

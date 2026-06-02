@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode._
-import diode.data.{Pending, Pot}
+import diode.data.{ Pending, Pot }
 import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
@@ -12,9 +12,10 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](now: () => SDateLike,
-                         viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]
-                        ) extends LoggingActionHandler(viewModePortStateMP) {
+class ViewModeHandler[M](
+    now: () => SDateLike,
+    viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]
+) extends LoggingActionHandler(viewModePortStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
@@ -23,7 +24,9 @@ class ViewModeHandler[M](now: () => SDateLike,
       val (currentViewMode, _, _) = value
 
       (newViewMode, currentViewMode) match {
-        case (newVm, oldVm) if newVm.localDate != oldVm.localDate || newVm.maybePointInTime != oldVm.maybePointInTime || value._2.isEmpty =>
+        case (newVm, oldVm)
+            if newVm.localDate != oldVm.localDate || newVm.maybePointInTime != oldVm.maybePointInTime ||
+              value._2.isEmpty =>
           updated((newViewMode, Pending(), 0L), initialRequests(currentViewMode, newViewMode))
         case _ =>
           noChange
@@ -44,7 +47,7 @@ class ViewModeHandler[M](now: () => SDateLike,
     if (!isHistoricView)
       effects + Effect(Future(ClearForecastAccuracy))
     else if (newViewMode.dayStart != currentViewMode.dayStart)
-      effects// + Effect(Future(GetForecastAccuracy(newViewMode.dayStart.toLocalDate)))
+      effects // + Effect(Future(GetForecastAccuracy(newViewMode.dayStart.toLocalDate)))
     else
       effects
   }

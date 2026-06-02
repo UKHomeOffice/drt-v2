@@ -9,11 +9,11 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
 
   val simulation = style(
     padding(15.px),
-    minHeight(550.px),
+    minHeight(550.px)
   )
 
   val simulationCharts = style(
-    padding(15.px),
+    padding(15.px)
   )
 
 }

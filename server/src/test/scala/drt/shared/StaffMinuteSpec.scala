@@ -13,15 +13,18 @@ class StaffMinuteSpec extends Specification {
     val existing = StaffMinute(T1, 0L, shifts, fixedPoints, movements)
     "When shifts are updated" >> {
       val sm = StaffMinute(T1, 0L, shifts + 1, fixedPoints, movements)
-      sm.maybeUpdated(existing, nowMillis) === Option(existing.copy(shifts = shifts + 1, lastUpdated = Option(nowMillis)))
+      sm.maybeUpdated(existing, nowMillis) ===
+        Option(existing.copy(shifts = shifts + 1, lastUpdated = Option(nowMillis)))
     }
     "When fixedPoints are updated" >> {
       val sm = StaffMinute(T1, 0L, shifts, fixedPoints + 1, movements)
-      sm.maybeUpdated(existing, nowMillis) === Option(existing.copy(fixedPoints = fixedPoints + 1, lastUpdated = Option(nowMillis)))
+      sm.maybeUpdated(existing, nowMillis) ===
+        Option(existing.copy(fixedPoints = fixedPoints + 1, lastUpdated = Option(nowMillis)))
     }
     "When movements are updated" >> {
       val sm = StaffMinute(T1, 0L, shifts, fixedPoints, movements + 1)
-      sm.maybeUpdated(existing, nowMillis) === Option(existing.copy(movements = movements + 1, lastUpdated = Option(nowMillis)))
+      sm.maybeUpdated(existing, nowMillis) ===
+        Option(existing.copy(movements = movements + 1, lastUpdated = Option(nowMillis)))
     }
   }
   val staffMinute: StaffMinute = StaffMinute(
@@ -29,7 +32,8 @@ class StaffMinuteSpec extends Specification {
     minute = 0L,
     shifts = 1,
     fixedPoints = 2,
-    movements = 3)
+    movements = 3
+  )
 
   "Given StaffMinutes" >> {
     "When they have the same values `maybeUpdated` should return None" >> {

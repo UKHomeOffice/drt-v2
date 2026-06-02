@@ -21,20 +21,25 @@ class LgwForecastFeedCsvParserSpec extends Specification {
 
     "I should be able to parse it into a list of ForecastArrivals" >> {
       val parser = LgwForecastFeedCsvParser(() => Option(content))
-      parser.parseCsv(content) === (List(
-        ForecastArrival(
-          operator = None,
-          maxPax = Some(174),
-          totalPax = Some(pax),
-          transPax = None,
-          terminal = S,
-          voyageNumber = flightNumber,
-          carrierCode = carrierCode,
-          flightCodeSuffix = None,
-          origin = origin,
-          previousPort = None,
-          scheduled = scheduled.millisSinceEpoch,
-        )), 0)
+      parser.parseCsv(content) ===
+        (
+          List(
+            ForecastArrival(
+              operator = None,
+              maxPax = Some(174),
+              totalPax = Some(pax),
+              transPax = None,
+              terminal = S,
+              voyageNumber = flightNumber,
+              carrierCode = carrierCode,
+              flightCodeSuffix = None,
+              origin = origin,
+              previousPort = None,
+              scheduled = scheduled.millisSinceEpoch
+            )
+          ),
+          0
+        )
     }
   }
 
@@ -47,21 +52,25 @@ class LgwForecastFeedCsvParserSpec extends Specification {
 
     "I should be able to parse it into a list of ForecastArrivals" >> {
       val parser = LgwForecastFeedCsvParser(() => Option(content))
-      parser.parseCsv(content) === (List(
-        ForecastArrival(
-          operator = None,
-          maxPax = Some(174),
-          totalPax = Some(pax),
-          transPax = None,
-          terminal = S,
-          voyageNumber = flightNumber,
-          carrierCode = carrierCode,
-          flightCodeSuffix = None,
-          origin = origin,
-          previousPort = None,
-          scheduled = scheduled.millisSinceEpoch,
-        ),
-      ), 0)
+      parser.parseCsv(content) ===
+        (
+          List(
+            ForecastArrival(
+              operator = None,
+              maxPax = Some(174),
+              totalPax = Some(pax),
+              transPax = None,
+              terminal = S,
+              voyageNumber = flightNumber,
+              carrierCode = carrierCode,
+              flightCodeSuffix = None,
+              origin = origin,
+              previousPort = None,
+              scheduled = scheduled.millisSinceEpoch
+            )
+          ),
+          0
+        )
     }
   }
 }

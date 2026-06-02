@@ -2,22 +2,22 @@ package actors
 
 import actors.PartitionedPortStateActor._
 import actors.routing.FlightsRouterActor
-import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.{ Actor, ActorRef, Props }
 import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.testkit.{ ImplicitSender, TestProbe }
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MinutesContainer, PortStateUpdates, StaffMinute}
-import drt.shared.{FlightUpdatesAndRemovals, PortState, TM}
+import drt.shared.CrunchApi.{ MinutesContainer, PortStateUpdates, StaffMinute }
+import drt.shared.{ FlightUpdatesAndRemovals, PortState, TM }
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.Try
 
 class MockRequestHandler(response: Any) extends Actor {
@@ -34,14 +34,16 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a queue minutes requester with a mock queues actor" >> {
     "When the mock is set to return an empty CrunchMinute MinutesContainer" >> {
-      val requestQueueMinutes: QueueMinutesRequester = PartitionedPortStateActor.requestQueueMinutesFn(mockResponseActor(emptyQueueMinutes))
+      val requestQueueMinutes: QueueMinutesRequester =
+        PartitionedPortStateActor.requestQueueMinutesFn(mockResponseActor(emptyQueueMinutes))
       "Then I should see the empty container in the future" >> {
         val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second)
         result === emptyQueueMinutes
       }
     }
     "When the mock is set to return an a non-MinutesContainer" >> {
-      val requestQueueMinutes: QueueMinutesRequester = PartitionedPortStateActor.requestQueueMinutesFn(mockResponseActor(List()))
+      val requestQueueMinutes: QueueMinutesRequester =
+        PartitionedPortStateActor.requestQueueMinutesFn(mockResponseActor(List()))
       "Then I should see an exception in the future" >> {
         val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second))
         result.isFailure === true
@@ -51,14 +53,16 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a staff minutes requester with a mock staff actor" >> {
     "When the mock is set to return an empty StaffMinute MinutesContainer" >> {
-      val requestQueueMinutes: StaffMinutesRequester = PartitionedPortStateActor.requestStaffMinutesFn(mockResponseActor(emptyStaffMinutes))
+      val requestQueueMinutes: StaffMinutesRequester =
+        PartitionedPortStateActor.requestStaffMinutesFn(mockResponseActor(emptyStaffMinutes))
       "Then I should see the empty container in the future" >> {
         val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second)
         result === emptyStaffMinutes
       }
     }
     "When the mock is set to return an a non-MinutesContainer" >> {
-      val requestQueueMinutes: StaffMinutesRequester = PartitionedPortStateActor.requestStaffMinutesFn(mockResponseActor(List()))
+      val requestQueueMinutes: StaffMinutesRequester =
+        PartitionedPortStateActor.requestStaffMinutesFn(mockResponseActor(List()))
       "Then I should see an exception in the future" >> {
         val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second))
         result.isFailure === true
@@ -68,9 +72,11 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a flights requester with a mock flights actor" >> {
     "When the mock is set to return an empty FlightsWithSplits" >> {
-      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List((UtcDate(2021, 8, 8), emptyFlights)))))
+      val requestQueueMinutes: FlightsRequester =
+        PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List((UtcDate(2021, 8, 8), emptyFlights)))))
       "Then I should see the empty container in the future" >> {
-        val eventualResult: Future[FlightsWithSplits] = FlightsRouterActor.runAndCombine(requestQueueMinutes(GetStateForDateRange(0L, 0L)))
+        val eventualResult: Future[FlightsWithSplits] =
+          FlightsRouterActor.runAndCombine(requestQueueMinutes(GetStateForDateRange(0L, 0L)))
         val result = Await.result(eventualResult, 1.second)
         result === emptyFlights
       }
@@ -110,7 +116,8 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
       "Then I should see an Option of PortStateUpdates send with the update and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
-        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
+        val updatesAndRemovals =
+          FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
         expectMsg(Option(PortStateUpdates(updatedMillis, 0L, 0L, updatesAndRemovals, Seq(), Seq())))
         success
       }
@@ -130,8 +137,16 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
-        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
-        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, maxUpdatedMillis, 0L, updatesAndRemovals, Seq(updatedQueueMinute), Seq())))
+        val updatesAndRemovals =
+          FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
+        expectMsg(Option(PortStateUpdates(
+          maxUpdatedMillis,
+          maxUpdatedMillis,
+          0L,
+          updatesAndRemovals,
+          Seq(updatedQueueMinute),
+          Seq()
+        )))
         success
       }
     }
@@ -151,8 +166,16 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
-        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
-        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, 50L, maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq(updatedStaffMinute))))
+        val updatesAndRemovals =
+          FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
+        expectMsg(Option(PortStateUpdates(
+          maxUpdatedMillis,
+          50L,
+          maxUpdatedMillis,
+          updatesAndRemovals,
+          Seq(updatedQueueMinute),
+          Seq(updatedStaffMinute)
+        )))
         success
       }
     }
@@ -174,7 +197,11 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
     "Given a replyWithPortState function with mock requesters returning some data" >> {
       "When I ask to reply with the PortState" >> {
-        val flight = ApiFlightWithSplits(ArrivalGenerator.live("BA0001").toArrival(LiveFeedSource), Set(), lastUpdated = Option(10L))
+        val flight = ApiFlightWithSplits(
+          ArrivalGenerator.live("BA0001").toArrival(LiveFeedSource),
+          Set(),
+          lastUpdated = Option(10L)
+        )
         val queueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(50L))
         val staffMinute = StaffMinute(T1, 0L, 0, 0, 0, lastUpdated = Option(75L))
         val flights = FlightsWithSplits(Seq(flight))
@@ -191,18 +218,22 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     }
   }
 
-  private def makeReplyWithUpdates(flights: FlightUpdatesAndRemovals,
-                                   queues: MinutesContainer[CrunchMinute, TQM],
-                                   staff: MinutesContainer[StaffMinute, TM]): PortStateUpdatesRequester = {
+  private def makeReplyWithUpdates(
+      flights: FlightUpdatesAndRemovals,
+      queues: MinutesContainer[CrunchMinute, TQM],
+      staff: MinutesContainer[StaffMinute, TM]
+  ): PortStateUpdatesRequester = {
     val mockFlightsRequester = (_: PortStateRequest) => Future(flights)
     val mockQueuesRequester = (_: PortStateRequest) => Future(queues)
     val mockStaffRequester = (_: PortStateRequest) => Future(staff)
     PartitionedPortStateActor.replyWithUpdatesFn(mockFlightsRequester, mockQueuesRequester, mockStaffRequester)
   }
 
-  private def makeReplyWithPortState(flights: FlightsWithSplits,
-                                     queues: MinutesContainer[CrunchMinute, TQM],
-                                     staff: MinutesContainer[StaffMinute, TM]): PortStateRequester = {
+  private def makeReplyWithPortState(
+      flights: FlightsWithSplits,
+      queues: MinutesContainer[CrunchMinute, TQM],
+      staff: MinutesContainer[StaffMinute, TM]
+  ): PortStateRequester = {
     val mockFlightsRequester = (_: PortStateRequest) => Future(Source(List((UtcDate(2020, 1, 1), flights))))
     val mockQueuesRequester = (_: PortStateRequest) => Future(queues)
     val mockStaffRequester = (_: PortStateRequest) => Future(staff)

@@ -2,7 +2,7 @@ package actors.daily
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.PaxCountMessage
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 class PassengersActorSpec extends Specification {

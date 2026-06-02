@@ -2,20 +2,23 @@ package services.workload
 
 import scala.annotation.tailrec
 
-
 case class QueuePassenger(load: Int, joinTime: Int)
 
 object QueuePassenger {
   def apply(load: Int): QueuePassenger = QueuePassenger(load, 0)
 }
 
-
 object QueueProcessor {
   @tailrec
-  def applyCapacity(minute: Int, capacitySeconds: Int, queue: List[QueuePassenger], waitTime: Int = 0): (List[QueuePassenger], Int) = {
+  def applyCapacity(
+      minute: Int,
+      capacitySeconds: Int,
+      queue: List[QueuePassenger],
+      waitTime: Int = 0
+  ): (List[QueuePassenger], Int) = {
     def calcWaitTime(previousWaitTime: Int, joinTime: Int): Int = minute - joinTime match {
       case x if x > previousWaitTime => x
-      case _ => previousWaitTime
+      case _                         => previousWaitTime
     }
 
     queue match {
@@ -39,13 +42,17 @@ object QueueProcessor {
     }
   }
 
-  def processQueue(capacityMinutes: IndexedSeq[List[Int]], paxLoadMinutes: Seq[List[QueuePassenger]]): (List[QueuePassenger], List[Int], List[Int]) = {
-    val (queue, waitTimes, queueSizes) = paxLoadMinutes.zipWithIndex.foldLeft((List.empty[QueuePassenger], List.empty[Int], List.empty[Int])) {
-      case ((incomingPax, previousWaits, previousQueueSizes), (incoming, minute)) =>
-        val startQueueForMinute = incomingPax ::: incoming.map(_.copy(joinTime = minute))
-        val (endQueueForMinute, maxWait) = applyCapacity(minute, capacityMinutes(minute).sum, startQueueForMinute)
-        (endQueueForMinute, maxWait :: previousWaits, endQueueForMinute.size :: previousQueueSizes)
-    }
+  def processQueue(
+      capacityMinutes: IndexedSeq[List[Int]],
+      paxLoadMinutes: Seq[List[QueuePassenger]]
+  ): (List[QueuePassenger], List[Int], List[Int]) = {
+    val (queue, waitTimes, queueSizes) =
+      paxLoadMinutes.zipWithIndex.foldLeft((List.empty[QueuePassenger], List.empty[Int], List.empty[Int])) {
+        case ((incomingPax, previousWaits, previousQueueSizes), (incoming, minute)) =>
+          val startQueueForMinute = incomingPax ::: incoming.map(_.copy(joinTime = minute))
+          val (endQueueForMinute, maxWait) = applyCapacity(minute, capacityMinutes(minute).sum, startQueueForMinute)
+          (endQueueForMinute, maxWait :: previousWaits, endQueueForMinute.size :: previousQueueSizes)
+      }
     (queue, waitTimes.reverse, queueSizes.reverse)
   }
 }

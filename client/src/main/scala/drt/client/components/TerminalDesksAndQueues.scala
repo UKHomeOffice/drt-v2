@@ -2,32 +2,32 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType}
-import drt.client.actions.Actions.{RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation}
+import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType }
+import drt.client.actions.Actions.{ RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation }
 import drt.client.components.ToolTips._
-import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.handlers.UpdateUserPreferences
-import drt.client.services.{SPACircuit, StaffMovementMinute, ViewMode}
+import drt.client.services.{ SPACircuit, StaffMovementMinute, ViewMode }
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiTypography }
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import org.scalajs.dom.{DOMList, Node}
-import org.scalajs.dom.html.{Div, TableCell}
+import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, ScalaComponent }
+import org.scalajs.dom.{ DOMList, Node }
+import org.scalajs.dom.html.{ Div, TableCell }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
-import uk.gov.homeoffice.drt.models.{CrunchMinute, UserPreferences}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, UserPreferences }
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, Queue, Transfer }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, Queues }
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -44,25 +44,26 @@ object TerminalDesksAndQueues {
 
   def queueActualsColour(queue: Queue): String = s"${queueColour(queue)} actuals"
 
-  case class Props(router: RouterCtl[Loc],
-                   viewStart: SDateLike,
-                   hoursToView: Int,
-                   airportConfig: AirportConfig,
-                   slaConfigs: Pot[SlaConfigs],
-                   terminalPageTab: TerminalPageTabLoc,
-                   showActuals: Boolean,
-                   viewMode: ViewMode,
-                   loggedInUser: LoggedInUser,
-                   featureFlags: FeatureFlags,
-                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
-                   windowStaffRecs: Pot[Map[Long, Int]],
-                   windowStaffDeps: Pot[Map[Long, Option[Int]]],
-                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
-                   windowStaffSummaries: Pot[Map[Long, StaffMinute]],
-                   addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
-                   terminal: Terminal,
-                   userPreferences: UserPreferences
-                  ) extends UseValueEq
+  case class Props(
+      router: RouterCtl[Loc],
+      viewStart: SDateLike,
+      hoursToView: Int,
+      airportConfig: AirportConfig,
+      slaConfigs: Pot[SlaConfigs],
+      terminalPageTab: TerminalPageTabLoc,
+      showActuals: Boolean,
+      viewMode: ViewMode,
+      loggedInUser: LoggedInUser,
+      featureFlags: FeatureFlags,
+      windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
+      windowStaffRecs: Pot[Map[Long, Int]],
+      windowStaffDeps: Pot[Map[Long, Option[Int]]],
+      dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
+      windowStaffSummaries: Pot[Map[Long, StaffMinute]],
+      addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
+      terminal: Terminal,
+      userPreferences: UserPreferences
+  ) extends UseValueEq
 
   sealed trait DeskType {
     val queryParamsValue: String
@@ -100,7 +101,13 @@ object TerminalDesksAndQueues {
     override val queryParamsValue: String = "quarterly"
   }
 
-  case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, timeInterval: TimeInterval, showWaitColumn: Boolean) extends UseValueEq
+  case class State(
+      showActuals: Boolean,
+      deskType: DeskType,
+      displayType: DisplayType,
+      timeInterval: TimeInterval,
+      showWaitColumn: Boolean
+  ) extends UseValueEq
 
   class Backend() {
     def render(props: Props, state: State): VdomTagOf[Div] = {
@@ -109,7 +116,7 @@ object TerminalDesksAndQueues {
       def deskUnitLabel(queue: Queue): String = {
         queue match {
           case EGate => "Banks"
-          case _ => "Desks"
+          case _     => "Desks"
         }
       }
 
@@ -117,13 +124,17 @@ object TerminalDesksAndQueues {
 
       val startDate = props.viewStart.toLocalDate
       val endDate = props.viewStart.addHours(props.hoursToView).toLocalDate
-      val queues = QueueConfig.queuesForDateRangeAndTerminal(props.airportConfig.queuesByTerminal)(startDate, endDate, props.terminal)
+      val queues = QueueConfig.queuesForDateRangeAndTerminal(props.airportConfig.queuesByTerminal)(
+        startDate,
+        endDate,
+        props.terminal
+      )
 
       def stacked(label: String, tooltip: VdomNode): VdomTagOf[Div] =
         <.div(
           ^.className := "subheading-with-tooltip",
           <.div(^.className := "subheading-label", label),
-          <.div(^.className := "subheading-tooltip", tooltip),
+          <.div(^.className := "subheading-tooltip", tooltip)
         )
 
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
@@ -132,8 +143,9 @@ object TerminalDesksAndQueues {
         val headings = state.deskType match {
           case Deployments =>
             val h = List(<.th(
-              stacked(s"${deskUnitLabel(queueName)}", depBanksOrDesksTip(queueName)), ^.className := queueColumnClass)
-            )
+              stacked(s"${deskUnitLabel(queueName)}", depBanksOrDesksTip(queueName)),
+              ^.className := queueColumnClass
+            ))
             if (showWaitColumn)
               h :+ <.th(stacked("Wait", estWaitTooltip), ^.className := queueColumnClass)
             else
@@ -148,32 +160,43 @@ object TerminalDesksAndQueues {
 
         if (props.airportConfig.hasActualDeskStats && state.showActuals)
           headings ++ List(
-            <.th(Tippy.describe("actual-desks-used", <.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"), ^.className := queueColumnActualsClass),
-            <.th(Tippy.describe("actual-wait-times", <.span("Actual wait times"), "Act wait"), ^.className := queueColumnActualsClass))
+            <.th(
+              Tippy.describe("actual-desks-used", <.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"),
+              ^.className := queueColumnActualsClass
+            ),
+            <.th(
+              Tippy.describe("actual-wait-times", <.span("Actual wait times"), "Act wait"),
+              ^.className := queueColumnActualsClass
+            )
+          )
         else headings
       }
 
       def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
         val queueSubHeadings = queueNames.flatMap { queueName =>
-          <.th(^.className := queueColour(queueName), stacked("Incoming pax", paxBanksOrDesksTip(queueName))) :: staffDeploymentSubheadings(queueName, showWaitColumn)
+          <.th(^.className := queueColour(queueName), stacked("Incoming pax", paxBanksOrDesksTip(queueName))) ::
+            staffDeploymentSubheadings(queueName, showWaitColumn)
         }.toTagMod
 
-        List(queueSubHeadings,
+        List(
+          queueSubHeadings,
           <.th(^.className := "total-deployed", stacked("Misc", miscTooltip)),
           <.th(^.className := "total-deployed", stacked("Moves", movesTooltip)),
           <.th(^.className := "total-deployed", stacked("Required", pcpStaffRecommended(state.deskType))),
           <.th(^.className := "total-deployed", stacked("Deployed", pcpStaffDeployed(state.deskType))),
-          <.th(^.className := "total-deployed", stacked("Available", availTooltip), ^.colSpan := 2))
+          <.th(^.className := "total-deployed", stacked("Available", availTooltip), ^.colSpan := 2)
+        )
       }
 
-      def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
+      def qth(queue: Queue, xs: TagMod*) =
+        <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
 
       val queueHeadings: List[TagMod] = queues.map(queue => {
         val colsToSpan = (state.showWaitColumn, state.showActuals) match {
-          case (true, true) => 5
-          case (false, true) => 4
+          case (true, true)   => 5
+          case (false, true)  => 4
           case (false, false) => 2
-          case (_, _) => 3
+          case (_, _)         => 3
         }
         qth(queue, queueDisplayName(queue.toString), ^.colSpan := colsToSpan, ^.className := "top-heading")
       }).toList
@@ -190,12 +213,18 @@ object TerminalDesksAndQueues {
         )
       }
 
-       def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) =>  Callback{
-        e.preventDefault()
-         GoogleEventTracker.sendEvent(s"$terminal", s"Select ${timeInterval.queryParamsValue} interval", timeInterval.toString)
-         SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes = if (timeInterval == Hourly) 60 else 15)))
-       }
-
+      def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) =>
+        Callback {
+          e.preventDefault()
+          GoogleEventTracker.sendEvent(
+            s"$terminal",
+            s"Select ${timeInterval.queryParamsValue} interval",
+            timeInterval.toString
+          )
+          SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes =
+            if (timeInterval == Hourly) 60 else 15
+          )))
+        }
 
       def toggleDisplayType(newDisplayType: DisplayType) = (e: ReactEventFromInput) => {
         e.preventDefault()
@@ -215,42 +244,87 @@ object TerminalDesksAndQueues {
 
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
         val deskTypeControls = List(
-          <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.deskType == Recommended, ^.onChange ==> toggleDeskType(Recommended), ^.id := "show-recs"),
+          <.div(
+            ^.className := s"controls-radio-wrapper",
+            <.input.radio(
+              ^.checked := state.deskType == Recommended,
+              ^.onChange ==> toggleDeskType(Recommended),
+              ^.id := "show-recs"
+            ),
             <.label(^.`for` := "show-recs", "Recommended", " ", recommendationsTooltip)
           ),
-          <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.deskType == Deployments, ^.onChange ==> toggleDeskType(Deployments), ^.id := "show-deps"),
+          <.div(
+            ^.className := s"controls-radio-wrapper",
+            <.input.radio(
+              ^.checked := state.deskType == Deployments,
+              ^.onChange ==> toggleDeskType(Deployments),
+              ^.id := "show-deps"
+            ),
             <.label(^.`for` := "show-deps", "Available", " ", availableStaffDeploymentsTooltip)
-          ))
+          )
+        )
 
         val displayTypeControls = List(
-          <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.displayType == TableView, ^.onChange ==> toggleDisplayType(TableView), ^.id := "display-table"),
+          <.div(
+            ^.className := s"controls-radio-wrapper",
+            <.input.radio(
+              ^.checked := state.displayType == TableView,
+              ^.onChange ==> toggleDisplayType(TableView),
+              ^.id := "display-table"
+            ),
             <.label(^.`for` := "display-table", "Table")
           ),
-          <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.displayType == ChartsView, ^.onChange ==> toggleDisplayType(ChartsView), ^.id := "display-charts"),
+          <.div(
+            ^.className := s"controls-radio-wrapper",
+            <.input.radio(
+              ^.checked := state.displayType == ChartsView,
+              ^.onChange ==> toggleDisplayType(ChartsView),
+              ^.id := "display-charts"
+            ),
             <.label(^.`for` := "display-charts", "Chart")
-          ))
-
+          )
+        )
 
         val displayIntervalControls = List(
-          <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.timeInterval == Quarterly, ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Quarterly)), ^.id := "display-quaterly-interval"),
+          <.div(
+            ^.className := s"controls-radio-wrapper",
+            <.input.radio(
+              ^.checked := state.timeInterval == Quarterly,
+              ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Quarterly)),
+              ^.id := "display-quaterly-interval"
+            ),
             <.label(^.`for` := "display-quaterly-interval", "15 minute")
           ),
-          <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.timeInterval == Hourly, ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Hourly)), ^.id := "display-hourly-interval"),
+          <.div(
+            ^.className := s"controls-radio-wrapper",
+            <.input.radio(
+              ^.checked := state.timeInterval == Hourly,
+              ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Hourly)),
+              ^.id := "display-hourly-interval"
+            ),
             <.label(^.`for` := "display-hourly-interval", "Hour")
-          ))
+          )
+        )
 
-        <.div(^.className := "view-controls",
-          <.div(^.className := "view-controls-label", "Staffing", <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)),
+        <.div(
+          ^.className := "view-controls",
+          <.div(
+            ^.className := "view-controls-label",
+            "Staffing",
+            <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)
+          ),
           <.span(^.className := "separator"),
-          <.div(^.className := "view-controls-label", "View", <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)),
+          <.div(
+            ^.className := "view-controls-label",
+            "View",
+            <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)
+          ),
           <.span(^.className := "separator"),
-          <.div(^.className := "view-controls-label", "Time interval", <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)),
+          <.div(
+            ^.className := "view-controls-label",
+            "Time interval",
+            <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)
+          )
         )
       }
 
@@ -263,9 +337,11 @@ object TerminalDesksAndQueues {
           dayCrunchMinutes <- props.dayCrunchSummaries
           slaConfigs <- props.slaConfigs
         } yield {
-          val slas = slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
+          val slas =
+            slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
           val interval = if (state.timeInterval == Hourly) 60 else 15
-          val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by interval * 60000
+          val viewMinutes = props.viewStart.millisSinceEpoch until
+            (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by interval * 60000
 
           val maxPaxInQueues: Map[Queue, Int] = windowCrunchMinutes
             .toList
@@ -281,57 +357,76 @@ object TerminalDesksAndQueues {
             }
             .view.mapValues(_.map(_._2).max).toMap
 
-          <.div(^.className := "desks-queues-title",
+          <.div(
+            ^.className := "desks-queues-title",
             MuiTypography(variant = "h2")(s"Desks and queues"),
             StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
-            <.p(^.id := "desk-queues-description", "Estimated queue pressure based on incoming passengers and staff availability"),
-            <.div(^.className := "desks-and-queues-top",
+            <.p(
+              ^.id := "desk-queues-description",
+              "Estimated queue pressure based on incoming passengers and staff availability"
+            ),
+            <.div(
+              ^.className := "desks-and-queues-top",
               ^.aria.labelledBy := "desk-queues-description",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
-              if (props.loggedInUser.hasRole(SuperAdmin)) <.div(^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
+              if (props.loggedInUser.hasRole(SuperAdmin)) <.div(
+                ^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
                 adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
-                adminRecalcButton(requestPaxLoadsRecalculation, "Recalc Pax Loads"),
+                adminRecalcButton(requestPaxLoadsRecalculation, "Recalc Pax Loads")
               )
-              else EmptyVdom,
+              else EmptyVdom
             ),
             if (state.displayType == ChartsView) {
               queues.map { queue =>
                 val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
-                <.div(^.aria.labelledBy := "desk-queues-description",
-                QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), interval, state.deskType))
-              )
+                <.div(
+                  ^.aria.labelledBy := "desk-queues-description",
+                  QueueChartComponent(QueueChartComponent.Props(
+                    queue,
+                    sortedCrunchMinuteSummaries,
+                    slas(queue),
+                    interval,
+                    state.deskType
+                  ))
+                )
               }.toTagMod
             } else {
-                <.table(
-                  ^.aria.labelledBy := "desk-queues-description",
-                  ^.className := s"user-desk-recs table-striped",
-                  <.thead(
-                    ^.className := "sticky-top",
-                    <.tr(<.th(^.className := "solid-background", "") :: headings: _*),
-                    <.tr(<.th("Time", ^.className := "solid-background") :: subHeadingLevel2(queues, state.showWaitColumn): _*)),
-                  <.tbody(
-                    viewMinutes.map { millis =>
-                      val rowProps = TerminalDesksAndQueuesRow.Props(
-                        minuteMillis = millis,
-                        queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
-                        staffRec = windowStaffRecs.getOrElse(millis, 0),
-                        staffDep = windowStaffDeps.getOrElse(millis, None),
-                        staffMinute = staffMinutesWithLocalUpdates(props.addedStaffMovementMinutes, windowStaffMinutes.getOrElse(millis, StaffMinute.empty)),
-                        maxPaxInQueues = maxPaxInQueues,
-                        airportConfig = props.airportConfig,
-                        slaConfigs = props.slaConfigs,
-                        terminal = terminal,
-                        showActuals = state.showActuals,
-                        viewType = state.deskType,
-                        hasActualDeskStats = props.airportConfig.hasActualDeskStats,
-                        viewMode = props.viewMode,
-                        loggedInUser = props.loggedInUser,
-                        slotMinutes = slotMinutes,
-                        showWaitColumn = state.showWaitColumn,
-                        queues = queues,
-                      )
-                      TerminalDesksAndQueuesRow(rowProps)
-                    }.toTagMod)
+              <.table(
+                ^.aria.labelledBy := "desk-queues-description",
+                ^.className := s"user-desk-recs table-striped",
+                <.thead(
+                  ^.className := "sticky-top",
+                  <.tr(<.th(^.className := "solid-background", "") :: headings: _*),
+                  <.tr(<.th("Time", ^.className := "solid-background") ::
+                    subHeadingLevel2(queues, state.showWaitColumn): _*)
+                ),
+                <.tbody(
+                  viewMinutes.map { millis =>
+                    val rowProps = TerminalDesksAndQueuesRow.Props(
+                      minuteMillis = millis,
+                      queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
+                      staffRec = windowStaffRecs.getOrElse(millis, 0),
+                      staffDep = windowStaffDeps.getOrElse(millis, None),
+                      staffMinute = staffMinutesWithLocalUpdates(
+                        props.addedStaffMovementMinutes,
+                        windowStaffMinutes.getOrElse(millis, StaffMinute.empty)
+                      ),
+                      maxPaxInQueues = maxPaxInQueues,
+                      airportConfig = props.airportConfig,
+                      slaConfigs = props.slaConfigs,
+                      terminal = terminal,
+                      showActuals = state.showActuals,
+                      viewType = state.deskType,
+                      hasActualDeskStats = props.airportConfig.hasActualDeskStats,
+                      viewMode = props.viewMode,
+                      loggedInUser = props.loggedInUser,
+                      slotMinutes = slotMinutes,
+                      showWaitColumn = state.showWaitColumn,
+                      queues = queues
+                    )
+                    TerminalDesksAndQueuesRow(rowProps)
+                  }.toTagMod
+                )
               )
             }
           )
@@ -341,19 +436,27 @@ object TerminalDesksAndQueues {
     }
   }
 
-  def staffMinutesWithLocalUpdates(addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]], staffMinute: StaffMinute): StaffMinute =
+  def staffMinutesWithLocalUpdates(
+      addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
+      staffMinute: StaffMinute
+  ): StaffMinute =
     addedStaffMovementMinutes
       .getOrElse(TM(staffMinute), Seq.empty[StaffMovementMinute])
       .filter(_.createdAt > staffMinute.lastUpdated.getOrElse(0L))
       .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
 
   private def adminRecalcButton(requestRecalc: () => Callback, label: String): VdomTagOf[Div] = {
-    <.div(^.className := "re-crunch", MuiButton(
-      variant = "contained",
-      size = "medium",
-      color = Color.secondary,
-    )(^.onClick --> requestRecalc(),
-      label))
+    <.div(
+      ^.className := "re-crunch",
+      MuiButton(
+        variant = "contained",
+        size = "medium",
+        color = Color.secondary
+      )(
+        ^.onClick --> requestRecalc(),
+        label
+      )
+    )
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
@@ -364,9 +467,10 @@ object TerminalDesksAndQueues {
         displayType = p.terminalPageTab.displayAs,
         timeInterval = p.userPreferences.desksAndQueuesIntervalMinutes match {
           case 60 => Hourly
-          case _ => Quarterly
+          case _  => Quarterly
         },
-        showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
+        showWaitColumn = !p.featureFlags.displayWaitTimesToggle
+      )
     }
     .renderBackend[Backend]
     .build

@@ -2,22 +2,22 @@ package services.liveviews
 
 import controllers.ArrivalGenerator
 import drt.shared.CodeShares
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{ MinutesContainer, PassengersMinute }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, VoyageNumber }
 import uk.gov.homeoffice.drt.db.tables.PassengersHourlyRow
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.ports.{ AclFeedSource, PortCode }
+import uk.gov.homeoffice.drt.time.{ SDate, UtcDate }
 
 import java.sql.Timestamp
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class PassengersLiveViewTest extends AnyWordSpec with Matchers {
   "minutesContainerToHourlyRow given a container with one minute" should {
@@ -54,7 +54,7 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
           PassengersMinute(T1, EeaDesk, hour2minute1.millisSinceEpoch, Seq.fill(3)(0.5), None),
           PassengersMinute(T1, EeaDesk, hour2minute2.millisSinceEpoch, Seq.fill(3)(0.5), None),
           PassengersMinute(T1, EGate, hour2minute1.millisSinceEpoch, Seq.fill(2)(0.6), None),
-          PassengersMinute(T1, EGate, hour2minute2.millisSinceEpoch, Seq.fill(2)(0.6), None),
+          PassengersMinute(T1, EGate, hour2minute2.millisSinceEpoch, Seq.fill(2)(0.6), None)
         )
       )
 
@@ -66,7 +66,7 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
         PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, "2023-12-21", 15, 10, new Timestamp(0L)),
         PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, "2023-12-21", 20, 6, new Timestamp(0L)),
         PassengersHourlyRow(code.iata, T1.toString, EGate.toString, "2023-12-21", 15, 8, new Timestamp(0L)),
-        PassengersHourlyRow(code.iata, T1.toString, EGate.toString, "2023-12-21", 20, 4, new Timestamp(0L)),
+        PassengersHourlyRow(code.iata, T1.toString, EGate.toString, "2023-12-21", 20, 4, new Timestamp(0L))
       ))
     }
   }
@@ -94,7 +94,7 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
         SDate("2024-06-27T11:58").millisSinceEpoch -> 20,
         SDate("2024-06-27T11:59").millisSinceEpoch -> 20,
         SDate("2024-06-27T12:00").millisSinceEpoch -> 20,
-        SDate("2024-06-27T12:01").millisSinceEpoch -> 5,
+        SDate("2024-06-27T12:01").millisSinceEpoch -> 5
       )
       val result = PassengersLiveView.addMinutePaxToHourAggregates(utcDate, hourly, pcpMinutes)
       result should ===(Map(
@@ -107,13 +107,19 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
 
   "populateMissingMaxPax" should {
     "return the flights with the MaxPax field populated from the baseArrivals" in {
-      val baseArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2024-06-27T12:00", maxPax = Option(85), feedSource = AclFeedSource)
+      val baseArrival = ArrivalGenerator.arrival(
+        iata = "BA0001",
+        schDt = "2024-06-27T12:00",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
       val baseArrivals = ArrivalsState(SortedMap(baseArrival.unique -> baseArrival), AclFeedSource, None)
-      val missingMaxPax = ApiFlightWithSplits(apiFlight = baseArrival.copy(MaxPax = None, Estimated = Option(1L)), Set(), None)
+      val missingMaxPax =
+        ApiFlightWithSplits(apiFlight = baseArrival.copy(MaxPax = None, Estimated = Option(1L)), Set(), None)
       PassengersLiveView.populateMissingMaxPax(
         UtcDate(2024, 6, 27),
         _ => Future.successful(baseArrivals),
-        Iterable(missingMaxPax),
+        Iterable(missingMaxPax)
       ).map { result =>
         result should ===(Iterable(missingMaxPax.apiFlight.copy(MaxPax = Option(85))))
       }
@@ -122,33 +128,58 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
 
   "capacityAndPcpTimes" should {
     "return the capacity and pcp times for the flights" in {
-      val flight1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2024-06-27T12:00", maxPax = Option(85), feedSource = AclFeedSource)
-      val flight2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2024-06-27T12:00", maxPax = Option(85), feedSource = AclFeedSource)
+      val flight1 = ArrivalGenerator.arrival(
+        iata = "BA0001",
+        schDt = "2024-06-27T12:00",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
+      val flight2 = ArrivalGenerator.arrival(
+        iata = "BA0002",
+        schDt = "2024-06-27T12:00",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
       val flights = Iterable(flight1, flight2).map(flight => ApiFlightWithSplits(flight, Set(), None))
       val result = PassengersLiveView.capacityAndPcpTimes(flights)
       result should ===(Iterable(
         (85, SDate(flight1.PcpTime.getOrElse(0L))),
-        (85, SDate(flight2.PcpTime.getOrElse(0L))
-        )))
+        (85, SDate(flight2.PcpTime.getOrElse(0L)))
+      ))
     }
   }
 
   "uniqueFlightsForDate" should {
     "return the unique flights for the date" in {
-      val arrival1 = ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = "2024-06-27T12:00", feedSource = AclFeedSource)
+      val arrival1 = ArrivalGenerator.arrival(
+        iata = "BA0001",
+        origin = PortCode("JFK"),
+        schDt = "2024-06-27T12:00",
+        feedSource = AclFeedSource
+      )
       val codeShare1 = arrival1.copy(VoyageNumber = VoyageNumber(2))
-      val arrival2 = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("CDG"), schDt = "2024-06-27T12:05", maxPax = Option(85),
-        feedSource = AclFeedSource)
+      val arrival2 = ArrivalGenerator.arrival(
+        iata = "BA0003",
+        origin = PortCode("CDG"),
+        schDt = "2024-06-27T12:05",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
 
       val flights = Iterable(arrival1, codeShare1, arrival2).map(flight => ApiFlightWithSplits(flight, Set(), None))
 
-      val baseArrival = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2024-06-27T12:00", maxPax = Option(85), feedSource = AclFeedSource)
+      val baseArrival = ArrivalGenerator.arrival(
+        iata = "BA0002",
+        schDt = "2024-06-27T12:00",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
       val baseArrivals = ArrivalsState(SortedMap(baseArrival.unique -> baseArrival), AclFeedSource, None)
 
       val eventualUniqueFlights = PassengersLiveView.uniqueFlightsForDate(
         _ => Future.successful(flights),
         _ => Future.successful(baseArrivals),
-        CodeShares.uniqueArrivals(List(AclFeedSource), Set()),
+        CodeShares.uniqueArrivals(List(AclFeedSource), Set())
       )
 
       val result = Await.result(eventualUniqueFlights(UtcDate(2024, 6, 27)), 1.second)
@@ -162,24 +193,32 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
 
   "populateCapacityForDate" should {
     "include capacity from flights scheduled the day before that contribute to the pcp on the date in question" in {
-      val flight1 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2024-06-26T23:50", maxPax = Option(85), feedSource = AclFeedSource)
+      val flight1 = ArrivalGenerator.arrival(
+        iata = "BA0002",
+        schDt = "2024-06-26T23:50",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
         .copy(PcpTime = Option(SDate("2024-06-26T23:58").millisSinceEpoch))
-      val flight2 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2024-06-27T12:00", maxPax = Option(85), feedSource = AclFeedSource)
+      val flight2 = ArrivalGenerator.arrival(
+        iata = "BA0001",
+        schDt = "2024-06-27T12:00",
+        maxPax = Option(85),
+        feedSource = AclFeedSource
+      )
       val flights = Map(
         UtcDate(2024, 6, 26) -> Iterable(ApiFlightWithSplits(flight1, Set(), None)),
         UtcDate(2024, 6, 27) -> Iterable(ApiFlightWithSplits(flight2, Set(), None))
       )
 
-      val eventualCapacity = PassengersLiveView.capacityForDate(
-        date => Future.successful(flights(date))
-      )
+      val eventualCapacity = PassengersLiveView.capacityForDate(date => Future.successful(flights(date)))
 
       val result = eventualCapacity(UtcDate(2024, 6, 27))
 
       val expected = Map(
         T1 -> Map(
           0 -> 45,
-          12 -> 85,
+          12 -> 85
         )
       )
 

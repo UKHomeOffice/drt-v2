@@ -3,13 +3,13 @@ package controllers.application
 import drt.http.ProdSendAndReceive
 import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.users.KeyCloakClient
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.Mockito.{ times, verify, when }
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
-import play.api.mvc.{Action, AnyContent, Headers}
+import play.api.mvc.{ Action, AnyContent, Headers }
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
-import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
+import play.api.test.{ FakeRequest, Helpers }
+import uk.gov.homeoffice.drt.auth.Roles.{ ManageUsers, Role }
 
 import scala.concurrent.Future
 
@@ -26,11 +26,12 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.getLoggedInUser().apply(FakeRequest()
-        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+        .withHeaders(
+          "X-Forwarded-Email" -> "test@test.com",
           "X-Forwarded-Preferred-Username" -> "test",
           "X-Forwarded-User" -> "test",
-          "X-Forwarded-Groups" -> "TEST")
-      )
+          "X-Forwarded-Groups" -> "TEST"
+        ))
 
       status(result) mustBe OK
 
@@ -46,7 +47,15 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       val keyCloakClient = mock[KeyCloakClient with ProdSendAndReceive]
 
       when(keyCloakClient.getUsersForEmail("test@test.com"))
-        .thenReturn(Future.successful(Some(KeyCloakUser("test", "test", false, false, "test", "test", "test@test.com"))))
+        .thenReturn(Future.successful(Some(KeyCloakUser(
+          "test",
+          "test",
+          false,
+          false,
+          "test",
+          "test",
+          "test@test.com"
+        ))))
 
       val controller: AuthController = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
         override def getLoggedInUser: Action[AnyContent] = super.getLoggedInUser()
@@ -58,11 +67,12 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.userDetails("test@test.com").apply(FakeRequest()
-        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+        .withHeaders(
+          "X-Forwarded-Email" -> "test@test.com",
           "X-Forwarded-Preferred-Username" -> "test",
           "X-Forwarded-User" -> "test",
-          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}")
-      )
+          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}"
+        ))
 
       status(result) mustBe OK
 
@@ -81,7 +91,8 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
         override def userDetails(email: String): Action[AnyContent] = super.userDetails(email)
 
-        override def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] = super.authByRole(allowedRole)(action)
+        override def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] =
+          super.authByRole(allowedRole)(action)
 
         val action: Action[AnyContent] = Action.async { _ =>
           Future.successful(Ok("Success!"))
@@ -90,11 +101,12 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.authByRole(ManageUsers)(controller.action).apply(FakeRequest()
-        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+        .withHeaders(
+          "X-Forwarded-Email" -> "test@test.com",
           "X-Forwarded-Preferred-Username" -> "test",
           "X-Forwarded-User" -> "test",
-          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}")
-      )
+          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}"
+        ))
 
       status(result) mustBe OK
 
@@ -109,11 +121,12 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.trackUser().apply(FakeRequest()
-        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+        .withHeaders(
+          "X-Forwarded-Email" -> "test@test.com",
           "X-Forwarded-Preferred-Username" -> "test",
           "X-Forwarded-User" -> "test",
-          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}")
-      )
+          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}"
+        ))
 
       status(result) mustBe OK
 

@@ -3,7 +3,6 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import utest._
 
-
 object FlightTimelineTests extends TestSuite {
   def tests = Tests {
     test("TimelineTests") - {

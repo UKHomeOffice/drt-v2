@@ -4,7 +4,7 @@ import drt.shared.Alert
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
 
-class AlertMessageConversionSpec extends Specification{
+class AlertMessageConversionSpec extends Specification {
 
   "Given an alert I should serialise it and deserialise it and get back the same result" >> {
     val created = SDate("2020-01-11T13:00").millisSinceEpoch

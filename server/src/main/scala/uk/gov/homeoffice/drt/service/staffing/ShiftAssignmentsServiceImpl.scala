@@ -3,32 +3,41 @@ package uk.gov.homeoffice.drt.service.staffing
 import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.LegacyShiftAssignmentsActor.UpdateShifts
-import actors.persistent.staffing.{ShiftAssignmentsReadActor, ShiftAssignmentsActor}
-import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
+import actors.persistent.staffing.{ ShiftAssignmentsActor, ShiftAssignmentsReadActor }
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, PoisonPill }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
-import drt.shared.{ShiftAssignments, StaffAssignmentLike}
+import drt.shared.{ ShiftAssignments, StaffAssignmentLike }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
-
+import scala.concurrent.{ ExecutionContext, Future }
 
 object ShiftAssignmentsServiceImpl {
   def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
     val actorName = s"staff-store-read-actor-" + UUID.randomUUID().toString
-    system.actorOf(ShiftAssignmentsReadActor.props(ShiftAssignmentsActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+    system.actorOf(
+      ShiftAssignmentsReadActor.props(
+        ShiftAssignmentsActor.persistenceId,
+        pointInTime,
+        time48HoursAgo(() => pointInTime)
+      ),
+      actorName
+    )
   }
 }
 
-case class ShiftAssignmentsServiceImpl(liveShiftAssignmentsActor: ActorRef,
-                                       shiftAssignmentsSequentialWriteActor: ActorRef,
-                                       pitShiftAssignmentsActor: SDateLike => ActorRef,
-                                     )
-                                      (implicit timeout: Timeout, ec: ExecutionContext) extends ShiftAssignmentsService {
-  override def shiftAssignmentsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
+case class ShiftAssignmentsServiceImpl(
+    liveShiftAssignmentsActor: ActorRef,
+    shiftAssignmentsSequentialWriteActor: ActorRef,
+    pitShiftAssignmentsActor: SDateLike => ActorRef
+)(implicit timeout: Timeout, ec: ExecutionContext) extends ShiftAssignmentsService {
+  override def shiftAssignmentsForDate(
+      date: LocalDate,
+      maybePointInTime: Option[MillisSinceEpoch]
+  ): Future[ShiftAssignments] = {
     maybePointInTime match {
       case None =>
         liveShiftAssignmentsForDate(date)
@@ -73,4 +82,3 @@ case class ShiftAssignmentsServiceImpl(liveShiftAssignmentsActor: ActorRef,
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
 }
-

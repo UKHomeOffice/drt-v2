@@ -2,7 +2,7 @@ package drt.server.feeds.lcy
 
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import org.apache.pekko.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -10,14 +10,15 @@ import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.xml.{NodeSeq, XML}
+import scala.xml.{ NodeSeq, XML }
 
 class LCYFlightTransformSpec extends CrunchTestLike {
   sequential
   isolated
 
   implicit val xmlToResUM: Unmarshaller[NodeSeq, LCYFlightsResponse] = LCYFlightTransform.unmarshaller
-  implicit val resToBHXResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] = LCYFlightTransform.responseToAUnmarshaller
+  implicit val resToBHXResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] =
+    LCYFlightTransform.responseToAUnmarshaller
 
   "Given some flight xml with one flight, I should get get back a list of 1 arrival" >> {
 
@@ -119,7 +120,8 @@ class LCYFlightTransformSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T23:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T23:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -136,8 +138,8 @@ class LCYFlightTransformSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
-
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -154,7 +156,8 @@ class LCYFlightTransformSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -171,7 +174,8 @@ class LCYFlightTransformSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -179,7 +183,6 @@ class LCYFlightTransformSpec extends CrunchTestLike {
 
     result === expected
   }
-
 
   "Given a LCYFlight, I should get an Arrival back with the same fields - we should not use Est Chocks" >> {
     val estimatedOnBlocksTimeString = "2018-09-01T23:05:00.000Z"
@@ -231,7 +234,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       gate = Option("6"),
       stand = Option("55"),
       runway = None,
-      baggageReclaim = None,
+      baggageReclaim = None
     )
 
     result === expected
@@ -256,7 +259,8 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       passengerGate = None,
       seatCapacity = None,
       paxCount = None,
-      codeShares = List.empty)
+      codeShares = List.empty
+    )
 
     val arrival = LCYFlightTransform.lcyFlightToArrival(lcyFlight)
     arrival.voyageNumber === 123 && arrival.flightCodeSuffix === Option("F")

@@ -1,11 +1,10 @@
 package drt.client.modules
 
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.{ CtorType, _ }
 import japgolly.scalajs.react.component.Js.Component
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-
 
 object PopoverWrapper {
 //  @JSName("Popover")
@@ -20,14 +19,17 @@ object PopoverWrapper {
     var className: String = js.native
   }
 
-  def props(trigger: String,
-            position: String = "right",
-            className: String = "flights-popover"): Props = {
+  def props(
+      trigger: String,
+      position: String = "right",
+      className: String = "flights-popover"
+  ): Props = {
     val p = (new js.Object).asInstanceOf[Props]
     p.position = position
     p.trigger = trigger
     p.className = className
     p
   }
-  val component: Component[Props, Null, CtorType.PropsAndChildren] = JsComponent[Props, Children.Varargs, Null](RawComponent)
+  val component: Component[Props, Null, CtorType.PropsAndChildren] =
+    JsComponent[Props, Children.Varargs, Null](RawComponent)
 }

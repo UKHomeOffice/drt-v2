@@ -1,6 +1,6 @@
 package drt.server.feeds.mag
 
-import drt.server.feeds.mag.MagFeed.{FlightNumber, IataIcao, MagArrival}
+import drt.server.feeds.mag.MagFeed.{ FlightNumber, IataIcao, MagArrival }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.arrivals.LiveArrival
@@ -21,11 +21,20 @@ class MagFeedTest extends AnyWordSpec with Matchers {
         gate = Option(MagFeed.Gate("G", "1")),
         stand = Option(MagFeed.Stand(Option("S"), Option("2"), true, None, None)),
         passenger = MagFeed.Passenger(Option(100), Option(150), Option(50), Option(50)),
-        onBlockTime = MagFeed.Timings("2021-01-01T00:00:00Z", Option("2021-01-01T00:05:00Z"), Option("2021-01-01T00:10:00Z")),
-        touchDownTime = MagFeed.Timings("2021-01-01T00:05:00Z", Option("2021-01-01T00:10:00Z"), Option("2021-01-01T00:15:00Z")),
+        onBlockTime =
+          MagFeed.Timings("2021-01-01T00:00:00Z", Option("2021-01-01T00:05:00Z"), Option("2021-01-01T00:10:00Z")),
+        touchDownTime =
+          MagFeed.Timings("2021-01-01T00:05:00Z", Option("2021-01-01T00:10:00Z"), Option("2021-01-01T00:15:00Z")),
         arrivalDate = "2021-01-01",
-        arrival = MagFeed.ArrivalDetails(IataIcao("LHR", "LHR"), "2021-01-01T00:00:00Z", Option("2021-01-01T00:05:00Z"), Option("2021-01-01T00:10:00Z"), Option("t1"), Option("g1")),
-        flightStatus = "Landed",
+        arrival = MagFeed.ArrivalDetails(
+          IataIcao("LHR", "LHR"),
+          "2021-01-01T00:00:00Z",
+          Option("2021-01-01T00:05:00Z"),
+          Option("2021-01-01T00:10:00Z"),
+          Option("t1"),
+          Option("g1")
+        ),
+        flightStatus = "Landed"
       )
 
       MagFeed.toArrival(magArrival) should ===(
@@ -49,7 +58,7 @@ class MagFeedTest extends AnyWordSpec with Matchers {
           gate = Option("G"),
           stand = Option("S"),
           runway = None,
-          baggageReclaim = None,
+          baggageReclaim = None
         )
       )
     }

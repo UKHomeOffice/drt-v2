@@ -1,15 +1,19 @@
 package drt.server.feeds
 
-import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike}
+import drt.shared.{ ShiftAssignments, StaffAssignment, StaffAssignmentLike }
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Shift
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
-import uk.gov.homeoffice.drt.testsystem.{MockShiftAssignmentsService, MockShiftStaffRollingService, MockStaffShiftsService}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.testsystem.{
+  MockShiftAssignmentsService,
+  MockShiftStaffRollingService,
+  MockStaffShiftsService
+}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
@@ -26,10 +30,10 @@ class AutoRollShiftUtilSpec extends Specification {
     endDate must beEqualTo(expectedEnd)
   }
 
-
   "updateShiftDateForRolling should update all shifts to the given start and end dates" >> {
     val originalShifts = Seq(
-      Shift(shiftName = "shift1",
+      Shift(
+        shiftName = "shift1",
         terminal = "T1",
         startDate = SDate("2024-07-01T08:00").toLocalDate,
         startTime = "08:00",
@@ -39,8 +43,10 @@ class AutoRollShiftUtilSpec extends Specification {
         createdBy = None,
         createdAt = 0,
         port = "XYZ",
-        frequency = None),
-      Shift(shiftName = "shift2",
+        frequency = None
+      ),
+      Shift(
+        shiftName = "shift2",
         terminal = "T1",
         startDate = SDate("2024-07-02T09:00").toLocalDate,
         startTime = "11:00",
@@ -50,7 +56,8 @@ class AutoRollShiftUtilSpec extends Specification {
         createdBy = None,
         createdAt = 0,
         port = "XYZ",
-        frequency = None)
+        frequency = None
+      )
     )
     val newStart = LocalDate(2024, 8, 1)
     val newEnd = LocalDate(2024, 8, 31)
@@ -79,11 +86,19 @@ class AutoRollShiftUtilSpec extends Specification {
   "return empty when there are no shift exists when if assignments exists" in {
     val existingShiftAssignments = ShiftAssignments(Map(
       drt.shared.TM(T1, SDate("2024-07-01T08:00").millisSinceEpoch) ->
-        StaffAssignment("shift", T1, SDate("2024-07-01T08:00").millisSinceEpoch, SDate("2024-07-01T08:15").millisSinceEpoch, 2, None)
+        StaffAssignment(
+          "shift",
+          T1,
+          SDate("2024-07-01T08:00").millisSinceEpoch,
+          SDate("2024-07-01T08:15").millisSinceEpoch,
+          2,
+          None
+        )
     ))
     val shiftService = MockStaffShiftsService()
     val shiftStaffRollingService = MockShiftStaffRollingService()
-    val shiftAssignmentsService: ShiftAssignmentsService = MockShiftAssignmentsService(existingShiftAssignments.assignments)
+    val shiftAssignmentsService: ShiftAssignmentsService =
+      MockShiftAssignmentsService(existingShiftAssignments.assignments)
     val previousViewDate = SDate("2024-07-15T08:00")
     val currentDate = SDate("2024-07-26T12:00")
     val monthsToAdd = AutoRollShiftUtil.numberOfMonthsToFill(Some(previousViewDate), currentDate)
@@ -105,17 +120,20 @@ class AutoRollShiftUtilSpec extends Specification {
   "return assignment to rolls when there are shifts for given previous end date present and not assignments present in" in {
     val existingShiftAssignments = ShiftAssignments(Map(
       drt.shared.TM(T1, SDate("2024-07-01T08:00").millisSinceEpoch) ->
-        StaffAssignment("shift",
+        StaffAssignment(
+          "shift",
           T1,
           SDate("2024-07-01T08:00").millisSinceEpoch,
           SDate("2024-07-01T08:15").millisSinceEpoch,
           1,
-          None)
+          None
+        )
     ))
     val shiftService = MockStaffShiftsService()
     val shiftStaffRollingService = MockShiftStaffRollingService()
     val shiftWithNoEndDate = getShift("shift", 1, SDate("2024-07-01T00:00").millisSinceEpoch, None)
-    val shiftAssignmentsService: ShiftAssignmentsService = MockShiftAssignmentsService(existingShiftAssignments.assignments)
+    val shiftAssignmentsService: ShiftAssignmentsService =
+      MockShiftAssignmentsService(existingShiftAssignments.assignments)
     val previousEndDate = SDate("2024-07-15T08:00")
     val currentDate = SDate("2024-06-26T12:00")
     val monthsToAdd = AutoRollShiftUtil.numberOfMonthsToFill(Some(previousEndDate), currentDate)
@@ -136,20 +154,24 @@ class AutoRollShiftUtilSpec extends Specification {
 
     val sortedResult = result.sortBy(_.start)
     sortedResult.head mustEqual
-      StaffAssignment("shift",
+      StaffAssignment(
+        "shift",
         T1,
         SDate("2024-07-01T08:00").millisSinceEpoch,
         SDate("2024-07-01T08:15").millisSinceEpoch,
         1,
-        None)
+        None
+      )
 
     sortedResult.reverse.head mustEqual
-      StaffAssignment("shift",
+      StaffAssignment(
+        "shift",
         T1,
         SDate("2024-12-31T08:45").millisSinceEpoch,
         SDate("2024-12-31T08:59").millisSinceEpoch,
         1,
-        None)
+        None
+      )
 
   }
 

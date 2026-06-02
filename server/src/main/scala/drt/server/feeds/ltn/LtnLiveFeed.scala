@@ -1,6 +1,6 @@
 package drt.server.feeds.ltn
 
-import org.apache.pekko.actor.{ActorSystem, typed}
+import org.apache.pekko.actor.{ typed, ActorSystem }
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model.HttpEntity.Strict
 import org.apache.pekko.http.scaladsl.model._
@@ -8,26 +8,27 @@ import org.apache.pekko.http.scaladsl.model.headers.RawHeader
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTimeZone
-import org.slf4j.{Logger, LoggerFactory}
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
+import org.slf4j.{ Logger, LoggerFactory }
+import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, LiveArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 trait LtnFeedRequestLike {
   def getResponse: () => Future[HttpResponse]
 }
 
-case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)
-                           (implicit system: ActorSystem) extends LtnFeedRequestLike {
+case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)(implicit
+    system: ActorSystem
+) extends LtnFeedRequestLike {
   val request: HttpRequest = HttpRequest(
     method = HttpMethods.GET,
     uri = Uri(endPoint),
@@ -45,7 +46,8 @@ case class LtnFeedRequester(endPoint: String, token: String, username: String, p
 case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone)(implicit materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+      : Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.mapAsync(1) { _ =>
       log.info(s"Requesting feed")
       requestFeed()
@@ -74,9 +76,10 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
 
     entity.toStrict(10.seconds).map {
       case Strict(_, data) =>
-        Try(data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]].filter(_.DepartureArrivalType == Option("A"))) match {
+        Try(data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]].filter(_.DepartureArrivalType ==
+          Option("A"))) match {
           case Success(flights) => ArrivalsFeedSuccess(flights.map(toArrival))
-          case Failure(t) =>
+          case Failure(t)       =>
             log.warn(s"Failed to parse ltn arrivals response", t)
             ArrivalsFeedFailure(t.getMessage)
         }
@@ -101,7 +104,9 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       flightCodeSuffix = suffix.map(_.suffix),
       origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
       previousPort = None,
-      scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
+      scheduled = sdateWithTimeZoneApplied(
+        ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))
+      ),
       estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
       touchdown = ltnFeedFlight.ALDT.map(sdateWithTimeZoneApplied),
       estimatedChox = None,
@@ -110,7 +115,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       gate = ltnFeedFlight.GateCode,
       stand = ltnFeedFlight.StandCode,
       runway = ltnFeedFlight.Runway,
-      baggageReclaim = ltnFeedFlight.BaggageClaimUnit,
+      baggageReclaim = ltnFeedFlight.BaggageClaimUnit
     )
   }
 
@@ -121,28 +126,29 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
   }
 }
 
-case class LtnLiveFlight(TotalPassengerCount: Option[Int],
-                         AirlineIATA: Option[String],
-                         FlightStatus: Option[String],
-                         FlightNumber: Option[String],
-                         OriginDestAirportICAO: Option[String],
-                         TerminalCode: Option[String],
-                         DepartureArrivalType: Option[String],
-                         ScheduledDateTime: Option[String],
-                         Runway: Option[String],
-                         StandCode: Option[String],
-                         PaxTransfer: Option[Int],
-                         BaggageClaimUnit: Option[String],
-                         EstimatedDateTime: Option[String],
-                         GateCode: Option[String],
-                         AirlineICAO: Option[String],
-                         FlightStatusDesc: Option[String],
-                         AirlineDesc: Option[String],
-                         MaxPax: Option[Int],
-                         AIBT: Option[String],
-                         ALDT: Option[String],
-                         OriginDestAirportIATA: Option[String]
-                        )
+case class LtnLiveFlight(
+    TotalPassengerCount: Option[Int],
+    AirlineIATA: Option[String],
+    FlightStatus: Option[String],
+    FlightNumber: Option[String],
+    OriginDestAirportICAO: Option[String],
+    TerminalCode: Option[String],
+    DepartureArrivalType: Option[String],
+    ScheduledDateTime: Option[String],
+    Runway: Option[String],
+    StandCode: Option[String],
+    PaxTransfer: Option[Int],
+    BaggageClaimUnit: Option[String],
+    EstimatedDateTime: Option[String],
+    GateCode: Option[String],
+    AirlineICAO: Option[String],
+    FlightStatusDesc: Option[String],
+    AirlineDesc: Option[String],
+    MaxPax: Option[Int],
+    AIBT: Option[String],
+    ALDT: Option[String],
+    OriginDestAirportIATA: Option[String]
+)
 
 object LtnLiveFlightProtocol extends DefaultJsonProtocol {
   implicit val ltnLiveFlightConverter: RootJsonFormat[LtnLiveFlight] = jsonFormat21(LtnLiveFlight)

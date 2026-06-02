@@ -7,17 +7,17 @@ import com.google.inject.Inject
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.Roles.CreateAlerts
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class AlertsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class AlertsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getAlerts(createdAfter: MillisSinceEpoch): Action[AnyContent] = Action.async { _ =>
     val eventualAlerts: Future[Seq[Alert]] = for {
@@ -33,7 +33,8 @@ class AlertsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
       request.body.asText match {
         case Some(text) =>
           val alert: Alert = read[Alert](text)
-          (ctrl.applicationService.alertsActor ? Alert(alert.title, alert.message, alert.alertClass, alert.expires, createdAt = DateTime.now.getMillis))
+          (ctrl.applicationService.alertsActor ?
+            Alert(alert.title, alert.message, alert.alertClass, alert.expires, createdAt = DateTime.now.getMillis))
             .mapTo[Alert]
             .map { alert =>
               Ok(s"$alert added!")

@@ -7,36 +7,35 @@ import drt.shared._
 import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2, Terminal }
+import uk.gov.homeoffice.drt.ports.{ PaxTypeAndQueue, Queues }
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.concurrent.duration._
-
 
 class CrunchTimezoneSpec extends CrunchTestLike {
   "Crunch timezone " >> {
     "Given an SDateLike for a date outside BST" +
       "When I ask for a corresponding crunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
-      val now = SDate("2010-01-02T11:39", europeLondonTimeZone)
+        val now = SDate("2010-01-02T11:39", europeLondonTimeZone)
 
-      val result = now.getLocalLastMidnight.millisSinceEpoch
-      val expected = SDate("2010-01-02T00:00").millisSinceEpoch
+        val result = now.getLocalLastMidnight.millisSinceEpoch
+        val expected = SDate("2010-01-02T00:00").millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
 
     "Given an SDateLike for a date inside BST" +
       "When I ask for a corresponding crunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
-      val now = SDate("2010-07-02T11:39", europeLondonTimeZone)
-      val result: MillisSinceEpoch = now.getLocalLastMidnight.millisSinceEpoch
-      val expected = SDate("2010-07-01T23:00").millisSinceEpoch
+        val now = SDate("2010-07-02T11:39", europeLondonTimeZone)
+        val result: MillisSinceEpoch = now.getLocalLastMidnight.millisSinceEpoch
+        val expected = SDate("2010-07-01T23:00").millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
 
     "Min / Max desks in BST " >> {
       "Given flights with one passenger and one split to eea desk " >> {
@@ -60,7 +59,8 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             )
 
             val oneMinute = 60d / 60
-            val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute))
+            val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] =
+              Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute))
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduledDuringBst),
@@ -68,14 +68,19 @@ class CrunchTimezoneSpec extends CrunchTestLike {
                 minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
                 terminalProcessingTimes = procTimes,
                 minutesToCrunch = 120
-              )))
+              )
+            ))
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
             crunch.portStateTestProbe.fishForMessage(5.seconds) {
               case ps: PortState =>
-                val midnightBstEeaFiveDesks = ps.crunchMinutes.values.exists(cm => cm.minute == SDate("2017-05-31T23:00").millisSinceEpoch && cm.deskRec == 0)
-                val oneAmBstEeaZeroDesks = ps.crunchMinutes.values.exists(cm => cm.minute == SDate("2017-06-01T00:00").millisSinceEpoch && cm.deskRec == 5)
+                val midnightBstEeaFiveDesks = ps.crunchMinutes.values.exists(cm =>
+                  cm.minute == SDate("2017-05-31T23:00").millisSinceEpoch && cm.deskRec == 0
+                )
+                val oneAmBstEeaZeroDesks = ps.crunchMinutes.values.exists(cm =>
+                  cm.minute == SDate("2017-06-01T00:00").millisSinceEpoch && cm.deskRec == 5
+                )
                 midnightBstEeaFiveDesks && oneAmBstEeaZeroDesks
             }
 

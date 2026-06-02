@@ -10,18 +10,17 @@ import org.apache.pekko.util.Timeout
 import play.api.Configuration
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.JsResult.Exception
-import play.api.libs.json.{JsError, JsObject, Json, Writes}
+import play.api.libs.json.{ JsError, JsObject, Json, Writes }
 import play.api.mvc._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
+import uk.gov.homeoffice.drt.auth.Roles.{ ManageUsers, Role }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.tables.UserRow
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 
 import java.sql.Timestamp
-import scala.concurrent.{ExecutionContext, Future}
-
+import scala.concurrent.{ ExecutionContext, Future }
 
 abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AbstractController(cc) {
 
@@ -44,7 +43,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
         "userName" -> user.userName,
         "id" -> user.id,
         "email" -> user.email,
-        "roles" -> user.roles.map(_.name),
+        "roles" -> user.roles.map(_.name)
       )
     }
 
@@ -54,7 +53,8 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
   def trackUser: Action[AnyContent] = Action.async { request =>
     val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     ctrl.userService.upsertUser(
-      UserRow(id = loggedInUser.id,
+      UserRow(
+        id = loggedInUser.id,
         username = loggedInUser.userName,
         email = loggedInUser.email,
         latest_login = new java.sql.Timestamp(ctrl.now().millisSinceEpoch),
@@ -69,21 +69,27 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
         desks_and_queues_interval_minutes = None,
         port_dashboard_interval_minutes = None,
         port_dashboard_terminals = None
-      ))
+      )
+    )
     Future.successful(Ok(s"User-tracked"))
   }
 
   def closeBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-    val result: Future[Int] = ctrl.userService.updateCloseBanner(email = userEmail, at = new Timestamp(ctrl.now().millisSinceEpoch))
+    val result: Future[Int] =
+      ctrl.userService.updateCloseBanner(email = userEmail, at = new Timestamp(ctrl.now().millisSinceEpoch))
     result.map(_ => Ok("Successfully closed banner"))
   }
 
   def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Forwarded-Access-Token")
-      .getOrElse(throw Exception(JsError("X-Forwarded-Access-Token missing from headers, we need this to query the Key Cloak API.")))
+      .getOrElse(throw Exception(
+        JsError("X-Forwarded-Access-Token missing from headers, we need this to query the Key Cloak API.")
+      ))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-      .getOrElse(throw Exception(JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")))
+      .getOrElse(throw Exception(
+        JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")
+      ))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
@@ -92,7 +98,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
       val keyCloakClient = keyCloakClientWithHeader(request.headers)
       keyCloakClient.getUsersForEmail(email) map {
         case Some(userDetails) => Ok(write(userDetails))
-        case _ => throw Exception(JsError(s"unable to get user details for email $email"))
+        case _                 => throw Exception(JsError(s"unable to get user details for email $email"))
       }
     } else Future.successful(Unauthorized(write(ErrorResponse(s"Permission denied, do not have access"))))
   }
@@ -107,19 +113,22 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
           val response: Future[HttpResponse] = keyCloakClient.addUserToGroup(userId, kcg.id)
           response map { r =>
             r.status.intValue match {
-              case s if s > 200 && s < 300 => log.info(s"Added group $group  to userId $userId , with response status: ${r.status}  $r")
+              case s if s > 200 && s < 300 =>
+                log.info(s"Added group $group  to userId $userId , with response status: ${r.status}  $r")
                 Ok(s"Added group $group to userId $userId")
-              case _ => throw Exception(JsError(s"unable to add group $group to userId $userId response from keycloak $response"))
+              case _ => throw Exception(
+                  JsError(s"unable to add group $group to userId $userId response from keycloak $response")
+                )
             }
           }
 
-        case _ => log.error(s"Unable to add $userId to $group")
+        case _ =>
+          log.error(s"Unable to add $userId to $group")
           Future.failed(Exception(JsError(s"Unable to add $userId to $group")))
       }
     } else Future.successful(Unauthorized(write(ErrorResponse(s"Permission denied, do not have access"))))
 
   }
-
 
   def getUserHasPortAccess: Action[AnyContent] = auth {
     Action {
@@ -148,7 +157,6 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
     Forbidden(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
 
   def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
-
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     val portRole = airportConfig.role
 
@@ -161,7 +169,8 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
       if (noPortAccess)
         log.warning(
           s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
-            s"and has ${loggedInUser.roles.mkString(", ")} (needs $portRole)")
+            s"and has ${loggedInUser.roles.mkString(", ")} (needs $portRole)"
+        )
 
       if (noEnvironmentAccess)
         log.warning(s"User is restricted to environments: ${loggedInUser.restrictToEnvironments}. This is ${ctrl.env}")

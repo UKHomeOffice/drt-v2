@@ -9,7 +9,8 @@ class CapacitySpec extends Specification {
       val capacity = Capacity(10, 0)
       val expectedBatch = BatchOfWork(List(
         Work(0.0, 0, List(ProcessedLoad(1.0, 0, 0))),
-        Work(0.0, 1, List(ProcessedLoad(1.0, 1, 0)))))
+        Work(0.0, 1, List(ProcessedLoad(1.0, 1, 0)))
+      ))
       capacity.process(batch) === (expectedBatch, Capacity(8.0, 0))
     }
     "When there is insufficient capacity the capacity should be zero, and some work remains outstanding" >> {
@@ -17,7 +18,8 @@ class CapacitySpec extends Specification {
       val capacity = Capacity(1, 0)
       val expectedBatch = BatchOfWork(List(
         Work(0.0, 0, List(ProcessedLoad(1.0, 0, 0))),
-        Work(1.0, 1, List.empty)))
+        Work(1.0, 1, List.empty)
+      ))
       capacity.process(batch) === (expectedBatch, Capacity(0.0, 0))
     }
   }

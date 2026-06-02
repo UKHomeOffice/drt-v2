@@ -1,36 +1,36 @@
 package services.crunch
 
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
+import org.apache.pekko.actor.{ typed, ActorRef, ActorSystem, Props, Terminated }
 import org.apache.pekko.pattern.ask
-import org.apache.pekko.persistence.testkit.{PersistenceTestKitPlugin, PersistenceTestKitSnapshotPlugin}
+import org.apache.pekko.persistence.testkit.{ PersistenceTestKitPlugin, PersistenceTestKitSnapshotPlugin }
 import org.apache.pekko.stream.QueueOfferResult.Enqueued
 import org.apache.pekko.stream.Supervision.Stop
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import org.apache.pekko.stream.testkit.TestSubscriber.Probe
-import org.apache.pekko.stream.{Materializer, QueueOfferResult}
-import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.stream.{ Materializer, QueueOfferResult }
+import org.apache.pekko.testkit.{ TestKit, TestProbe }
 import org.apache.pekko.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.{AfterAll, AfterEach, BeforeEach}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import org.specs2.specification.{ AfterAll, AfterEach, BeforeEach }
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, UniqueArrival }
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.db.AggregateDbH2
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{ SplitRatio, SplitRatios, SplitSources }
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2, Terminal }
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import scala.collection.immutable
-import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.immutable.{ Map, SortedMap }
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ Await, ExecutionContext, ExecutionContextExecutor, Future }
 
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
@@ -43,10 +43,15 @@ object TestDefaults {
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
     minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
-    terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
-      SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 1)
-    ))).toMap,
+    terminalPaxSplits = List(T1, T2).map(t =>
+      (
+        t,
+        SplitRatios(
+          SplitSources.TerminalAverage,
+          SplitRatio(eeaMachineReadableToDesk, 1)
+        )
+      )
+    ).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         gbrNationalToDesk -> 25d / 60,
@@ -66,14 +71,17 @@ object TestDefaults {
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2)))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2)))
+      ),
       T2 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2))))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2)))
+      )
+    ),
     eGateBankSizes = Map(
       T1 -> Iterable(10, 10),
-      T2 -> Iterable(10, 10),
+      T2 -> Iterable(10, 10)
     ),
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
@@ -113,11 +121,16 @@ object TestDefaults {
     slaByQueue = Map(Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
     minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
-    terminalPaxSplits = List(T1).map(t => (t, SplitRatios(
-      SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToEGate, 0.5),
-      SplitRatio(eeaMachineReadableToDesk, 0.5)
-    ))).toMap,
+    terminalPaxSplits = List(T1).map(t =>
+      (
+        t,
+        SplitRatios(
+          SplitSources.TerminalAverage,
+          SplitRatio(eeaMachineReadableToEGate, 0.5),
+          SplitRatio(eeaMachineReadableToDesk, 0.5)
+        )
+      )
+    ).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
@@ -151,7 +164,11 @@ object TestDefaults {
 
   def airportConfigForSplits(splits: Map[PaxTypeAndQueue, Double]): AirportConfig = {
     val queues = Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
-    val slas = Map[Queue, Int](Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45).view.filterKeys(queues.contains).toMap
+    val slas = Map[Queue, Int](
+      Queues.EGate -> 25,
+      Queues.EeaDesk -> 25,
+      Queues.NonEeaDesk -> 45
+    ).view.filterKeys(queues.contains).toMap
     val ratios: immutable.Iterable[SplitRatio] = splits.map {
       case (pt, q) => SplitRatio(pt, q)
     }
@@ -160,7 +177,7 @@ object TestDefaults {
       eeaMachineReadableToEGate -> 20d / 60,
       eeaNonMachineReadableToDesk -> 25d / 60,
       nonVisaNationalToDesk -> 45d / 60,
-      visaNationalToDesk -> 60d / 60,
+      visaNationalToDesk -> 60d / 60
     )
     val minMax = (List.fill[Int](24)(1), List.fill[Int](24)(20))
     val paxTypeQueues: Map[PaxType, List[(Queue, Double)]] = splits.groupBy(_._1.passengerType).map {
@@ -177,7 +194,8 @@ object TestDefaults {
       minutesToCrunch = 30,
       defaultWalkTimeMillis = Map(),
       terminalPaxSplits = Map(T1 -> SplitRatios(ratios, SplitSources.TerminalAverage)),
-      terminalProcessingTimes = Map(T1 -> procTimes.view.filterKeys { case PaxTypeAndQueue(_, q) => queues.contains(q) }.toMap),
+      terminalProcessingTimes =
+        Map(T1 -> procTimes.view.filterKeys { case PaxTypeAndQueue(_, q) => queues.contains(q) }.toMap),
       minMaxDesksByTerminalQueue24Hrs = Map(T1 -> queues.map(q => (q, minMax)).toMap),
       eGateBankSizes = Map(T1 -> Iterable(10, 5)),
       timeToChoxMillis = 120000L,
@@ -192,16 +210,17 @@ object TestDefaults {
     arrivals => Future.successful(arrivals.map(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch))))
 
   val setPcpFromBest: Seq[Arrival] => Future[Seq[Arrival]] =
-    arrivals => Future.successful(
-      arrivals.map { a =>
-        val pcp = if (a.ActualChox.isDefined) SDate(a.ActualChox.get).millisSinceEpoch
-        else if (a.EstimatedChox.isDefined) SDate(a.EstimatedChox.get).millisSinceEpoch
-        else if (a.Actual.isDefined) SDate(a.Actual.get).millisSinceEpoch
-        else if (a.Estimated.isDefined) SDate(a.Estimated.get).millisSinceEpoch
-        else SDate(a.Scheduled).millisSinceEpoch
-        a.copy(PcpTime = Option(pcp))
-      }
-    )
+    arrivals =>
+      Future.successful(
+        arrivals.map { a =>
+          val pcp = if (a.ActualChox.isDefined) SDate(a.ActualChox.get).millisSinceEpoch
+          else if (a.EstimatedChox.isDefined) SDate(a.EstimatedChox.get).millisSinceEpoch
+          else if (a.Actual.isDefined) SDate(a.Actual.get).millisSinceEpoch
+          else if (a.Estimated.isDefined) SDate(a.Estimated.get).millisSinceEpoch
+          else SDate(a.Scheduled).millisSinceEpoch
+          a.copy(PcpTime = Option(pcp))
+        }
+      )
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
 
@@ -212,12 +231,17 @@ object TestDefaults {
     MlFeedSource,
     ForecastFeedSource,
     HistoricApiFeedSource,
-    AclFeedSource,
+    AclFeedSource
   )
 }
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(PersistenceTestKitSnapshotPlugin.config.withFallback(ConfigFactory.load()))))
+    extends TestKit(ActorSystem(
+      "DRT-TEST",
+      PersistenceTestKitPlugin.config.withFallback(
+        PersistenceTestKitSnapshotPlugin.config.withFallback(ConfigFactory.load())
+      )
+    ))
     with SpecificationLike
     with AfterAll
     with AfterEach
@@ -321,9 +345,11 @@ class CrunchTestLike
         paxByQueue == nonZerosToExpect
     }
 
-  def paxLoadsFromPortState(portState: PortState,
-                            minsToTake: Int,
-                            startFromMinuteIdx: Int = 0): Map[Terminal, Map[Queue, List[Double]]] = portState
+  def paxLoadsFromPortState(
+      portState: PortState,
+      minsToTake: Int,
+      startFromMinuteIdx: Int = 0
+  ): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
     .groupBy(_.terminal)
@@ -343,9 +369,11 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def paxLoadsFromPortState(portState: PortState,
-                            minsToTake: Int,
-                            startFromMinute: SDateLike): Map[Terminal, Map[Queue, List[Double]]] = {
+  def paxLoadsFromPortState(
+      portState: PortState,
+      minsToTake: Int,
+      startFromMinute: SDateLike
+  ): Map[Terminal, Map[Queue, List[Double]]] = {
     val startFromMillis = startFromMinute.millisSinceEpoch
 
     portState
@@ -390,8 +418,10 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def workLoadsFromPortState(portState: PortState,
-                             minsToTake: Int): Map[Terminal, Map[Queue, List[Double]]] = portState
+  def workLoadsFromPortState(
+      portState: PortState,
+      minsToTake: Int
+  ): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
     .groupBy(_.terminal)
@@ -438,7 +468,6 @@ class CrunchTestLike
     testProbe.fishForMessage(1.second) {
       case ps: PortState => ps.flights.nonEmpty
     }
-
 
   def offerAndWait[T](source: typed.ActorRef[T], offering: T): Unit = {
     source ! offering

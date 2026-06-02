@@ -5,14 +5,13 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import java.io.{ByteArrayOutputStream, OutputStream}
+import java.io.{ ByteArrayOutputStream, OutputStream }
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
-
+import scala.util.{ Failure, Success, Try }
 
 object LgwForecastSftpService {
   def sshClient(ftpServer: String, port: Int, username: String, password: String): SSHClient = {
@@ -26,7 +25,13 @@ object LgwForecastSftpService {
   }
 }
 
-case class LgwForecastSftpService(ftpServer: String, port: Int, username: String, password: String, pathPrefix: String) {
+case class LgwForecastSftpService(
+    ftpServer: String,
+    port: Int,
+    username: String,
+    password: String,
+    pathPrefix: String
+) {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, port, username, password)
@@ -61,7 +66,9 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
     Try(sftp.get(fileName, output)) match {
       case Success(_) => Some(outputStream.toString())
       case Failure(e) =>
-        log.error(s"[LgwForecastSftpService][contentForFile] Failed to get file '$fileName' from sftp server: ${e.getMessage}")
+        log.error(
+          s"[LgwForecastSftpService][contentForFile] Failed to get file '$fileName' from sftp server: ${e.getMessage}"
+        )
         None
     }
   }
@@ -100,7 +107,9 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
       .orElse(legacyFiles.sortBy(_._1.millisSinceEpoch).reverse.headOption)
       .map(_._2)
       .orElse {
-        log.warn(s"[LgwForecastSftpService][latestFileName] No suitable forecast file found in $pathPrefix on $ftpServer:$port")
+        log.warn(
+          s"[LgwForecastSftpService][latestFileName] No suitable forecast file found in $pathPrefix on $ftpServer:$port"
+        )
         None
       }
   }
@@ -108,7 +117,7 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
   private def parseDate(year: String, month: String, day: String, fileName: String): Option[SDateLike] = {
     Try(SDate(year.toInt, month.toInt, day.toInt)) match {
       case Success(date) => Some(date)
-      case Failure(e) =>
+      case Failure(e)    =>
         log.warn(s"[LgwForecastSftpService][parseDate] Date parsing failed for file '$fileName': ${e.getMessage}")
         None
     }

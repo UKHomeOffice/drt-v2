@@ -1,14 +1,14 @@
 package drt.server.feeds.lhr.forecast
 
 import drt.server.feeds.lhr.LHRForecastFeed
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
+import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter, ISODateTimeFormat }
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.io.Source
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object LHRForecastCSVExtractor {
   private val log = LoggerFactory.getLogger(getClass)
@@ -57,8 +57,8 @@ object LHRForecastCSVExtractor {
           case s => s
         }
       }).collect {
-      case Success(a) if a.internationalDomestic == "I" => a
-    }.toList
+        case Success(a) if a.internationalDomestic == "I" => a
+      }.toList
   }
 
   private def asString(stringField: String): String = stringField.replace("\"", "").trim()

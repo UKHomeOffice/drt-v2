@@ -2,25 +2,24 @@ package drt.server.feeds.mag
 
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.mag.MagFeed.MagArrival
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import org.apache.pekko.actor.{ActorSystem, typed}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
+import org.apache.pekko.actor.{ typed, ActorSystem }
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import org.apache.pekko.http.scaladsl.model._
 import org.apache.pekko.http.scaladsl.model.headers.RawHeader
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
-import org.slf4j.{Logger, LoggerFactory}
-import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
-import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
+import org.slf4j.{ Logger, LoggerFactory }
+import pdi.jwt.{ Jwt, JwtAlgorithm, JwtHeader }
+import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, LiveArrival }
+import uk.gov.homeoffice.drt.ports.{ PortCode, Terminals }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 trait FeedRequesterLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -34,19 +33,19 @@ object ProdFeedRequester extends FeedRequesterLike {
   override def createToken(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
     Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
-  override def send(request: HttpRequest)
-                   (implicit actorSystem: ActorSystem): Future[HttpResponse] =
+  override def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] =
     Http().singleRequest(request)
 }
 
-case class MagFeed(key: String,
-                   claimIss: String,
-                   claimRole: String,
-                   claimSub: String,
-                   now: () => SDateLike,
-                   portCode: PortCode,
-                   feedRequester: FeedRequesterLike)
-                  (implicit val system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
+case class MagFeed(
+    key: String,
+    claimIss: String,
+    claimRole: String,
+    claimSub: String,
+    now: () => SDateLike,
+    portCode: PortCode,
+    feedRequester: FeedRequesterLike
+)(implicit val system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def claim: String =
@@ -65,12 +64,14 @@ case class MagFeed(key: String,
     new org.bouncycastle.jce.provider.BouncyCastleProvider()
   )
 
-  def newToken: String = feedRequester.createToken(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
+  def newToken: String =
+    feedRequester.createToken(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
 
   private def makeUri(start: SDateLike, end: SDateLike, from: Int, size: Int): String =
     s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString}&endDate=${end.toISOString}&from=$from&size=$size"
 
-  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+      : Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
 
   def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =
@@ -120,7 +121,9 @@ case class MagFeed(key: String,
           .unmarshalResponse(response)
           .map { arrivals =>
             val relevantArrivals = arrivals.filter(isAppropriateArrival)
-            log.info(s"${relevantArrivals.length} relevant arrivals out of ${arrivals.length} in results from offset $from")
+            log.info(
+              s"${relevantArrivals.length} relevant arrivals out of ${arrivals.length} in results from offset $from"
+            )
             Success(relevantArrivals)
           }
           .recover { case t =>
@@ -138,32 +141,36 @@ case class MagFeed(key: String,
   }
 }
 
-
 object MagFeed {
-  private def unmarshalResponse(httpResponse: HttpResponse)(implicit materializer: Materializer): Future[List[MagArrival]] = {
+  private def unmarshalResponse(httpResponse: HttpResponse)(implicit
+      materializer: Materializer
+  ): Future[List[MagArrival]] = {
     import JsonSupport._
 
     Unmarshal(httpResponse).to[List[MagArrival]]
   }
 
-  case class MagArrival(uri: String,
-                        operatingAirline: IataIcao,
-                        flightNumber: FlightNumber,
-                        departureAirport: IataIcao,
-                        arrivalAirport: IataIcao,
-                        arrivalDeparture: String,
-                        domesticInternational: String,
-                        flightType: String,
-                        gate: Option[Gate],
-                        stand: Option[Stand],
-                        passenger: Passenger,
-                        onBlockTime: Timings,
-                        touchDownTime: Timings,
-                        arrivalDate: String,
-                        arrival: ArrivalDetails,
-                        flightStatus: String)
+  case class MagArrival(
+      uri: String,
+      operatingAirline: IataIcao,
+      flightNumber: FlightNumber,
+      departureAirport: IataIcao,
+      arrivalAirport: IataIcao,
+      arrivalDeparture: String,
+      domesticInternational: String,
+      flightType: String,
+      gate: Option[Gate],
+      stand: Option[Stand],
+      passenger: Passenger,
+      onBlockTime: Timings,
+      touchDownTime: Timings,
+      arrivalDate: String,
+      arrival: ArrivalDetails,
+      flightStatus: String
+  )
   def toArrival(ma: MagArrival): LiveArrival = {
-    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber.getOrElse(""))
+    val (carrierCode, voyageNumber, suffix) =
+      FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber.getOrElse(""))
 
     LiveArrival(
       operator = Option(ma.operatingAirline.iata),
@@ -181,11 +188,12 @@ object MagFeed {
       touchdown = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
       estimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
       actualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),
-      status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
+      status = if (ma.onBlockTime.actual.isDefined) "On Chocks"
+      else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
       gate = ma.gate.map(_.name.replace("Gate ", "")),
       stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
       runway = None,
-      baggageReclaim = None,
+      baggageReclaim = None
     )
   }
 
@@ -195,29 +203,35 @@ object MagFeed {
 
   case class Gate(name: String, number: String)
 
-  case class Stand(name: Option[String],
-                   number: Option[String],
-                   provisional: Boolean,
-                   provisionalName: Option[String],
-                   provisionalNumber: Option[String])
+  case class Stand(
+      name: Option[String],
+      number: Option[String],
+      provisional: Boolean,
+      provisionalName: Option[String],
+      provisionalNumber: Option[String]
+  )
 
   case class BaggageClaim(name: String, number: String, firstBagReclaim: String, lastBagReclaim: String)
 
   case class Terminal(name: String, short_name: String, number: String)
 
-  case class Passenger(count: Option[Int],
-                       maximum: Option[Int],
-                       transferCount: Option[Int],
-                       prmCount: Option[Int])
+  case class Passenger(
+      count: Option[Int],
+      maximum: Option[Int],
+      transferCount: Option[Int],
+      prmCount: Option[Int]
+  )
 
   case class Timings(scheduled: String, estimated: Option[String], actual: Option[String])
 
-  case class ArrivalDetails(airport: IataIcao,
-                            scheduled: String,
-                            estimated: Option[String],
-                            actual: Option[String],
-                            terminal: Option[String],
-                            gate: Option[String])
+  case class ArrivalDetails(
+      airport: IataIcao,
+      scheduled: String,
+      estimated: Option[String],
+      actual: Option[String],
+      terminal: Option[String],
+      gate: Option[String]
+  )
 
   object JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
     implicit val passengerFormat: RootJsonFormat[Passenger] = jsonFormat4(Passenger)

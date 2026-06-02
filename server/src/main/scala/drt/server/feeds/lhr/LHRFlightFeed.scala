@@ -3,35 +3,35 @@ package drt.server.feeds.lhr
 import org.apache.pekko.actor.typed
 import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
+import drt.server.feeds.lhr.LHRFlightFeed.{ emptyStringToOption, parseDateTime }
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
+import org.apache.commons.csv.{ CSVFormat, CSVParser, CSVRecord }
 import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
+import org.joda.time.format.{ DateTimeFormat, DateTimeFormatter }
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, LiveArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class LHRLiveFlight(
-                          term: Terminal,
-                          flightCode: String,
-                          operator: String,
-                          from: String,
-                          airportName: String,
-                          scheduled: DateTime,
-                          estimated: Option[DateTime],
-                          touchdown: Option[DateTime],
-                          estChox: Option[DateTime],
-                          actChox: Option[DateTime],
-                          stand: Option[String],
-                          maxPax: Option[Int],
-                          actPax: Option[Int],
-                          connPax: Option[Int]
-                        ) {
+    term: Terminal,
+    flightCode: String,
+    operator: String,
+    from: String,
+    airportName: String,
+    scheduled: DateTime,
+    estimated: Option[DateTime],
+    touchdown: Option[DateTime],
+    estChox: Option[DateTime],
+    actChox: Option[DateTime],
+    stand: Option[String],
+    maxPax: Option[Int],
+    actPax: Option[Int],
+    connPax: Option[Int]
+) {
   def flightId(): Int = {
     // flightcode,scheduled datetime and from port make the flight sufficiently unique for later parts of the pipeline
     // but we do not want to override the hashCode here because that would be surprising.
@@ -69,7 +69,8 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
           stand = opt(splitRow(10)),
           maxPax = optInt(splitRow(11)),
           actPax = optInt(splitRow(12)),
-          connPax = optInt(splitRow(13)))
+          connPax = optInt(splitRow(13))
+        )
       }
 
       t match {
@@ -110,7 +111,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         gate = None,
         stand = flight.stand,
         runway = None,
-        baggageReclaim = None,
+        baggageReclaim = None
       )
     }.toList
 }
@@ -132,9 +133,10 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => Try[String],
-            source: Source[FeedTick, typed.ActorRef[FeedTick]],
-           ): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+  def apply(
+      csvContentsProvider: () => Try[String],
+      source: Source[FeedTick, typed.ActorRef[FeedTick]]
+  ): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.map { _ =>
       log.info(s"Requesting CSV")
       csvContentsProvider() match {

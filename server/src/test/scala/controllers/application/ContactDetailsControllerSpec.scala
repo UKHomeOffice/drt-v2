@@ -8,14 +8,14 @@ import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.config.Lhr
 
-
 class ContactDetailsControllerSpec extends PlaySpec {
   "ContactDetailsController" should {
 
     "get contact details" in {
       val config = Lhr.config.copy(
         contactEmail = Some("test@test.com"),
-        outOfHoursContactPhone = Some("0123456789"))
+        outOfHoursContactPhone = Some("0123456789")
+      )
 
       val module: DrtModule = new TestDrtModule(config)
 
@@ -25,10 +25,12 @@ class ContactDetailsControllerSpec extends PlaySpec {
 
       val controller = new ContactDetailsController(Helpers.stubControllerComponents(), drtSystemInterface)
 
-      val result = controller.getContactDetails.apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+      val result = controller.getContactDetails.apply(FakeRequest().withHeaders(
+        "X-Forwarded-Email" -> "test@test.com",
         "X-Forwarded-Preferred-Username" -> "test",
         "X-Forwarded-User" -> "test",
-        "X-Forwarded-Groups" -> s"TEST"))
+        "X-Forwarded-Groups" -> s"TEST"
+      ))
 
       status(result)(timeout) mustBe OK
 

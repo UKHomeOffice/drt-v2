@@ -1,9 +1,9 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{GetLoggedInStatus, RetryActionAfter, TriggerReload}
+import diode.{ ActionResult, Effect, ModelRW }
+import drt.client.actions.Actions.{ GetLoggedInStatus, RetryActionAfter, TriggerReload }
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay, RootModel}
+import drt.client.services.{ DrtApi, PollDelay, RootModel }
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
 
@@ -17,7 +17,7 @@ class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAc
         Effect(
           DrtApi.get("logged-in")
             .map(r => {
-              if(r.status == 200)
+              if (r.status == 200)
                 RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay)
               else
                 TriggerReload
@@ -27,10 +27,13 @@ class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAc
                 log.error(s"User is logged out. Triggering page reload.")
                 Future(TriggerReload)
               case f =>
-                log.error(s"Unexpected error when checking for user login status ($f). Retrying after ${PollDelay.loginCheckDelay}")
+                log.error(
+                  s"Unexpected error when checking for user login status ($f). Retrying after ${PollDelay.loginCheckDelay}"
+                )
                 Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
             }
-        ))
+        )
+      )
 
     case TriggerReload =>
       log.info(s"LoginStatus: triggering reload")

@@ -1,8 +1,8 @@
 package actors
 
-import actors.daily.{DayManifestActor, RequestAndTerminate, RequestAndTerminateActor}
-import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import actors.daily.{ DayManifestActor, RequestAndTerminate, RequestAndTerminateActor }
+import actors.routing.minutes.MinutesActorLike.{ ManifestLookup, ManifestsUpdate }
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.models.VoyageManifests
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, UtcDate }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -32,7 +32,7 @@ trait ManifestLookupsLike {
 
   val manifestsByDayLookup: ManifestLookup = (date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
-      case None => DayManifestActor.props(date, terminals)
+      case None              => DayManifestActor.props(date, terminals)
       case Some(pointInTime) => DayManifestActor.propsPointInTime(date, pointInTime, terminals)
     }
     val actor = system.actorOf(props)
@@ -40,7 +40,8 @@ trait ManifestLookupsLike {
   }
 }
 
-case class ManifestLookups(system: ActorSystem, terminals: LocalDate => Iterable[Terminal]) extends ManifestLookupsLike {
+case class ManifestLookups(system: ActorSystem, terminals: LocalDate => Iterable[Terminal])
+    extends ManifestLookupsLike {
   override val requestAndTerminateActor: ActorRef = system
     .actorOf(Props(new RequestAndTerminateActor()), "manifests-lookup-kill-actor")
 }

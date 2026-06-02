@@ -5,8 +5,8 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import play.api.test.{ FakeRequest, Helpers }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.ExecutionContext
 
@@ -19,7 +19,8 @@ class DataRetentionControllerSpec extends PlaySpec {
     "Have status Ok, and confirm the date range being deleted when the date is outside the retention period" in {
       val controller = dataRetentionController
 
-      val result = controller.purge("2019-05-21").apply(FakeRequest().withHeaders("X-Forwarded-Groups" -> "super-admin,TEST"))
+      val result =
+        controller.purge("2019-05-21").apply(FakeRequest().withHeaders("X-Forwarded-Groups" -> "super-admin,TEST"))
 
       status(result) mustBe OK
 
@@ -30,11 +31,13 @@ class DataRetentionControllerSpec extends PlaySpec {
     "Have status BadRequest, and confirm the date range being deleted when the date is within the retention period" in {
       val controller = dataRetentionController
 
-      val result = controller.purge("2019-05-22").apply(FakeRequest().withHeaders("X-Forwarded-Groups" -> "super-admin,TEST"))
+      val result =
+        controller.purge("2019-05-22").apply(FakeRequest().withHeaders("X-Forwarded-Groups" -> "super-admin,TEST"))
 
       status(result) mustBe BAD_REQUEST
 
-      val resultExpected = s"""Cannot purge data from 2019-05-22 as it is within the retention period (2019-05-21 onwards)""".stripMargin
+      val resultExpected =
+        s"""Cannot purge data from 2019-05-22 as it is within the retention period (2019-05-21 onwards)""".stripMargin
 
       contentAsString(result) must ===(resultExpected)
     }

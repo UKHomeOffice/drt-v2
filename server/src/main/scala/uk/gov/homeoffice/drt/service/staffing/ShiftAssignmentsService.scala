@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import drt.shared.{ShiftAssignments, StaffAssignmentLike}
+import drt.shared.{ ShiftAssignments, StaffAssignmentLike }
 import uk.gov.homeoffice.drt.time.LocalDate
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
 

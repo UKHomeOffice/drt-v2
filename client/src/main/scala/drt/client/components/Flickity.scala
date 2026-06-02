@@ -1,9 +1,9 @@
 package drt.client.components
 
-import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.logger.{ Logger, LoggerFactory }
 import japgolly.scalajs.react.CtorType.ChildArg
-import japgolly.scalajs.react.{Children, JsComponent}
-import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
+import japgolly.scalajs.react.{ Children, JsComponent }
+import japgolly.scalajs.react.component.Js.{ RawMounted, UnmountedWithRawType }
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport

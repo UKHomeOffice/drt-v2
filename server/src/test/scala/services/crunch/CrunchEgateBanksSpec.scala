@@ -5,15 +5,14 @@ import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared._
 import services.OptimiserWithFlexibleProcessors
 import uk.gov.homeoffice.drt.arrivals.LiveArrival
-import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{ eeaMachineReadableToDesk, eeaMachineReadableToEGate }
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{ SplitRatio, SplitRatios, SplitSources }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, Queues }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.collection.immutable.{ List, Seq, SortedMap }
 import scala.concurrent.duration._
-
 
 class CrunchEgateBanksSpec extends CrunchTestLike {
   sequential
@@ -34,7 +33,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
     )),
     minMaxDesksByTerminalQueue24Hrs = Map(T1 -> Map(
       Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))),
-      Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
+      Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20)))
+    )),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25),
     minutesToCrunch = 30
   )
@@ -48,26 +48,26 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       "When I ask for desk recs " +
       "Then I should see lower egates recs by a factor of 2" >> {
 
-      val crunch = runCrunchGraph(TestConfig(
-        now = () => SDate(scheduled),
-        airportConfig = airportConfig,
-        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)
-      ))
+        val crunch = runCrunchGraph(TestConfig(
+          now = () => SDate(scheduled),
+          airportConfig = airportConfig,
+          cruncher = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true)
+        ))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map(T1 -> Map(
-        Queues.EeaDesk -> Seq.fill(15)(2),
-        Queues.EGate -> Seq.fill(15)(1)
-      ))
+        val expected = Map(T1 -> Map(
+          Queues.EeaDesk -> Seq.fill(15)(2),
+          Queues.EGate -> Seq.fill(15)(1)
+        ))
 
-      crunch.portStateTestProbe.fishForMessage(2.seconds) {
-        case ps: PortState =>
-          val resultSummary = deskRecsFromPortState(ps, 15)
-          resultSummary == expected
+        crunch.portStateTestProbe.fishForMessage(2.seconds) {
+          case ps: PortState =>
+            val resultSummary = deskRecsFromPortState(ps, 15)
+            resultSummary == expected
+        }
+
+        success
       }
-
-      success
-    }
   }
 }

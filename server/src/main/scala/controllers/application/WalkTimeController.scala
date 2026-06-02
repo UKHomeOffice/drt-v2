@@ -1,8 +1,8 @@
 package controllers.application
 
 import com.google.inject.Inject
-import drt.shared.api.{WalkTime, WalkTimes}
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import drt.shared.api.{ WalkTime, WalkTimes }
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -12,11 +12,13 @@ trait WalkTimeLike {
     case ((terminal, gateOrStand), walkTimeSeconds) => WalkTime(gateOrStand, terminal, walkTimeSeconds * 1000)
   }
 
-  protected def walkTimes(walkTimesFilePath: Option[String]): Iterable[WalkTime] = walkTimesFilePath.map(walkTimes).getOrElse(Iterable())
+  protected def walkTimes(walkTimesFilePath: Option[String]): Iterable[WalkTime] =
+    walkTimesFilePath.map(walkTimes).getOrElse(Iterable())
 
 }
 
-class WalkTimeController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with WalkTimeLike {
+class WalkTimeController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl)
+    with WalkTimeLike {
 
   def getWalkTimes: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action { _ =>
@@ -28,6 +30,5 @@ class WalkTimeController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInte
       Ok(write(WalkTimes(gates, stands)))
     }
   }
-
 
 }

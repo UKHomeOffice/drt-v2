@@ -2,9 +2,9 @@ package actors.serializers
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventType, VoyageNumber }
 import uk.gov.homeoffice.drt.models._
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ PaxAge, PortCode }
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.PassengerInfoJsonMessage
 
 class ManifestMessageConversionSpec extends Specification {
@@ -28,8 +28,8 @@ class ManifestMessageConversionSpec extends Specification {
         DisembarkationPortCountryCode = Some(Nationality("TST")),
         NationalityCountryCode = Some(Nationality("GBR")),
         PassengerIdentifier = Option("id")
-      )))
-    ))
+      ))
+    )))
 
     val serialised = ManifestMessageConversion.voyageManifestsToMessage(manifest)
 
@@ -39,35 +39,33 @@ class ManifestMessageConversionSpec extends Specification {
   }
   "Given a VoyageManifest that's been serialized with a bad Nationality toString method " +
     "then I should get the nationality without the word Nationality in there" >> {
-    val passengerMessage = PassengerInfoJsonMessage(
-      Some("P"),
-      Some("Nationality(GBR)"),
-      Some("EEA"),
-      Some("30"),
-      Some("TST"),
-      Some("N"),
-      Some("Nationality(TST)"),
-      Some("Nationality(GBR)"),
-      Some("id")
-    )
+      val passengerMessage = PassengerInfoJsonMessage(
+        Some("P"),
+        Some("Nationality(GBR)"),
+        Some("EEA"),
+        Some("30"),
+        Some("TST"),
+        Some("N"),
+        Some("Nationality(TST)"),
+        Some("Nationality(GBR)"),
+        Some("id")
+      )
 
-    val expected = PassengerInfoJson(
-      DocumentType = Option(DocumentType("P")),
-      DocumentIssuingCountryCode = Nationality("GBR"),
-      EEAFlag = EeaFlag("EEA"),
-      Age = Option(PaxAge(30)),
-      DisembarkationPortCode = Option(PortCode("TST")),
-      InTransitFlag = InTransit("N"),
-      DisembarkationPortCountryCode = Some(Nationality("TST")),
-      NationalityCountryCode = Some(Nationality("GBR")),
-      PassengerIdentifier = Option("id")
-    )
+      val expected = PassengerInfoJson(
+        DocumentType = Option(DocumentType("P")),
+        DocumentIssuingCountryCode = Nationality("GBR"),
+        EEAFlag = EeaFlag("EEA"),
+        Age = Option(PaxAge(30)),
+        DisembarkationPortCode = Option(PortCode("TST")),
+        InTransitFlag = InTransit("N"),
+        DisembarkationPortCountryCode = Some(Nationality("TST")),
+        NationalityCountryCode = Some(Nationality("GBR")),
+        PassengerIdentifier = Option("id")
+      )
 
+      val result = ManifestMessageConversion.passengerInfoFromMessage(passengerMessage)
 
-    val result = ManifestMessageConversion.passengerInfoFromMessage(passengerMessage)
-
-    result === expected
-  }
-
+      result === expected
+    }
 
 }

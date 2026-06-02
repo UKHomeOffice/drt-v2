@@ -1,7 +1,7 @@
 package actors
 
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 class DrtStaticParametersSpec extends AnyWordSpec {
   "startOfTheMonth" should {

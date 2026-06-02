@@ -1,9 +1,9 @@
 package drt.shared.api
 
 import drt.shared.TimeUtil._
-import drt.shared.{MinuteAsAdjective, MinuteAsNoun}
+import drt.shared.{ MinuteAsAdjective, MinuteAsNoun }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import upickle.default.{macroRW, _}
+import upickle.default.{ macroRW, _ }
 
 import scala.util.Try
 import scala.util.matching.Regex
@@ -20,10 +20,15 @@ object TerminalWalkTimes {
 
 case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
 
-  def walkTimeStringForArrival(defaultWalkTime: Long)
-                              (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
+  def walkTimeStringForArrival(defaultWalkTime: Long)(
+      gate: Option[String],
+      stand: Option[String],
+      terminal: Terminal
+  ): String = {
     val defaultString = s"${MinuteAsNoun(millisToMinutes(defaultWalkTime)).display} (default walk time for terminal)"
-    maybeWalkTimeMinutes(gate, stand, terminal).map(wtMins => MinuteAsAdjective(wtMins).display + " walk time").getOrElse(defaultString)
+    maybeWalkTimeMinutes(gate, stand, terminal).map(wtMins =>
+      MinuteAsAdjective(wtMins).display + " walk time"
+    ).getOrElse(defaultString)
   }
 
   def maybeWalkTimeMinutes(gate: Option[String], stand: Option[String], terminal: Terminal): Option[Int] = {
@@ -37,8 +42,11 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
     maybeWalkTime.map(_.inMinutes)
   }
 
-  def walkTimeMillisForArrival(defaultWalkTime: Long)
-                              (gate: Option[String], stand: Option[String], terminal: Terminal): Long = {
+  def walkTimeMillisForArrival(defaultWalkTime: Long)(
+      gate: Option[String],
+      stand: Option[String],
+      terminal: Terminal
+  ): Long = {
     val maybeWalkTime = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
         byTerminal(terminal).gateWalktimes.get(g)
@@ -81,7 +89,8 @@ object WalkTimes {
   private def gateStandPatternMatchPair(gateStand: String): (Int, String) = {
     val pattern: Regex = "^[0-9]*[A-Z]$".r
     pattern.findFirstMatchIn(gateStand) match {
-      case Some(_) => gateStand.substring(0, gateStand.length - 1).toInt -> gateStand.substring(gateStand.length - 1, gateStand.length)
+      case Some(_) => gateStand.substring(0, gateStand.length - 1).toInt ->
+          gateStand.substring(gateStand.length - 1, gateStand.length)
       case None => Try(gateStand.toInt -> "").getOrElse(999 -> gateStand)
     }
   }

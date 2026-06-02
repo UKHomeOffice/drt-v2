@@ -2,15 +2,15 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.SPAMain
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDateParameter }
 import drt.client.actions.Actions.GetForecast
 import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers.UpdateUserPreferences
-import drt.client.services.{DrtApi, SPACircuit}
-import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
+import drt.client.services.{ DrtApi, SPACircuit }
+import drt.shared.CrunchApi.{ ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch }
 import drt.shared.Forecast
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
@@ -24,19 +24,22 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent }
 import org.scalajs.dom.html.Select
-import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
+import org.scalajs.dom.{ document, Blob, HTMLAnchorElement, URL }
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
-import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, Queues }
+import uk.gov.homeoffice.drt.time.{ MilliDate, SDateLike }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 object TerminalPlanningComponent {
-  private case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines], userPreferences: Pot[UserPreferences])
+  private case class TerminalPlanningModel(
+      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+      userPreferences: Pot[UserPreferences]
+  )
 
   def getLastSunday(start: SDateLike): SDateLike = {
     val sunday = start.getLastSunday
@@ -51,29 +54,44 @@ object TerminalPlanningComponent {
   case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean, timePeriod: Int)
 
   implicit val propsReuse: Reusability[Props] = Reusability.always[Props]
-  implicit val stateReuse: Reusability[State] = Reusability.by((s: State) => (s.downloadingHeadlines, s.downloadingStaff, s.timePeriod))
+  implicit val stateReuse: Reusability[State] =
+    Reusability.by((s: State) => (s.downloadingHeadlines, s.downloadingStaff, s.timePeriod))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
-    .initialStateFromProps(p => State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod))
+    .initialStateFromProps(p =>
+      State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod)
+    )
     .renderPS { (scope, props, state) =>
-      val modelRCP = SPACircuit.connect(model => TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot, userPreferences = model.userPreferences))
+      val modelRCP = SPACircuit.connect(model =>
+        TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot, userPreferences = model.userPreferences)
+      )
       modelRCP(modelProxy => {
         val model: TerminalPlanningModel = modelProxy()
         <.div(model.forecastPeriodPot.renderReady { forecastPeriod =>
           model.userPreferences.renderReady { userPreferences =>
             val sortedDays = forecastPeriod.forecast.days.toList.sortBy(_._1)
-            val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(forecastPeriod.forecast)
+            val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] =
+              Forecast.periodByTimeSlotAcrossDays(forecastPeriod.forecast)
 
             def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
-              <.select(^.className := "form-control", ^.value := value,
-                ^.onChange ==> ((e: ReactEventFromInput) => {
-                  GoogleEventTracker.sendEvent(props.page.terminalName, "planning-select-week",
-                    Option(SDate(e.target.value).toLocalDate.toISOString).getOrElse("none"))
-                  props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDate.toISOString))))
-                }),
+              <.select(
+                ^.className := "form-control",
+                ^.value := value,
+                ^.onChange ==>
+                  ((e: ReactEventFromInput) => {
+                    GoogleEventTracker.sendEvent(
+                      props.page.terminalName,
+                      "planning-select-week",
+                      Option(SDate(e.target.value).toLocalDate.toISOString).getOrElse("none")
+                    )
+                    props.router.set(props.page.withUrlParameters(
+                      UrlDateParameter(Option(SDate(e.target.value).toLocalDate.toISOString))
+                    ))
+                  }),
                 values.zip(names).map {
                   case (value, name) => <.option(^.value := value, name)
-                }.toTagMod)
+                }.toTagMod
+              )
             }
 
             val slotStartTimes = Forecast.timeSlotStartTimes(
@@ -88,8 +106,10 @@ object TerminalPlanningComponent {
               a.click()
             }
 
-            val headlineFiguresExportUrl = s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
-            val staffRecommendationsExportUrl = s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
+            val headlineFiguresExportUrl =
+              s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
+            val staffRecommendationsExportUrl =
+              s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
 
             def createDownload(updateState: (State, Boolean) => State): String => Event => CallbackTo[Unit] = url => {
               event =>
@@ -113,36 +133,48 @@ object TerminalPlanningComponent {
             <.div(
               MuiTypography(variant = "h2")(s"Planning"),
               MuiTypography(variant = "h3", sx = SxProps(Map("paddingTop" -> "0px")))("Headline Figures"),
-              <.div(^.className := "terminal-content-header",
-                <.div(^.className := "staffing-controls-wrapper",
-                  <.div(^.className := "staffing-controls-row hstack",
-                    MuiFormLabel(sx = SxProps(Map("size" -> "16px",
-                      "paddingRight" -> "10px",
-                      "color" -> DrtReactTheme.palette.grey.`900`,
-                      "fontWeight" -> "bold")))(<.span("Week start")),
-                    <.div(^.className := "staffing-controls-select",
+              <.div(
+                ^.className := "terminal-content-header",
+                <.div(
+                  ^.className := "staffing-controls-wrapper",
+                  <.div(
+                    ^.className := "staffing-controls-row hstack",
+                    MuiFormLabel(sx =
+                      SxProps(Map(
+                        "size" -> "16px",
+                        "paddingRight" -> "10px",
+                        "color" -> DrtReactTheme.palette.grey.`900`,
+                        "fontWeight" -> "bold"
+                      ))
+                    )(<.span("Week start")),
+                    <.div(
+                      ^.className := "staffing-controls-select",
                       drawSelect(
                         forecastWeeks.map(_.ddMMyyString),
                         forecastWeeks.map(_.toISOString).toList,
-                        defaultStartDate(props.page.dateFromUrlOrNow).toISOString)
+                        defaultStartDate(props.page.dateFromUrlOrNow).toISOString
+                      )
                     )
                   ),
                   MuiDivider()(),
-                  <.div(^.className := "staffing-controls-row",
-                    buttonWithProgress(headlineFiguresExportUrl,
+                  <.div(
+                    ^.className := "staffing-controls-row",
+                    buttonWithProgress(
+                      headlineFiguresExportUrl,
                       buttonContent(state.downloadingHeadlines, "Export Headlines"),
                       createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b)),
-                      state.downloadingHeadlines,
+                      state.downloadingHeadlines
                     )
                   )
-                ),
+                )
               ),
-              <.table(^.className := "headlines",
+              <.table(
+                ^.className := "headlines",
                 <.thead(
                   <.tr(
                     <.th(^.className := "queue-heading"),
-                    forecastPeriod.headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(
-                      day => <.th(s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}")
+                    forecastPeriod.headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(day =>
+                      <.th(s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}")
                     ).toTagMod
                   ), {
                     Queues.inOrder(forecastPeriod.headlines.queueDayHeadlines.map(_.queue).distinct).map { queue =>
@@ -158,54 +190,97 @@ object TerminalPlanningComponent {
                   }, {
                     val byDay = forecastPeriod.headlines.queueDayHeadlines.groupBy(_.day).toList
                     List(
-                      <.tr(^.className := "total",
-                        <.th(^.className := "queue-heading", "Total Pax"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.paxNos).sum)).toTagMod),
-                      <.tr(^.className := "total",
-                        <.th(^.className := "queue-heading", "Workloads"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.workload).sum)).toTagMod)
+                      <.tr(
+                        ^.className := "total",
+                        <.th(^.className := "queue-heading", "Total Pax"),
+                        byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.paxNos).sum)).toTagMod
+                      ),
+                      <.tr(
+                        ^.className := "total",
+                        <.th(^.className := "queue-heading", "Workloads"),
+                        byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.workload).sum)).toTagMod
+                      )
                     ).toTagMod
                   }
                 )
               ),
               MuiTypography(variant = "h3")("Available and recommended staff"),
-              <.div(^.className := "terminal-content-header vstack",
+              <.div(
+                ^.className := "terminal-content-header vstack",
                 MuiFormControl()(
-                  <.div(^.className := "hstack",
-                    MuiFormLabel(sx = SxProps(Map("size" -> "16px",
-                      "paddingRight" -> "10px",
-                      "marginBtotom" -> "0px !important",
-                      "color" -> DrtReactTheme.palette.grey.`900`,
-                      "fontWeight" -> "bold")))(<.span("Time Period")),
-                    MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
-                      val daysInWeek = 7
-                      scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
-                        Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
-                        Callback(SPACircuit.dispatch(GetForecast(props.page.dateFromUrlOrNow, daysInWeek, Terminal(props.page.terminalName), e.target.value.toInt))) >>
-                        Callback(GoogleEventTracker.sendEvent(props.page.terminalName, "planning-time-period", e.target.value))
-                    }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
-                      MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
-                    ))
+                  <.div(
+                    ^.className := "hstack",
+                    MuiFormLabel(sx =
+                      SxProps(Map(
+                        "size" -> "16px",
+                        "paddingRight" -> "10px",
+                        "marginBtotom" -> "0px !important",
+                        "color" -> DrtReactTheme.palette.grey.`900`,
+                        "fontWeight" -> "bold"
+                      ))
+                    )(<.span("Time Period")),
+                    MuiRadioGroup(row = true)(
+                      ^.value := state.timePeriod,
+                      ^.onChange ==>
+                        ((e: ReactEventFromInput) => {
+                          val daysInWeek = 7
+                          scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
+                            Callback(SPACircuit.dispatch(UpdateUserPreferences(
+                              userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)
+                            ))) >>
+                            Callback(SPACircuit.dispatch(GetForecast(
+                              props.page.dateFromUrlOrNow,
+                              daysInWeek,
+                              Terminal(props.page.terminalName),
+                              e.target.value.toInt
+                            ))) >>
+                            Callback(GoogleEventTracker.sendEvent(
+                              props.page.terminalName,
+                              "planning-time-period",
+                              e.target.value
+                            ))
+                        }),
+                      MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
+                      MuiFormControlLabel(
+                        control = MuiRadio()().rawElement,
+                        label = "Every 15 minutes".toVdom
+                      )(^.value := "15")
+                    )
+                  )
                 ),
                 MuiDivider()(),
-                <.div(^.className := "staffing-controls-row",
-                  buttonWithProgress(staffRecommendationsExportUrl,
+                <.div(
+                  ^.className := "staffing-controls-row",
+                  buttonWithProgress(
+                    staffRecommendationsExportUrl,
                     buttonContent(state.downloadingStaff, "Export Staff Requirements"),
                     createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b)),
                     state.downloadingStaff
                   )
                 )
               ),
-              <.table(^.className := "forecast",
-                <.thead(^.className := "sticky-top",
+              <.table(
+                ^.className := "forecast",
+                <.thead(
+                  ^.className := "sticky-top",
                   <.tr(
-                    <.th(^.className := "heading"), sortedDays.map {
+                    <.th(^.className := "heading"),
+                    sortedDays.map {
                       case (day, _) =>
-                        <.th(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}")
+                        <.th(
+                          ^.colSpan := 2,
+                          ^.className := "heading",
+                          s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}"
+                        )
                     }.toTagMod
                   ),
                   <.tr(
                     <.th(^.className := "heading", "Time"),
-                    sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
-                  )),
+                    sortedDays.flatMap(_ =>
+                      List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))
+                    ).toTagMod
+                  )
+                ),
                 <.tbody(
                   byTimeSlot.zip(slotStartTimes).map {
                     case (row, startTime) =>
@@ -230,7 +305,12 @@ object TerminalPlanningComponent {
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
       val daysInWeek = 7
-      Callback(SPACircuit.dispatch(GetForecast(p.props.page.dateFromUrlOrNow, daysInWeek, Terminal(p.props.page.terminalName), p.props.timePeriod)))
+      Callback(SPACircuit.dispatch(GetForecast(
+        p.props.page.dateFromUrlOrNow,
+        daysInWeek,
+        Terminal(p.props.page.terminalName),
+        p.props.timePeriod
+      )))
     }
     .build
 
@@ -240,11 +320,12 @@ object TerminalPlanningComponent {
     else
       Seq(labelText)
 
-  private def buttonWithProgress(url: String,
-                                 label: Seq[TagMod],
-                                 createDownload: String => Event => CallbackTo[Unit],
-                                 disabled: Boolean,
-                                ): WithPropsAndTagsMods =
+  private def buttonWithProgress(
+      url: String,
+      label: Seq[TagMod],
+      createDownload: String => Event => CallbackTo[Unit],
+      disabled: Boolean
+  ): WithPropsAndTagsMods =
     MuiButton(color = Color.secondary, variant = "contained")(
       ^.disabled := disabled,
       <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "15px"), label.toTagMod),

@@ -6,26 +6,27 @@ import drt.shared.SimulationParams.fullDay
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, PaxTypeAndQueue, Queues }
 import uk.gov.homeoffice.drt.time.LocalDate
 
-case class SimulationFormFields(terminal: Terminal,
-                                date: LocalDate,
-                                passengerWeighting: Option[Double],
-                                processingTimes: Map[PaxTypeAndQueue, Option[Int]],
-                                minDesksByQueue: Map[Queue, Option[Int]],
-                                terminalDesks: Int,
-                                eGateBankSizes: IndexedSeq[Option[Int]],
-                                slaByQueue: Map[Queue, Option[Int]],
-                                crunchOffsetMinutes: Int,
-                                eGateOpenHours: Seq[Int],
-                               ) {
+case class SimulationFormFields(
+    terminal: Terminal,
+    date: LocalDate,
+    passengerWeighting: Option[Double],
+    processingTimes: Map[PaxTypeAndQueue, Option[Int]],
+    minDesksByQueue: Map[Queue, Option[Int]],
+    terminalDesks: Int,
+    eGateBankSizes: IndexedSeq[Option[Int]],
+    slaByQueue: Map[Queue, Option[Int]],
+    crunchOffsetMinutes: Int,
+    eGateOpenHours: Seq[Int]
+) {
   val isValid: Boolean = {
     passengerWeighting.isDefined &&
-      processingTimes.forall(_._2.isDefined) &&
-      minDesksByQueue.forall(_._2.isDefined) &&
-      eGateBankSizes.forall(_.isDefined) &&
-      slaByQueue.forall(_._2.isDefined)
+    processingTimes.forall(_._2.isDefined) &&
+    minDesksByQueue.forall(_._2.isDefined) &&
+    eGateBankSizes.forall(_.isDefined) &&
+    slaByQueue.forall(_._2.isDefined)
   }
 
   private def eGateOpenAt(hour: Int): Boolean = eGateOpenHours.contains(hour)
@@ -62,7 +63,12 @@ case class SimulationFormFields(terminal: Terminal,
 }
 
 object SimulationFormFields {
-  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig, slaConfigs: SlaConfigs): SimulationFormFields = {
+  def apply(
+      terminal: Terminal,
+      date: LocalDate,
+      airportConfig: AirportConfig,
+      slaConfigs: SlaConfigs
+  ): SimulationFormFields = {
     val processingTimes: Map[PaxTypeAndQueue, Option[Int]] = airportConfig.terminalProcessingTimes(terminal)
       .filterNot {
         case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
@@ -73,7 +79,8 @@ object SimulationFormFields {
       case (q, (min, _)) => q -> Option(min.max)
     }
     val terminalDesks = airportConfig.desksByTerminal.getOrElse(terminal, 0)
-    val egateBankSizes: IndexedSeq[Option[Int]] = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq.map(Option(_))
+    val egateBankSizes: IndexedSeq[Option[Int]] =
+      airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq.map(Option(_))
     val slas: Map[Queue, Option[Int]] = slaConfigs.configForDate(SDate(date).millisSinceEpoch)
       .getOrElse(airportConfig.slaByQueue)
       .view.mapValues(Option(_)).toMap

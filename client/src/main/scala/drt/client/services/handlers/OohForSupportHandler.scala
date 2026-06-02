@@ -1,9 +1,9 @@
 package drt.client.services.handlers
 
-import diode.data.{Pending, Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pending, Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import drt.shared.OutOfHoursStatus
 import upickle.default.read
 
@@ -15,9 +15,9 @@ class OohForSupportHandler[M](modelRW: ModelRW[M, Pot[OutOfHoursStatus]]) extend
     case GetOohStatus =>
       effectOnly(Effect(DrtApi.get("ooh-status")
         .map(r => UpdateOohStatus(read[OutOfHoursStatus](r.responseText))).recoverWith {
-        case _ =>
-          Future(RetryActionAfter(GetOohStatus, PollDelay.recoveryDelay))
-      }))
+          case _ =>
+            Future(RetryActionAfter(GetOohStatus, PollDelay.recoveryDelay))
+        }))
 
     case UpdateOohStatus(oohStatus) =>
       val poll = Effect(Future(RetryActionAfter(GetOohStatus, PollDelay.oohSupportUpdateDelay)))

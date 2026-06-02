@@ -3,7 +3,7 @@ package feeds.cirium
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.cirium.CiriumFeed
-import drt.server.feeds.{ArrivalsFeedSuccess, Feed}
+import drt.server.feeds.{ ArrivalsFeedSuccess, Feed }
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
@@ -70,8 +70,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       publishedDepartureTime
     )
 
-    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
-
+    val expected =
+      drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
@@ -80,36 +80,36 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
   "Given a CiriumFlightStatus with a non round scheduled time " +
     "Then I should get a rounded scheduled time back" >> {
-    val publishedArrivalTime = "2019-07-15T11:06:00.000Z"
-    val publishedArrivalTimeRounded = "2019-07-15T11:05:00.000Z"
-    val estRunwayArrival = "2019-07-15T11:07:00.000Z"
-    val actRunwayArrival = "2019-07-15T11:08:00.000Z"
-    val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
-    val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
-    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
+      val publishedArrivalTime = "2019-07-15T11:06:00.000Z"
+      val publishedArrivalTimeRounded = "2019-07-15T11:05:00.000Z"
+      val estRunwayArrival = "2019-07-15T11:07:00.000Z"
+      val actRunwayArrival = "2019-07-15T11:08:00.000Z"
+      val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
+      val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+      val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
-    val ciriumArrival = ciriumFlightStatus(
-      publishedArrivalTime,
-      estRunwayArrival,
-      actRunwayArrival,
-      estGateArrivalTime,
-      actGateArrivalTime,
-      "1000",
-      publishedDepartureTime
-    )
+      val ciriumArrival = ciriumFlightStatus(
+        publishedArrivalTime,
+        estRunwayArrival,
+        actRunwayArrival,
+        estGateArrivalTime,
+        actGateArrivalTime,
+        "1000",
+        publishedDepartureTime
+      )
 
-    val expected = drtArrival(
-      publishedArrivalTimeRounded,
-      estRunwayArrival,
-      actRunwayArrival,
-      estGateArrivalTime,
-      actGateArrivalTime,
-    )
+      val expected = drtArrival(
+        publishedArrivalTimeRounded,
+        estRunwayArrival,
+        actRunwayArrival,
+        estGateArrivalTime,
+        actGateArrivalTime
+      )
 
-    val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
+      val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a CiriumFlightStatus with a flight code suffix, it should be parsed correctly" >> {
     val ciriumArrival = ciriumFlightStatus(
@@ -126,7 +126,13 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     arrival.voyageNumber === 1000 && arrival.flightCodeSuffix === Option("F")
   }
 
-  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String): LiveArrival = {
+  private def drtArrival(
+      publishedArrivalTime: String,
+      estRunwayArrival: String,
+      actRunwayArrival: String,
+      estGateArrivalTime: String,
+      actGateArrivalTime: String
+  ): LiveArrival = {
     LiveArrival(
       operator = Option("TST"),
       maxPax = None,
@@ -147,17 +153,19 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       gate = Option("22"),
       stand = None,
       runway = None,
-      baggageReclaim = Option("12"),
+      baggageReclaim = Option("12")
     )
   }
 
-  private def ciriumFlightStatus(publishedArrivalTime: String,
-                                 estRunwayArrival: String,
-                                 actRunwayArrival: String,
-                                 estGateArrivalTime: String,
-                                 actGateArrivalTime: String,
-                                 flightNumber: String,
-                                 publishedDepartureTime: String) =
+  private def ciriumFlightStatus(
+      publishedArrivalTime: String,
+      estRunwayArrival: String,
+      actRunwayArrival: String,
+      estGateArrivalTime: String,
+      actGateArrivalTime: String,
+      flightNumber: String,
+      publishedDepartureTime: String
+  ) =
     CiriumFlightStatus(
       100000,
       "TST",
@@ -185,7 +193,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
         actualGateArrival = Option(CiriumDate(actGateArrivalTime, None)),
         scheduledRunwayArrival = None,
         estimatedRunwayArrival = Option(CiriumDate(estRunwayArrival, None)),
-        actualRunwayArrival = Option(CiriumDate(actRunwayArrival, None))),
+        actualRunwayArrival = Option(CiriumDate(actRunwayArrival, None))
+      ),
       None,
       None,
       List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
@@ -194,10 +203,10 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
         departureGate = None,
         arrivalTerminal = Option("1"),
         arrivalGate = Option("22"),
-        baggage = Option("12"))
-      ),
-      Seq())
-
+        baggage = Option("12")
+      )),
+      Seq()
+    )
 
   private val basicCiriumFlightStatus = {
     CiriumFlightStatus(
@@ -227,12 +236,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
         actualGateArrival = None,
         scheduledRunwayArrival = None,
         estimatedRunwayArrival = None,
-        actualRunwayArrival = None),
+        actualRunwayArrival = None
+      ),
       None,
       None,
       List(),
       None,
-      Seq())
+      Seq()
+    )
   }
 
   "When successfully polling for CiriumArrivals I should get a stream of ArrivalFeedSuccess" >> {
@@ -244,14 +255,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(2.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
+      case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
+        true
       case _ => false
     }
     timer.cancel()
 
     success
   }
-
 
   "When an error occurs polling for cirium then it should continue to receive a later update" >> {
     val ciriumFeed = new CiriumFeed("", PortCode("LHR")) with MockClientWithFailure
@@ -262,7 +273,9 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(2.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.nonEmpty && s.arrivals.head.scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
+      case s: ArrivalsFeedSuccess
+          if s.arrivals.nonEmpty && s.arrivals.head.scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
+        true
       case _ => false
     }
     timer.cancel()
@@ -272,57 +285,57 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
   "Given a flight with an estimated touchdown, no estimated chocks time, and scheduledTaxiInMinutes" +
     " we should not calculate estimated chocks time" >> {
-    val estimatedRunwayArrivalTime = "2019-07-15T11:05:00.000Z"
-    val ciriumFlight = basicCiriumFlightStatus
-      .copy(
-        operationalTimes = basicCiriumFlightStatus
-          .operationalTimes
-          .copy(estimatedRunwayArrival = Option(CiriumDate(estimatedRunwayArrivalTime, None))),
-        flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
-      )
+      val estimatedRunwayArrivalTime = "2019-07-15T11:05:00.000Z"
+      val ciriumFlight = basicCiriumFlightStatus
+        .copy(
+          operationalTimes = basicCiriumFlightStatus
+            .operationalTimes
+            .copy(estimatedRunwayArrival = Option(CiriumDate(estimatedRunwayArrivalTime, None))),
+          flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
+        )
 
-    val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
-    val result = arrival.estimatedChox
-    val expected = None
+      val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
+      val result = arrival.estimatedChox
+      val expected = None
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a flight with an actual touchdown, no estimated chocks time, and scheduledTaxiInMinutes" +
     " we should calculate estimated chocks time" >> {
-    val actualRunwayTime = "2019-07-15T11:05:00.000Z"
-    val ciriumFlight = basicCiriumFlightStatus
-      .copy(
-        operationalTimes = basicCiriumFlightStatus
-          .operationalTimes
-          .copy(actualRunwayArrival = Option(CiriumDate(actualRunwayTime, None))),
-        flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
-      )
+      val actualRunwayTime = "2019-07-15T11:05:00.000Z"
+      val ciriumFlight = basicCiriumFlightStatus
+        .copy(
+          operationalTimes = basicCiriumFlightStatus
+            .operationalTimes
+            .copy(actualRunwayArrival = Option(CiriumDate(actualRunwayTime, None))),
+          flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
+        )
 
-    val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
-    val result = arrival.estimatedChox
-    val expected = None
+      val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
+      val result = arrival.estimatedChox
+      val expected = None
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a flight with an estimated chocks time, and no estimated touch down time " +
     "the estimated time should be the est chocks minus 5 minutes" >> {
-    val estimatedChoxTime = "2019-07-15T11:05:00.000Z"
-    val ciriumFlight = basicCiriumFlightStatus
-      .copy(
-        operationalTimes = basicCiriumFlightStatus
-          .operationalTimes
-          .copy(estimatedGateArrival = Option(CiriumDate(estimatedChoxTime, None))),
-        flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
-      )
+      val estimatedChoxTime = "2019-07-15T11:05:00.000Z"
+      val ciriumFlight = basicCiriumFlightStatus
+        .copy(
+          operationalTimes = basicCiriumFlightStatus
+            .operationalTimes
+            .copy(estimatedGateArrival = Option(CiriumDate(estimatedChoxTime, None))),
+          flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
+        )
 
-    val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
-    val result = arrival.estimated
-    val expected = Option(SDate(estimatedChoxTime).addMinutes(-5).millisSinceEpoch)
+      val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
+      val result = arrival.estimated
+      val expected = Option(SDate(estimatedChoxTime).addMinutes(-5).millisSinceEpoch)
 
-    result === expected
-  }
+      result === expected
+    }
 
   trait MockClientWithSuccess {
     self: CiriumFeed =>
