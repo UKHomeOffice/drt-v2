@@ -9,7 +9,7 @@ object SharedDependencyVersions {
   object shared {
     val scalajsReact = "2.1.2"
     val upickle = "3.3.1"
-    val utest = "0.7.4"
+    val utest = "0.7.11"
     val webjarsLocator = "0.52"
   }
 }

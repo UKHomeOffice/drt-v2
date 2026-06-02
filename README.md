@@ -122,19 +122,11 @@ The production build uses esbuild to get a much smaller bundle size and faster b
 
 ## Testing
 
-To run the standard local verification steps for this repo, use the root-level test script:
+- `./run_client_tests.sh` — installs client deps and runs client unit tests.
+- `./run_server_tests.sh` — runs server unit tests.
+- `./run_tests.sh` — full verification (format, compile, coverage, run both suites, dependency checks).
 
-```bash
-./run_tests.sh
-```
-
-The script will:
-- install client dependencies with `npm ci`
-- run `scalafmtAll`
-- run the client and server test suites
-- generate an SBT coverage report
-
-You should run it from the repository root. It requires `npm` and `sbt` to be available in your local environment.
+Run any script from the repository root. `sbt` is required; `npm` is required for the client script.
 
 #Updating the akka version and akka persistent jdbc 
 With upgrade for akka version (2.6.17) and akka persistent jdbc (5.0.4) there is change in schema for journal and snapshot . At moment there are no tools to migration from legacy to new schema.
