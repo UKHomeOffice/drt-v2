@@ -3,7 +3,7 @@ import sbt.*
 
 object FrontendDependencies {
   import SharedDependencyVersions.drt.lib
-  import SharedDependencyVersions.shared.{scalajsReact, upickle, utest}
+  import SharedDependencyVersions.shared.{ scalajsReact, upickle, utest }
 
   val scalajsReactVersion: String = scalajsReact
 
@@ -19,27 +19,26 @@ object FrontendDependencies {
   private val scalaTestVersion = "3.2.19"
 
   val dependencies = Def.setting(Seq(
-    "com.github.japgolly.scalajs-react" %%% "core" % scalajsReactVersion,
-    "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReactVersion,
-    "com.github.japgolly.scalajs-react" %%% "test" % scalajsReactVersion % Test,
-    "uk.gov.homeoffice" %%% "drt-lib" % lib,
-    "com.github.japgolly.scalacss" %%% "ext-react" % scalaCssVersion,
-    "io.suzaku" %%% "diode" % diodeVersion,
-    "io.suzaku" %%% "diode-react" % diodeVersion,
-    "org.scala-js" %%% "scalajs-dom" % scalaDomVersion,
-    "org.scala-js" %%% "scalajs-java-securerandom" % scalajsJavaSecurerandomVersion,
-    "com.lihaoyi" %%% "utest" % utest % Test,
-    "com.lihaoyi" %%% "upickle" % upickle,
-    "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJsVersion,
-    "io.github.cquiroz" %%% "scala-java-time" % scalaJavaTimeVersion,
+    "com.github.japgolly.scalajs-react" %%% "core"                      % scalajsReactVersion,
+    "com.github.japgolly.scalajs-react" %%% "extra"                     % scalajsReactVersion,
+    "com.github.japgolly.scalajs-react" %%% "test"                      % scalajsReactVersion % Test,
+    "uk.gov.homeoffice"                 %%% "drt-lib"                   % lib,
+    "com.github.japgolly.scalacss"      %%% "ext-react"                 % scalaCssVersion,
+    "io.suzaku"                         %%% "diode"                     % diodeVersion,
+    "io.suzaku"                         %%% "diode-react"               % diodeVersion,
+    "org.scala-js"                      %%% "scalajs-dom"               % scalaDomVersion,
+    "org.scala-js"                      %%% "scalajs-java-securerandom" % scalajsJavaSecurerandomVersion,
+    "com.lihaoyi"                       %%% "utest"                     % utest               % Test,
+    "com.lihaoyi"                       %%% "upickle"                   % upickle,
+    "ru.pavkin"                         %%% "scala-js-momentjs"         % scalaJsMomentJsVersion,
+    "io.github.cquiroz"                 %%% "scala-java-time"           % scalaJavaTimeVersion,
 
-    "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUiVersion,
+    "com.freshcodelimited" %%% "scalajs-react-material-ui-core"  % scalaJsReactMaterialUiVersion,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUiVersion,
-    "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUiVersion,
-    "com.dedipresta" %%% "scala-crypto" % scalaCryptoVersion,
-    "io.lemonlabs" %%% "scala-uri" % scalaUriVersion,
+    "com.freshcodelimited" %%% "scalajs-react-material-ui-lab"   % scalaJsReactMaterialUiVersion,
+    "com.dedipresta"       %%% "scala-crypto"                    % scalaCryptoVersion,
+    "io.lemonlabs"         %%% "scala-uri"                       % scalaUriVersion,
 
-    "org.scalatest" %%% "scalatest" % scalaTestVersion % Test,
+    "org.scalatest" %%% "scalatest" % scalaTestVersion % Test
   ))
 }
-

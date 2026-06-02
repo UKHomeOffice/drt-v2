@@ -13,5 +13,3 @@ object SharedDependencyVersions {
     val webjarsLocator = "0.52"
   }
 }
-
-

@@ -6,6 +6,6 @@ object ScalaCompilerSettings {
     "-feature",
     "-Ywarn-dead-code",
     "-Ywarn-unused",
-    "-Ywarn-value-discard",
+    "-Ywarn-value-discard"
   )
 }

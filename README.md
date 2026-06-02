@@ -120,6 +120,22 @@ If you want to mimic the production build you can run `npm run build` and then u
 
 The production build uses esbuild to get a much smaller bundle size and faster build times
 
+## Testing
+
+To run the standard local verification steps for this repo, use the root-level test script:
+
+```bash
+./run_tests.sh
+```
+
+The script will:
+- install client dependencies with `npm ci`
+- run `scalafmtAll`
+- run the client and server test suites
+- generate an SBT coverage report
+
+You should run it from the repository root. It requires `npm` and `sbt` to be available in your local environment.
+
 #Updating the akka version and akka persistent jdbc 
 With upgrade for akka version (2.6.17) and akka persistent jdbc (5.0.4) there is change in schema for journal and snapshot . At moment there are no tools to migration from legacy to new schema.
 But there is option provided to continue using legacy schema with some configure update for dao which is document by lightbend  https://doc.akka.io/docs/akka-persistence-jdbc/current/migration.html.

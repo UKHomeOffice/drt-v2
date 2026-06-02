@@ -1,8 +1,8 @@
 import sbt.*
 
 object BackendDependencies {
-  import SharedDependencyVersions.drt.{birminghamSchema, bluebus, cirium, lib}
-  import SharedDependencyVersions.shared.{utest, webjarsLocator}
+  import SharedDependencyVersions.drt.{ birminghamSchema, bluebus, cirium, lib }
+  import SharedDependencyVersions.shared.{ utest, webjarsLocator }
 
   private val pekkoVersion = "1.4.0"
   private val pekkoHttpVersion = "1.3.0"
@@ -44,80 +44,80 @@ object BackendDependencies {
   private val mockito34Version = "3.2.10.0"
 
   private val coreDependencies: Seq[ModuleID] = Seq(
-    "com.github.gphat" %% "censorinus" % censorinusVersion,
-    "com.github.jwt-scala" %% "jwt-core" % jwtCoreVersion,
-    "com.hierynomus" % "sshj" % sshJVersion,
-    "com.vmunier" %% "scalajs-scripts" % scalajsScriptsVersion,
-    "com.typesafe" % "config" % typesafeConfigVersion,
-    "joda-time" % "joda-time" % jodaTimeVersion,
-    "uk.gov.service.notify" % "notifications-java-client" % notificationsJavaClientVersion,
-    "software.amazon.awssdk" % "s3" % awsVersion,
-    "org.playframework.twirl" %% "twirl-api" % twirlApiVersion,
+    "com.github.gphat"        %% "censorinus"                % censorinusVersion,
+    "com.github.jwt-scala"    %% "jwt-core"                  % jwtCoreVersion,
+    "com.hierynomus"           % "sshj"                      % sshJVersion,
+    "com.vmunier"             %% "scalajs-scripts"           % scalajsScriptsVersion,
+    "com.typesafe"             % "config"                    % typesafeConfigVersion,
+    "joda-time"                % "joda-time"                 % jodaTimeVersion,
+    "uk.gov.service.notify"    % "notifications-java-client" % notificationsJavaClientVersion,
+    "software.amazon.awssdk"   % "s3"                        % awsVersion,
+    "org.playframework.twirl" %% "twirl-api"                 % twirlApiVersion
   )
 
   private val xmlAndMailDependencies: Seq[ModuleID] = Seq(
-    "javax.mail" % "mail" % mailVersion,
+    "javax.mail"     % "mail"               % mailVersion,
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % jakartaXmlWsApiVersion,
-    "com.sun.xml.ws" % "rt" % rtVersion,
-    "javax.xml.bind" % "jaxb-api" % jaxbApiVersion,
+    "com.sun.xml.ws" % "rt"                 % rtVersion,
+    "javax.xml.bind" % "jaxb-api"           % jaxbApiVersion
   )
 
   private val pekkoDependencies: Seq[ModuleID] = Seq(
-    "org.apache.pekko" %% "pekko-persistence-jdbc" % pekkoPersistenceJdbcVersion,
-    "org.apache.pekko" %% "pekko-persistence-typed" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-remote" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-persistence-testkit" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-actor-testkit-typed" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-testkit" % pekkoVersion,
+    "org.apache.pekko" %% "pekko-persistence-jdbc"      % pekkoPersistenceJdbcVersion,
+    "org.apache.pekko" %% "pekko-persistence-typed"     % pekkoVersion,
+    "org.apache.pekko" %% "pekko-remote"                % pekkoVersion,
+    "org.apache.pekko" %% "pekko-persistence-testkit"   % pekkoVersion,
+    "org.apache.pekko" %% "pekko-actor-testkit-typed"   % pekkoVersion,
+    "org.apache.pekko" %% "pekko-testkit"               % pekkoVersion,
     "org.apache.pekko" %% "pekko-serialization-jackson" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-pki" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-stream-typed" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-persistence" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-persistence-query" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-slf4j" % pekkoVersion,
-    "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion,
-    "org.apache.pekko" %% "pekko-http-caching" % pekkoHttpVersion,
-    "org.apache.pekko" %% "pekko-http-spray-json" % pekkoHttpVersion,
-    "org.apache.pekko" %% "pekko-http-xml" % pekkoHttpVersion,
-    "org.apache.pekko" %% "pekko-stream" % pekkoVersion,
+    "org.apache.pekko" %% "pekko-pki"                   % pekkoVersion,
+    "org.apache.pekko" %% "pekko-stream-typed"          % pekkoVersion,
+    "org.apache.pekko" %% "pekko-persistence"           % pekkoVersion,
+    "org.apache.pekko" %% "pekko-persistence-query"     % pekkoVersion,
+    "org.apache.pekko" %% "pekko-slf4j"                 % pekkoVersion,
+    "org.apache.pekko" %% "pekko-http"                  % pekkoHttpVersion,
+    "org.apache.pekko" %% "pekko-http-caching"          % pekkoHttpVersion,
+    "org.apache.pekko" %% "pekko-http-spray-json"       % pekkoHttpVersion,
+    "org.apache.pekko" %% "pekko-http-xml"              % pekkoHttpVersion,
+    "org.apache.pekko" %% "pekko-stream"                % pekkoVersion
   )
 
   private val slickDependencies: Seq[ModuleID] = Seq(
-    "com.typesafe.slick" %% "slick" % slickVersion,
+    "com.typesafe.slick" %% "slick"          % slickVersion,
     "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
-    "com.typesafe.slick" %% "slick-codegen" % slickVersion,
+    "com.typesafe.slick" %% "slick-codegen"  % slickVersion
   )
 
   private val loggingDependencies: Seq[ModuleID] = Seq(
-    "ch.qos.logback" % "logback-classic" % logbackVersion,
+    "ch.qos.logback"         % "logback-classic"      % logbackVersion,
     "ch.qos.logback.contrib" % "logback-json-classic" % logbackContribVersion,
-    "ch.qos.logback.contrib" % "logback-jackson" % logbackContribVersion,
-    "org.codehaus.janino" % "janino" % janinoVersion,
-    "org.codehaus.janino" % "janino" % janinoAltVersion,
+    "ch.qos.logback.contrib" % "logback-jackson"      % logbackContribVersion,
+    "org.codehaus.janino"    % "janino"               % janinoVersion,
+    "org.codehaus.janino"    % "janino"               % janinoAltVersion
   )
 
   private val dataDependencies: Seq[ModuleID] = Seq(
-    "org.pac4j" % "pac4j-saml" % pac4jSamlVersion,
-    "org.apache.commons" % "commons-csv" % csvCommonsVersion,
-    "org.apache.poi" % "poi" % poiVersion,
-    "org.apache.poi" % "poi-ooxml" % poiVersion,
-    "org.postgresql" % "postgresql" % postgresVersion,
-    "org.renjin" % "renjin-script-engine" % renjinVersion,
-    "io.netty" % "netty-all" % nettyAllVersion,
+    "org.pac4j"          % "pac4j-saml"           % pac4jSamlVersion,
+    "org.apache.commons" % "commons-csv"          % csvCommonsVersion,
+    "org.apache.poi"     % "poi"                  % poiVersion,
+    "org.apache.poi"     % "poi-ooxml"            % poiVersion,
+    "org.postgresql"     % "postgresql"           % postgresVersion,
+    "org.renjin"         % "renjin-script-engine" % renjinVersion,
+    "io.netty"           % "netty-all"            % nettyAllVersion
   )
 
   private val webjarDependencies: Seq[ModuleID] = Seq(
-    "org.webjars" % "font-awesome" % fontAwesomeVersion % Provided,
-    "org.webjars" % "bootstrap" % bootstrapVersion % Provided,
-    "org.webjars" %% "webjars-play" % webjarsPlayVersion,
-    "org.webjars" % "webjars-locator" % webjarsLocator,
+    "org.webjars"  % "font-awesome"    % fontAwesomeVersion % Provided,
+    "org.webjars"  % "bootstrap"       % bootstrapVersion   % Provided,
+    "org.webjars" %% "webjars-play"    % webjarsPlayVersion,
+    "org.webjars"  % "webjars-locator" % webjarsLocator
   )
 
   private val drtDependencies: Seq[ModuleID] = Seq(
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % birminghamSchema,
-    "uk.gov.homeoffice" %% "drt-cirium" % cirium,
-    "uk.gov.homeoffice" %% "drt-lib" % lib,
-    "uk.gov.homeoffice" %% "bluebus" % bluebus,
+    "uk.gov.homeoffice" %% "drt-cirium"            % cirium,
+    "uk.gov.homeoffice" %% "drt-lib"               % lib,
+    "uk.gov.homeoffice" %% "bluebus"               % bluebus
   )
 
   val compileDependencies: Seq[ModuleID] =
@@ -131,19 +131,18 @@ object BackendDependencies {
       drtDependencies
 
   val testDependencies: Seq[ModuleID] = Seq(
-    "com.h2database" % "h2" % h2Version,
-    "com.lihaoyi" %% "utest" % utest % Test,
-    "org.apache.pekko" %% "pekko-testkit" % pekkoVersion % Test,
+    "com.h2database"    % "h2"                   % h2Version,
+    "com.lihaoyi"      %% "utest"                % utest        % Test,
+    "org.apache.pekko" %% "pekko-testkit"        % pekkoVersion % Test,
     "org.apache.pekko" %% "pekko-stream-testkit" % pekkoVersion % Test,
 
-    "org.specs2" %% "specs2-core" % specs2Version % Test,
-    "org.specs2" %% "specs2-junit" % specs2Version % Test,
-    "org.specs2" %% "specs2-mock" % specs2Version % Test,
-    "org.mockito" % "mockito-core" % mockitoVersion % Test,
+    "org.specs2"             %% "specs2-core"        % specs2Version            % Test,
+    "org.specs2"             %% "specs2-junit"       % specs2Version            % Test,
+    "org.specs2"             %% "specs2-mock"        % specs2Version            % Test,
+    "org.mockito"             % "mockito-core"       % mockitoVersion           % Test,
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlayVersion % Test,
-    "org.scalatestplus" %% "mockito-3-4" % mockito34Version % Test,
+    "org.scalatestplus"      %% "mockito-3-4"        % mockito34Version         % Test
   )
 
   val all: Seq[ModuleID] = compileDependencies ++ testDependencies
 }
-
