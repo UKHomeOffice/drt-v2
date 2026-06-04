@@ -26,7 +26,7 @@ object BackendDependencies {
   private val xmlAndMailDependencies: Seq[ModuleID] = Seq(
     "javax.mail"     % "mail"               % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.3",
-    "javax.xml.bind" % "jaxb-api" % "2.3.1"
+    "javax.xml.bind" % "jaxb-api"           % "2.3.1"
   )
 
   private val pekkoDependencies: Seq[ModuleID] = Seq(

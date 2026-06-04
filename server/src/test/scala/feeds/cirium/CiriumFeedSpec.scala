@@ -177,6 +177,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       CiriumDate(publishedDepartureTime, None),
       CiriumDate(publishedArrivalTime, None),
       "A",
+      None,
       CiriumOperationalTimes(
         publishedDeparture = None,
         scheduledGateDeparture = None,
@@ -220,6 +221,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       CiriumDate("2019-07-15T09:10:00.000Z", None),
       CiriumDate("2019-07-16T09:10:00.000Z", None),
       "A",
+      None,
       CiriumOperationalTimes(
         publishedDeparture = None,
         scheduledGateDeparture = None,
