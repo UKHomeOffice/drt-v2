@@ -1,7 +1,7 @@
 package drt.client.components
 
 import japgolly.scalajs.react.vdom.VdomElement
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
@@ -16,7 +16,13 @@ sealed trait IUpdateStaffForTimeRangeData extends js.Object {
 }
 
 object IUpdateStaffForTimeRangeData {
-  def apply(startDayAt: moment.Date, startTimeAt: moment.Date, endTimeAt: moment.Date, endDayAt: moment.Date, actualStaff: String): IUpdateStaffForTimeRangeData = {
+  def apply(
+      startDayAt: moment.Date,
+      startTimeAt: moment.Date,
+      endTimeAt: moment.Date,
+      endDayAt: moment.Date,
+      actualStaff: String
+  ): IUpdateStaffForTimeRangeData = {
     val p = (new js.Object).asInstanceOf[IUpdateStaffForTimeRangeData]
     p.startDayAt = startDayAt
     p.startTimeAt = startTimeAt
@@ -36,7 +42,12 @@ trait IUpdateStaffForTimeRangeForm extends js.Object {
 }
 
 object IUpdateStaffForTimeRangeForm {
-  def apply(ustd: IUpdateStaffForTimeRangeData, interval: Int, handleSubmit: js.Function1[IUpdateStaffForTimeRangeData, Unit], cancelHandler: js.Function0[Unit]): IUpdateStaffForTimeRangeForm = {
+  def apply(
+      ustd: IUpdateStaffForTimeRangeData,
+      interval: Int,
+      handleSubmit: js.Function1[IUpdateStaffForTimeRangeData, Unit],
+      cancelHandler: js.Function0[Unit]
+  ): IUpdateStaffForTimeRangeForm = {
     val p = (new js.Object).asInstanceOf[IUpdateStaffForTimeRangeForm]
     p.ustd = ustd
     p.handleSubmit = handleSubmit

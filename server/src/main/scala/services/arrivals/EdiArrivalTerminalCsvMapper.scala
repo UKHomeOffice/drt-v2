@@ -1,6 +1,6 @@
 package services.arrivals
 
-import org.apache.commons.csv.{CSVFormat, CSVParser}
+import org.apache.commons.csv.{ CSVFormat, CSVParser }
 import uk.gov.homeoffice.drt.arrivals.FlightCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MonthStrings
@@ -9,7 +9,6 @@ import java.net.URL
 import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.Try
-
 
 object EdiArrivalTerminalCsvMapper {
 

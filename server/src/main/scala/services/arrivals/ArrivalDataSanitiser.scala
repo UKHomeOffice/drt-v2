@@ -3,8 +3,9 @@ package services.arrivals
 import uk.gov.homeoffice.drt.arrivals.Arrival
 
 case class ArrivalDataSanitiser(
-                                 maybeEstimatedThresholdHours: Option[Int],
-                                 maybeTaxiThresholdMinutes: Option[Int]) {
+    maybeEstimatedThresholdHours: Option[Int],
+    maybeTaxiThresholdMinutes: Option[Int]
+) {
 
   def maybeEstThresholdMillis: Option[Long] = maybeEstimatedThresholdHours.map(h => h * 60 * 60 * 1000L)
 

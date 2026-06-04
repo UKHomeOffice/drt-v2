@@ -2,23 +2,23 @@ package drt.server.feeds.api
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.{Done, NotUsed}
+import org.apache.pekko.{ Done, NotUsed }
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
-
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait ApiFeed {
   def startProcessingFrom(since: MillisSinceEpoch): Source[Done, NotUsed]
 }
 
-case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
-                       manifestProcessor: ManifestProcessor,
-                       throttleDuration: FiniteDuration)
-                      (implicit ec: ExecutionContext) extends ApiFeed {
+case class ApiFeedImpl(
+    arrivalKeyProvider: ManifestArrivalKeys,
+    manifestProcessor: ManifestProcessor,
+    throttleDuration: FiniteDuration
+)(implicit ec: ExecutionContext) extends ApiFeed {
   private val log = LoggerFactory.getLogger(getClass)
 
   override def startProcessingFrom(since: MillisSinceEpoch): Source[Done, NotUsed] =
@@ -26,7 +26,8 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
       .unfoldAsync((since, Iterable[(UniqueArrivalKey, MillisSinceEpoch)]())) { case (lastProcessedAt, lastKeys) =>
         markerAndNextArrivalKeys(lastProcessedAt).map {
           case (nextMarker, newKeys) =>
-            if (newKeys.nonEmpty) log.info(s"${newKeys.size} new live manifests available. Next marker: ${SDate(nextMarker).toISOString}")
+            if (newKeys.nonEmpty)
+              log.info(s"${newKeys.size} new live manifests available. Next marker: ${SDate(nextMarker).toISOString}")
             Option(((nextMarker, newKeys), (lastProcessedAt, lastKeys)))
         }
       }
@@ -55,7 +56,8 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
           Future.successful(Done)
       }
 
-  private def markerAndNextArrivalKeys(since: MillisSinceEpoch): Future[(MillisSinceEpoch, Iterable[(UniqueArrivalKey, MillisSinceEpoch)])] =
+  private def markerAndNextArrivalKeys(since: MillisSinceEpoch)
+      : Future[(MillisSinceEpoch, Iterable[(UniqueArrivalKey, MillisSinceEpoch)])] =
     arrivalKeyProvider
       .nextKeys(since)
       .map {

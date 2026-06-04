@@ -2,15 +2,18 @@ package actors.daily
 
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.persistence._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import services.PaxDeltas
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
-
+import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{
+  OriginTerminalPaxCountsMessage,
+  OriginTerminalPaxCountsMessages,
+  PaxCountMessage
+}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)
 
@@ -21,13 +24,17 @@ case object ClearState
 case class GetAverageAdjustment(originAndTerminal: OriginAndTerminal, numberOfDays: Int)
 
 object PassengersActor {
-  def relevantPaxCounts(numDaysInAverage: Int, now: () => SDateLike)(paxCountMessages: Seq[PaxCountMessage]): Seq[PaxCountMessage] = {
+  def relevantPaxCounts(
+      numDaysInAverage: Int,
+      now: () => SDateLike
+  )(paxCountMessages: Seq[PaxCountMessage]): Seq[PaxCountMessage] = {
     val cutoff = now().getLocalLastMidnight.addDays(-1 * numDaysInAverage).millisSinceEpoch
     paxCountMessages.filter(msg => msg.getDay >= cutoff)
   }
 }
 
-class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: () => SDateLike) extends RecoveryActorLike {
+class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: () => SDateLike)
+    extends RecoveryActorLike {
   override val persistenceId = s"daily-pax"
 
   val log: Logger = LoggerFactory.getLogger(persistenceId)
@@ -59,13 +66,13 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case OriginTerminalPaxCountsMessages(messages) => messages.foreach { message =>
-      applyPaxCounts(message.getOrigin, message.getTerminal, message.counts)
-    }
+        applyPaxCounts(message.getOrigin, message.getTerminal, message.counts)
+      }
   }
 
   override def receiveCommand: Receive = {
     case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
-    case u => log.info(s"Got unexpected command: $u")
+    case u                         => log.info(s"Got unexpected command: $u")
   }
 
   override def stateToMessage: GeneratedMessage = {
@@ -80,14 +87,16 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
       val origin = PortCode(originString)
       val terminal = Terminal(terminalString)
       val originAndTerminal = OriginAndTerminal(origin, terminal)
-      val updatedOriginTerminal = originTerminalPaxNosState.getOrElse(originAndTerminal, Map()) ++ updatesForOriginTerminal
+      val updatedOriginTerminal = originTerminalPaxNosState.getOrElse(originAndTerminal, Map()) ++
+        updatesForOriginTerminal
       updateState(origin, terminal, updatedOriginTerminal)
     }
 
   private def setPortAverage(state: Map[OriginAndTerminal, Map[(Long, Long), Int]]): Unit = {
     val portAverageDeltas = state.values
       .map { originTerminalCounts =>
-        val maybeDeltas = PaxDeltas.maybePctDeltas(originTerminalCounts, maxDaysToConsider, numDaysInAverage, () => SDate.now())
+        val maybeDeltas =
+          PaxDeltas.maybePctDeltas(originTerminalCounts, maxDaysToConsider, numDaysInAverage, () => SDate.now())
         PaxDeltas.maybeAveragePctDelta(maybeDeltas)
       }
       .collect { case Some(delta) => delta }
@@ -102,10 +111,11 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
 
   private def sendAverageDelta(gad: GetAverageAdjustment, replyTo: ActorRef): Unit = {
     val originTerminalPaxNos = originTerminalPaxNosState.getOrElse(gad.originAndTerminal, Map())
-    val maybeDeltas = PaxDeltas.maybePctDeltas(originTerminalPaxNos, maxDaysToConsider, gad.numberOfDays, () => SDate.now())
+    val maybeDeltas =
+      PaxDeltas.maybePctDeltas(originTerminalPaxNos, maxDaysToConsider, gad.numberOfDays, () => SDate.now())
     val maybeAverageDelta = PaxDeltas.maybeAveragePctDelta(maybeDeltas) match {
       case Some(average) => Option(average)
-      case None => Option(portAverageDelta)
+      case None          => Option(portAverageDelta)
     }
     replyTo ! maybeAverageDelta
   }
@@ -118,4 +128,3 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
 
   override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }
-

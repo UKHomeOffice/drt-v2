@@ -1,22 +1,22 @@
 package drt.client.services.handlers
 
 import diode._
-import diode.data.{Pot, Ready}
+import diode.data.{ Pot, Ready }
 import drt.client.actions.Actions._
 import drt.client.components.FileUploadState
 import drt.client.logger.log
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
-import org.scalajs.dom.{document, html}
+import org.scalajs.dom.{ document, html }
 import upickle.default._
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 case class ResponseMessage(message: String)
 
 object ResponseMessage {
-  import upickle.default.{macroRW, ReadWriter => RW}
+  import upickle.default.{ macroRW, ReadWriter => RW }
 
   implicit val rw: RW[ResponseMessage] = macroRW
 }
@@ -61,8 +61,9 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
           log.error(s"Failed to upload file $e")
           Future.successful(FileUploadStatus(FileUploadState(
             state = "error",
-            message = "Error while uploading file. Please check the file has correct content & format or Please contact DRT team with the file.")
-          ))
+            message =
+              "Error while uploading file. Please check the file has correct content & format or Please contact DRT team with the file."
+          )))
       })
 
       effectOnly(apiCallEffect)

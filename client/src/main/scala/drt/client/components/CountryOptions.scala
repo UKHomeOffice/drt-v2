@@ -2,7 +2,6 @@ package drt.client.components
 
 import drt.shared.Country
 
-
 object CountryOptions {
   def countries: Seq[Country] = Seq(
     Country(twoLetterCode = "AF", threeLetterCode = "AFG", name = "Afghanistan", id = 4),
@@ -122,7 +121,12 @@ object CountryOptions {
     Country(twoLetterCode = "KZ", threeLetterCode = "KAZ", name = "Kazakhstan", id = 398),
     Country(twoLetterCode = "KE", threeLetterCode = "KEN", name = "Kenya", id = 404),
     Country(twoLetterCode = "KI", threeLetterCode = "KIR", name = "Kiribati", id = 296),
-    Country(twoLetterCode = "KP", threeLetterCode = "PRK", name = "Korea (the Democratic People's Republic of)", id = 408),
+    Country(
+      twoLetterCode = "KP",
+      threeLetterCode = "PRK",
+      name = "Korea (the Democratic People's Republic of)",
+      id = 408
+    ),
     Country(twoLetterCode = "KR", threeLetterCode = "KOR", name = "Korea (the Republic of)", id = 410),
     Country(twoLetterCode = "KS", threeLetterCode = "RKS", name = "Kosovo", id = 411),
     Country(twoLetterCode = "KW", threeLetterCode = "KWT", name = "Kuwait", id = 414),
@@ -191,7 +195,12 @@ object CountryOptions {
     Country(twoLetterCode = "RW", threeLetterCode = "RWA", name = "Rwanda", id = 646),
     Country(twoLetterCode = "RE", threeLetterCode = "REU", name = "Réunion", id = 638),
     Country(twoLetterCode = "BL", threeLetterCode = "BLM", name = "Saint Barthélemy", id = 652),
-    Country(twoLetterCode = "SH", threeLetterCode = "SHN", name = "Saint Helena, Ascension and Tristan da Cunha", id = 654),
+    Country(
+      twoLetterCode = "SH",
+      threeLetterCode = "SHN",
+      name = "Saint Helena, Ascension and Tristan da Cunha",
+      id = 654
+    ),
     Country(twoLetterCode = "KN", threeLetterCode = "KNA", name = "Saint Kitts and Nevis", id = 659),
     Country(twoLetterCode = "LC", threeLetterCode = "LCA", name = "Saint Lucia", id = 662),
     Country(twoLetterCode = "MF", threeLetterCode = "MAF", name = "Saint Martin (French part)", id = 663),
@@ -212,7 +221,12 @@ object CountryOptions {
     Country(twoLetterCode = "SB", threeLetterCode = "SLB", name = "Solomon Islands", id = 90),
     Country(twoLetterCode = "SO", threeLetterCode = "SOM", name = "Somalia", id = 706),
     Country(twoLetterCode = "ZA", threeLetterCode = "ZAF", name = "South Africa", id = 710),
-    Country(twoLetterCode = "GS", threeLetterCode = "SGS", name = "South Georgia and the South Sandwich Islands", id = 239),
+    Country(
+      twoLetterCode = "GS",
+      threeLetterCode = "SGS",
+      name = "South Georgia and the South Sandwich Islands",
+      id = 239
+    ),
     Country(twoLetterCode = "SS", threeLetterCode = "SSD", name = "South Sudan", id = 728),
     Country(twoLetterCode = "ES", threeLetterCode = "ESP", name = "Spain", id = 724),
     Country(twoLetterCode = "LK", threeLetterCode = "LKA", name = "Sri Lanka", id = 144),
@@ -239,8 +253,18 @@ object CountryOptions {
     Country(twoLetterCode = "UG", threeLetterCode = "UGA", name = "Uganda", id = 800),
     Country(twoLetterCode = "UA", threeLetterCode = "UKR", name = "Ukraine", id = 804),
     Country(twoLetterCode = "AE", threeLetterCode = "ARE", name = "United Arab Emirates (the)", id = 784),
-    Country(twoLetterCode = "GB", threeLetterCode = "GBR", name = "United Kingdom of Great Britain and Northern Ireland (the)", id = 826),
-    Country(twoLetterCode = "UM", threeLetterCode = "UMI", name = "United States Minor Outlying Islands (the)", id = 581),
+    Country(
+      twoLetterCode = "GB",
+      threeLetterCode = "GBR",
+      name = "United Kingdom of Great Britain and Northern Ireland (the)",
+      id = 826
+    ),
+    Country(
+      twoLetterCode = "UM",
+      threeLetterCode = "UMI",
+      name = "United States Minor Outlying Islands (the)",
+      id = 581
+    ),
     Country(twoLetterCode = "US", threeLetterCode = "USA", name = "United States of America (the)", id = 840),
     Country(twoLetterCode = "UY", threeLetterCode = "URY", name = "Uruguay", id = 858),
     Country(twoLetterCode = "UZ", threeLetterCode = "UZB", name = "Uzbekistan", id = 860),
@@ -262,6 +286,6 @@ object CountryOptions {
     Country(twoLetterCode = "", threeLetterCode = "XXB", name = "Refugee (Article 1)", id = -5),
     Country(twoLetterCode = "", threeLetterCode = "XXC", name = "Refugee (non-Article 1)", id = -6),
     Country(twoLetterCode = "", threeLetterCode = "XXX", name = "Unspecified nationality", id = -7),
-    Country(twoLetterCode = "", threeLetterCode = "WSA", name = "World Service Authority World Passport", id = -8),
+    Country(twoLetterCode = "", threeLetterCode = "WSA", name = "World Service Authority World Passport", id = -8)
   )
 }

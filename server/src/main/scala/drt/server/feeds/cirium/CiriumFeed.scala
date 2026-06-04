@@ -1,30 +1,34 @@
 package drt.server.feeds.cirium
 
-import org.apache.pekko.actor.{ActorSystem, typed}
+import org.apache.pekko.actor.{ typed, ActorSystem }
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.model._
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, LiveArrival, VoyageNumber }
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.ports.Terminals.{ A2, InvalidTerminal, T1, Terminal }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem: ActorSystem, materializer: Materializer) {
+case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit
+    actorSystem: ActorSystem,
+    materializer: Materializer
+) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import CiriumFeed._
 
-  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+      : Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     source
       .mapAsync(1) { _ =>
         makeRequest()
@@ -60,16 +64,17 @@ object CiriumFeed {
   def timeToNearest5Minutes(date: SDateLike): SDateLike = date.getMinutes % 5 match {
     case n if n <= 2 => date.addMinutes(-n)
     case n if n >= 3 => date.addMinutes(5 - n)
-    case _ => date
+    case _           => date
   }
 
   def toArrival(f: CiriumFlightStatus, portCode: PortCode): LiveArrival = {
     val carrierScheduledTime = f.arrivalDate.millis
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
-    lazy val (carrierCode, voyageNumberLike, maybeSuffix) = FlightCode.flightCodeToParts(f.operatingCarrierFsCode + f.flightNumber)
+    lazy val (carrierCode, voyageNumberLike, maybeSuffix) =
+      FlightCode.flightCodeToParts(f.operatingCarrierFsCode + f.flightNumber)
     lazy val voyageNumber: VoyageNumber = voyageNumberLike match {
       case vn: VoyageNumber => vn
-      case _ => throw new Exception(s"Failed to parse voyage number from ${f.operatingCarrierFsCode + f.flightNumber}")
+      case _                => throw new Exception(s"Failed to parse voyage number from ${f.operatingCarrierFsCode + f.flightNumber}")
     }
 
     LiveArrival(
@@ -92,12 +97,14 @@ object CiriumFeed {
       gate = f.airportResources.flatMap(_.arrivalGate),
       stand = None,
       runway = None,
-      baggageReclaim = f.airportResources.flatMap(_.baggage),
+      baggageReclaim = f.airportResources.flatMap(_.baggage)
     )
   }
 
-  def requestFeed(endpoint: String)
-                 (implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()
+  def requestFeed(endpoint: String)(implicit
+      actorSystem: ActorSystem,
+      materializer: Materializer
+  ): Future[List[CiriumFlightStatus]] = Http()
     .singleRequest(HttpRequest(
       method = HttpMethods.GET,
       uri = Uri(endpoint),

@@ -1,21 +1,21 @@
-
 package slickdb
 
-import slick.dbio.{DBIOAction, NoStream}
+import slick.dbio.{ DBIOAction, NoStream }
 import slick.jdbc.PostgresProfile
 
 import scala.concurrent.Future
 
+case class JournalRow(
+    ordering: Long,
+    persistenceId: String,
+    sequenceNumber: Long
+)
 
-case class JournalRow(ordering: Long,
-                      persistenceId: String,
-                      sequenceNumber: Long,
-                     )
-
-case class SnapshotRow(persistenceId: String,
-                       sequenceNumber: Long,
-                       created: Long,
-                      )
+case class SnapshotRow(
+    persistenceId: String,
+    sequenceNumber: Long,
+    created: Long
+)
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait AkkaDbTables {

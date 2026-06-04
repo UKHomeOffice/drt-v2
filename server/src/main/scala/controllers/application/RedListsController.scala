@@ -2,19 +2,19 @@ package controllers.application
 
 import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
+import spray.json.{ enrichAny, DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.{AirportInfo, PortCode}
-import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.ports.{ AirportInfo, PortCode }
+import uk.gov.homeoffice.drt.redlist.{ RedListUpdate, RedListUpdates, SetRedListUpdate }
 import uk.gov.homeoffice.drt.services.AirportInfoService
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import upickle.default._
 
-
-class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class RedListsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
 
   def getRedListPorts(dateString: String): Action[AnyContent] =
     Action.async { _ =>
@@ -31,8 +31,11 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
 
   def getRedListUpdates: Action[AnyContent] =
     Action.async { _ =>
-      implicit val rluFormat: RedListJsonFormats.redListUpdatesJsonFormat.type = RedListJsonFormats.redListUpdatesJsonFormat
-      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(r.toJson.compactPrint))
+      implicit val rluFormat: RedListJsonFormats.redListUpdatesJsonFormat.type =
+        RedListJsonFormats.redListUpdatesJsonFormat
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r =>
+        Ok(r.toJson.compactPrint)
+      )
     }
 
   def getRedListUpdatesLegacy: Action[AnyContent] =
@@ -41,53 +44,54 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
     }
 }
 
-
 object RedListJsonFormats extends DefaultJsonProtocol {
-    implicit object redListUpdateJsonFormat extends RootJsonFormat[RedListUpdate] {
-      override def write(obj: RedListUpdate): JsValue = {
-        val additions = obj.additions.map { case (name, code) =>
-          JsArray(JsString(name), JsString(code))
-        }
-        JsObject(Map(
-          "effectiveFrom" -> JsNumber(obj.effectiveFrom),
-          "additions" -> JsArray(additions.toVector),
-          "removals" -> JsArray(obj.removals.map(r => JsString(r)).toVector)))
+  implicit object redListUpdateJsonFormat extends RootJsonFormat[RedListUpdate] {
+    override def write(obj: RedListUpdate): JsValue = {
+      val additions = obj.additions.map { case (name, code) =>
+        JsArray(JsString(name), JsString(code))
       }
-
-      override def read(json: JsValue): RedListUpdate = json match {
-        case JsObject(fields) =>
-          val maybeStuff = for {
-            effectiveFrom <- fields.get("effectiveFrom").collect { case JsNumber(value) => value.toLong }
-            additions <- fields.get("additions").collect {
-              case JsArray(things) =>
-                val namesWithCodes = things.collect {
-                  case JsArray(nameAndCode) =>
-                    nameAndCode.toList match {
-                      case JsString(n) :: JsString(c) :: _ => (n, c)
-                      case _ => throw new Exception("Didn't find country name and code for RedListUpdate additions")
-                    }
-                  case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
-                }.toMap
-                namesWithCodes
-              case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
-            }
-            removals <- fields.get("removals").collect { case JsArray(stuff) => stuff.map(_.convertTo[String]).toList }
-          } yield RedListUpdate(effectiveFrom, additions, removals)
-          maybeStuff.getOrElse(throw new Exception("Failed to deserialise RedListUpdate json"))
-      }
+      JsObject(Map(
+        "effectiveFrom" -> JsNumber(obj.effectiveFrom),
+        "additions" -> JsArray(additions.toVector),
+        "removals" -> JsArray(obj.removals.map(r => JsString(r)).toVector)
+      ))
     }
+
+    override def read(json: JsValue): RedListUpdate = json match {
+      case JsObject(fields) =>
+        val maybeStuff = for {
+          effectiveFrom <- fields.get("effectiveFrom").collect { case JsNumber(value) => value.toLong }
+          additions <- fields.get("additions").collect {
+            case JsArray(things) =>
+              val namesWithCodes = things.collect {
+                case JsArray(nameAndCode) =>
+                  nameAndCode.toList match {
+                    case JsString(n) :: JsString(c) :: _ => (n, c)
+                    case _                               => throw new Exception("Didn't find country name and code for RedListUpdate additions")
+                  }
+                case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
+              }.toMap
+              namesWithCodes
+            case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
+          }
+          removals <- fields.get("removals").collect { case JsArray(stuff) => stuff.map(_.convertTo[String]).toList }
+        } yield RedListUpdate(effectiveFrom, additions, removals)
+        maybeStuff.getOrElse(throw new Exception("Failed to deserialise RedListUpdate json"))
+    }
+  }
 
   implicit object redListUpdatesJsonFormat extends RootJsonFormat[RedListUpdates] {
     override def write(obj: RedListUpdates): JsValue = JsArray(obj.updates.values.map(_.toJson).toVector)
 
     override def read(json: JsValue): RedListUpdates = json match {
       case JsObject(fields) => fields.get("updates") match {
-        case Some(JsObject(updates)) =>
-          val redListUpdates = updates.map {
-            case (effectiveFrom, redListUpdateJson) => (effectiveFrom.toLong, redListUpdateJson.convertTo[RedListUpdate])
-          }
-          RedListUpdates(redListUpdates)
-      }
+          case Some(JsObject(updates)) =>
+            val redListUpdates = updates.map {
+              case (effectiveFrom, redListUpdateJson) =>
+                (effectiveFrom.toLong, redListUpdateJson.convertTo[RedListUpdate])
+            }
+            RedListUpdates(redListUpdates)
+        }
     }
   }
 

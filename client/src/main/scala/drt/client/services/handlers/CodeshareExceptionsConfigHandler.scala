@@ -1,9 +1,9 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{GetCodeShareExceptions, RetryActionAfter, UpdateCodeShareExceptions}
+import diode.{ ActionResult, Effect, ModelRW }
+import drt.client.actions.Actions.{ GetCodeShareExceptions, RetryActionAfter, UpdateCodeShareExceptions }
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.arrivals.FlightCode
 import upickle.default.read
 
@@ -15,10 +15,10 @@ class CodeshareExceptionsConfigHandler[M](modelRW: ModelRW[M, Set[FlightCode]]) 
     case GetCodeShareExceptions =>
       effectOnly(Effect(DrtApi.get("config/codeshare-exceptions")
         .map(r => UpdateCodeShareExceptions(read[Set[String]](r.responseText).map(FlightCode(_)))).recoverWith {
-        case _ =>
-          log.error(s"GetCodeShareExceptions request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetCodeShareExceptions, PollDelay.recoveryDelay))
-      }))
+          case _ =>
+            log.error(s"GetCodeShareExceptions request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(GetCodeShareExceptions, PollDelay.recoveryDelay))
+        }))
 
     case UpdateCodeShareExceptions(codeShareExceptions) =>
       updated(codeShareExceptions)

@@ -1,27 +1,33 @@
 package drt.server.feeds.acl
 
 import drt.server.feeds.acl.AclFeed._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightCode, ForecastArrival}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, FlightCode, ForecastArrival }
 import uk.gov.homeoffice.drt.ports.Terminals._
-import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
+import uk.gov.homeoffice.drt.ports.{ PortCode, Terminals }
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, OutputStream }
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util.zip.{ZipEntry, ZipInputStream}
+import java.util.zip.{ ZipEntry, ZipInputStream }
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.concurrent.duration.{ DurationLong, FiniteDuration }
 import scala.jdk.CollectionConverters.CollectionHasAsScala
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {
+case class AclFeed(
+    ftpServer: String,
+    username: String,
+    path: String,
+    portCode: PortCode,
+    terminalMapping: Terminal => Terminal
+) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
@@ -64,7 +70,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
       arrivalsFeedResponse
     } match {
       case Success(response) => response
-      case Failure(t) =>
+      case Failure(t)        =>
         log.error(s"Failed to get flights from ACL: $t")
         ArrivalsFeedFailure("Failed to connect to sftp server")
     }
@@ -118,10 +124,12 @@ object AclFeed {
       .map(_.split(",").toList)
       .filter(_.length == 30)
       .filter(_(AclColIndex.ArrDep) == "A")
-      .filter(f => f(AclColIndex.FlightNumber) match {
-        case Arrival.flightCodeRegex(_, _, suffix) => !(suffix == "P" || suffix == "F")
-        case _ => true
-      })
+      .filter(f =>
+        f(AclColIndex.FlightNumber) match {
+          case Arrival.flightCodeRegex(_, _, suffix) => !(suffix == "P" || suffix == "F")
+          case _                                     => true
+        }
+      )
 
     val arrivals = arrivalEntries
       .map(fields => aclFieldsToArrival(fields, terminalMapping))
@@ -130,7 +138,9 @@ object AclFeed {
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.scheduled).toLocalDateTimeString} (${latestArrival.voyageNumber})")
+      log.info(
+        s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.scheduled).toLocalDateTimeString} (${latestArrival.voyageNumber})"
+      )
     }
     arrivals
   }
@@ -172,9 +182,12 @@ object AclFeed {
     unzipAllFilesInStream(unzippedStream, Option(unzippedStream.getNextEntry))
   }
 
-  private def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[String] = {
+  private def unzipAllFilesInStream(
+      unzippedStream: ZipInputStream,
+      zipEntryOption: Option[ZipEntry]
+  ): Stream[String] = {
     zipEntryOption match {
-      case None => Stream.empty
+      case None    => Stream.empty
       case Some(_) =>
         val entry: String = getZipEntry(unzippedStream)
         val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
@@ -211,7 +224,7 @@ object AclFeed {
       val portTerminal = aclToPortTerminal(aclTerminal)
       val prevPort = fields(AclColIndex.LastNext) match {
         case "" => None
-        case s => Some(s)
+        case s  => Some(s)
       }
 
       val (_, voyageNumber, suffix) = FlightCode.flightCodeToParts(fields(AclColIndex.FlightNumber))
@@ -227,7 +240,7 @@ object AclFeed {
         flightCodeSuffix = suffix.map(_.suffix),
         origin = fields(AclColIndex.Origin),
         previousPort = prevPort,
-        scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
+        scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch
       )
     } match {
       case Success(a) => Success(a)
@@ -238,12 +251,36 @@ object AclFeed {
 
   private object AclColIndex {
     private val allFields: Map[String, Int] = List(
-      "A/C", "ACReg", "Airport", "ArrDep", "CreDate",
-      "Date", "DOOP", "EditDate", "Icao Aircraft Type", "Icao Last/Next Station",
-      "Icao Orig/Dest Station", "LastNext", "LastNextCountry", "Ope", "OpeGroup",
-      "OpeName", "OrigDest", "OrigDestCountry", "Res", "Season",
-      "Seats", "ServNo", "ST", "ove.ind", "Term",
-      "Time", "TurnOpe", "TurnServNo", "OpeFlightNo", "LoadFactor"
+      "A/C",
+      "ACReg",
+      "Airport",
+      "ArrDep",
+      "CreDate",
+      "Date",
+      "DOOP",
+      "EditDate",
+      "Icao Aircraft Type",
+      "Icao Last/Next Station",
+      "Icao Orig/Dest Station",
+      "LastNext",
+      "LastNextCountry",
+      "Ope",
+      "OpeGroup",
+      "OpeName",
+      "OrigDest",
+      "OrigDestCountry",
+      "Res",
+      "Season",
+      "Seats",
+      "ServNo",
+      "ST",
+      "ove.ind",
+      "Term",
+      "Time",
+      "TurnOpe",
+      "TurnServNo",
+      "OpeFlightNo",
+      "LoadFactor"
     ).zipWithIndex.toMap
 
     val MaxPax: Int = allFields("Seats")
@@ -260,17 +297,17 @@ object AclFeed {
 
   def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode.iata match {
     case "LGW" => (tIn: Terminal) =>
-      Map[Terminal, Terminal](
-        T1 -> S,
-        T2 -> N,
-      ).getOrElse(tIn, tIn)
+        Map[Terminal, Terminal](
+          T1 -> S,
+          T2 -> N
+        ).getOrElse(tIn, tIn)
     case "EDI" => (tIn: Terminal) =>
-      Map[Terminal, Terminal](T1 -> A2).getOrElse(tIn, tIn)
+        Map[Terminal, Terminal](T1 -> A2).getOrElse(tIn, tIn)
     case "LCY" => (tIn: Terminal) =>
-      Map[Terminal, Terminal](
-        ACLTER -> T1,
-        MainApron -> T1,
-      ).getOrElse(tIn, tIn)
+        Map[Terminal, Terminal](
+          ACLTER -> T1,
+          MainApron -> T1
+        ).getOrElse(tIn, tIn)
     case "STN" =>
       (tIn: Terminal) => Map[Terminal, Terminal](CTA -> T1).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn

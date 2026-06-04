@@ -3,28 +3,28 @@ package drt.client.services
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{ FileUploadState, StaffAdjustmentDialogueState }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import drt.shared.KeyCloakApi.{ KeyCloakGroup, KeyCloakUser }
 import drt.shared._
-import drt.shared.api.{ForecastAccuracy, WalkTimes}
-import uk.gov.homeoffice.drt.{ABFeature, Shift}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, UniqueArrival}
+import drt.shared.api.{ ForecastAccuracy, WalkTimes }
+import uk.gov.homeoffice.drt.{ ABFeature, Shift }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, UniqueArrival }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
-import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, UserPreferences}
+import uk.gov.homeoffice.drt.models.{ FlightManifestSummary, ManifestKey, UserPreferences }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, AirportInfo, FeedSource, PortCode }
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 import uk.gov.homeoffice.drt.training.FeatureGuide
 
-import scala.collection.immutable.{HashSet, Map}
+import scala.collection.immutable.{ HashSet, Map }
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -172,62 +172,63 @@ case class ClientServerVersions(client: String, server: String)
 
 case class StaffMovementMinute(terminal: Terminal, minute: MillisSinceEpoch, staff: Int, createdAt: MillisSinceEpoch)
 
-case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
-                     latestFlightUpdateMillis: MillisSinceEpoch = 0L,
-                     latestQueueUpdateMillis: MillisSinceEpoch = 0L,
-                     latestStaffUpdateMillis: MillisSinceEpoch = 0L,
-                     portStatePot: Pot[PortState] = Empty,
-                     forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
-                     airportInfos: Map[PortCode, Pot[AirportInfo]] = Map.empty,
-                     airportConfig: Pot[AirportConfig] = Empty,
-                     arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])] = None,
-                     contactDetails: Pot[ContactDetails] = Empty,
-                     dayOfShiftAssignments: Pot[ShiftAssignments] = Empty,
-                     allShiftAssignments:Pot[ShiftAssignments] = Empty,
-                     fixedPoints: Pot[FixedPointAssignments] = Empty,
-                     staffMovements: Pot[StaffMovements] = Empty,
-                     viewMode: ViewMode = ViewLive,
-                     loadingState: LoadingState = LoadingState(),
-                     showActualIfAvailable: Boolean = false,
-                     loggedInUserPot: Pot[LoggedInUser] = Empty,
-                     userHasPortAccess: Pot[Boolean] = Empty,
-                     minuteTicker: Pot[Int] = Empty,
-                     keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
-                     selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
-                     feedStatuses: Pot[Seq[FeedSourceStatuses]] = Empty,
-                     alerts: Pot[List[Alert]] = Empty,
-                     maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
-                     oohStatus: Pot[OutOfHoursStatus] = Empty,
-                     featureFlags: Pot[FeatureFlags] = Empty,
-                     fileUploadState: Pot[FileUploadState] = Empty,
-                     simulationResult: Pot[SimulationResult] = Empty,
-                     passengerInfoSummariesByArrival: Pot[Map[ManifestKey, FlightManifestSummary]] = Ready(Map.empty),
-                     snackbarMessage: Pot[String] = Empty,
-                     redListPorts: Pot[HashSet[PortCode]] = Empty,
-                     redListUpdates: Pot[RedListUpdates] = Empty,
-                     egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
-                     gateStandWalkTime: Pot[WalkTimes] = Empty,
-                     passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
-                     featureGuides: Pot[Seq[FeatureGuide]] = Empty,
-                     maybeTimeMachineDate: Option[SDateLike] = None,
-                     flaggedNationalities: Set[Country] = Set.empty,
-                     flightManifestSummaries: Map[ManifestKey, FlightManifestSummary] = Map.empty,
-                     paxFeedSourceOrder: List[FeedSource] = List.empty,
-                     showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
-                     featureGuideViewedIds: Pot[Seq[String]] = Empty,
-                     dropIns: Pot[Seq[DropIn]] = Empty,
-                     dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
-                     userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
-                     abFeatures: Pot[Seq[ABFeature]] = Empty,
-                     slaConfigs: Pot[SlaConfigs] = Empty,
-                     showFeedbackBanner: Pot[Boolean] = Empty,
-                     userPreferences: Pot[UserPreferences] = Empty,
-                     shifts: Pot[Seq[Shift]] = Empty,
-                     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
-                     addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map.empty,
-                     removedStaffMovements: Set[String] = Set.empty,
-                     codeShareExceptions: Set[FlightCode] = Set.empty,
-                    )
+case class RootModel(
+    applicationVersion: Pot[ClientServerVersions] = Empty,
+    latestFlightUpdateMillis: MillisSinceEpoch = 0L,
+    latestQueueUpdateMillis: MillisSinceEpoch = 0L,
+    latestStaffUpdateMillis: MillisSinceEpoch = 0L,
+    portStatePot: Pot[PortState] = Empty,
+    forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
+    airportInfos: Map[PortCode, Pot[AirportInfo]] = Map.empty,
+    airportConfig: Pot[AirportConfig] = Empty,
+    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])] = None,
+    contactDetails: Pot[ContactDetails] = Empty,
+    dayOfShiftAssignments: Pot[ShiftAssignments] = Empty,
+    allShiftAssignments: Pot[ShiftAssignments] = Empty,
+    fixedPoints: Pot[FixedPointAssignments] = Empty,
+    staffMovements: Pot[StaffMovements] = Empty,
+    viewMode: ViewMode = ViewLive,
+    loadingState: LoadingState = LoadingState(),
+    showActualIfAvailable: Boolean = false,
+    loggedInUserPot: Pot[LoggedInUser] = Empty,
+    userHasPortAccess: Pot[Boolean] = Empty,
+    minuteTicker: Pot[Int] = Empty,
+    keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
+    selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
+    feedStatuses: Pot[Seq[FeedSourceStatuses]] = Empty,
+    alerts: Pot[List[Alert]] = Empty,
+    maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
+    oohStatus: Pot[OutOfHoursStatus] = Empty,
+    featureFlags: Pot[FeatureFlags] = Empty,
+    fileUploadState: Pot[FileUploadState] = Empty,
+    simulationResult: Pot[SimulationResult] = Empty,
+    passengerInfoSummariesByArrival: Pot[Map[ManifestKey, FlightManifestSummary]] = Ready(Map.empty),
+    snackbarMessage: Pot[String] = Empty,
+    redListPorts: Pot[HashSet[PortCode]] = Empty,
+    redListUpdates: Pot[RedListUpdates] = Empty,
+    egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
+    gateStandWalkTime: Pot[WalkTimes] = Empty,
+    passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
+    featureGuides: Pot[Seq[FeatureGuide]] = Empty,
+    maybeTimeMachineDate: Option[SDateLike] = None,
+    flaggedNationalities: Set[Country] = Set.empty,
+    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary] = Map.empty,
+    paxFeedSourceOrder: List[FeedSource] = List.empty,
+    showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
+    featureGuideViewedIds: Pot[Seq[String]] = Empty,
+    dropIns: Pot[Seq[DropIn]] = Empty,
+    dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
+    userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
+    abFeatures: Pot[Seq[ABFeature]] = Empty,
+    slaConfigs: Pot[SlaConfigs] = Empty,
+    showFeedbackBanner: Pot[Boolean] = Empty,
+    userPreferences: Pot[UserPreferences] = Empty,
+    shifts: Pot[Seq[Shift]] = Empty,
+    flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
+    addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map.empty,
+    removedStaffMovements: Set[String] = Set.empty,
+    codeShareExceptions: Set[FlightCode] = Set.empty
+)
 
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10.seconds
@@ -247,21 +248,43 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     val composedHandlers: HandlerFunction = composeHandlers(
       new InitialPortStateHandler(
         currentViewMode,
-        zoomRW(m => (m.portStatePot, m.latestFlightUpdateMillis, m.latestQueueUpdateMillis, m.latestStaffUpdateMillis, m.redListPorts))(
-          (m, v) => m.copy(portStatePot = v._1, latestFlightUpdateMillis = v._2, latestQueueUpdateMillis = v._3, latestStaffUpdateMillis = v._4, redListPorts = v._5)
-        ),
+        zoomRW(m =>
+          (
+            m.portStatePot,
+            m.latestFlightUpdateMillis,
+            m.latestQueueUpdateMillis,
+            m.latestStaffUpdateMillis,
+            m.redListPorts
+          )
+        )((m, v) =>
+          m.copy(
+            portStatePot = v._1,
+            latestFlightUpdateMillis = v._2,
+            latestQueueUpdateMillis = v._3,
+            latestStaffUpdateMillis = v._4,
+            redListPorts = v._5
+          )
+        )
       ),
       new PortStateUpdatesHandler(
         currentViewMode,
         zoomRW(m => (m.portStatePot, m.latestFlightUpdateMillis, m.latestQueueUpdateMillis, m.latestStaffUpdateMillis))(
-          (m, v) => m.copy(portStatePot = v._1, latestFlightUpdateMillis = v._2, latestQueueUpdateMillis = v._3, latestStaffUpdateMillis = v._4)
+          (m, v) =>
+            m.copy(
+              portStatePot = v._1,
+              latestFlightUpdateMillis = v._2,
+              latestQueueUpdateMillis = v._3,
+              latestStaffUpdateMillis = v._4
+            )
         ),
         zoom(_.flightManifestSummaries),
-        zoom(_.paxFeedSourceOrder),
+        zoom(_.paxFeedSourceOrder)
       ),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
-      new FlightManifestSummariesHandler(zoomRW(_.flightManifestSummaries)((m, v) => m.copy(flightManifestSummaries = v))),
+      new FlightManifestSummariesHandler(zoomRW(_.flightManifestSummaries)((m, v) =>
+        m.copy(flightManifestSummaries = v)
+      )),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new PaxFeedSourceOrderHandler(zoomRW(_.paxFeedSourceOrder)((m, v) => m.copy(paxFeedSourceOrder = v))),
@@ -270,15 +293,24 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
       new FeatureFlagHandler(zoomRW(_.featureFlags)((m, v) => m.copy(featureFlags = v))),
       new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
-      new DayOfShiftAssignmentsHandler(currentViewMode, zoomRW(_.dayOfShiftAssignments)((m, v) => m.copy(dayOfShiftAssignments = v))),
+      new DayOfShiftAssignmentsHandler(
+        currentViewMode,
+        zoomRW(_.dayOfShiftAssignments)((m, v) => m.copy(dayOfShiftAssignments = v))
+      ),
       new AllShiftAssignmentsHandler(zoomRW(_.allShiftAssignments)((m, v) => m.copy(allShiftAssignments = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
-      new StaffMovementsHandler(currentViewMode, zoomRW(m => (m.staffMovements, m.addedStaffMovementMinutes, m.removedStaffMovements)) { (m, v) =>
-        m.copy(staffMovements = v._1, addedStaffMovementMinutes = v._2, removedStaffMovements = v._3)
-      }),
-      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis)) { (m, v) =>
-        m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3)
-      }),
+      new StaffMovementsHandler(
+        currentViewMode,
+        zoomRW(m => (m.staffMovements, m.addedStaffMovementMinutes, m.removedStaffMovements)) { (m, v) =>
+          m.copy(staffMovements = v._1, addedStaffMovementMinutes = v._2, removedStaffMovements = v._3)
+        }
+      ),
+      new ViewModeHandler(
+        () => SDate.now(),
+        zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis)) { (m, v) =>
+          m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3)
+        }
+      ),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, _) => m)),
@@ -292,7 +324,9 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
       new RedListUpdatesHandler(zoomRW(_.redListUpdates)((m, v) => m.copy(redListUpdates = v))),
       new EgateBanksUpdatesHandler(zoomRW(_.egateBanksUpdates)((m, v) => m.copy(egateBanksUpdates = v))),
-      new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
+      new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) =>
+        m.copy(maybeStaffDeploymentAdjustmentPopoverState = v)
+      )),
       new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
       new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v))),
@@ -302,7 +336,9 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
       new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
       new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
-      new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
+      new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) =>
+        m.copy(showNewFeatureGuideOnLogin = v)
+      )),
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
       new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
       new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
@@ -312,7 +348,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
       new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
-      new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
+      new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v)))
     )
     composedHandlers
   }

@@ -1,11 +1,11 @@
 package services.crunch.deskrecs
 
-import services.{OptimiserConfig, OptimizerCrunchResult}
+import services.{ OptimiserConfig, OptimizerCrunchResult }
 import uk.gov.homeoffice.drt.ports.Queues._
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
 
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 
 class DeploymentFlexingSpec extends CrunchTestLike {
   val totalDesks = 20
@@ -30,7 +30,7 @@ class DeploymentFlexingSpec extends CrunchTestLike {
     NonEeaDesk -> roWMinDesks24,
     EeaDesk -> eeaMinDesks24,
     EGate -> egateMinDesks24
-    )
+  )
 
   val maxDesks: Map[Queue, List[Int]] = Map(EGate -> egateMaxDesks24)
 
@@ -70,7 +70,8 @@ class DeploymentFlexingSpec extends CrunchTestLike {
 
     val alreadyDeployed = 3
     s"Given a single queue with $minDesks min desks $totalDesks total desks, $totalStaff available staff and $alreadyDeployed staff already deployed" >> {
-      s"I should get the minimum of the 2 numbers, ie $totalStaff, minus $minDesks min desks = ${totalStaff - minDesks - alreadyDeployed}" >> {
+      s"I should get the minimum of the 2 numbers, ie $totalStaff, minus $minDesks min desks = ${totalStaff - minDesks -
+          alreadyDeployed}" >> {
         val maxStaffAvailable = List(totalStaff, totalDesks).min - minDesks - alreadyDeployed
 
         maxStaffAvailable === (totalStaff - minDesks) - alreadyDeployed

@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import drt.client.actions.Actions._

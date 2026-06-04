@@ -1,6 +1,6 @@
 package controllers.application.api.v1
 
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import com.google.inject.Inject
 import controllers.application.AuthController
 import play.api.mvc._
@@ -8,10 +8,10 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.FeedSource
-import uk.gov.homeoffice.drt.time.{DateRange, UtcDate}
+import uk.gov.homeoffice.drt.time.{ DateRange, UtcDate }
 
-
-class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class FlightsApiController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
   implicit val pfso: List[FeedSource] = ctrl.paxFeedSourceOrder
 
   def populateFlights(start: String, end: String): Action[AnyContent] =

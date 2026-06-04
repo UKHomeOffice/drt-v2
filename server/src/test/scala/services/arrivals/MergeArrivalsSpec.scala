@@ -3,21 +3,32 @@ package services.arrivals
 import drt.shared.ArrivalGenerator
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, Predictions, UniqueArrival, VoyageNumber, Predictions => Preds}
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1, Terminal}
+import uk.gov.homeoffice.drt.arrivals.{
+  Arrival,
+  ArrivalStatus,
+  ArrivalsDiff,
+  CarrierCode,
+  FlightCodeSuffix,
+  Operator,
+  Passengers,
+  Predictions,
+  Predictions => Preds,
+  UniqueArrival,
+  VoyageNumber
+}
+import uk.gov.homeoffice.drt.ports.Terminals.{ A1, A2, T1, Terminal }
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ DateLike, LocalDate, UtcDate }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
-
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class MergeArrivalsSpec extends AnyWordSpec with Matchers {
   private val current = Arrival(
@@ -46,7 +57,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     Origin = PortCode("JFK"),
     PreviousPort = Option(PortCode("JFK")),
     Scheduled = 1000L,
-    PcpTime = None,
+    PcpTime = None
   )
 
   private def updateWithAllOptionals(source: FeedSource) = current.copy(
@@ -67,7 +78,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     PassengerSources = Map(source -> Passengers(Option(100), Option(10))),
     FlightCodeSuffix = Option(FlightCodeSuffix("A")),
     Predictions = Preds(10L, Map("a" -> 1)),
-    PreviousPort = Option(PortCode("ABZ")),
+    PreviousPort = Option(PortCode("ABZ"))
   )
 
   private def updateWithNoOptionals(source: FeedSource) = current.copy(
@@ -88,7 +99,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     PassengerSources = Map(source -> Passengers(Option(100), Option(10))),
     FlightCodeSuffix = None,
     Predictions = Preds(10L, Map("a" -> 1)),
-    PreviousPort = None,
+    PreviousPort = None
   )
 
   "mergeArrivals" should {
@@ -122,7 +133,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         Origin = updateWithAllOptionals(LiveFeedSource).Origin,
         PreviousPort = updateWithAllOptionals(LiveFeedSource).PreviousPort,
         Scheduled = updateWithAllOptionals(LiveFeedSource).Scheduled,
-        PcpTime = updateWithAllOptionals(LiveFeedSource).PcpTime,
+        PcpTime = updateWithAllOptionals(LiveFeedSource).PcpTime
       ))
     }
     "overwrite the current arrival with the next arrival's values falling back on current value where next doesn't have one" in {
@@ -154,7 +165,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         Origin = updateWithNoOptionals(LiveFeedSource).Origin,
         PreviousPort = current.PreviousPort,
         Scheduled = updateWithNoOptionals(LiveFeedSource).Scheduled,
-        PcpTime = current.PcpTime,
+        PcpTime = current.PcpTime
       ))
     }
   }
@@ -164,14 +175,19 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val existingMerged = Set.empty[UniqueArrival]
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](current.unique -> current)),
-        FeedArrivalSet(isPrimary = false, None, Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource))),
+        FeedArrivalSet(
+          isPrimary = false,
+          None,
+          Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+            updateWithAllOptionals(LiveFeedSource))
+        )
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       val expectedMergedArrival = updateWithAllOptionals(LiveFeedSource).copy(
         FeedSources = current.FeedSources ++ updateWithAllOptionals(LiveFeedSource).FeedSources,
-        PassengerSources = current.PassengerSources ++ updateWithAllOptionals(LiveFeedSource).PassengerSources,
+        PassengerSources = current.PassengerSources ++ updateWithAllOptionals(LiveFeedSource).PassengerSources
       )
 
       result should ===(
@@ -183,7 +199,12 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val existingMerged = Set.empty[UniqueArrival]
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = true, None, Map.empty[UniqueArrival, Arrival]),
-        FeedArrivalSet(isPrimary = false, None, Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource))),
+        FeedArrivalSet(
+          isPrimary = false,
+          None,
+          Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+            updateWithAllOptionals(LiveFeedSource))
+        )
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
@@ -194,19 +215,28 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val existingMerged = Set.empty[UniqueArrival]
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = true, None, Map.empty[UniqueArrival, Arrival]),
-        FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource))),
+        FeedArrivalSet(
+          isPrimary = true,
+          None,
+          Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+            updateWithAllOptionals(LiveFeedSource))
+        )
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(
-        ArrivalsDiff(Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource)), Set.empty)
+        ArrivalsDiff(
+          Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+            updateWithAllOptionals(LiveFeedSource)),
+          Set.empty
+        )
       )
     }
     "remove a unique arrival when it exists in the existing merged but not in a primary set" in {
       val existingMerged = Set(current.unique)
       val arrivalSets = Seq(
-        FeedArrivalSet(isPrimary = true, None, Map.empty[UniqueArrival, Arrival]),
+        FeedArrivalSet(isPrimary = true, None, Map.empty[UniqueArrival, Arrival])
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
@@ -221,7 +251,11 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val arrivalA2 = current.copy(Terminal = A2, BaggageReclaimId = a2BaggageBelt)
       val arrivalWithA1Baggage = arrivalA2.copy(BaggageReclaimId = a1BaggageBelt)
       val arrivalSets = Seq(
-        FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](arrivalWithA1Baggage.unique -> arrivalWithA1Baggage)),
+        FeedArrivalSet(
+          isPrimary = true,
+          None,
+          Map[UniqueArrival, Arrival](arrivalWithA1Baggage.unique -> arrivalWithA1Baggage)
+        )
       )
 
       val result = MergeArrivals.mergeSets(Set(arrivalA2.unique), arrivalSets, EdiArrivalsTerminalAdjustments.adjust)
@@ -238,7 +272,11 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val arrivalA1 = current.copy(Terminal = A1, BaggageReclaimId = a1BaggageBelt)
       val arrivalWithA2Baggage = arrivalA1.copy(BaggageReclaimId = a2BaggageBelt)
       val arrivalSets = Seq(
-        FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](arrivalWithA2Baggage.unique -> arrivalWithA2Baggage)),
+        FeedArrivalSet(
+          isPrimary = true,
+          None,
+          Map[UniqueArrival, Arrival](arrivalWithA2Baggage.unique -> arrivalWithA2Baggage)
+        )
       )
 
       val result = MergeArrivals.mergeSets(Set(arrivalA1.unique), arrivalSets, EdiArrivalsTerminalAdjustments.adjust)
@@ -255,17 +293,19 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val liveArrival = updateWithNoOptionals(LiveFeedSource)
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = false, None, Map(ciriumArrival.unique -> ciriumArrival)),
-        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival)),
+        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival))
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(
-        ArrivalsDiff(Map(
-          ciriumArrival.unique -> ciriumArrival.copy(
-            FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
-            PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources,
-          )),
+        ArrivalsDiff(
+          Map(
+            ciriumArrival.unique -> ciriumArrival.copy(
+              FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
+              PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources
+            )
+          ),
           Set.empty[UniqueArrival]
         )
       )
@@ -276,17 +316,19 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val liveArrival = updateWithNoOptionals(LiveFeedSource).copy(Status = ArrivalStatus(""))
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = false, None, Map(ciriumArrival.unique -> ciriumArrival)),
-        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival)),
+        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival))
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(
-        ArrivalsDiff(Map(
-          ciriumArrival.unique -> ciriumArrival.copy(
-            FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
-            PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources,
-          )),
+        ArrivalsDiff(
+          Map(
+            ciriumArrival.unique -> ciriumArrival.copy(
+              FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
+              PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources
+            )
+          ),
           Set.empty[UniqueArrival]
         )
       )
@@ -298,17 +340,19 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val liveArrival = updateWithNoOptionals(LiveFeedSource)
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = false, Option(5.minutes), Map(ciriumArrivalFuzzy.unique -> ciriumArrivalFuzzy)),
-        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival)),
+        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival))
       )
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(
-        ArrivalsDiff(Map(
-          updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource).copy(
-            FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
-            PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources,
-          )),
+        ArrivalsDiff(
+          Map(
+            updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource).copy(
+              FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
+              PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources
+            )
+          ),
           Set.empty[UniqueArrival]
         )
       )
@@ -319,15 +363,26 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     "merge arrivals from multiple sources" in {
       val existingMerged = (_: Terminal, _: UtcDate) => Future.successful(Set.empty[UniqueArrival])
       val arrivalSources = Seq(
-        (_: DateLike, _: Terminal) => Future.successful(FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](current.unique -> current))),
-        (_: DateLike, _: Terminal) => Future.successful(FeedArrivalSet(isPrimary = false, None, Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource)))),
+        (_: DateLike, _: Terminal) =>
+          Future.successful(FeedArrivalSet(
+            isPrimary = true,
+            None,
+            Map[UniqueArrival, Arrival](current.unique -> current)
+          )),
+        (_: DateLike, _: Terminal) =>
+          Future.successful(FeedArrivalSet(
+            isPrimary = false,
+            None,
+            Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+              updateWithAllOptionals(LiveFeedSource))
+          ))
       )
 
       val result = MergeArrivals(existingMerged, arrivalSources, identity)(ExecutionContext.global)
 
       val expectedMergedArrival = updateWithAllOptionals(LiveFeedSource).copy(
         FeedSources = current.FeedSources ++ updateWithAllOptionals(LiveFeedSource).FeedSources,
-        PassengerSources = current.PassengerSources ++ updateWithAllOptionals(LiveFeedSource).PassengerSources,
+        PassengerSources = current.PassengerSources ++ updateWithAllOptionals(LiveFeedSource).PassengerSources
       )
 
       result(T1, UtcDate(2024, 6, 1)).futureValue should ===(
@@ -337,8 +392,19 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     "propagate exceptions in the existing merged provider" in {
       val existingMerged = (_: Terminal, _: UtcDate) => Future.failed(new Exception("Boom"))
       val arrivalSources = Seq(
-        (_: DateLike, _: Terminal) => Future.successful(FeedArrivalSet(isPrimary = true, None, Map[UniqueArrival, Arrival](current.unique -> current))),
-        (_: DateLike, _: Terminal) => Future.successful(FeedArrivalSet(isPrimary = false, None, Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource)))),
+        (_: DateLike, _: Terminal) =>
+          Future.successful(FeedArrivalSet(
+            isPrimary = true,
+            None,
+            Map[UniqueArrival, Arrival](current.unique -> current)
+          )),
+        (_: DateLike, _: Terminal) =>
+          Future.successful(FeedArrivalSet(
+            isPrimary = false,
+            None,
+            Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+              updateWithAllOptionals(LiveFeedSource))
+          ))
       )
 
       val result = MergeArrivals(existingMerged, arrivalSources, identity)(ExecutionContext.global)
@@ -349,7 +415,13 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       val existingMerged = (_: Terminal, _: UtcDate) => Future.successful(Set.empty[UniqueArrival])
       val arrivalSources = Seq(
         (_: DateLike, _: Terminal) => Future.failed(new Exception("Boom")),
-        (_: DateLike, _: Terminal) => Future.successful(FeedArrivalSet(isPrimary = false, None, Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource)))),
+        (_: DateLike, _: Terminal) =>
+          Future.successful(FeedArrivalSet(
+            isPrimary = false,
+            None,
+            Map[UniqueArrival, Arrival](updateWithAllOptionals(LiveFeedSource).unique ->
+              updateWithAllOptionals(LiveFeedSource))
+          ))
       )
 
       val result = MergeArrivals(existingMerged, arrivalSources, identity)(ExecutionContext.global)
@@ -375,7 +447,12 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       }
 
     "call addArrivalPredictions when the request date is not earlier than today" in {
-      val flow = MergeArrivals.processingRequestToArrivalsDiff(mergeArrivalsForDate, setupPcpTimes, addArrivalPredictions, () => LocalDate(2025, 5, 13))
+      val flow = MergeArrivals.processingRequestToArrivalsDiff(
+        mergeArrivalsForDate,
+        setupPcpTimes,
+        addArrivalPredictions,
+        () => LocalDate(2025, 5, 13)
+      )
       callCount = 0
       val runnable = Source(Seq(TerminalUpdateRequest(T1, LocalDate(2025, 5, 13))))
         .via(flow)
@@ -387,7 +464,12 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     }
 
     "not call addArrivalPredictions when the request date is not earlier than today" in {
-      val flow = MergeArrivals.processingRequestToArrivalsDiff(mergeArrivalsForDate, setupPcpTimes, addArrivalPredictions, () => LocalDate(2025, 5, 13))
+      val flow = MergeArrivals.processingRequestToArrivalsDiff(
+        mergeArrivalsForDate,
+        setupPcpTimes,
+        addArrivalPredictions,
+        () => LocalDate(2025, 5, 13)
+      )
       callCount = 0
       val runnable = Source(Seq(TerminalUpdateRequest(T1, LocalDate(2025, 5, 12))))
         .via(flow)

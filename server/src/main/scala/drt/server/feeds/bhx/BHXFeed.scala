@@ -1,18 +1,18 @@
 package drt.server.feeds.bhx
 
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import org.apache.pekko.http.scaladsl.model._
 import org.apache.pekko.http.scaladsl.model.headers._
-import org.apache.pekko.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
+import org.apache.pekko.http.scaladsl.unmarshalling.{ FromResponseUnmarshaller, Unmarshal, Unmarshaller }
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ FeedArrival, FlightCode, LiveArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -20,13 +20,15 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
-import scala.xml.{Node, NodeSeq}
+import scala.xml.{ Node, NodeSeq }
 
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply[FT](client: BHXClientLike, source: Source[FeedTick, FT])
-               (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, FT] = {
+  def apply[FT](client: BHXClientLike, source: Source[FeedTick, FT])(implicit
+      actorSystem: ActorSystem,
+      materializer: Materializer
+  ): Source[ArrivalsFeedResponse, FT] = {
     var initialRequest = true
     source.mapAsync(1) { _ =>
       log.info(s"Requesting BHX Feed")
@@ -45,25 +47,25 @@ object BHXFeed {
 }
 
 case class BHXFlight(
-                      airline: String,
-                      flightNumber: String,
-                      departureAirport: String,
-                      arrivalAirport: String,
-                      aircraftTerminal: String,
-                      status: String,
-                      scheduledOnBlocks: String,
-                      arrival: Boolean,
-                      international: Boolean,
-                      estimatedOnBlocks: Option[String] = None,
-                      actualOnBlocks: Option[String] = None,
-                      estimatedTouchDown: Option[String] = None,
-                      actualTouchDown: Option[String] = None,
-                      aircraftParkingPosition: Option[String] = None,
-                      passengerGate: Option[String] = None,
-                      seatCapacity: Option[Int] = None,
-                      paxCount: Option[Int] = None,
-                      codeShares: List[String] = Nil
-                    )
+    airline: String,
+    flightNumber: String,
+    departureAirport: String,
+    arrivalAirport: String,
+    aircraftTerminal: String,
+    status: String,
+    scheduledOnBlocks: String,
+    arrival: Boolean,
+    international: Boolean,
+    estimatedOnBlocks: Option[String] = None,
+    actualOnBlocks: Option[String] = None,
+    estimatedTouchDown: Option[String] = None,
+    actualTouchDown: Option[String] = None,
+    aircraftParkingPosition: Option[String] = None,
+    passengerGate: Option[String] = None,
+    seatCapacity: Option[Int] = None,
+    paxCount: Option[Int] = None,
+    codeShares: List[String] = Nil
+)
 
 final class SoapActionHeader(action: String) extends ModeledCustomHeader[SoapActionHeader] {
   override def renderInRequests = true
@@ -97,7 +99,10 @@ trait BHXClientLike extends ScalaXmlSupport {
     sendXMLRequest(updateXml()(bhxLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit
+      actorSystem: ActorSystem,
+      materializer: Materializer
+  ): Future[ArrivalsFeedResponse] = {
     implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
 
@@ -142,20 +147,29 @@ trait BHXClientLike extends ScalaXmlSupport {
     postXML
   }
 
-  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                 (implicit system: ActorSystem): Future[HttpResponse]
+  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+      system: ActorSystem
+  ): Future[HttpResponse]
 
 }
 
 case class BHXClient(bhxLiveFeedUser: String, soapEndPoint: String) extends BHXClientLike {
-  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                 (implicit system: ActorSystem): Future[HttpResponse] =
-    Http().singleRequest(HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)))
+  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+      system: ActorSystem
+  ): Future[HttpResponse] =
+    Http().singleRequest(HttpRequest(
+      HttpMethods.POST,
+      endpoint,
+      headers,
+      HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)
+    ))
 }
 
 trait NodeSeqUnmarshaller {
-  implicit def responseToAUnmarshaller[A](implicit resp: FromResponseUnmarshaller[NodeSeq],
-                                          toA: Unmarshaller[NodeSeq, A]): Unmarshaller[HttpResponse, A] = {
+  implicit def responseToAUnmarshaller[A](implicit
+      resp: FromResponseUnmarshaller[NodeSeq],
+      toA: Unmarshaller[NodeSeq, A]
+  ): Unmarshaller[HttpResponse, A] = {
     resp.flatMap(toA).asScala
   }
 }
@@ -186,73 +200,73 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def scheduledTime: NodeSeq => Option[String] = operationTimeFromNodeSeq("SCT", "ONB")
 
-  implicit val unmarshaller: Unmarshaller[NodeSeq, BHXFlightsResponse] = Unmarshaller.strict[NodeSeq, BHXFlightsResponse] { xml =>
+  implicit val unmarshaller: Unmarshaller[NodeSeq, BHXFlightsResponse] =
+    Unmarshaller.strict[NodeSeq, BHXFlightsResponse] { xml =>
+      val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
 
-    val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
+      log.info(s"Got ${flightNodeSeq.length} flights in BHX XML")
 
-    log.info(s"Got ${flightNodeSeq.length} flights in BHX XML")
+      val flights = flightNodeSeq.map(n => {
+        val airline = (n \ "LegIdentifier" \ "Airline").text
+        val flightNumber = (n \ "LegIdentifier" \ "FlightNumber").text
+        val departureAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
+        val aircraftTerminal = (n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftTerminal").text
+        val status = (n \ "LegData" \ "RemarkFreeText").text
+        val airportParkingLocation =
+          maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftParkingPosition")
+        val passengerGate = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "PassengerGate")
 
-    val flights = flightNodeSeq.map(n => {
-      val airline = (n \ "LegIdentifier" \ "Airline").text
-      val flightNumber = (n \ "LegIdentifier" \ "FlightNumber").text
-      val departureAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
-      val aircraftTerminal = (n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftTerminal").text
-      val status = (n \ "LegData" \ "RemarkFreeText").text
-      val airportParkingLocation = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftParkingPosition")
-      val passengerGate = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "PassengerGate")
+        val cabins = n \ "LegData" \ "CabinClass"
+        val maxPax = paxFromCabin(cabins, "SeatCapacity")
+        val totalPax = paxFromCabin(cabins, "PaxCount")
 
-      val cabins = n \ "LegData" \ "CabinClass"
-      val maxPax = paxFromCabin(cabins, "SeatCapacity")
-      val totalPax = paxFromCabin(cabins, "PaxCount")
+        val operationTimes = n \ "LegData" \ "OperationTime"
 
-      val operationTimes = n \ "LegData" \ "OperationTime"
+        val scheduledOnBlocks = scheduledTime(operationTimes).get
+        val maybeActualTouchDown = actualTouchDown(operationTimes)
+        val maybeEstTouchDown = estTouchDown(operationTimes)
+        val maybeEstChox = estChox(operationTimes)
+        val maybeActualChox = actualChox(operationTimes)
 
-      val scheduledOnBlocks = scheduledTime(operationTimes).get
-      val maybeActualTouchDown = actualTouchDown(operationTimes)
-      val maybeEstTouchDown = estTouchDown(operationTimes)
-      val maybeEstChox = estChox(operationTimes)
-      val maybeActualChox = actualChox(operationTimes)
+        BHXFlight(
+          airline,
+          flightNumber,
+          departureAirport,
+          "BHX",
+          aircraftTerminal,
+          status,
+          scheduledOnBlocks,
+          arrival = true,
+          international = true,
+          maybeEstChox,
+          maybeActualChox,
+          maybeEstTouchDown,
+          maybeActualTouchDown,
+          airportParkingLocation,
+          passengerGate,
+          maxPax,
+          totalPax
+        )
+      }).toList
 
-      BHXFlight(
-        airline,
-        flightNumber,
-        departureAirport,
-        "BHX",
-        aircraftTerminal,
-        status,
-        scheduledOnBlocks,
-        arrival = true,
-        international = true,
-        maybeEstChox,
-        maybeActualChox,
-        maybeEstTouchDown,
-        maybeActualTouchDown,
-        airportParkingLocation,
-        passengerGate,
-        maxPax,
-        totalPax
-      )
-    }).toList
+      val warningNode = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "Warnings" \ "Warning"
 
-    val warningNode = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "Warnings" \ "Warning"
+      val warnings = warningNode.map(w => {
+        val typeCode = attributeFromNode(w, "Type").getOrElse("No error type code")
+        s"Code: $typeCode  Message:${w.text}"
+      })
+      warnings.foreach(w => log.warn(s"BHX Live Feed warning: $w"))
 
-    val warnings = warningNode.map(w => {
-      val typeCode = attributeFromNode(w, "Type").getOrElse("No error type code")
-      s"Code: $typeCode  Message:${w.text}"
-    })
-    warnings.foreach(w => log.warn(s"BHX Live Feed warning: $w"))
-
-    if (flights.isEmpty && warnings.nonEmpty)
-      BHXFlightsResponseFailure(warnings.mkString(", "))
-    else
-      BHXFlightsResponseSuccess(flights)
-  }
+      if (flights.isEmpty && warnings.nonEmpty)
+        BHXFlightsResponseFailure(warnings.mkString(", "))
+      else
+        BHXFlightsResponseSuccess(flights)
+    }
 
   def paxFromCabin(cabinPax: NodeSeq, seatingField: String): Option[Int] = cabinPax match {
     case cpn if cpn.length > 0 =>
       val seats: immutable.Seq[Option[Int]] = cpn.flatMap(p => {
         (p \ seatingField).map(seatingNode =>
-
           if (seatingNode.text.isEmpty)
             None
           else
@@ -269,12 +283,12 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def maybeNodeText(n: NodeSeq): Option[String] = n.text match {
     case t if t.nonEmpty => Option(t)
-    case _ => None
+    case _               => None
   }
 
   def attributeFromNode(ot: Node, attributeName: String): Option[String] = ot.attribute(attributeName) match {
     case Some(node) => Some(node.text)
-    case _ => None
+    case _          => None
   }
 
   def bhxFlightToArrival(f: BHXFlight): FeedArrival = {
@@ -300,7 +314,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
       gate = f.passengerGate,
       stand = f.aircraftParkingPosition,
       runway = None,
-      baggageReclaim = None,
+      baggageReclaim = None
     )
   }
 

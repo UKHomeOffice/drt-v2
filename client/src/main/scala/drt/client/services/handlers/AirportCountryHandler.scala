@@ -1,16 +1,17 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
-import drt.client.services.{DrtApi, PollDelay}
-import uk.gov.homeoffice.drt.ports.{AirportInfo, PortCode}
+import drt.client.services.{ DrtApi, PollDelay }
+import uk.gov.homeoffice.drt.ports.{ AirportInfo, PortCode }
 import upickle.default.read
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class AirportCountryHandler[M](modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
+class AirportCountryHandler[M](modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo]]])
+    extends LoggingActionHandler(modelRW) {
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportInfos(codes) =>
       effectOnly(Effect(DrtApi.get(s"airport-info?portCode=${codes.map(_.iata).mkString(",")}")

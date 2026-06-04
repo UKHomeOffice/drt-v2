@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.specs2.mutable.Specification
 import services.PaxDeltas.maybePctDeltas
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 class PaxDeltasSpec extends Specification {
   val now: () => SDateLike = () => SDate("2020-04-01", utcTimeZone)
@@ -19,7 +19,7 @@ class PaxDeltasSpec extends Specification {
 
     val dailyPaxNosByDay = Map(
       (todayMinus2, todayMinus1) -> 100,
-      (todayMinus1, todayMinus1) -> 50,
+      (todayMinus1, todayMinus1) -> 50
     )
 
     "When I ask for the average delta percentage over 1 day" >> {
@@ -44,7 +44,7 @@ class PaxDeltasSpec extends Specification {
       (todayMinus4, todayMinus3) -> 100,
       (todayMinus3, todayMinus3) -> 75,
       (todayMinus2, todayMinus1) -> 100,
-      (todayMinus1, todayMinus1) -> 50,
+      (todayMinus1, todayMinus1) -> 50
     )
 
     "When I ask for the average delta percentage over 1 day" >> {

@@ -3,24 +3,41 @@ package drt.server.feeds.lcy
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.http.scaladsl.model.headers.{BasicHttpCredentials, ModeledCustomHeader, ModeledCustomHeaderCompanion}
-import org.apache.pekko.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import org.apache.pekko.http.scaladsl.model.headers.{
+  BasicHttpCredentials,
+  ModeledCustomHeader,
+  ModeledCustomHeaderCompanion
+}
+import org.apache.pekko.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import org.apache.pekko.stream.Materializer
 import drt.server.feeds.common.HttpClient
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess }
 import org.apache.pekko.stream.scaladsl.Sink
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.Try
 import scala.xml.NodeSeq
 
-case class LCYClient(httpClient: HttpClient, lcyLiveFeedUser: String, soapEndPoint: String, username: String, password: String) extends ProdLcyClientSupport {
+case class LCYClient(
+    httpClient: HttpClient,
+    lcyLiveFeedUser: String,
+    soapEndPoint: String,
+    username: String,
+    password: String
+) extends ProdLcyClientSupport {
 
-  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit system: ActorSystem): Future[HttpResponse] = {
-    val httpRequest = HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)).addCredentials(BasicHttpCredentials(username, password))
+  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+      system: ActorSystem
+  ): Future[HttpResponse] = {
+    val httpRequest = HttpRequest(
+      HttpMethods.POST,
+      endpoint,
+      headers,
+      HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)
+    ).addCredentials(BasicHttpCredentials(username, password))
     httpClient.sendRequest(httpRequest)
   }
 }
@@ -59,23 +76,33 @@ trait ProdLcyClientSupport extends LcyClientSupport with ScalaXmlSupport {
 
   def password: String
 
-  override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+  override def initialFlights(implicit
+      actorSystem: ActorSystem,
+      materializer: Materializer
+  ): Future[ArrivalsFeedResponse] = {
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(lcyLiveFeedUser))
   }
 
-  override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+  override def updateFlights(implicit
+      actorSystem: ActorSystem,
+      materializer: Materializer
+  ): Future[ArrivalsFeedResponse] = {
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(lcyLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit
+      actorSystem: ActorSystem,
+      materializer: Materializer
+  ): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, LCYFlightsResponse] = LCYFlightTransform.unmarshaller
-    implicit val resToLCYResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] = LCYFlightTransform.responseToAUnmarshaller
+    implicit val resToLCYResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] =
+      LCYFlightTransform.responseToAUnmarshaller
 
     val headers: List[HttpHeader] = List(
-      SoapActionHeader(""),
+      SoapActionHeader("")
     )
 
     makeRequest(soapEndPoint, headers, postXml)
@@ -113,7 +140,8 @@ trait ProdLcyClientSupport extends LcyClientSupport with ScalaXmlSupport {
        |</soapenv:Envelope>""".stripMargin
   }
 
-  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit system: ActorSystem): Future[HttpResponse]
+  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+      system: ActorSystem
+  ): Future[HttpResponse]
 
 }
-

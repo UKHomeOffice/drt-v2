@@ -1,13 +1,15 @@
 package actors.persistent.staffing
 
 import actors.persistent.staffing.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
-import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
-import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
+import org.apache.pekko.persistence.{ Recovery, SnapshotSelectionCriteria }
+import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{ FixedPointsMessage, FixedPointsStateSnapshotMessage }
 import uk.gov.homeoffice.drt.time.SDateLike
 
-case class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) extends FixedPointsActor(() => pointInTime) {
+case class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike)
+    extends FixedPointsActor(() => pointInTime) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: FixedPointsStateSnapshotMessage => state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints.toList)
+    case snapshot: FixedPointsStateSnapshotMessage =>
+      state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints.toList)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

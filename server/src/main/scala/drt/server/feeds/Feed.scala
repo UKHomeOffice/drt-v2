@@ -15,7 +15,8 @@ object Feed {
     val interval: FiniteDuration
   }
 
-  case class EnabledFeedWithFrequency[T](feedSource: T, initialDelay: FiniteDuration, interval: FiniteDuration) extends FeedWithFrequency[T]
+  case class EnabledFeedWithFrequency[T](feedSource: T, initialDelay: FiniteDuration, interval: FiniteDuration)
+      extends FeedWithFrequency[T]
 
   sealed trait FeedTick
 
@@ -32,6 +33,7 @@ object Feed {
     failureMatcher = {
       case Fail(ex) => ex
     },
-    bufferSize = 8, overflowStrategy = OverflowStrategy.dropHead
+    bufferSize = 8,
+    overflowStrategy = OverflowStrategy.dropHead
   )
 }

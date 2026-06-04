@@ -2,7 +2,7 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 object ViewModeTests extends TestSuite {
   val nowMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
@@ -49,7 +49,9 @@ object ViewModeTests extends TestSuite {
         }
       }
 
-      test("Given a ViewDay with a now of 2020-06-01T00:00 BST, and date of one minutes before midnight that morning") - {
+      test(
+        "Given a ViewDay with a now of 2020-06-01T00:00 BST, and date of one minutes before midnight that morning"
+      ) - {
         val now = SDate("2020-06-01T00:00")
         val viewDay = ViewDay(SDate("2020-06-01T00:00").addMinutes(-1).toLocalDate, None)
         test("When I ask if it's historic") - {

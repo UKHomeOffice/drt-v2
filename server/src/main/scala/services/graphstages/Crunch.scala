@@ -1,15 +1,15 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, UniqueArrival, WithTimeAccessor }
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate, SDateLike, UtcDate }
 
-import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.immutable.{ Map, SortedMap }
 
 object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -27,18 +27,20 @@ object Crunch {
     val maybePassengers: Option[Iterable[Double]]
   }
 
-  case class LoadMinute(terminal: Terminal,
-                        queue: Queue,
-                        passengers: Iterable[Double],
-                        workLoad: Double,
-                        minute: MillisSinceEpoch) extends TerminalQueueMinute with LoadMinuteLike {
+  case class LoadMinute(
+      terminal: Terminal,
+      queue: Queue,
+      passengers: Iterable[Double],
+      workLoad: Double,
+      minute: MillisSinceEpoch
+  ) extends TerminalQueueMinute with LoadMinuteLike {
     lazy val paxLoad: Double = passengers.size
     lazy val maybePassengers: Option[Iterable[Double]] = Some(passengers)
 
     def +(other: LoadMinute): LoadMinuteLike = this.copy(
       passengers = this.passengers ++ other.passengers,
       workLoad = this.workLoad + other.workLoad
-      )
+    )
   }
 
   object LoadMinute {
@@ -50,10 +52,12 @@ object Crunch {
     }
   }
 
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B],
-                                             atTime: MillisSinceEpoch => A,
-                                             now: () => SDateLike,
-                                             expireAfter: Int): SortedMap[A, B] = {
+  def purgeExpired[A <: WithTimeAccessor, B](
+      expireable: SortedMap[A, B],
+      atTime: MillisSinceEpoch => A,
+      now: () => SDateLike,
+      expireAfter: Int
+  ): SortedMap[A, B] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
     val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
@@ -63,12 +67,14 @@ object Crunch {
     updatedExpireable
   }
 
-  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival],
-                                     existing: Map[UniqueArrival, Arrival]): (Set[UniqueArrival], Iterable[Arrival]) = {
+  def baseArrivalsRemovalsAndUpdates(
+      incoming: Map[UniqueArrival, Arrival],
+      existing: Map[UniqueArrival, Arrival]
+  ): (Set[UniqueArrival], Iterable[Arrival]) = {
     val removals = existing.keys.toSet -- incoming.keys.toSet
 
     val updates = incoming.collect {
-      case (k, a) if !existing.contains(k) || existing(k) != a =>  a
+      case (k, a) if !existing.contains(k) || existing(k) != a => a
     }
 
     (removals, updates)
@@ -81,11 +87,11 @@ object Crunch {
 
   @scala.annotation.tailrec
   def reduceIterables[A](iterables: List[Iterable[A]])(combine: (A, A) => A): Iterable[A] = iterables match {
-    case Nil => Nil
-    case head :: Nil => head
+    case Nil                                               => Nil
+    case head :: Nil                                       => head
     case emptyHead1 :: head2 :: tail if emptyHead1.isEmpty => reduceIterables(head2 :: tail)(combine)
     case head1 :: emptyHead2 :: tail if emptyHead2.isEmpty => reduceIterables(head1 :: tail)(combine)
-    case head1 :: head2 :: tail =>
+    case head1 :: head2 :: tail                            =>
       val reducedHead = head1.zip(head2).map {
         case (a, b) => combine(a, b)
       }

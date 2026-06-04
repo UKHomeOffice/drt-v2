@@ -72,7 +72,6 @@ object StaffingUtil {
     dateRangeDays(startOfWeek, days.toInt)
   }
 
-
   def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
     val lastDayOfPreviousMonth = SDate(startDay.getFullYear, startDay.getMonth, 1).addDays(-1)
     val adjustedStartDay: SDateLike = if (startDay.getDate == lastDayOfPreviousMonth.getDate) {

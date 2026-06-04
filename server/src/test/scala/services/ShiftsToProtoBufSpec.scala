@@ -1,10 +1,10 @@
 package services
 
 import actors.persistent.staffing.ShiftAssignmentsMessageParser._
-import drt.shared.{ShiftAssignments, StaffAssignment}
+import drt.shared.{ ShiftAssignments, StaffAssignment }
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ ShiftMessage, ShiftsMessage }
 import uk.gov.homeoffice.drt.time.SDate
 
 class ShiftsToProtoBufSpec extends Specification {
@@ -40,7 +40,8 @@ class ShiftsToProtoBufSpec extends Specification {
       val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val staffAssignments = ShiftAssignments(Seq(
         StaffAssignment("shift name", T1, start, end, 5, None),
-        StaffAssignment("shift name", T1, start, end, 9, None)))
+        StaffAssignment("shift name", T1, start, end, 9, None)
+      ))
 
       val shiftsMessage: Seq[ShiftMessage] = shiftAssignmentsToShiftsMessages(staffAssignments, createdAt)
 
@@ -52,7 +53,8 @@ class ShiftsToProtoBufSpec extends Specification {
           endTimestamp = Some(1484942400000L),
           numberOfStaff = Some("9"),
           createdAt = Some(createdAt.millisSinceEpoch)
-        ))
+        )
+      )
 
       shiftsMessage === expected
     }
@@ -60,11 +62,24 @@ class ShiftsToProtoBufSpec extends Specification {
 
   "shiftMessagesToShiftsString" should {
     "take a v1 ShiftsMessage and return the multiline string representation" in {
-      val shiftsMessage = ShiftsMessage(List(ShiftMessage(
-        Some("shift name"), Some(T1.toString), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("5")
-      ), ShiftMessage(
-        Some("shift name"), Some(T1.toString), Some("20/01/17"), Some("10:00"), Some("20:00"), Some("9")
-      )))
+      val shiftsMessage = ShiftsMessage(List(
+        ShiftMessage(
+          Some("shift name"),
+          Some(T1.toString),
+          Some("20/01/17"),
+          Some("10:00"),
+          Some("20:00"),
+          Some("5")
+        ),
+        ShiftMessage(
+          Some("shift name"),
+          Some(T1.toString),
+          Some("20/01/17"),
+          Some("10:00"),
+          Some("20:00"),
+          Some("9")
+        )
+      ))
 
       val shiftsString = shiftMessagesToShiftAssignments(shiftsMessage.shifts)
 
@@ -72,16 +87,34 @@ class ShiftsToProtoBufSpec extends Specification {
       val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val expected = ShiftAssignments(Seq(
         StaffAssignment("shift name", T1, start, end, 5, None),
-        StaffAssignment("shift name", T1, start, end, 9, None)))
+        StaffAssignment("shift name", T1, start, end, 9, None)
+      ))
 
       shiftsString === expected
     }
     "take a v2 ShiftsMessage and return the multiline string representation" in {
-      val shiftsMessage = ShiftsMessage(List(ShiftMessage(
-        Some("shift name"), Some(T1.toString), None, None, None, Some("5"), Some(1484906400000L), Some(1484942400000L)
-      ), ShiftMessage(
-        Some("shift name"), Some(T1.toString), None, None, None, Some("9"), Some(1484906400000L), Some(1484942400000L)
-      )))
+      val shiftsMessage = ShiftsMessage(List(
+        ShiftMessage(
+          Some("shift name"),
+          Some(T1.toString),
+          None,
+          None,
+          None,
+          Some("5"),
+          Some(1484906400000L),
+          Some(1484942400000L)
+        ),
+        ShiftMessage(
+          Some("shift name"),
+          Some(T1.toString),
+          None,
+          None,
+          None,
+          Some("9"),
+          Some(1484906400000L),
+          Some(1484942400000L)
+        )
+      ))
 
       val shiftsString = shiftMessagesToShiftAssignments(shiftsMessage.shifts)
 
@@ -89,7 +122,8 @@ class ShiftsToProtoBufSpec extends Specification {
       val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val staffAssignments = ShiftAssignments(Seq(
         StaffAssignment("shift name", T1, start, end, 5, None),
-        StaffAssignment("shift name", T1, start, end, 9, None)))
+        StaffAssignment("shift name", T1, start, end, 9, None)
+      ))
 
       val expected = staffAssignments
 

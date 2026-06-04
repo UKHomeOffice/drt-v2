@@ -1,11 +1,16 @@
 package controllers.application
 
-import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.debug.{ DebugFlightsActor, MessageQuery, MessageResponse }
+import actors.persistent.arrivals.{
+  AclForecastArrivalsActor,
+  CiriumLiveArrivalsActor,
+  PortForecastArrivalsActor,
+  PortLiveArrivalsActor
+}
 import org.apache.pekko.actor.Props
 import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import services.ActorTree
 import uk.gov.homeoffice.drt.auth.Roles.Debug
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -15,8 +20,7 @@ import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.SortedMap
 
-
-class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class DebugController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getActorTree: Action[AnyContent] = authByRole(Debug) {
     Action { _ =>
@@ -24,7 +28,11 @@ class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
     }
   }
 
-  def getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int): Action[AnyContent] = authByRole(Debug) {
+  def getMessagesForFlightPersistenceIdAtTime(
+      persistenceId: String,
+      dateString: String,
+      messages: Int
+  ): Action[AnyContent] = authByRole(Debug) {
     Action.async { _ =>
       val pit = SDate(dateString)
       val persistenceIds = SortedMap(
@@ -33,9 +41,10 @@ class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
         "Cirium Live" -> CiriumLiveArrivalsActor.persistenceId,
         "Port Live" -> PortLiveArrivalsActor.persistenceId,
         "Crunch State" -> "crunch-state",
-        "Flight State" -> "flight-state",
+        "Flight State" -> "flight-state"
       ) ++ airportConfig.terminalsForDate(SDate.now().toLocalDate).map(t => {
-        "Terminal Day Flight (for snapshot day)" -> f"terminal-flights-${t.toString.toLowerCase}-${pit.getFullYear}-${pit.getMonth}%02d-${pit.getDate}%02d"
+        "Terminal Day Flight (for snapshot day)" ->
+          f"terminal-flights-${t.toString.toLowerCase}-${pit.getFullYear}-${pit.getMonth}%02d-${pit.getDate}%02d"
       })
 
       if (persistenceIds.keys.exists(_ == persistenceId)) throw new Exception("Invalid actor")
@@ -106,10 +115,18 @@ class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
                       "<td>" + a.getFlight.status.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.gate.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.stand.getOrElse("-") + "</td>" +
-                      "<td>" + s"${if (a.getFlight.totalPax.isEmpty) "-" else a.getFlight.totalPax.map(_.passengers.map(_.actual + ",").getOrElse(""))}" + "</td>" +
-                      "<td>" + a.getFlight.totalPax.find(_.feedSource == Option(ApiFeedSource)).flatMap(_.passengers.map(_.actual)).getOrElse("-") + "</td>" +
+                      "<td>" +
+                      s"${if (a.getFlight.totalPax.isEmpty) "-"
+                        else a.getFlight.totalPax.map(_.passengers.map(_.actual + ",").getOrElse(""))}" + "</td>" +
+                      "<td>" +
+                      a.getFlight.totalPax.find(
+                        _.feedSource == Option(ApiFeedSource)
+                      ).flatMap(_.passengers.map(_.actual)).getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.maxPax.getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.totalPax.find(_.feedSource == Option(ApiFeedSource)).flatMap(_.passengers.map(_.transit)).getOrElse("-") + "</td>" +
+                      "<td>" +
+                      a.getFlight.totalPax.find(
+                        _.feedSource == Option(ApiFeedSource)
+                      ).flatMap(_.passengers.map(_.transit)).getOrElse("-") + "</td>" +
                       "<tr>"
 
                   }).mkString("\n") +

@@ -8,17 +8,20 @@ import uk.gov.homeoffice.drt.db.AggregatedDbTables
 
 import java.sql.Timestamp
 import java.time.format.DateTimeFormatter
-import java.time.{ZoneId, ZonedDateTime}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.{ ZoneId, ZonedDateTime }
+import scala.concurrent.{ ExecutionContext, Future }
 
-case class DropInRow(id: Option[Int],
-                     title: String,
-                     startTime: Timestamp,
-                     endTime: Timestamp,
-                     isPublished: Boolean,
-                     meetingLink: Option[String],
-                     lastUpdatedAt: Timestamp) {
-  def toDropIn: DropIn = DropIn(id, title, startTime.getTime, endTime.getTime, isPublished, meetingLink, lastUpdatedAt.getTime)
+case class DropInRow(
+    id: Option[Int],
+    title: String,
+    startTime: Timestamp,
+    endTime: Timestamp,
+    isPublished: Boolean,
+    meetingLink: Option[String],
+    lastUpdatedAt: Timestamp
+) {
+  def toDropIn: DropIn =
+    DropIn(id, title, startTime.getTime, endTime.getTime, isPublished, meetingLink, lastUpdatedAt.getTime)
 
   def getDate: String = getUKStringDate(startTime, dateFormatter)
 
@@ -30,7 +33,8 @@ case class DropInRow(id: Option[Int],
 
   val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-  def getUKStringDate(timestamp: Timestamp, formatter: DateTimeFormatter): String = zonedUKDateTime(timestamp).format(formatter)
+  def getUKStringDate(timestamp: Timestamp, formatter: DateTimeFormatter): String =
+    zonedUKDateTime(timestamp).format(formatter)
 
   val zonedUKDateTime: Timestamp => ZonedDateTime = timestamp => timestamp.toInstant.atZone(ZoneId.of("Europe/London"))
 
@@ -51,7 +55,8 @@ class DropIns(tag: Tag) extends Table[DropInRow](tag, "drop_in") {
 
   def lastUpdatedAt: Rep[Timestamp] = column[Timestamp]("last_updated_at")
 
-  def * : ProvenShape[DropInRow] = (id, title, startTime, endTime, isPublished, meetingLink, lastUpdatedAt).mapTo[DropInRow]
+  def * : ProvenShape[DropInRow] =
+    (id, title, startTime, endTime, isPublished, meetingLink, lastUpdatedAt).mapTo[DropInRow]
 }
 
 trait DropInTableLike {
@@ -65,7 +70,9 @@ case class DropInTable(tables: AggregatedDbTables) extends DropInTableLike {
 
   def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = {
     val query = dropInTable
-      .filter(r => r.isPublished && r.startTime > new Timestamp(DateTime.now().withTimeAtStartOfDay().minusDays(1).getMillis))
+      .filter(r =>
+        r.isPublished && r.startTime > new Timestamp(DateTime.now().withTimeAtStartOfDay().minusDays(1).getMillis)
+      )
       .sortBy(_.startTime)
       .result
     val result = tables.run(query)

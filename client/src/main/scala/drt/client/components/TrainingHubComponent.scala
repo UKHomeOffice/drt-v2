@@ -1,18 +1,18 @@
 package drt.client.components
 
 import diode.data.Pot
-import diode.{FastEqLowPri, UseValueEq}
+import diode.{ FastEqLowPri, UseValueEq }
 import drt.client.SPAMain._
-import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services._
 import drt.client.spa.TrainingHubPageMode
-import drt.client.spa.TrainingHubPageModes.{DropInBooking, TrainingMaterial}
-import drt.shared.{DropIn, DropInRegistration}
+import drt.client.spa.TrainingHubPageModes.{ DropInBooking, TrainingMaterial }
+import drt.shared.{ DropIn, DropInRegistration }
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{ CtorType, Reusability, ScalaComponent }
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -21,30 +21,34 @@ object TrainingHubComponent {
 
   val log: Logger = LoggerFactory.getLogger("TrainingHubComponent")
 
-  case class Props(trainingHubLoc: TrainingHubLoc,
-                   router: RouterCtl[Loc],
-                   loggedInUserPot: Pot[LoggedInUser],
-                   airportConfigPot: Pot[AirportConfig],
-                  ) extends FastEqLowPri
+  case class Props(
+      trainingHubLoc: TrainingHubLoc,
+      router: RouterCtl[Loc],
+      loggedInUserPot: Pot[LoggedInUser],
+      airportConfigPot: Pot[AirportConfig]
+  ) extends FastEqLowPri
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.trainingHubLoc == b.trainingHubLoc)
 
-  private case class TrainingModel(airportConfig: Pot[AirportConfig],
-                                   loggedInUserPot: Pot[LoggedInUser],
-                                   dropIns: Pot[Seq[DropIn]],
-                                   dropInRegistrations: Pot[Seq[DropInRegistration]]
-                                  ) extends UseValueEq
+  private case class TrainingModel(
+      airportConfig: Pot[AirportConfig],
+      loggedInUserPot: Pot[LoggedInUser],
+      dropIns: Pot[Seq[DropIn]],
+      dropInRegistrations: Pot[Seq[DropInRegistration]]
+  ) extends UseValueEq
 
   private val activeClass = "active"
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TrainingHubComponent")
     .render_P { props =>
-      val modelRCP = SPACircuit.connect(model => TrainingModel(
-        airportConfig = props.airportConfigPot,
-        loggedInUserPot = props.loggedInUserPot,
-        dropIns = model.dropIns,
-        dropInRegistrations = model.dropInRegistrations
-      ))
+      val modelRCP = SPACircuit.connect(model =>
+        TrainingModel(
+          airportConfig = props.airportConfigPot,
+          loggedInUserPot = props.loggedInUserPot,
+          dropIns = model.dropIns,
+          dropInRegistrations = model.dropInRegistrations
+        )
+      )
 
       <.div(
         modelRCP(modelMP => {
@@ -52,7 +56,8 @@ object TrainingHubComponent {
           <.div(
             MuiTypography(variant = "h1")(s"Training Hub"),
             <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
-            <.div(^.className := "tab-content",
+            <.div(
+              ^.className := "tab-content",
               props.trainingHubLoc.modeStr match {
                 case "trainingMaterial" =>
                   TrainingMaterialComponent()
@@ -64,25 +69,33 @@ object TrainingHubComponent {
               }
             )
           )
-        }
-        ))
+        })
+      )
     }
     .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def trainingTabs(props: Props): VdomTagOf[UList] = {
-    def tabClass(mode: TrainingHubPageMode): String = if (props.trainingHubLoc.modeStr == mode.asString) activeClass else ""
+    def tabClass(mode: TrainingHubPageMode): String =
+      if (props.trainingHubLoc.modeStr == mode.asString) activeClass else ""
 
-    <.ul(^.className := "nav nav-tabs",
-      <.li(^.className := tabClass(DropInBooking),
+    <.ul(
+      ^.className := "nav nav-tabs",
+      <.li(
+        ^.className := tabClass(DropInBooking),
         props.router.link(props.trainingHubLoc.copy(modeStr = DropInBooking.asString))(
-          ^.id := "dropInBooking", "Book a Drop-in Session", VdomAttr("data-toggle") := "tab"
+          ^.id := "dropInBooking",
+          "Book a Drop-in Session",
+          VdomAttr("data-toggle") := "tab"
         )
       ),
-      if (false) { //temporary setting to false as it will be coming in future
-        <.li(^.className := tabClass(TrainingMaterial),
+      if (false) { // temporary setting to false as it will be coming in future
+        <.li(
+          ^.className := tabClass(TrainingMaterial),
           props.router.link(props.trainingHubLoc.copy(modeStr = TrainingMaterial.asString))(
-            ^.id := "trainingMaterial", "Training Material", VdomAttr("data-toggle") := "tab"
+            ^.id := "trainingMaterial",
+            "Training Material",
+            VdomAttr("data-toggle") := "tab"
           )
         )
       } else EmptyVdom

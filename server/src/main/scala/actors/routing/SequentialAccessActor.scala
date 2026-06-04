@@ -1,15 +1,14 @@
 package actors.routing
 
-import actors.routing.SequentialAccessActor.{ProcessNextRequest, RequestFinished}
-import org.apache.pekko.actor.{Actor, ActorRef}
+import actors.routing.SequentialAccessActor.{ ProcessNextRequest, RequestFinished }
+import org.apache.pekko.actor.{ Actor, ActorRef }
 import org.apache.pekko.pattern.StatusReply.Ack
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
-
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 
 object SequentialAccessActor {
   case object ProcessNextRequest
@@ -17,9 +16,10 @@ object SequentialAccessActor {
   case object RequestFinished
 }
 
-class SequentialAccessActor[RES, REQ, U](resourceRequest: (RES, REQ) => Future[Set[U]],
-                                         splitByResource: REQ => Iterable[(RES, REQ)],
-                                        ) extends Actor {
+class SequentialAccessActor[RES, REQ, U](
+    resourceRequest: (RES, REQ) => Future[Set[U]],
+    splitByResource: REQ => Iterable[(RES, REQ)]
+) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   var updatesSubscribers: List[ActorRef] = List.empty

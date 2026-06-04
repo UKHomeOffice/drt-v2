@@ -1,14 +1,14 @@
 package feeds.bhx
 
 import drt.server.feeds.bhx._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed }
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import org.apache.pekko.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
@@ -17,8 +17,8 @@ import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.xml.{NodeSeq, XML}
+import scala.concurrent.{ Await, Future }
+import scala.xml.{ NodeSeq, XML }
 
 class BHXFeedSpec extends CrunchTestLike {
   sequential
@@ -155,15 +155,17 @@ class BHXFeedSpec extends CrunchTestLike {
     result === expected
   }
 
-  case class BHXMockClient(xmlResponse: String, bhxLiveFeedUser: String = "", soapEndPoint: String = "") extends BHXClientLike {
+  case class BHXMockClient(xmlResponse: String, bhxLiveFeedUser: String = "", soapEndPoint: String = "")
+      extends BHXClientLike {
 
-
-    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                   (implicit system: ActorSystem): Future[HttpResponse] = Future(HttpResponse(
+    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+        system: ActorSystem
+    ): Future[HttpResponse] = Future(HttpResponse(
       entity = HttpEntity(
         contentType = ContentType(MediaTypes.`application/xml`, HttpCharsets.`UTF-8`),
         xmlResponse
-      )))
+      )
+    ))
   }
 
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" >> {
@@ -195,12 +197,18 @@ class BHXFeedSpec extends CrunchTestLike {
     result must haveClass[ArrivalsFeedFailure]
   }
 
-  case class BHXMockClientWithUpdates(initialResponses: List[ArrivalsFeedResponse], updateResponses: List[ArrivalsFeedResponse]) extends BHXClientLike {
+  case class BHXMockClientWithUpdates(
+      initialResponses: List[ArrivalsFeedResponse],
+      updateResponses: List[ArrivalsFeedResponse]
+  ) extends BHXClientLike {
 
     var mockInitialResponse: immutable.Seq[ArrivalsFeedResponse] = initialResponses
     var mockUpdateResponses: immutable.Seq[ArrivalsFeedResponse] = updateResponses
 
-    override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = mockInitialResponse match {
+    override def initialFlights(implicit
+        actorSystem: ActorSystem,
+        materializer: Materializer
+    ): Future[ArrivalsFeedResponse] = mockInitialResponse match {
       case head :: tail =>
         mockInitialResponse = tail
         Future(head)
@@ -208,7 +216,10 @@ class BHXFeedSpec extends CrunchTestLike {
         Future(ArrivalsFeedFailure("No more mock esponses"))
     }
 
-    override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] =
+    override def updateFlights(implicit
+        actorSystem: ActorSystem,
+        materializer: Materializer
+    ): Future[ArrivalsFeedResponse] =
       mockUpdateResponses match {
         case head :: tail =>
           mockUpdateResponses = tail
@@ -218,8 +229,9 @@ class BHXFeedSpec extends CrunchTestLike {
           Future(ArrivalsFeedFailure("No more mock esponses"))
       }
 
-    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                   (implicit system: ActorSystem): Future[HttpResponse] = ???
+    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+        system: ActorSystem
+    ): Future[HttpResponse] = ???
 
     override val bhxLiveFeedUser: String = ""
     override val soapEndPoint: String = ""
@@ -275,7 +287,8 @@ class BHXFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T23:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T23:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -292,8 +305,8 @@ class BHXFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
-
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -310,7 +323,8 @@ class BHXFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -327,7 +341,8 @@ class BHXFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -344,8 +359,8 @@ class BHXFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="ACT">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-        """.stripMargin)
-
+        """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -404,7 +419,7 @@ class BHXFeedSpec extends CrunchTestLike {
       gate = Option("6"),
       stand = Option("55"),
       runway = None,
-      baggageReclaim = None,
+      baggageReclaim = None
     )
 
     result === expected

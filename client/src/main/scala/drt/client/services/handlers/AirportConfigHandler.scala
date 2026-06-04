@@ -1,10 +1,10 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{GetAirportConfig, RetryActionAfter, UpdateAirportConfig}
+import diode.data.{ Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
+import drt.client.actions.Actions.{ GetAirportConfig, RetryActionAfter, UpdateAirportConfig }
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.read
 
@@ -16,10 +16,10 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
     case GetAirportConfig =>
       effectOnly(Effect(DrtApi.get("config/airport-config")
         .map(r => UpdateAirportConfig(read[AirportConfig](r.responseText))).recoverWith {
-        case _ =>
-          log.error(s"AirportConfig request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
-      }))
+          case _ =>
+            log.error(s"AirportConfig request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
+        }))
 
     case UpdateAirportConfig(airportConfig) =>
       updated(Ready(airportConfig))

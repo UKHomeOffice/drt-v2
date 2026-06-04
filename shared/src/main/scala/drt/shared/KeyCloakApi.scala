@@ -1,23 +1,23 @@
 package drt.shared
 
-import upickle.default.{macroRW, _}
+import upickle.default.{ macroRW, _ }
 
-object KeyCloakApi  {
+object KeyCloakApi {
   implicit val rw: ReadWriter[KeyCloakUser] = macroRW
 
   case class KeyCloakUser(
-                           id: String,
-                           username: String,
-                           enabled: Boolean,
-                           emailVerified: Boolean,
-                           firstName: String,
-                           lastName: String,
-                           email: String
-                         )
+      id: String,
+      username: String,
+      enabled: Boolean,
+      emailVerified: Boolean,
+      firstName: String,
+      lastName: String,
+      email: String
+  )
 
   case class KeyCloakGroup(
-                            id: String,
-                            name: String,
-                            path: String
-                          )
+      id: String,
+      name: String,
+      path: String
+  )
 }

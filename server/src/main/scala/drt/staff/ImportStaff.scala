@@ -1,6 +1,6 @@
 package drt.staff
 
-import drt.shared.{ShiftAssignments, StaffAssignment}
+import drt.shared.{ ShiftAssignments, StaffAssignment }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import uk.gov.homeoffice.drt.ports.Terminals
@@ -16,7 +16,7 @@ object ImportStaff {
   def staffJsonToShifts(staffJson: JsValue): Option[ShiftAssignments] = {
     implicit val terminalReads: Reads[Terminal] = {
       case j: JsString => JsSuccess(Terminals.Terminal(j.value))
-      case u => JsError(s"invalid terminal json value: $u")
+      case u           => JsError(s"invalid terminal json value: $u")
     }
     implicit val terminalWrites: Writes[Terminal] = (o: Terminal) => JsString(o.toString)
     implicit val shiftFormat: OFormat[StaffShift] = Json.format[StaffShift]
@@ -26,12 +26,19 @@ object ImportStaff {
       case StaffShifts(shifts) =>
         shifts.zipWithIndex.map {
           case (shift, index) =>
-            //The client deals in local time, and these shifts are sent to the client as strings with no timezone for now.
-            //TODO: store shifts not as strings.
+            // The client deals in local time, and these shifts are sent to the client as strings with no timezone for now.
+            // TODO: store shifts not as strings.
             val shiftStartDate = new DateTime(shift.shift_start).withZone(europeLondonTimeZone)
             val shiftsEndDate = shiftStartDate.addMinutes(14)
 
-            StaffAssignment(index.toString, shift.terminal, shiftStartDate.millisSinceEpoch, shiftsEndDate.millisSinceEpoch, shift.staff.toInt, Option("API"))
+            StaffAssignment(
+              index.toString,
+              shift.terminal,
+              shiftStartDate.millisSinceEpoch,
+              shiftsEndDate.millisSinceEpoch,
+              shift.staff.toInt,
+              Option("API")
+            )
         }
     }
     maybeAssignments.map(ShiftAssignments(_))

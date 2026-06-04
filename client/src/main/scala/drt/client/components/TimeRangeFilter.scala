@@ -2,7 +2,6 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 
-
 sealed trait TimeRangeHours {
   def start: String
 
@@ -17,9 +16,9 @@ case class CustomWindow(start: String, end: String) extends TimeRangeHours {
   override def startInt: Int = start.split(":")(0).toInt
 
   override def endInt: Int = if (end.contains("+1"))
-    end.split(":")(0).toInt + 24 else end.split(":")(0).toInt
+    end.split(":")(0).toInt + 24
+  else end.split(":")(0).toInt
 }
-
 
 case class WholeDayWindow() extends TimeRangeHours {
   override def start: String = "00:00"

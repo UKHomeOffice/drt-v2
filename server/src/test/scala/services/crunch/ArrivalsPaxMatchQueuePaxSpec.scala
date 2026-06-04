@@ -1,16 +1,16 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess }
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.passengers.{ BestAvailableManifest, ManifestPaxCount }
 import manifests.ManifestLookupLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.models.{DocumentType, UniqueArrivalKey}
+import uk.gov.homeoffice.drt.models.{ DocumentType, UniqueArrivalKey }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.ports.{ ApiFeedSource, LiveFeedSource, PortCode }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -23,20 +23,22 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
     var manifest: Option[BestAvailableManifest] = None
     var manifestPaxCount: Option[ManifestPaxCount] = None
 
-    override def maybeBestAvailableManifest(arrivalPort: PortCode,
-                                            departurePort: PortCode,
-                                            voyageNumber: VoyageNumber,
-                                            scheduled: SDateLike,
-                                           ): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
+    override def maybeBestAvailableManifest(
+        arrivalPort: PortCode,
+        departurePort: PortCode,
+        voyageNumber: VoyageNumber,
+        scheduled: SDateLike
+    ): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
       val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
       Future.successful((key, manifest))
     }
 
-    override def maybeHistoricManifestPax(arrivalPort: PortCode,
-                                          departurePort: PortCode,
-                                          voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike,
-                                    ): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+    override def maybeHistoricManifestPax(
+        arrivalPort: PortCode,
+        departurePort: PortCode,
+        voyageNumber: VoyageNumber,
+        scheduled: SDateLike
+    ): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
       val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
       Future.successful((key, manifestPaxCount))
     }
@@ -48,15 +50,17 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T23:58Z"
 
         val arrivalPax = 112
-        val arrival = ArrivalGenerator.live(schDt = scheduled,
+        val arrival = ArrivalGenerator.live(
+          schDt = scheduled,
           iata = "BA0001",
           terminal = T1,
-          totalPax = Option(arrivalPax))
+          totalPax = Option(arrivalPax)
+        )
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
           airportConfig = TestDefaults.airportConfig.copy(
-            minutesToCrunch = 1440,
+            minutesToCrunch = 1440
           )
         ))
 
@@ -70,13 +74,38 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
             paxInQueues == arrivalPax
         }
 
-        val apiManifest = VoyageManifestGenerator.manifestForArrival(arrival.toArrival(LiveFeedSource),
-          List.fill(45)(PassengerInfoGenerator.passengerInfoJson(Nationality("GBR"), DocumentType("P"), Nationality("GBR"))) ++
-            List.fill(17)(PassengerInfoGenerator.passengerInfoJson(Nationality("FRA"), DocumentType("P"), Nationality("FRA"))) ++
-            List.fill(19)(PassengerInfoGenerator.passengerInfoJson(Nationality("USA"), DocumentType("P"), Nationality("USA"))) ++
-            List.fill(7)(PassengerInfoGenerator.passengerInfoJson(Nationality("CHN"), DocumentType("P"), Nationality("CHN"))) ++
-            List.fill(12)(PassengerInfoGenerator.passengerInfoJson(Nationality("GER"), DocumentType("P"), Nationality("GER"))) ++
-            List.fill(13)(PassengerInfoGenerator.passengerInfoJson(Nationality("IND"), DocumentType("P"), Nationality("IND")))
+        val apiManifest = VoyageManifestGenerator.manifestForArrival(
+          arrival.toArrival(LiveFeedSource),
+          List.fill(45)(PassengerInfoGenerator.passengerInfoJson(
+            Nationality("GBR"),
+            DocumentType("P"),
+            Nationality("GBR")
+          )) ++
+            List.fill(17)(PassengerInfoGenerator.passengerInfoJson(
+              Nationality("FRA"),
+              DocumentType("P"),
+              Nationality("FRA")
+            )) ++
+            List.fill(19)(PassengerInfoGenerator.passengerInfoJson(
+              Nationality("USA"),
+              DocumentType("P"),
+              Nationality("USA")
+            )) ++
+            List.fill(7)(PassengerInfoGenerator.passengerInfoJson(
+              Nationality("CHN"),
+              DocumentType("P"),
+              Nationality("CHN")
+            )) ++
+            List.fill(12)(PassengerInfoGenerator.passengerInfoJson(
+              Nationality("GER"),
+              DocumentType("P"),
+              Nationality("GER")
+            )) ++
+            List.fill(13)(PassengerInfoGenerator.passengerInfoJson(
+              Nationality("IND"),
+              DocumentType("P"),
+              Nationality("IND")
+            ))
         )
 
         val arrivalv2 = arrival.copy(totalPax = Option(110))
@@ -96,7 +125,7 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
 
         val arrivalv3 = arrivalv2.copy(
           estimated = Option(SDate(scheduled).addMinutes(5).millisSinceEpoch),
-          totalPax = Option(111),
+          totalPax = Option(111)
         )
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrivalv3)))
 
@@ -115,4 +144,3 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
     }
   }
 }
-

@@ -1,8 +1,8 @@
 package drt.client.services.handlers
 
 import diode.data.Pot
-import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{RetryActionAfter, UpdateMinuteTicker}
+import diode.{ ActionResult, Effect, ModelRW }
+import drt.client.actions.Actions.{ RetryActionAfter, UpdateMinuteTicker }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.PollDelay
 

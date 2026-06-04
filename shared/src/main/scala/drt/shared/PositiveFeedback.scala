@@ -1,6 +1,6 @@
 package drt.shared
 
-import upickle.default.{macroRW, ReadWriter => RW}
+import upickle.default.{ macroRW, ReadWriter => RW }
 
 case class PositiveFeedback(email: String, url: String, portCode: String)
 

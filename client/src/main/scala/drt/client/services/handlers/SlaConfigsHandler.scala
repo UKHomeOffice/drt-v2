@@ -2,13 +2,13 @@ package drt.client.services.handlers
 
 import diode.AnyAction.aType
 import diode.Implicits.runAfterImpl
-import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -43,7 +43,7 @@ class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends PotActi
         .map { _ =>
           value match {
             case Ready(configs) => UpdateSlaConfigs(configs.update(update))
-            case _ => DoNothing()
+            case _              => DoNothing()
           }
         }
         .recoverWith {
@@ -58,7 +58,7 @@ class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends PotActi
         .map { _ =>
           value match {
             case Ready(configs) => UpdateSlaConfigs(configs.remove(effectiveFrom))
-            case _ => DoNothing()
+            case _              => DoNothing()
           }
         }
         .recoverWith {

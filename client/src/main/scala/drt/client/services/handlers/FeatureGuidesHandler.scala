@@ -1,10 +1,10 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ Action, ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import uk.gov.homeoffice.drt.training.FeatureGuide
 
 import scala.concurrent.Future

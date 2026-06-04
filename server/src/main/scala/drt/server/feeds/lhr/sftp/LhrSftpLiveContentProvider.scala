@@ -1,7 +1,7 @@
 package drt.server.feeds.lhr.sftp
 
 import drt.server.feeds.SftpClientPasswordAuth
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.util.Try
 

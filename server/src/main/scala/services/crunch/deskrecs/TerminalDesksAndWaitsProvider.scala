@@ -1,33 +1,35 @@
 package services.crunch.deskrecs
 
-import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
+import drt.shared.CrunchApi.{ DeskRecMinute, MillisSinceEpoch }
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.{OptimiserConfig, OptimizerCrunchResult, TryCrunchWholePax}
+import services.{ OptimiserConfig, OptimizerCrunchResult, TryCrunchWholePax }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{Map, NumericRange}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.collection.immutable.{ Map, NumericRange }
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
-case class TerminalDesksAndWaitsProvider(terminal: Terminal,
-                                         sla: (LocalDate, Queue) => Future[Int],
-                                         queuePriority: List[Queue],
-                                         cruncher: TryCrunchWholePax,
-                                         description: String,
-                                        ) {
+case class TerminalDesksAndWaitsProvider(
+    terminal: Terminal,
+    sla: (LocalDate, Queue) => Future[Int],
+    queuePriority: List[Queue],
+    cruncher: TryCrunchWholePax,
+    description: String
+) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def workToDeskRecs(terminal: Terminal,
-                     minuteMillis: NumericRange[MillisSinceEpoch],
-                     terminalPassengers: Map[Queue, IndexedSeq[Iterable[Double]]],
-                     terminalWork: Map[Queue, Seq[Double]],
-                     deskLimitsProvider: TerminalDeskLimitsLike)
-                    (implicit ec: ExecutionContext, mat: Materializer): Future[Iterable[DeskRecMinute]] = {
+  def workToDeskRecs(
+      terminal: Terminal,
+      minuteMillis: NumericRange[MillisSinceEpoch],
+      terminalPassengers: Map[Queue, IndexedSeq[Iterable[Double]]],
+      terminalWork: Map[Queue, Seq[Double]],
+      deskLimitsProvider: TerminalDeskLimitsLike
+  )(implicit ec: ExecutionContext, mat: Materializer): Future[Iterable[DeskRecMinute]] = {
     desksAndWaits(minuteMillis, terminalPassengers, deskLimitsProvider).map { queueDesksAndWaits =>
       queueDesksAndWaits.flatMap {
         case (queue, (desks, waits, paxInQueue)) =>
@@ -40,22 +42,35 @@ case class TerminalDesksAndWaitsProvider(terminal: Terminal,
                 desk <- desks.toIndexedSeq.lift(idx)
                 wait <- waits.toIndexedSeq.lift(idx)
                 queueSize <- paxInQueue.toIndexedSeq.lift(idx)
-              } yield DeskRecMinute(terminal, queue, minute, pax.size, work, desk, wait, Option(Math.round(queueSize).toInt))
+              } yield DeskRecMinute(
+                terminal,
+                queue,
+                minute,
+                pax.size,
+                work,
+                desk,
+                wait,
+                Option(Math.round(queueSize).toInt)
+              )
 
               (idx, maybeDrm)
             }
             .map {
               case (_, Some(drm)) => drm
-              case (idx, None) => DeskRecMinute(terminal, queue, minuteMillis(idx), 0, 0, 0, 0, None)
+              case (idx, None)    => DeskRecMinute(terminal, queue, minuteMillis(idx), 0, 0, 0, 0, None)
             }
       }
     }
   }
 
-  def desksAndWaits(minuteMillis: NumericRange[MillisSinceEpoch],
-                    passengersByQueue: Map[Queue, Iterable[Iterable[Double]]],
-                    deskLimitsProvider: TerminalDeskLimitsLike)
-                   (implicit ec: ExecutionContext, mat: Materializer): Future[Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]] = {
+  def desksAndWaits(
+      minuteMillis: NumericRange[MillisSinceEpoch],
+      passengersByQueue: Map[Queue, Iterable[Iterable[Double]]],
+      deskLimitsProvider: TerminalDeskLimitsLike
+  )(implicit
+      ec: ExecutionContext,
+      mat: Materializer
+  ): Future[Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]] = {
     val queuesToProcess = passengersByQueue.keys.toSet
 
     val queues = Source(queuePriority.filter(queuesToProcess.contains))
@@ -74,11 +89,14 @@ case class TerminalDesksAndWaitsProvider(terminal: Terminal,
           val queueDeskAllocations = queueRecsSoFar.view.mapValues { case (desks, _, _) => desks.toList }.toMap
 
           for {
-            (minDesks, processorsProvider) <- deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
+            (minDesks, processorsProvider) <-
+              deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
           } yield {
             queuePassengers match {
               case noWork if noWork.isEmpty || noWork.map(_.sum).sum == 0 =>
-                log.info(s"No workload to crunch for $identifier on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times")
+                log.info(
+                  s"No workload to crunch for $identifier on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times"
+                )
                 queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0), List.fill(minDesks.size)(0d))))
 
               case someWork =>
@@ -97,7 +115,10 @@ case class TerminalDesksAndWaitsProvider(terminal: Terminal,
                   queueRecsSoFar
                 }
 
-                log.info(s"$identifier crunch for ${SDate(minuteMillis.min).toISOString} took: ${System.currentTimeMillis() - start}ms")
+                log.info(
+                  s"$identifier crunch for ${SDate(minuteMillis.min).toISOString} took: ${System.currentTimeMillis() -
+                      start}ms"
+                )
                 optimisedDesks
             }
           }

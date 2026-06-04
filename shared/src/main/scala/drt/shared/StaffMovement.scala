@@ -4,8 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
-import upickle.default.{ReadWriter, macroRW}
-
+import upickle.default.{ macroRW, ReadWriter }
 
 trait HasExpireables[A] {
   def purgeExpired(expireBefore: () => SDateLike): A
@@ -15,13 +14,15 @@ trait Expireable {
   def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean
 }
 
-case class StaffMovement(terminal: Terminal,
-                         reason: String,
-                         time: MillisSinceEpoch,
-                         delta: Int,
-                         uUID: String,
-                         queue: Option[Queue] = None,
-                         createdBy: Option[String]) extends Expireable {
+case class StaffMovement(
+    terminal: Terminal,
+    reason: String,
+    time: MillisSinceEpoch,
+    delta: Int,
+    uUID: String,
+    queue: Option[Queue] = None,
+    createdBy: Option[String]
+) extends Expireable {
   def isExpired(expiresBeforeMillis: MillisSinceEpoch): Boolean = time < expiresBeforeMillis
 
   val minutesSinceEpoch: MillisSinceEpoch = time / 60000

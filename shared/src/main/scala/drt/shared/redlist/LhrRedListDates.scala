@@ -16,11 +16,12 @@ case object LhrRedListDatesImpl extends LhrRedListDates {
 
   def overlapsRedListDates(startDate: SDateLike, endDate: SDateLike): Boolean = {
     (startDate.millisSinceEpoch <= startRedListingDate && endDate.millisSinceEpoch >= startRedListingDate) ||
-      (startDate.millisSinceEpoch <= endRedListingDate && endDate.millisSinceEpoch >= endRedListingDate) ||
-      isRedListActive(startDate) || isRedListActive(endDate)
+    (startDate.millisSinceEpoch <= endRedListingDate && endDate.millisSinceEpoch >= endRedListingDate) ||
+    isRedListActive(startDate) || isRedListActive(endDate)
   }
 
-  def isRedListActive(day: SDateLike): Boolean = day.millisSinceEpoch >= startRedListingDate && day.millisSinceEpoch <= endRedListingDate
+  def isRedListActive(day: SDateLike): Boolean = day.millisSinceEpoch >= startRedListingDate &&
+    day.millisSinceEpoch <= endRedListingDate
 
   override val t3RedListOpeningDate = 1622502000000L // 2021-06-01 BST
   override val t4RedListOpeningDate = 1624921200000L // 2021-06-29 BST

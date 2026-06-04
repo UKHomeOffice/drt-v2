@@ -1,9 +1,9 @@
 package services
 
 import java.io.InputStream
-import javax.script.{ScriptEngine, ScriptEngineManager}
-import org.renjin.sexp.{DoubleVector, IntVector}
-import org.slf4j.{Logger, LoggerFactory}
+import javax.script.{ ScriptEngine, ScriptEngineManager }
+import org.renjin.sexp.{ DoubleVector, IntVector }
+import org.slf4j.{ Logger, LoggerFactory }
 
 object OptimiserRInterface {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -30,11 +30,13 @@ object OptimiserRInterface {
   val targetWidth = 60
   val rollingBuffer = 120
 
-  def leftwardDesksR(work: IndexedSeq[Double],
-                     xmin: IndexedSeq[Int],
-                     xmax: IndexedSeq[Int],
-                     blockSize: Int,
-                     backlog: Double): IndexedSeq[Int] = {
+  def leftwardDesksR(
+      work: IndexedSeq[Double],
+      xmin: IndexedSeq[Int],
+      xmax: IndexedSeq[Int],
+      blockSize: Int,
+      backlog: Double
+  ): IndexedSeq[Int] = {
     engine.put("work", work.toArray)
     engine.put("xmin", xmin.toArray)
     engine.put("xmax", xmax.head)
@@ -44,10 +46,12 @@ object OptimiserRInterface {
     engine.eval("result").asInstanceOf[DoubleVector].toIntArray.toIndexedSeq
   }
 
-  def processWorkR(work: IndexedSeq[Double],
-                   capacity: IndexedSeq[Int],
-                   sla: Int,
-                   qstart: IndexedSeq[Double]): ProcessedWork = {
+  def processWorkR(
+      work: IndexedSeq[Double],
+      capacity: IndexedSeq[Int],
+      sla: Int,
+      qstart: IndexedSeq[Double]
+  ): ProcessedWork = {
     engine.put("work", work.toArray)
     engine.put("capacity", capacity.toArray)
     engine.put("sla", sla)
@@ -62,17 +66,21 @@ object OptimiserRInterface {
     ProcessedWork(utilisation, waits, q, totalWait, excessWait)
   }
 
-  def rollingFairXmaxR(work: IndexedSeq[Double],
-                       xmin: IndexedSeq[Int],
-                       blockSize: Int,
-                       sla: Int,
-                       targetWidth: Int,
-                       rollingBuffer: Int): IndexedSeq[Int] = {
+  def rollingFairXmaxR(
+      work: IndexedSeq[Double],
+      xmin: IndexedSeq[Int],
+      blockSize: Int,
+      sla: Int,
+      targetWidth: Int,
+      rollingBuffer: Int
+  ): IndexedSeq[Int] = {
     engine.put("w", work.toArray)
     engine.put("xmin", xmin.toArray)
     engine.put("blockSize", blockSize)
     engine.put("sla", sla)
-    engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=blockSize, sla=sla, target.width=60, rolling.buffer=120)")
+    engine.eval(
+      "rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=blockSize, sla=sla, target.width=60, rolling.buffer=120)"
+    )
     engine.eval("rollingfairxmax").asInstanceOf[DoubleVector].toIntArray
   }
 
@@ -103,14 +111,16 @@ object OptimiserRInterface {
     engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.head.toInt
   }
 
-  def costR(work: IndexedSeq[Double],
-            sla: Int,
-            weightChurn: Double,
-            weightPax: Double,
-            weightStaff: Double,
-            weightSla: Double,
-            qStart: IndexedSeq[Double],
-            churnStart: Int)(capacity: IndexedSeq[Int]): Cost = {
+  def costR(
+      work: IndexedSeq[Double],
+      sla: Int,
+      weightChurn: Double,
+      weightPax: Double,
+      weightStaff: Double,
+      weightSla: Double,
+      qStart: IndexedSeq[Double],
+      churnStart: Int
+  )(capacity: IndexedSeq[Int]): Cost = {
     engine.put("work", work.toArray)
     engine.put("sla", sla)
     engine.put("weightChurn", weightChurn.toInt)
@@ -120,7 +130,9 @@ object OptimiserRInterface {
     engine.put("qStart", qStart.toArray)
     engine.put("churnStart", churnStart)
     engine.put("capacity", capacity.toArray)
-    engine.eval("result <- cost(work, capacity, sla, weightPax, weightStaff, weightChurn, weightSla, qstart = qStart, churn.start = churnStart)")
+    engine.eval(
+      "result <- cost(work, capacity, sla, weightPax, weightStaff, weightChurn, weightSla, qstart = qStart, churn.start = churnStart)"
+    )
     val rpax = engine.eval("result$pax").asInstanceOf[DoubleVector].toIntArray.head
     val rsla = engine.eval("result$sla.p").asInstanceOf[DoubleVector].toDoubleArray.head.toInt
     val rstaff = engine.eval("result$staff").asInstanceOf[DoubleVector].toDoubleArray.head
@@ -129,14 +141,16 @@ object OptimiserRInterface {
     Cost(rpax, rsla, rstaff, rchurn, rtotal)
   }
 
-  def optimiseWinR(work: IndexedSeq[Double],
-                   minDesks: IndexedSeq[Int],
-                   maxDesks: IndexedSeq[Int],
-                   sla: Int,
-                   weightChurn: Double,
-                   weightPax: Double,
-                   weightStaff: Double,
-                   weightSla: Double): Seq[Int] = {
+  def optimiseWinR(
+      work: IndexedSeq[Double],
+      minDesks: IndexedSeq[Int],
+      maxDesks: IndexedSeq[Int],
+      sla: Int,
+      weightChurn: Double,
+      weightPax: Double,
+      weightStaff: Double,
+      weightSla: Double
+  ): Seq[Int] = {
     engine.put("work", work.toArray)
     engine.put("xmax", maxDesks.toArray)
     engine.put("xmin", minDesks.toArray)
@@ -147,7 +161,9 @@ object OptimiserRInterface {
     engine.put("w_staff", weightStaff)
     engine.put("w_sla", weightSla)
 
-    engine.eval("result <- optimise.win(work=work, xmin=xmin, xmax=xmax, sla=sla, weight.churn=w_churn, weight.pax=w_pax, weight.staff=w_staff, weight.sla=w_sla)")
+    engine.eval(
+      "result <- optimise.win(work=work, xmin=xmin, xmax=xmax, sla=sla, weight.churn=w_churn, weight.pax=w_pax, weight.staff=w_staff, weight.sla=w_sla)"
+    )
     engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toSeq
   }
 }

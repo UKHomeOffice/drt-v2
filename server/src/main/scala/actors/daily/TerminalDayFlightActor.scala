@@ -4,9 +4,9 @@ import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._
 import drt.shared._
-import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.actor.{ ActorRef, Props }
 import org.apache.pekko.persistence.SaveSnapshotSuccess
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
@@ -14,27 +14,32 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, HistoricApiFeedSource, MlFeedSource}
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
+import uk.gov.homeoffice.drt.ports.{ FeedSource, ForecastFeedSource, HistoricApiFeedSource, MlFeedSource }
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{
+  FlightsWithSplitsDiffMessage,
+  FlightsWithSplitsMessage,
+  SplitsForArrivalsMessage
+}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike, UtcDate }
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
-  def propsWithRemovalsCutoff(terminal: Terminal,
-                              date: UtcDate,
-                              now: () => SDateLike,
-                              cutOff: Option[FiniteDuration],
-                              paxFeedSourceOrder: List[FeedSource],
-                              terminalSplits: Option[Splits],
-                              requestHistoricSplitsActor: Option[ActorRef],
-                              requestHistoricPaxActor: Option[ActorRef],
-                              maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
-                             ): Props =
+  def propsWithRemovalsCutoff(
+      terminal: Terminal,
+      date: UtcDate,
+      now: () => SDateLike,
+      cutOff: Option[FiniteDuration],
+      paxFeedSourceOrder: List[FeedSource],
+      terminalSplits: Option[Splits],
+      requestHistoricSplitsActor: Option[ActorRef],
+      requestHistoricPaxActor: Option[ActorRef],
+      maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]]
+  ): Props =
     Props(new TerminalDayFlightActor(
       year = date.year,
       month = date.month,
@@ -47,17 +52,18 @@ object TerminalDayFlightActor {
       terminalSplits = terminalSplits,
       maybeRequestHistoricSplitsActor = requestHistoricSplitsActor,
       maybeRequestHistoricPaxActor = requestHistoricPaxActor,
-      maybeUpdateLiveView = maybeUpdateLiveView,
+      maybeUpdateLiveView = maybeUpdateLiveView
     ))
 
-  def propsPointInTime(terminal: Terminal,
-                       date: UtcDate,
-                       now: () => SDateLike,
-                       pointInTime: MillisSinceEpoch,
-                       cutOff: Option[FiniteDuration],
-                       paxFeedSourceOrder: List[FeedSource],
-                       terminalSplits: Option[Splits],
-                      ): Props =
+  def propsPointInTime(
+      terminal: Terminal,
+      date: UtcDate,
+      now: () => SDateLike,
+      pointInTime: MillisSinceEpoch,
+      cutOff: Option[FiniteDuration],
+      paxFeedSourceOrder: List[FeedSource],
+      terminalSplits: Option[Splits]
+  ): Props =
     Props(new TerminalDayFlightActor(
       year = date.year,
       month = date.month,
@@ -70,25 +76,26 @@ object TerminalDayFlightActor {
       terminalSplits = terminalSplits,
       maybeRequestHistoricSplitsActor = None,
       maybeRequestHistoricPaxActor = None,
-      maybeUpdateLiveView = None,
+      maybeUpdateLiveView = None
     ))
 }
 
-class TerminalDayFlightActor(year: Int,
-                             month: Int,
-                             day: Int,
-                             terminal: Terminal,
-                             val now: () => SDateLike,
-                             override val maybePointInTime: Option[MillisSinceEpoch],
-                             maybeRemovalMessageCutOff: Option[FiniteDuration],
-                             paxFeedSourceOrder: List[FeedSource],
-                             terminalSplits: Option[Splits],
-                             maybeRequestHistoricSplitsActor: Option[ActorRef],
-                             maybeRequestHistoricPaxActor: Option[ActorRef],
-                             maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
-                            ) extends RecoveryActorLike {
+class TerminalDayFlightActor(
+    year: Int,
+    month: Int,
+    day: Int,
+    terminal: Terminal,
+    val now: () => SDateLike,
+    override val maybePointInTime: Option[MillisSinceEpoch],
+    maybeRemovalMessageCutOff: Option[FiniteDuration],
+    paxFeedSourceOrder: List[FeedSource],
+    terminalSplits: Option[Splits],
+    maybeRequestHistoricSplitsActor: Option[ActorRef],
+    maybeRequestHistoricPaxActor: Option[ActorRef],
+    maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]]
+) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
-    case None => ""
+    case None      => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
   }
 
@@ -112,13 +119,20 @@ class TerminalDayFlightActor(year: Int,
     state = state.copy(flights = restorer.arrivals.filter(_._1.number != 0))
     restorer.finish()
 
-    if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
+    if (
+      maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 &&
+      lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight
+    ) {
       log.info(f"Creating final snapshot for $terminal for historic day $year-$month%02d-$day%02d")
       saveSnapshot(stateToMessage)
     }
   }
 
-  private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {
+  private def matchesScheduledAndVoyageNumber(
+      fws: ApiFlightWithSplits,
+      scheduled: SDateLike,
+      voyageNumber: VoyageNumberLike
+  ) = {
     fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
   }
 
@@ -127,10 +141,13 @@ class TerminalDayFlightActor(year: Int,
       case (diff, redListPassengers: RedListPassengers) =>
         val (_, voyageNumber, _) = FlightCode.flightCodeToParts(redListPassengers.flightCode)
         state.flights.values.find(matchesScheduledAndVoyageNumber(_, redListPassengers.scheduled, voyageNumber)) match {
-          case None => diff
+          case None      => diff
           case Some(fws) =>
             val updatedArrival = fws.apiFlight.copy(RedListPax = Option(redListPassengers.urns.size))
-            diff.copy(flightsToUpdate = diff.flightsToUpdate ++ Iterable(fws.copy(apiFlight = updatedArrival, lastUpdated = Option(now().millisSinceEpoch))))
+            diff.copy(flightsToUpdate =
+              diff.flightsToUpdate ++
+                Iterable(fws.copy(apiFlight = updatedArrival, lastUpdated = Option(now().millisSinceEpoch)))
+            )
         }
     }
   }
@@ -162,7 +179,10 @@ class TerminalDayFlightActor(year: Int,
       updateAndPersistDiffAndAck(diff)
 
     case RemoveSplits =>
-      val diff = FlightsWithSplitsDiff(state.flights.values.map(_.copy(splits = Set(), lastUpdated = Option(now().millisSinceEpoch))))
+      val diff = FlightsWithSplitsDiff(state.flights.values.map(_.copy(
+        splits = Set(),
+        lastUpdated = Option(now().millisSinceEpoch)
+      )))
       log.info(f"Removing splits for terminal ${terminal.toString} for day $year-$month%02d-$day%02d")
       updateAndPersistDiffAndAck(diff)
 
@@ -201,9 +221,14 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndRequestMissingData(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits], Iterable[UniqueArrival])
-                                            ): (Set[TerminalUpdateRequest], Option[() => Future[Unit]]) = {
-    val (updatedState, minutesToUpdate, updates, removals) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
+  private def applyDiffAndRequestMissingData(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (
+      FlightsWithSplits,
+      Set[Long],
+      Iterable[ApiFlightWithSplits],
+      Iterable[UniqueArrival]
+  )): (Set[TerminalUpdateRequest], Option[() => Future[Unit]]) = {
+    val (updatedState, minutesToUpdate, updates, removals) =
+      applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
 
@@ -224,8 +249,7 @@ class TerminalDayFlightActor(year: Int,
       val (updateRequests, postPersist) = applyDiffAndRequestMissingData(diff.applyTo)
       val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)), postPersist)
-    }
-    else sender() ! Set.empty
+    } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
@@ -246,7 +270,7 @@ class TerminalDayFlightActor(year: Int,
 
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
     case Some(removalsCutoffTimestamp) => timestamp < removalsCutoffTimestamp
-    case None => true
+    case None                          => true
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -259,8 +283,9 @@ class TerminalDayFlightActor(year: Int,
             restorer.remove(uniqueArrivalsFromMessages(removals))
 
           val incomingFws = updates.map(flightWithSplitsFromMessage).map(fws => (fws.unique, fws)).toMap
-          val updateFws: (Option[ApiFlightWithSplits], ApiFlightWithSplits) => Option[ApiFlightWithSplits] = (maybeExisting, newFws) =>
-            Option(maybeExisting.map(_.update(newFws)).getOrElse(newFws))
+          val updateFws: (Option[ApiFlightWithSplits], ApiFlightWithSplits) => Option[ApiFlightWithSplits] =
+            (maybeExisting, newFws) =>
+              Option(maybeExisting.map(_.update(newFws)).getOrElse(newFws))
           restorer.applyUpdates(incomingFws, updateFws)
       }
 
@@ -273,28 +298,30 @@ class TerminalDayFlightActor(year: Int,
             restorer.remove(uniqueArrivalsFromMessages(removals))
 
           val incomingArrivals = updates.map(flightMessageToApiFlight).map(a => (a.unique, a)).toMap
-          val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeExistingFws, incoming) => {
-            val updated = maybeExistingFws
-              .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
-              .getOrElse {
-                ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt))
-              }
-              .copy(lastUpdated = Option(createdAt))
-            Option(updated)
-          }
+          val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] =
+            (maybeExistingFws, incoming) => {
+              val updated = maybeExistingFws
+                .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
+                .getOrElse {
+                  ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt))
+                }
+                .copy(lastUpdated = Option(createdAt))
+              Option(updated)
+            }
 
           restorer.applyUpdates(incomingArrivals, updateFws)
       }
 
-    case msg@SplitsForArrivalsMessage(Some(createdAt), _) =>
+    case msg @ SplitsForArrivalsMessage(Some(createdAt), _) =>
       maybePointInTime match {
         case Some(pit) if pit < createdAt =>
           log.debug(s"Ignoring diff created more recently than the recovery point in time")
         case _ =>
           val incomingSplits = splitsForArrivalsFromMessage(msg).splits
-          val updateFws: (Option[ApiFlightWithSplits], Set[Splits]) => Option[ApiFlightWithSplits] = (maybeFws, incoming) => {
-            maybeFws.map(fws => SplitsForArrivals.updateFlightWithSplits(fws, incoming, createdAt))
-          }
+          val updateFws: (Option[ApiFlightWithSplits], Set[Splits]) => Option[ApiFlightWithSplits] =
+            (maybeFws, incoming) => {
+              maybeFws.map(fws => SplitsForArrivals.updateFlightWithSplits(fws, incoming, createdAt))
+            }
           restorer.applyUpdates(incomingSplits, updateFws)
       }
   }

@@ -4,43 +4,43 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
-import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography, MuiGrid}
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiGrid, MuiTypography }
+import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagOf, all, html_<^}
-import japgolly.scalajs.react.{CtorType, _}
-import org.scalajs.dom.html.{Anchor, Div, Table}
+import japgolly.scalajs.react.vdom.{ all, html_<^, TagOf }
+import japgolly.scalajs.react.{ CtorType, _ }
+import org.scalajs.dom.html.{ Anchor, Div, Table }
 import org.scalajs.dom.raw.HTMLElement
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, MilliDate, SDateLike }
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.duration.DurationInt
 import scala.util.Success
 
-
 object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(terminal: Terminal,
-                    dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
-                    potFixedPoints: Pot[FixedPointAssignments],
-                    potStaffMovements: Pot[StaffMovements],
-                    removedStaffMovements: Set[String],
-                    airportConfig: AirportConfig,
-                    loggedInUser: LoggedInUser,
-                    viewMode: ViewMode
-                  ) extends UseValueEq
+  case class Props(
+      terminal: Terminal,
+      dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+      potFixedPoints: Pot[FixedPointAssignments],
+      potStaffMovements: Pot[StaffMovements],
+      removedStaffMovements: Set[String],
+      airportConfig: AirportConfig,
+      loggedInUser: LoggedInUser,
+      viewMode: ViewMode
+  ) extends UseValueEq
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
@@ -54,7 +54,12 @@ object TerminalStaffing {
               MuiTypography(variant = "h2")(s"Staff movements"),
               MuiGrid(container = true, spacing = 2)(
                 MuiGrid(item = true, xs = 12, md = 3)(
-                  FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))
+                  FixedPointsEditor(FixedPointsProps(
+                    FixedPointAssignments(fixedPoints.forTerminal(props.terminal)),
+                    props.airportConfig,
+                    props.terminal,
+                    props.loggedInUser
+                  ))
                 ),
                 MuiGrid(item = true, xs = 12, md = 4)(
                   movementsEditor(movementsForTheDay, props.terminal)
@@ -62,7 +67,12 @@ object TerminalStaffing {
               ),
               MuiGrid(container = true, spacing = 2)(
                 MuiGrid(item = true, xs = 12, md = 10)(
-                  staffOverTheDay(props.viewMode.localDate, movementsForTheDay, legacyDayOfShiftAssignments, props.terminal)
+                  staffOverTheDay(
+                    props.viewMode.localDate,
+                    movementsForTheDay,
+                    legacyDayOfShiftAssignments,
+                    props.terminal
+                  )
                 )
               )
             )
@@ -71,10 +81,12 @@ object TerminalStaffing {
       }
     )
 
-    private def staffOverTheDay(localDate: LocalDate,
-                                movements: Seq[StaffMovement],
-                                dayOfStaffAssignments: ShiftAssignments,
-                                terminalName: Terminal): VdomTagOf[Div] = {
+    private def staffOverTheDay(
+        localDate: LocalDate,
+        movements: Seq[StaffMovement],
+        dayOfStaffAssignments: ShiftAssignments,
+        terminalName: Terminal
+    ): VdomTagOf[Div] = {
       val terminalShifts = ShiftAssignments(dayOfStaffAssignments.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
 
@@ -86,61 +98,84 @@ object TerminalStaffing {
 
     private def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
       val terminalMovements = movements.filter(_.terminal == terminalName)
-      <.div(^.className := "staff-movements-list", <.h3("Movements"), movementsListTagMod(terminalMovements, terminalName))
+      <.div(
+        ^.className := "staff-movements-list",
+        <.h3("Movements"),
+        movementsListTagMod(terminalMovements, terminalName)
+      )
     }
 
-    case class FixedPointsProps(fixedPoints: FixedPointAssignments,
-                                airportConfig: AirportConfig,
-                                terminal: Terminal,
-                                loggedInUser: LoggedInUser)
+    case class FixedPointsProps(
+        fixedPoints: FixedPointAssignments,
+        airportConfig: AirportConfig,
+        terminal: Terminal,
+        loggedInUser: LoggedInUser
+    )
 
     case class FixedPointsState(text: String, originalValue: FixedPointAssignments, terminal: Terminal) {
       def isUpdated: Boolean = currentValue != originalValue
 
       def currentValue: FixedPointAssignments = {
         val withTerminalName = addTerminalNameAndDate(text, terminal)
-        FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
+        FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect {
+          case Success(sa) => sa
+        })
       }
     }
 
     private object FixedPointsEditor {
-      val component: Component[FixedPointsProps, FixedPointsState, Unit, CtorType.Props] = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
-        .initialStateFromProps { props =>
-          FixedPointsState(
-            StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints),
-            props.fixedPoints,
-            props.terminal)
-        }
-        .renderPS((scope, props, state) => {
-          val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
-          val examples = if (props.airportConfig.fixedPointExamples.nonEmpty)
-            props.airportConfig.fixedPointExamples
-          else
-            defaultExamples
+      val component: Component[FixedPointsProps, FixedPointsState, Unit, CtorType.Props] =
+        ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
+          .initialStateFromProps { props =>
+            FixedPointsState(
+              StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints),
+              props.fixedPoints,
+              props.terminal
+            )
+          }
+          .renderPS((scope, props, state) => {
+            val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
+            val examples = if (props.airportConfig.fixedPointExamples.nonEmpty)
+              props.airportConfig.fixedPointExamples
+            else
+              defaultExamples
 
-          <.div(
-            <.h3("Miscellaneous Staff"),
-            if (props.loggedInUser.roles.contains(StaffEdit)) {
-              <.div(
-                <.p("One entry per line with values separated by commas, e.g.:"),
-                <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
-                <.label(^.`for` := "staffing-editor-textarea", ^.className := "staffing-editor-label", "Staffing Editor"),
-                <.textarea(^.id:= "staffing-editor-textarea", ^.defaultValue := state.text, ^.className := "staffing-editor",
-                  ^.onChange ==> ((e: ReactEventFromInput) => {
-                    val newRawFixedPoints = e.target.value
-                    scope.modState(_.copy(text = newRawFixedPoints))
-                  })),
-                MuiButton(variant = MuiButton.Variant.contained, color = MuiButton.Color.primary)(all.disabled := !state.isUpdated, onClick --> {
-                  GoogleEventTracker.sendEvent(props.terminal.toString, "Save Fixed Points", "")
-                  scope.modState(
-                    _.copy(originalValue = state.currentValue),
-                    Callback(SPACircuit.dispatch(SaveFixedPoints(state.currentValue, props.terminal))))
-                }, "Save changes")
-              )
-            }
-            else <.pre(state.text, ^.className := "staffing-editor")
-          )
-        }).build
+            <.div(
+              <.h3("Miscellaneous Staff"),
+              if (props.loggedInUser.roles.contains(StaffEdit)) {
+                <.div(
+                  <.p("One entry per line with values separated by commas, e.g.:"),
+                  <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
+                  <.label(
+                    ^.`for` := "staffing-editor-textarea",
+                    ^.className := "staffing-editor-label",
+                    "Staffing Editor"
+                  ),
+                  <.textarea(
+                    ^.id := "staffing-editor-textarea",
+                    ^.defaultValue := state.text,
+                    ^.className := "staffing-editor",
+                    ^.onChange ==>
+                      ((e: ReactEventFromInput) => {
+                        val newRawFixedPoints = e.target.value
+                        scope.modState(_.copy(text = newRawFixedPoints))
+                      })
+                  ),
+                  MuiButton(variant = MuiButton.Variant.contained, color = MuiButton.Color.primary)(
+                    all.disabled := !state.isUpdated,
+                    onClick --> {
+                      GoogleEventTracker.sendEvent(props.terminal.toString, "Save Fixed Points", "")
+                      scope.modState(
+                        _.copy(originalValue = state.currentValue),
+                        Callback(SPACircuit.dispatch(SaveFixedPoints(state.currentValue, props.terminal)))
+                      )
+                    },
+                    "Save changes"
+                  )
+                )
+              } else <.pre(state.text, ^.className := "staffing-editor")
+            )
+          }).build
 
       def apply(props: FixedPointsProps): Unmounted[FixedPointsProps, FixedPointsState, Unit] = component(props)
     }
@@ -150,27 +185,36 @@ object TerminalStaffing {
       startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (1.minute.toMillis * 15)
     }
 
-    private def staffingTableHourPerColumn(terminalName: Terminal,
-                                           daysWorthOf15Minutes: NumericRange[Long],
-                                           staffWithShiftsAndMovements: (Terminal, SDateLike, MillisSinceEpoch => SDateLike) => Int): VdomTagOf[Table] =
+    private def staffingTableHourPerColumn(
+        terminalName: Terminal,
+        daysWorthOf15Minutes: NumericRange[Long],
+        staffWithShiftsAndMovements: (Terminal, SDateLike, MillisSinceEpoch => SDateLike) => Int
+    ): VdomTagOf[Table] =
       <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
           daysWorthOf15Minutes.grouped(16).flatMap {
             hoursWorthOf15Minutes =>
               Seq(
-                <.tr(^.key := s"hr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}", {
-                  hoursWorthOf15Minutes.map((t: Long) => {
-                    val d = SDate(t)
-                    val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
-                    <.th(^.key := t, display)
-                  }).toTagMod
-                }),
-                <.tr(^.key := s"vr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}",
+                <.tr(
+                  ^.key := s"hr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}", {
+                    hoursWorthOf15Minutes.map((t: Long) => {
+                      val d = SDate(t)
+                      val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
+                      <.th(^.key := t, display)
+                    }).toTagMod
+                  }
+                ),
+                <.tr(
+                  ^.key := s"vr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}",
                   hoursWorthOf15Minutes.map(t => {
-                    <.td(^.key := t, s"${staffWithShiftsAndMovements(terminalName, SDate(t), JSDateConversions.longToSDateLocal)}")
+                    <.td(
+                      ^.key := t,
+                      s"${staffWithShiftsAndMovements(terminalName, SDate(t), JSDateConversions.longToSDateLocal)}"
+                    )
                   }).toTagMod
-                ))
+                )
+              )
           }.toTagMod
         )
       )
@@ -183,40 +227,55 @@ object TerminalStaffing {
       <.p("No movements recorded")
   }
 
-  private def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: Terminal): Seq[TagMod] = sortedMovements(terminalMovements).map {
-    case (_, movementPair) =>
-      labelAndLink(terminalName, movementPair) match {
-        case Some((label, link)) => <.li(link, " ", <.span(^.`class` := "movement-display", label))
-        case None => TagMod()
-      }
-  }
-
-  private def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(String, Seq[StaffMovement])] = terminalMovements
-    .groupBy(_.uUID)
-    .toSeq
-    .sortBy {
-      case (_, head :: _) => head.time.millisSinceEpoch
-      case (_, _) => 0L
+  private def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: Terminal): Seq[TagMod] =
+    sortedMovements(terminalMovements).map {
+      case (_, movementPair) =>
+        labelAndLink(terminalName, movementPair) match {
+          case Some((label, link)) => <.li(link, " ", <.span(^.`class` := "movement-display", label))
+          case None                => TagMod()
+        }
     }
 
-  private def labelAndLink(terminalName: Terminal,
-                           movementPair: Seq[StaffMovement]): Option[(String, html_<^.VdomTagOf[Anchor])] =
+  private def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(String, Seq[StaffMovement])] =
+    terminalMovements
+      .groupBy(_.uUID)
+      .toSeq
+      .sortBy {
+        case (_, head :: _) => head.time.millisSinceEpoch
+        case (_, _)         => 0L
+      }
+
+  private def labelAndLink(
+      terminalName: Terminal,
+      movementPair: Seq[StaffMovement]
+  ): Option[(String, html_<^.VdomTagOf[Anchor])] =
     movementPair
       .toList
       .sortBy(_.time.millisSinceEpoch) match {
-      case first :: second :: Nil => Option(Tuple2(MovementDisplay.displayPair(first, second), removeLink(terminalName, first)))
+      case first :: second :: Nil =>
+        Option(Tuple2(MovementDisplay.displayPair(first, second), removeLink(terminalName, first)))
       case mm :: Nil => Option(Tuple2(MovementDisplay.displaySingle(mm), removeLink(terminalName, mm)))
-      case x =>
+      case x         =>
         log.info(s"didn't get a pair: $x")
         None
     }
 
   private def removeLink(terminal: Terminal, movement: StaffMovement): VdomTagOf[Anchor] =
-    <.a(Icon.remove, ^.key := movement.uUID, ^.onClick ==> ((_: ReactEventFromInput) =>
-      Callback {
-        GoogleEventTracker.sendEvent(terminal.toString, "Remove Staff Movement", movement.copy(createdBy = None).toString)
-        SPACircuit.dispatch(RemoveStaffMovements(movement.uUID))
-      }))
+    <.a(
+      Icon.remove,
+      ^.key := movement.uUID,
+      ^.onClick ==>
+        ((_: ReactEventFromInput) =>
+          Callback {
+            GoogleEventTracker.sendEvent(
+              terminal.toString,
+              "Remove Staff Movement",
+              movement.copy(createdBy = None).toString
+            )
+            SPACircuit.dispatch(RemoveStaffMovements(movement.uUID))
+          }
+        )
+    )
 
   def apply(props: Props): VdomElement = component(props)
 
@@ -232,7 +291,7 @@ object TerminalStaffing {
       val endDateForDisplay = if (startDate != endDate) endDate else ""
       val reasonForDisplay = start.reason.replace(" start", "") match {
         case "" => " (no reason given) "
-        case r => r
+        case r  => r
       }
       val createdBy = start.createdBy.getOrElse("unknown")
       s"${start.delta} @ $startDateForDisplay ${displayTime(start.time)} -> $endDateForDisplay ${displayTime(end.time)} $reasonForDisplay by $createdBy"
@@ -243,7 +302,7 @@ object TerminalStaffing {
       val startDateForDisplay = if (startDate != displayDate(SDate.now().millisSinceEpoch)) startDate else ""
       val reasonForDisplay = movement.reason.replace(" start", "") match {
         case "" => " - "
-        case r => r
+        case r  => r
       }
       val createdBy = movement.createdBy.getOrElse("unknown")
       s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay by $createdBy"
@@ -265,7 +324,7 @@ object FixedPoints {
       val withoutTerminal = line.split(",").toList.map(_.trim)
       val withTerminal = withoutTerminal match {
         case fpName :: tail => fpName :: terminalName.toString :: todayString :: tail
-        case _ => Nil
+        case _              => Nil
       }
       withTerminal.mkString(", ")
     })

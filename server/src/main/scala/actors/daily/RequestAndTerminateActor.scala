@@ -1,9 +1,9 @@
 package actors.daily
 
-import org.apache.pekko.actor.{Actor, ActorRef, PoisonPill, Terminated}
-import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.actor.{ Actor, ActorRef, PoisonPill, Terminated }
+import org.apache.pekko.pattern.{ ask, StatusReply }
 import org.apache.pekko.util.Timeout
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scala.concurrent.ExecutionContextExecutor
 
 case class Terminate(actor: ActorRef)
@@ -30,7 +30,7 @@ class RequestAndTerminateActor(implicit defaultTimeout: Timeout) extends Actor {
 
     case Terminated(terminatedActor) =>
       deathWatchReplyToAndResponse.get(terminatedActor) match {
-        case None => log.error("Failed to find a matching terminated actor to respond to")
+        case None                      => log.error("Failed to find a matching terminated actor to respond to")
         case Some((replyTo, response)) =>
           deathWatchReplyToAndResponse = deathWatchReplyToAndResponse - terminatedActor
           replyTo ! response

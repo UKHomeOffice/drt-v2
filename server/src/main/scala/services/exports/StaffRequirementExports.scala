@@ -2,23 +2,23 @@ package services.exports
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import drt.shared.CrunchApi.StaffMinute
 import services.LocalDateStream
-import uk.gov.homeoffice.drt.models.{CrunchMinute, MinuteLike}
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, MinuteLike }
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, UtcDate }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object StaffRequirementExports {
   private val relevantMinute: (LocalDate, Seq[CrunchMinute]) => Seq[CrunchMinute] =
     (current, minutes) => minutes.filter { m => SDate(m.minute).toLocalDate == current }
 
-  def queuesProvider(utcQueuesProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
-                    ): (LocalDate, LocalDate) => Source[(LocalDate, Seq[CrunchMinute]), NotUsed] =
+  def queuesProvider(utcQueuesProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed])
+      : (LocalDate, LocalDate) => Source[(LocalDate, Seq[CrunchMinute]), NotUsed] =
     LocalDateStream(utcQueuesProvider, startBufferDays = 1, endBufferDays = 1, transformData = relevantMinute)
 
   def toPassengerHeadlines(queues: Seq[Queue]): (LocalDate, Seq[CrunchMinute]) => Seq[String] =
@@ -32,7 +32,7 @@ object StaffRequirementExports {
         .map(byQueue.get)
         .collect {
           case Some(pax) => pax
-          case None => 0
+          case None      => 0
         }
       Seq(dateFormatted, total.toString) ++ byQueueInOrder.map(_.toString) ++ Seq(workLoad.toString)
     }
@@ -48,8 +48,9 @@ object StaffRequirementExports {
         (queue, pax.toInt)
       }
 
-  def toHourlyStaffing(staffProvider: LocalDate => Future[Seq[StaffMinute]], minutesInSlot: Int)
-                      (implicit ec: ExecutionContext): (LocalDate, Seq[CrunchMinute]) => Future[Seq[(String, String, String)]] =
+  def toHourlyStaffing(staffProvider: LocalDate => Future[Seq[StaffMinute]], minutesInSlot: Int)(implicit
+      ec: ExecutionContext
+  ): (LocalDate, Seq[CrunchMinute]) => Future[Seq[(String, String, String)]] =
     (date, crunchMinutes) => {
       val numberOfSlots = 1440 / minutesInSlot
       val dateFormatted = f"${date.day}%02d/${date.month}%02d"
@@ -91,8 +92,11 @@ object StaffRequirementExports {
       .mapValues(_.map(_.toMinute))
       .toMap
 
-  def staffingForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed])
-                                  (implicit ec: ExecutionContext, mat: Materializer): LocalDate => Future[Seq[StaffMinute]] =
+  def staffingForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed])(
+      implicit
+      ec: ExecutionContext,
+      mat: Materializer
+  ): LocalDate => Future[Seq[StaffMinute]] =
     date => {
       val startUtc = SDate(date).toUtcDate
       val endUtc = SDate(date).addDays(1).addMinutes(-1).toUtcDate

@@ -1,12 +1,17 @@
 package drt.client.services.handlers
 
 import diode._
-import diode.data.{Pending, Pot, Ready}
-import drt.client.actions.Actions.{GetAllShiftAssignments, RetryActionAfter, SetAllShiftAssignments, UpdateShiftAssignments}
+import diode.data.{ Pending, Pot, Ready }
+import drt.client.actions.Actions.{
+  GetAllShiftAssignments,
+  RetryActionAfter,
+  SetAllShiftAssignments,
+  UpdateShiftAssignments
+}
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import drt.shared.ShiftAssignments
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue

@@ -1,15 +1,20 @@
 package services
 
 import org.slf4j.LoggerFactory
-import ForecastAccuracyComparison.{maybeAbsoluteError, maybeAverageFlightError}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import ForecastAccuracyComparison.{ maybeAbsoluteError, maybeAverageFlightError }
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, UniqueArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
-case class ErrorValues(predictionRmse: Option[Double], predictionError: Option[Double], legacyRmse: Option[Double], legacyError: Option[Double])
+case class ErrorValues(
+    predictionRmse: Option[Double],
+    predictionError: Option[Double],
+    legacyRmse: Option[Double],
+    legacyError: Option[Double]
+)
 
 object ForecastAccuracyComparison {
   private val log = LoggerFactory.getLogger(getClass)
@@ -17,7 +22,11 @@ object ForecastAccuracyComparison {
   def percentageForecastOfActuals(actuals: Set[UniqueArrival], forecasts: Set[UniqueArrival]): Double =
     actuals.count(a => forecasts.contains(a)).toDouble / actuals.size.toDouble
 
-  def maybeAverageFlightError(actuals: Map[UniqueArrival, Int], forecasts: Map[UniqueArrival, Int], minCoverage: Double): Option[Double] = {
+  def maybeAverageFlightError(
+      actuals: Map[UniqueArrival, Int],
+      forecasts: Map[UniqueArrival, Int],
+      minCoverage: Double
+  ): Option[Double] = {
     val coverage = percentageForecastOfActuals(actuals.keySet, forecasts.keySet)
     if (coverage >= minCoverage) {
       val actualsSet = actuals.keySet
@@ -36,12 +45,18 @@ object ForecastAccuracyComparison {
 
       Option(averageError)
     } else {
-      log.warn(f"coverage too low for comparison: ${coverage * 100}%.2f%% - ${actuals.size} actuals, ${forecasts.size} forecasts}")
+      log.warn(
+        f"coverage too low for comparison: ${coverage * 100}%.2f%% - ${actuals.size} actuals, ${forecasts.size} forecasts}"
+      )
       None
     }
   }
 
-  def maybeAbsoluteError(actuals: Map[UniqueArrival, Int], forecasts: Map[UniqueArrival, Int], minCoverage: Double): Option[Double] = {
+  def maybeAbsoluteError(
+      actuals: Map[UniqueArrival, Int],
+      forecasts: Map[UniqueArrival, Int],
+      minCoverage: Double
+  ): Option[Double] = {
     val coverage = percentageForecastOfActuals(actuals.keySet, forecasts.keySet)
     if (coverage >= minCoverage) {
       val actualsSet = actuals.keySet
@@ -60,11 +75,11 @@ object ForecastAccuracyComparison {
 
 }
 
-case class ForecastAccuracyComparison(forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]],
-                                      terminalActuals: Map[Terminal, Seq[Arrival]],
-                                      today: LocalDate
-                                            )
-                                     (implicit ec: ExecutionContext) {
+case class ForecastAccuracyComparison(
+    forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]],
+    terminalActuals: Map[Terminal, Seq[Arrival]],
+    today: LocalDate
+)(implicit ec: ExecutionContext) {
   private val log = LoggerFactory.getLogger(getClass)
 
   def accuracy(date: LocalDate, daysBeforeDate: Int): Option[Future[Map[Terminal, ErrorValues]]] = {
@@ -77,7 +92,8 @@ case class ForecastAccuracyComparison(forecast: (LocalDate, SDateLike) => Future
             val forecastArrivals = terminalForecasts.getOrElse(terminal, Seq())
             val actualPax = paxNosForFeeds(actualArrivals, List(LiveFeedSource, ApiFeedSource))
             val predictedPax = paxNosForFeeds(forecastArrivals, List(MlFeedSource))
-            val legacyPax = paxNosForFeeds(forecastArrivals, List(ForecastFeedSource, HistoricApiFeedSource, AclFeedSource))
+            val legacyPax =
+              paxNosForFeeds(forecastArrivals, List(ForecastFeedSource, HistoricApiFeedSource, AclFeedSource))
             val minimumPopulated = 0.75
             val errors = ErrorValues(
               predictionRmse = maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, minimumPopulated),

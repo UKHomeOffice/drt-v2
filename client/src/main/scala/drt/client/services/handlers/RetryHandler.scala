@@ -1,6 +1,6 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{ ActionResult, Effect, ModelRW }
 import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.services.RootModel

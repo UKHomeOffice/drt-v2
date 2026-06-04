@@ -1,16 +1,16 @@
 package services.imports
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
-import org.apache.pekko.actor.{Actor, ActorLogging, PoisonPill}
-import org.apache.pekko.pattern.{StatusReply, pipe}
+import org.apache.pekko.actor.{ Actor, ActorLogging, PoisonPill }
+import org.apache.pekko.pattern.{ pipe, StatusReply }
 import org.apache.pekko.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
-import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{ StreamCompleted, StreamInitialized }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.concurrent.{ExecutionContextExecutor, Promise}
+import scala.concurrent.{ ExecutionContextExecutor, Promise }
 import scala.util.Try
 
 class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with ActorLogging {

@@ -2,17 +2,17 @@ package actors.routing
 
 import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import org.apache.pekko.NotUsed
-import org.apache.pekko.actor.{Actor, ActorLogging, ActorRef}
-import org.apache.pekko.pattern.{StatusReply, ask, pipe}
+import org.apache.pekko.actor.{ Actor, ActorLogging, ActorRef }
+import org.apache.pekko.pattern.{ ask, pipe, StatusReply }
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.DataUpdates.Updates
-import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{ StreamCompleted, StreamFailure, StreamInitialized }
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor, Future }
 import scala.language.postfixOps
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P, A] extends RouterActorLike[U, P, A] {
@@ -169,6 +169,3 @@ trait RouterActorLike2[U <: Updates, P, A] extends Actor with ActorLogging {
       log.error(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }
-
-
-

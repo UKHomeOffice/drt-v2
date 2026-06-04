@@ -1,23 +1,24 @@
 package drt.server.feeds.stn
 
 import drt.server.feeds.common.XlsExtractorUtil._
-import org.apache.poi.ss.usermodel.{CellType, DateUtil}
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival}
+import org.apache.poi.ss.usermodel.{ CellType, DateUtil }
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, ForecastArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import java.util.TimeZone
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
-case class STNForecastFlightRow(scheduledDate: SDateLike,
-                                flightCode: String = "",
-                                origin: String = "",
-                                internationalDomestic: String = "",
-                                maxPax: Int = 0,
-                                totalPax: Int = 0
-                               )
+case class STNForecastFlightRow(
+    scheduledDate: SDateLike,
+    flightCode: String = "",
+    origin: String = "",
+    internationalDomestic: String = "",
+    maxPax: Int = 0,
+    totalPax: Int = 0
+)
 
 object STNForecastXLSExtractor {
 
@@ -55,7 +56,8 @@ object STNForecastXLSExtractor {
         val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
         val flightNumber: String = if (flightNumberCell == 0) "" else flightNumberCell.toString
-        STNForecastFlightRow(scheduledDate = scheduled,
+        STNForecastFlightRow(
+          scheduledDate = scheduled,
           flightCode = s"$carrierCodeCell$flightNumber",
           origin = originCell.getOrElse(""),
           internationalDomestic = internationalDomesticCell.getOrElse(""),
@@ -67,9 +69,12 @@ object STNForecastXLSExtractor {
 
     val arrivalRows = arrivalRowsTry.zipWithIndex.toList.flatMap {
       case (Success(a), _) =>
-        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", europeLondonTimeZone))
+        val inLondonEuropeTz = a.copy(scheduledDate =
+          SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", europeLondonTimeZone)
+        )
         Some(inLondonEuropeTz)
-      case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 3} ${e.getMessage}", e)
+      case (Failure(e), i) =>
+        log.warn(s"Invalid data on row ${i + 3} ${e.getMessage}", e)
         None
     }.filter(_.internationalDomestic == "INTERNATIONAL")
 
@@ -77,7 +82,6 @@ object STNForecastXLSExtractor {
 
     arrivalRows
   }
-
 
   private def stnFieldsToArrival(flightRow: STNForecastFlightRow): Try[ForecastArrival] = {
     val totalPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
@@ -94,7 +98,7 @@ object STNForecastXLSExtractor {
         flightCodeSuffix = suffix.map(_.suffix),
         origin = flightRow.origin,
         previousPort = None,
-        scheduled = flightRow.scheduledDate.millisSinceEpoch,
+        scheduled = flightRow.scheduledDate.millisSinceEpoch
       )
     }
   }

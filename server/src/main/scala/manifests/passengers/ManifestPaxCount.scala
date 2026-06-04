@@ -1,26 +1,29 @@
 package manifests.passengers
 
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumberLike}
-import uk.gov.homeoffice.drt.models.{ManifestLike, UniqueArrivalKey}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventType, VoyageNumberLike }
+import uk.gov.homeoffice.drt.models.{ ManifestLike, UniqueArrivalKey }
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.time.SDateLike
 
-case class ManifestPaxCount(source: SplitSource,
-                            arrivalPortCode: PortCode,
-                            departurePortCode: PortCode,
-                            voyageNumber: VoyageNumberLike,
-                            carrierCode: CarrierCode,
-                            scheduled: SDateLike,
-                            totalPax: Int,
-                            transPax: Int,
-                            maybeEventType: Option[EventType])
-
+case class ManifestPaxCount(
+    source: SplitSource,
+    arrivalPortCode: PortCode,
+    departurePortCode: PortCode,
+    voyageNumber: VoyageNumberLike,
+    carrierCode: CarrierCode,
+    scheduled: SDateLike,
+    totalPax: Int,
+    transPax: Int,
+    maybeEventType: Option[EventType]
+)
 
 object ManifestPaxCount {
 
-  def apply(manifest: ManifestLike,
-            source: SplitSource): ManifestPaxCount = {
+  def apply(
+      manifest: ManifestLike,
+      source: SplitSource
+  ): ManifestPaxCount = {
     val passengers = manifest.uniquePassengers
     ManifestPaxCount(
       source = source,
@@ -31,15 +34,16 @@ object ManifestPaxCount {
       scheduled = manifest.scheduled,
       totalPax = passengers.size,
       transPax = passengers.count(_.inTransit),
-      maybeEventType = manifest.maybeEventType,
+      maybeEventType = manifest.maybeEventType
     )
   }
 
-  def apply(source: SplitSource,
-            uniqueArrivalKey: UniqueArrivalKey,
-            totalPax: Int,
-            transPax: Int,
-           ): ManifestPaxCount = ManifestPaxCount(
+  def apply(
+      source: SplitSource,
+      uniqueArrivalKey: UniqueArrivalKey,
+      totalPax: Int,
+      transPax: Int
+  ): ManifestPaxCount = ManifestPaxCount(
     source = source,
     arrivalPortCode = uniqueArrivalKey.arrivalPort,
     departurePortCode = uniqueArrivalKey.departurePort,
@@ -48,5 +52,6 @@ object ManifestPaxCount {
     scheduled = uniqueArrivalKey.scheduled,
     totalPax = totalPax,
     transPax = transPax,
-    maybeEventType = None)
+    maybeEventType = None
+  )
 }

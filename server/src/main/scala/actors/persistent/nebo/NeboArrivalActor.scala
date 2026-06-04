@@ -4,13 +4,13 @@ import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.NeboArrivalMessageConversion._
 import org.apache.pekko.actor.Props
-import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import org.apache.pekko.persistence.{ SaveSnapshotFailure, SaveSnapshotSuccess }
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{NeboArrivals, RedListPassengers}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.shared.{ NeboArrivals, RedListPassengers }
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
-import uk.gov.homeoffice.drt.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
+import uk.gov.homeoffice.drt.actor.{ PersistentDrtActor, RecoveryActorLike }
+import uk.gov.homeoffice.drt.protobuf.messages.NeboPassengersMessage.{ NeboArrivalMessage, NeboArrivalSnapshotMessage }
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object NeboArrivalActor {
@@ -28,9 +28,11 @@ object NeboArrivalActor {
   }
 }
 
-class NeboArrivalActor(redListPassengers: RedListPassengers,
-                       val now: () => SDateLike,
-                       override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike with PersistentDrtActor[NeboArrivals] {
+class NeboArrivalActor(
+    redListPassengers: RedListPassengers,
+    val now: () => SDateLike,
+    override val maybePointInTime: Option[MillisSinceEpoch]
+) extends RecoveryActorLike with PersistentDrtActor[NeboArrivals] {
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass")
   private val maxSnapshotInterval = 250

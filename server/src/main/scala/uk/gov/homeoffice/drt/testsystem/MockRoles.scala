@@ -1,10 +1,9 @@
-
 package uk.gov.homeoffice.drt.testsystem
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import play.api.Configuration
-import play.api.mvc.{Headers, Session}
-import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat}
+import play.api.mvc.{ Headers, Session }
+import spray.json.{ DefaultJsonProtocol, JsValue, RootJsonFormat }
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.tables.UserTableLike

@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions._
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 object PlanningTests extends TestSuite {
 

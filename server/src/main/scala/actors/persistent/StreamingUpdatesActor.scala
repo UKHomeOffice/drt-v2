@@ -2,21 +2,25 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem }
 import org.apache.pekko.pattern.StatusReply.Ack
-import org.apache.pekko.persistence.query.{EventEnvelope, PersistenceQuery}
-import org.apache.pekko.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
-import org.apache.pekko.stream.scaladsl.{Keep, Sink}
-import org.apache.pekko.stream.{KillSwitches, Materializer, UniqueKillSwitch}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.persistence.query.{ EventEnvelope, PersistenceQuery }
+import org.apache.pekko.persistence.{ PersistentActor, RecoveryCompleted, SnapshotOffer }
+import org.apache.pekko.stream.scaladsl.{ Keep, Sink }
+import org.apache.pekko.stream.{ KillSwitches, Materializer, UniqueKillSwitch }
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import services.StreamSupervision
-import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{ StreamCompleted, StreamInitialized }
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
 object StreamingUpdatesActor {
-  def startUpdatesStream(system: ActorSystem, journalType: StreamingJournalLike, persistenceId: String, receivingRef: ActorRef)
-                        (implicit mat: Materializer): Long => UniqueKillSwitch =
+  def startUpdatesStream(
+      system: ActorSystem,
+      journalType: StreamingJournalLike,
+      persistenceId: String,
+      receivingRef: ActorRef
+  )(implicit mat: Materializer): Long => UniqueKillSwitch =
     (sequenceNumber: Long) => {
       val (_, killSwitch) = PersistenceQuery(system)
         .readJournalFor[journalType.ReadJournalType](journalType.id)
@@ -29,13 +33,14 @@ object StreamingUpdatesActor {
     }
 }
 
-class StreamingUpdatesActor[T, S](val persistenceId: String,
-                                  journalType: StreamingJournalLike,
-                                  initialState: T,
-                                  snapshotMessageToState: Any => T,
-                                  eventToState: (T, Any) => (T, S),
-                                  query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
-                                 ) extends PersistentActor {
+class StreamingUpdatesActor[T, S](
+    val persistenceId: String,
+    journalType: StreamingJournalLike,
+    initialState: T,
+    snapshotMessageToState: Any => T,
+    eventToState: (T, Any) => (T, S),
+    query: (() => T, () => ActorRef) => PartialFunction[Any, Unit]
+) extends PersistentActor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

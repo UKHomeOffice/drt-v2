@@ -1,10 +1,9 @@
 package actors.supervised
 
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
 import org.apache.pekko.pattern.BackoffOpts
 
 import scala.concurrent.duration.FiniteDuration
-
 
 case class RestartOnStop(minBackoff: FiniteDuration, maxBackoff: FiniteDuration) {
   def actorOf(props: Props, name: String)(implicit system: ActorSystem): ActorRef = {

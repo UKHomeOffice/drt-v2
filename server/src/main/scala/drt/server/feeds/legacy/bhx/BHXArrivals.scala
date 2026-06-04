@@ -1,8 +1,8 @@
 package drt.server.feeds.legacy.bhx
 
 import org.joda.time.format.ISODateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone}
-import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
+import org.joda.time.{ DateTime, DateTimeZone }
+import uk.co.bhx.online.flightinformation.{ FlightRecord, ScheduledFlightRecord }
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
@@ -16,7 +16,7 @@ sealed trait BHXArrivals {
 
     date.getTime match {
       case 0L => None
-      case _ =>
+      case _  =>
         val datetime = new DateTime(date.getTime).withMillisOfSecond(0).withSecondOfMinute(0)
         Some(datetime.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime))
     }
@@ -58,7 +58,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       gate = if (flightRecord.getGate.isBlank) None else Option(flightRecord.getGate),
       stand = if (flightRecord.getStand.isBlank) None else Option(flightRecord.getStand),
       runway = if (flightRecord.getRunway.isBlank) None else Option(flightRecord.getRunway),
-      baggageReclaim = Option(flightRecord.getBelt),
+      baggageReclaim = Option(flightRecord.getBelt)
     )
   }
 }
@@ -82,7 +82,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       flightCodeSuffix = suffix.map(_.suffix),
       origin = flightRecord.getOrigin,
       previousPort = None,
-      scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
+      scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch
     )
   }
 }

@@ -5,8 +5,14 @@ import org.specs2.mutable.Specification
 import queueus._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
-import uk.gov.homeoffice.drt.models.{B5JPlusTypeAllocator, B5JPlusWithTransitTypeAllocator, DefaultPaxTypeAllocator, DocumentType, ManifestPassengerProfile}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, Splits, VoyageNumber }
+import uk.gov.homeoffice.drt.models.{
+  B5JPlusTypeAllocator,
+  B5JPlusWithTransitTypeAllocator,
+  DefaultPaxTypeAllocator,
+  DocumentType,
+  ManifestPassengerProfile
+}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
@@ -47,12 +53,18 @@ class QueueAllocationSpec extends Specification {
         None
       )
 
-      val expected = Splits(Set(ApiPaxTypeAndQueueCount(
-        PaxTypes.GBRNational,
-        Queues.EGate, 1,
-        Option(Map(Nationality("GBR") -> 1)),
-        Option(Map(PaxAge(21) -> 1))
-      )), Historical, None, PaxNumbers)
+      val expected = Splits(
+        Set(ApiPaxTypeAndQueueCount(
+          PaxTypes.GBRNational,
+          Queues.EGate,
+          1,
+          Option(Map(Nationality("GBR") -> 1)),
+          Option(Map(PaxAge(21) -> 1))
+        )),
+        Historical,
+        None,
+        PaxNumbers
+      )
 
       val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
 
@@ -113,7 +125,13 @@ class QueueAllocationSpec extends Specification {
         VoyageNumber("234"),
         CarrierCode("SA"),
         SDate("2019-07-22T06:24:00Z"),
-        List(ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(21)), true, None)),
+        List(ManifestPassengerProfile(
+          Nationality("USA"),
+          Option(DocumentType.Passport),
+          Option(PaxAge(21)),
+          true,
+          None
+        )),
         None
       )
 
@@ -266,7 +284,8 @@ class QueueAllocationSpec extends Specification {
     }
   }
 
-  val fastTrackQueueAllocator: TerminalQueueAllocatorWithFastTrack = TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap)
+  val fastTrackQueueAllocator: TerminalQueueAllocatorWithFastTrack =
+    TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap)
 
   "Given a BestAvailableManifest with 10 NonEEA Passengers on a Flight with FastTrack at LHR " >> {
     "Then I should get 0.8 Pax to NonEEA Queue and 0.1 to FastTrack" >> {

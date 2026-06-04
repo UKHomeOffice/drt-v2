@@ -3,7 +3,7 @@ package services.crunch
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models._
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ PaxAge, PortCode }
 import uk.gov.homeoffice.drt.time.SDate
 
 object VoyageManifestGenerator {
@@ -99,15 +99,26 @@ object VoyageManifestGenerator {
     List.fill(qty)(passport)
   }
 
-  def voyageManifest(dqEventCode: EventType = EventTypes.DC,
-                     portCode: PortCode = PortCode("STN"),
-                     departurePortCode: PortCode = PortCode("JFK"),
-                     voyageNumber: VoyageNumber = VoyageNumber(0),
-                     carrierCode: CarrierCode = CarrierCode("BA"),
-                     scheduledDate: ManifestDateOfArrival = ManifestDateOfArrival("2017-01-01"),
-                     scheduledTime: ManifestTimeOfArrival = ManifestTimeOfArrival("00:00"),
-                     paxInfos: List[PassengerInfoJson] = List()): VoyageManifest = {
-    VoyageManifest(dqEventCode, portCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, paxInfos)
+  def voyageManifest(
+      dqEventCode: EventType = EventTypes.DC,
+      portCode: PortCode = PortCode("STN"),
+      departurePortCode: PortCode = PortCode("JFK"),
+      voyageNumber: VoyageNumber = VoyageNumber(0),
+      carrierCode: CarrierCode = CarrierCode("BA"),
+      scheduledDate: ManifestDateOfArrival = ManifestDateOfArrival("2017-01-01"),
+      scheduledTime: ManifestTimeOfArrival = ManifestTimeOfArrival("00:00"),
+      paxInfos: List[PassengerInfoJson] = List()
+  ): VoyageManifest = {
+    VoyageManifest(
+      dqEventCode,
+      portCode,
+      departurePortCode,
+      voyageNumber,
+      carrierCode,
+      scheduledDate,
+      scheduledTime,
+      paxInfos
+    )
   }
 
   def manifestForArrival(arrival: Arrival, pax: List[PassengerInfoJson]): VoyageManifest = {
@@ -118,7 +129,7 @@ object VoyageManifestGenerator {
       scheduledDate = ManifestDateOfArrival(date),
       scheduledTime = ManifestTimeOfArrival(time.take(5)),
       voyageNumber = arrival.VoyageNumber,
-      departurePortCode = arrival.Origin,
+      departurePortCode = arrival.Origin
     )
   }
 }

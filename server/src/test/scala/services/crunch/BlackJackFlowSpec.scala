@@ -2,16 +2,15 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
+import drt.shared.CrunchApi.{ ActualDeskStats, DeskStat }
 import drt.shared.PortState
-import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{ eeaMachineReadableToDesk, eeaMachineReadableToEGate }
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{Seq, SortedMap}
+import scala.collection.immutable.{ Seq, SortedMap }
 import scala.concurrent.duration._
-
 
 class BlackJackFlowSpec extends CrunchTestLike {
   isolated
@@ -28,7 +27,9 @@ class BlackJackFlowSpec extends CrunchTestLike {
           EeaDesk -> Map(
             SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
             SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
-          ))))
+          )
+        )
+      ))
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
@@ -36,7 +37,8 @@ class BlackJackFlowSpec extends CrunchTestLike {
           terminalProcessingTimes = Map(T1 -> Map(
             eeaMachineReadableToDesk -> 25d / 60
           )),
-          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk))))
+          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk)))
+        )
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(initialBaseArrivals.toSeq))
@@ -73,7 +75,9 @@ class BlackJackFlowSpec extends CrunchTestLike {
           EeaDesk -> Map(
             SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), None),
             SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(None, Option(10))
-          ))))
+          )
+        )
+      ))
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
@@ -82,7 +86,8 @@ class BlackJackFlowSpec extends CrunchTestLike {
             eeaMachineReadableToDesk -> 25d / 60,
             eeaMachineReadableToEGate -> 25d / 60
           )),
-          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk))))
+          queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(EeaDesk)))
+        )
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(initialBaseArrivals.toSeq))

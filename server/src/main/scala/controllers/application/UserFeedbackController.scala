@@ -1,7 +1,7 @@
 package controllers.application
 
 import com.google.inject.Inject
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.tables.UserFeedbackRow
 import uk.gov.homeoffice.drt.feedback.UserFeedback
@@ -9,7 +9,8 @@ import upickle.default._
 
 import scala.concurrent.Future
 
-class UserFeedbackController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class UserFeedbackController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
   implicit val rw: ReadWriter[UserFeedback] = macroRW
 
   def getUserFeedback: Action[AnyContent] = Action.async { implicit request =>

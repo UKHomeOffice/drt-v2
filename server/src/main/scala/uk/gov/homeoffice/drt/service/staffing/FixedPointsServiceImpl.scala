@@ -2,33 +2,36 @@ package uk.gov.homeoffice.drt.service.staffing
 
 import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import actors.persistent.staffing.FixedPointsReadActor
-import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, PoisonPill, Props }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, StaffAssignmentLike}
+import drt.shared.{ FixedPointAssignments, StaffAssignmentLike }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object FixedPointsServiceImpl {
   def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
     val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
-    system.actorOf(Props(
-      classOf[FixedPointsReadActor],
-      pointInTime,
-      () => SDate.now(),
-    ), actorName)
+    system.actorOf(
+      Props(
+        classOf[FixedPointsReadActor],
+        pointInTime,
+        () => SDate.now()
+      ),
+      actorName
+    )
   }
 }
 
-case class FixedPointsServiceImpl(liveFixedPointsActor: ActorRef,
-                                  fixedPointsWriteActor: ActorRef,
-                                  pointInTimeActor: SDateLike => ActorRef,
-                                 )
-                                 (implicit timeout: Timeout, ec: ExecutionContext) extends FixedPointsService {
+case class FixedPointsServiceImpl(
+    liveFixedPointsActor: ActorRef,
+    fixedPointsWriteActor: ActorRef,
+    pointInTimeActor: SDateLike => ActorRef
+)(implicit timeout: Timeout, ec: ExecutionContext) extends FixedPointsService {
 
   override def fixedPoints(maybePointInTime: Option[MillisSinceEpoch]): Future[FixedPointAssignments] = {
     maybePointInTime match {

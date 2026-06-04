@@ -2,14 +2,14 @@ package controllers.application
 
 import drt.shared.ArrivalGenerator
 import org.specs2.mutable.SpecificationLike
-import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
+import services.crunch.{ CrunchTestLike, VoyageManifestGenerator }
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.models.{ManifestKey, VoyageManifests}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.models.{ ManifestKey, VoyageManifests }
+import uk.gov.homeoffice.drt.ports.{ LiveFeedSource, PortCode }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike, UtcDate }
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
   def mockProvider(manifests: Map[UtcDate, VoyageManifests]): UtcDate => Future[VoyageManifests] =
@@ -20,21 +20,32 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
 
   val scheduledDay1: SDateLike = SDate(UtcDate(2023, 4, 26))
   val scheduled1: SDateLike = scheduledDay1.addHours(6)
-  val arrival1: Arrival = ArrivalGenerator.arrival(sch = scheduled1.millisSinceEpoch, origin = PortCode("JFK"), totalPax = Option(100)).toArrival(LiveFeedSource)
+  val arrival1: Arrival = ArrivalGenerator.arrival(
+    sch = scheduled1.millisSinceEpoch,
+    origin = PortCode("JFK"),
+    totalPax = Option(100)
+  ).toArrival(LiveFeedSource)
 
   val scheduledDay2: SDateLike = SDate(UtcDate(2023, 4, 27))
   val scheduled2: SDateLike = scheduledDay2.addHours(12)
-  val arrival2: Arrival = ArrivalGenerator.arrival(sch = scheduled2.millisSinceEpoch, origin = PortCode("BHX"), totalPax = Option(100)).toArrival(LiveFeedSource)
+  val arrival2: Arrival = ArrivalGenerator.arrival(
+    sch = scheduled2.millisSinceEpoch,
+    origin = PortCode("BHX"),
+    totalPax = Option(100)
+  ).toArrival(LiveFeedSource)
 
   val manifests: Map[UtcDate, VoyageManifests] = Map(
     scheduledDay1.toUtcDate -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival1, List()))),
-    scheduledDay2.toUtcDate -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival2, List()))),
+    scheduledDay2.toUtcDate -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival2, List())))
   )
 
   "Given an arrival key" >> {
     "When a manifest exists for that arrival" >> {
       "I should get a manifest summary" >> {
-        val result = Await.result(ManifestsController.manifestsForFlights(mockProvider(manifests))(List(ManifestKey(arrival1))), 1.second)
+        val result = Await.result(
+          ManifestsController.manifestsForFlights(mockProvider(manifests))(List(ManifestKey(arrival1))),
+          1.second
+        )
 
         result === manifests(scheduledDay1.toUtcDate)
       }
@@ -44,9 +55,16 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
   "Given arrival keys for 2 different scheduled days" >> {
     "When manifests exist for them" >> {
       "I should get the manifest summaries" >> {
-        val result = Await.result(ManifestsController.manifestsForFlights(mockProvider(manifests))(List(ManifestKey(arrival1), ManifestKey(arrival2))), 1.second)
+        val result = Await.result(
+          ManifestsController.manifestsForFlights(mockProvider(manifests))(List(
+            ManifestKey(arrival1),
+            ManifestKey(arrival2)
+          )),
+          1.second
+        )
 
-        result === VoyageManifests(manifests(scheduledDay1.toUtcDate).manifests ++ manifests(scheduledDay2.toUtcDate).manifests)
+        result ===
+          VoyageManifests(manifests(scheduledDay1.toUtcDate).manifests ++ manifests(scheduledDay2.toUtcDate).manifests)
       }
     }
   }
@@ -58,9 +76,13 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
           scheduledDay1.toUtcDate -> VoyageManifests(Set(
             VoyageManifestGenerator.voyageManifest(),
             VoyageManifestGenerator.manifestForArrival(arrival1, List()),
-            VoyageManifestGenerator.voyageManifest(),
-        )))
-        val result = Await.result(ManifestsController.manifestsForFlights(mockProvider(multiManifests))(List(ManifestKey(arrival1))), 1.second)
+            VoyageManifestGenerator.voyageManifest()
+          ))
+        )
+        val result = Await.result(
+          ManifestsController.manifestsForFlights(mockProvider(multiManifests))(List(ManifestKey(arrival1))),
+          1.second
+        )
 
         result === VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival1, List())))
       }

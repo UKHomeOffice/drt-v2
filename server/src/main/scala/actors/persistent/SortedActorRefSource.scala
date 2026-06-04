@@ -3,10 +3,10 @@ package actors.persistent
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.stream._
 import org.apache.pekko.stream.stage._
-import uk.gov.homeoffice.drt.actor.commands.{RemoveProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.{ RemoveProcessingRequest, TerminalUpdateRequest }
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.{SortedSet, mutable}
+import scala.collection.{ mutable, SortedSet }
 
 private object SortedActorRefSource {
   private sealed trait ActorRefStage {
@@ -14,11 +14,11 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource(persistentActor: ActorRef,
-                                 initialQueue: SortedSet[TerminalUpdateRequest],
-                                 graphName: String,
-                                )
-  extends GraphStageWithMaterializedValue[SourceShape[TerminalUpdateRequest], ActorRef] {
+final class SortedActorRefSource(
+    persistentActor: ActorRef,
+    initialQueue: SortedSet[TerminalUpdateRequest],
+    graphName: String
+) extends GraphStageWithMaterializedValue[SourceShape[TerminalUpdateRequest], ActorRef] {
 
   import SortedActorRefSource._
 
@@ -29,13 +29,16 @@ final class SortedActorRefSource(persistentActor: ActorRef,
   def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, ActorRef) =
     throw new IllegalStateException("Not supported")
 
-  override def createLogicAndMaterializedValue(inheritedAttributes: Attributes,
-                                               eagerMaterializer: Materializer): (GraphStageLogic, ActorRef) = {
+  override def createLogicAndMaterializedValue(
+      inheritedAttributes: Attributes,
+      eagerMaterializer: Materializer
+  ): (GraphStageLogic, ActorRef) = {
     val stage: GraphStageLogic with StageLogging with ActorRefStage = new GraphStageLogic(shape) with StageLogging
       with ActorRefStage {
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
-      private val buffer: mutable.SortedSet[TerminalUpdateRequest] = mutable.SortedSet.empty[TerminalUpdateRequest] ++ initialQueue
+      private val buffer: mutable.SortedSet[TerminalUpdateRequest] = mutable.SortedSet.empty[TerminalUpdateRequest] ++
+        initialQueue
       private var prioritiseForecast: Boolean = false
 
       override protected def stageActorName: String =
@@ -71,7 +74,8 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           val forecastRequests = buffer.filter { r =>
             SDate(r.date) > SDate.now()
           }
-          val maybeNextElement = if (prioritiseForecast && forecastRequests.nonEmpty) forecastRequests.headOption else buffer.headOption
+          val maybeNextElement =
+            if (prioritiseForecast && forecastRequests.nonEmpty) forecastRequests.headOption else buffer.headOption
           maybeNextElement.foreach { e =>
             persistentActor ! RemoveProcessingRequest(e)
             buffer -= e
@@ -81,11 +85,14 @@ final class SortedActorRefSource(persistentActor: ActorRef,
         }
       }
 
-      setHandler(out, new OutHandler {
-        override def onPull(): Unit = {
-          tryPushElement()
+      setHandler(
+        out,
+        new OutHandler {
+          override def onPull(): Unit = {
+            tryPushElement()
+          }
         }
-      })
+      )
     }
 
     (stage, stage.ref)

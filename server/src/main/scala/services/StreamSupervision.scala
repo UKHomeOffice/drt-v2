@@ -1,7 +1,7 @@
 package services
 
-import org.apache.pekko.stream.{ActorAttributes, Attributes, Supervision}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.stream.{ ActorAttributes, Attributes, Supervision }
+import org.slf4j.{ Logger, LoggerFactory }
 
 object StreamSupervision {
   val log: Logger = LoggerFactory.getLogger(getClass)

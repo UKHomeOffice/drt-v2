@@ -14,18 +14,22 @@ class WalkTimeControllerSpec extends PlaySpec {
 
       val module = new TestDrtModule() {
         override lazy val drtParameters = new MockDrtParameters {
-          override val gateWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("gateWalktime.csv").getPath)
+          override val gateWalkTimesFilePath: Option[String] =
+            Some(getClass.getClassLoader.getResource("gateWalktime.csv").getPath)
 
-          override val standWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("standWalktime.csv").getPath)
+          override val standWalkTimesFilePath: Option[String] =
+            Some(getClass.getClassLoader.getResource("standWalktime.csv").getPath)
         }
       }
 
       val controller = new WalkTimeController(Helpers.stubControllerComponents(), module.provideDrtSystemInterface)
 
-      val result = controller.getWalkTimes.apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+      val result = controller.getWalkTimes.apply(FakeRequest().withHeaders(
+        "X-Forwarded-Email" -> "test@test.com",
         "X-Forwarded-Preferred-Username" -> "test",
         "X-Forwarded-User" -> "test",
-        "X-Forwarded-Groups" -> s"role:TEST,role:${ArrivalsAndSplitsView.name}"))
+        "X-Forwarded-Groups" -> s"role:TEST,role:${ArrivalsAndSplitsView.name}"
+      ))
 
       status(result) mustBe OK
 

@@ -2,7 +2,7 @@ package drt.shared
 
 import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.TimeUtil._
-import drt.shared.api.{TerminalWalkTimes, WalkTime, WalkTimes}
+import drt.shared.api.{ TerminalWalkTimes, WalkTime, WalkTimes }
 import org.specs2.mutable.Specification
 
 class WalkTimesSpec extends Specification {
@@ -37,14 +37,13 @@ class WalkTimesSpec extends Specification {
     val standWalkTimes = Seq(
       stand1T1,
       stand2T1,
-      stand1T2,
+      stand1T2
     )
-
 
     val gateWalkTimes = Seq(
       gate1T1,
       gate2T1,
-      gate1T2,
+      gate1T2
     )
 
     val result = WalkTimes(gateWalkTimes, standWalkTimes)
@@ -57,7 +56,7 @@ class WalkTimesSpec extends Specification {
           ),
           Map(
             "stand1" -> stand1T2
-          ),
+          )
         ),
         T1 -> TerminalWalkTimes(
           Map(
@@ -67,9 +66,9 @@ class WalkTimesSpec extends Specification {
           Map(
             "stand1" -> stand1T1,
             "stand2" -> stand2T1
-          ),
-        ),
-      ),
+          )
+        )
+      )
     )
 
     result === expected
@@ -80,13 +79,13 @@ class WalkTimesSpec extends Specification {
     val gateWalkTimes = Seq(
       gate1T1,
       gate2T1,
-      gate1T2,
+      gate1T2
     )
 
     val standWalkTimes = Seq(
       stand1T1,
       stand2T1,
-      stand1T2,
+      stand1T2
     )
 
     val wt = WalkTimes(gateWalkTimes, standWalkTimes)
@@ -150,7 +149,6 @@ class WalkTimesSpec extends Specification {
     }
   }
 
-
   "Sorting gate and stand Map" >> {
     val stand42RT1 = WalkTime("42R", T1, 10000L)
     val stand10T1 = WalkTime("10", T1, 20000L)
@@ -164,14 +162,14 @@ class WalkTimesSpec extends Specification {
     val gateWalkTimes = Seq(
       gate45T1,
       gate45MT1,
-      gate1T2,
+      gate1T2
     )
 
     val standWalkTimes = Seq(
       stand10T1,
       stand42RT1,
       stand2T1,
-      stand10MT1,
+      stand10MT1
     )
 
     val wt = WalkTimes(gateWalkTimes, standWalkTimes)
@@ -180,9 +178,10 @@ class WalkTimesSpec extends Specification {
       val result: Seq[(String, WalkTime)] = WalkTimes.sortGateStandMap(wt.byTerminal(T1).standWalkTimes)
       val excepted = Seq(
         ("1", WalkTime("1", T1, 40000L)),
-        ("10",WalkTime("10", T1, 20000L)),
+        ("10", WalkTime("10", T1, 20000L)),
         ("10M", WalkTime("10M", T1, 20000L)),
-        ("42R", WalkTime("42R", T1, 10000L)))
+        ("42R", WalkTime("42R", T1, 10000L))
+      )
       result mustEqual excepted
     }
 
@@ -191,7 +190,8 @@ class WalkTimesSpec extends Specification {
       val excepted = Seq(
         ("45", WalkTime("45", T1, 10000L)),
         ("45M", WalkTime("45M", T1, 20000L)),
-        ("gate1", WalkTime("gate1", T1, 40000L)))
+        ("gate1", WalkTime("gate1", T1, 40000L))
+      )
       result mustEqual excepted
     }
   }

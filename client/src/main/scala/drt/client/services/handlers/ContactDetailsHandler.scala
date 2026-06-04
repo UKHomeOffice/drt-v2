@@ -1,9 +1,9 @@
 package drt.client.services.handlers
 
-import diode.data.{Pending, Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{GetContactDetails, RetryActionAfter, UpdateContactDetails}
-import drt.client.services.{DrtApi, PollDelay}
+import diode.data.{ Pending, Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
+import drt.client.actions.Actions.{ GetContactDetails, RetryActionAfter, UpdateContactDetails }
+import drt.client.services.{ DrtApi, PollDelay }
 import drt.shared.ContactDetails
 import upickle.default.read
 

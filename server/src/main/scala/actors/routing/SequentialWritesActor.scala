@@ -1,14 +1,18 @@
 package actors.routing
 
-import actors.routing.minutes.MinutesActorLike.{FinishedProcessingRequest, ProcessNextUpdateRequest, QueueUpdateRequest}
-import org.apache.pekko.actor.{Actor, ActorLogging, ActorRef}
+import actors.routing.minutes.MinutesActorLike.{
+  FinishedProcessingRequest,
+  ProcessNextUpdateRequest,
+  QueueUpdateRequest
+}
+import org.apache.pekko.actor.{ Actor, ActorLogging, ActorRef }
 import org.apache.pekko.pattern.StatusReply
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor with ActorLogging {
   implicit val dispatcher: ExecutionContext = context.dispatcher

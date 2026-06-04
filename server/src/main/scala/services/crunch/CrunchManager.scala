@@ -1,6 +1,6 @@
 package services.crunch
 
-import actors.CrunchManagerActor.{ReProcessDates, RecalculatePaxLoads}
+import actors.CrunchManagerActor.{ ReProcessDates, RecalculatePaxLoads }
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
@@ -14,7 +14,13 @@ import scala.concurrent.ExecutionContext
 object CrunchManager {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def queueDaysToReProcess(crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike, message: Set[Long] => ReProcessDates): Unit = {
+  def queueDaysToReProcess(
+      crunchManager: ActorRef,
+      offsetMinutes: Int,
+      forecastMaxDays: Int,
+      now: () => SDateLike,
+      message: Set[Long] => ReProcessDates
+  ): Unit = {
     val today = now()
     val millisToCrunchStart = Crunch.crunchStartWithOffset(offsetMinutes) _
     val daysToReCrunch = (0 to forecastMaxDays).map(d => {
@@ -23,8 +29,13 @@ object CrunchManager {
     crunchManager ! message(daysToReCrunch)
   }
 
-  def queueDaysToReCrunchWithUpdatedSplits(flightsActor: ActorRef, crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike)
-                                          (implicit timeout: Timeout, ec: ExecutionContext): Unit = {
+  def queueDaysToReCrunchWithUpdatedSplits(
+      flightsActor: ActorRef,
+      crunchManager: ActorRef,
+      offsetMinutes: Int,
+      forecastMaxDays: Int,
+      now: () => SDateLike
+  )(implicit timeout: Timeout, ec: ExecutionContext): Unit = {
     val start = now().getLocalLastMidnight.addMinutes(offsetMinutes)
     val endMillis = start.addDays(forecastMaxDays).millisSinceEpoch
 

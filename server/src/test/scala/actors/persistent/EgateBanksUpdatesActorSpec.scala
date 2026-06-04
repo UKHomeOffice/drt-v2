@@ -1,19 +1,20 @@
 package actors.persistent
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import org.apache.pekko.actor.{PoisonPill, Props}
+import org.apache.pekko.actor.{ PoisonPill, Props }
 import org.apache.pekko.pattern.ask
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.egates._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class EgateBanksUpdatesActorSpec extends CrunchTestLike {
   "Given an egate banks update actor" >> {
-    val defaultUpdate = EgateBanksUpdate(100L, IndexedSeq(EgateBank(IndexedSeq(true, true)), EgateBank(IndexedSeq(true, false))))
+    val defaultUpdate =
+      EgateBanksUpdate(100L, IndexedSeq(EgateBank(IndexedSeq(true, true)), EgateBank(IndexedSeq(true, false))))
     val defaults: Map[Terminal, EgateBanksUpdates] = Map(T1 -> EgateBanksUpdates(List(defaultUpdate)))
     val actor = system.actorOf(Props(new EgateBanksUpdatesActor(() => SDate.now(), defaults, 5)))
 
@@ -37,9 +38,10 @@ class EgateBanksUpdatesActorSpec extends CrunchTestLike {
       val update = EgateBanksUpdate(150L, IndexedSeq(EgateBank(IndexedSeq(false, true, false))))
       val eventualState = actor
         .ask(SetEgateBanksUpdate(T1, 150L, update))
-        .flatMap(_ => actor
-          .ask(DeleteEgateBanksUpdates(T1, 150L))
-          .flatMap(_ => actor.ask(GetState).mapTo[PortEgateBanksUpdates])
+        .flatMap(_ =>
+          actor
+            .ask(DeleteEgateBanksUpdates(T1, 150L))
+            .flatMap(_ => actor.ask(GetState).mapTo[PortEgateBanksUpdates])
         )
       val result = Await.result(eventualState, 1.second)
       actor ! PoisonPill

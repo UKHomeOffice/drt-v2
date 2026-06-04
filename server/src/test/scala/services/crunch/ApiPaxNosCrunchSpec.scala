@@ -1,20 +1,20 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess }
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.passengers.{ BestAvailableManifest, ManifestPaxCount }
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, ForecastArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventTypes, ForecastArrival, VoyageNumber }
 import uk.gov.homeoffice.drt.models.DocumentType.Passport
 import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.gbrNationalChildToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.collection.immutable.{ List, Seq, SortedMap }
 import scala.concurrent.duration._
 
 class ApiPaxNosCrunchSpec extends CrunchTestLike {
@@ -26,20 +26,49 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
 
   val scheduled = "2019-11-20T00:00Z"
 
-  private val forecastArrival: ForecastArrival = ArrivalGenerator.forecast(iata = "BA0001", schDt = scheduled, origin = PortCode("JFK"))
+  private val forecastArrival: ForecastArrival =
+    ArrivalGenerator.forecast(iata = "BA0001", schDt = scheduled, origin = PortCode("JFK"))
   private val flights = List(forecastArrival)
 
   val manifests: ManifestsFeedResponse =
-    ManifestsFeedSuccess(DqManifests(0, Set(
-      VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"),
-        CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
-        List(
-          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(9)),
-            Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None),
-          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(9)),
-            Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-        ))
-    )))
+    ManifestsFeedSuccess(DqManifests(
+      0,
+      Set(
+        VoyageManifest(
+          EventTypes.DC,
+          defaultAirportConfig.portCode,
+          PortCode("JFK"),
+          VoyageNumber("0001"),
+          CarrierCode("BA"),
+          ManifestDateOfArrival("2019-11-20"),
+          ManifestTimeOfArrival("00:00"),
+          List(
+            PassengerInfoJson(
+              Option(DocumentType("P")),
+              Nationality("GBR"),
+              EeaFlag("EEA"),
+              Option(PaxAge(9)),
+              Option(PortCode("LHR")),
+              InTransit("N"),
+              Option(Nationality("GBR")),
+              Option(Nationality("GBR")),
+              None
+            ),
+            PassengerInfoJson(
+              Option(DocumentType("P")),
+              Nationality("GBR"),
+              EeaFlag("EEA"),
+              Option(PaxAge(9)),
+              Option(PortCode("LHR")),
+              InTransit("N"),
+              Option(Nationality("GBR")),
+              Option(Nationality("GBR")),
+              None
+            )
+          )
+        )
+      )
+    ))
 
   "Given a flight with no pax numbers and a Manifest of 2 passengers " >> {
     "Then we should get 2 passengers in PCP Pax" >> {
@@ -48,7 +77,8 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
           queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
-        )))
+        )
+      ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
       waitForFlightsInPortState(crunch.portStateTestProbe)
@@ -71,7 +101,8 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
           queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk)))
-        )))
+        )
+      ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
       waitForFlightsInPortState(crunch.portStateTestProbe)
@@ -96,9 +127,9 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
     SDate(arrival.scheduled),
     Seq(
       ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(9)), inTransit = false, Option("a")),
-      ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(23)), inTransit = false, Option("b")),
+      ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(23)), inTransit = false, Option("b"))
     ),
-    Option(EventTypes.DC),
+    Option(EventTypes.DC)
   )
 
   "Given an historic manifests provider and a flight with no historic splits" >> {
@@ -126,7 +157,9 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
       val arrival = forecastArrival
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        historicManifestLookup = Option(MockManifestLookupService(maybeManifestPaxCount = Option(ManifestPaxCount(manifest(arrival), Historical))))
+        historicManifestLookup = Option(MockManifestLookupService(maybeManifestPaxCount =
+          Option(ManifestPaxCount(manifest(arrival), Historical))
+        ))
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))

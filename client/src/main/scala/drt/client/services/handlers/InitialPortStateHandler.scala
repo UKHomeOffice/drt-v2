@@ -19,9 +19,13 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
-                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, Pot[HashSet[PortCode]])],
-                                ) extends LoggingActionHandler(portStateModel) {
+class InitialPortStateHandler[M](
+    getCurrentViewMode: () => ViewMode,
+    portStateModel: ModelRW[
+      M,
+      (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, Pot[HashSet[PortCode]])
+    ]
+) extends LoggingActionHandler(portStateModel) {
   private val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
@@ -31,7 +35,8 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       val startMillis = viewMode.dayStart.millisSinceEpoch
       val endMillis = startMillis + thirtySixHoursInMillis
       val updateRequestFuture = viewMode match {
-        case ViewDay(_, Some(time)) => DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
+        case ViewDay(_, Some(time)) =>
+          DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
         case _ => DrtApi.get(s"crunch?start=$startMillis&end=$endMillis")
       }
 
@@ -62,12 +67,21 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       else {
         viewMode match {
           case ViewDay(_, None) => actions + getCrunchUpdatesAfterDelay(viewMode)
-          case ViewLive => actions + getCrunchUpdatesAfterDelay(viewMode)
-          case _ => actions
+          case ViewLive         => actions + getCrunchUpdatesAfterDelay(viewMode)
+          case _                => actions
         }
       }
 
-      updated((Ready(portState), portState.flightsLatest, portState.crunchMinutesLatest, portState.staffMinutesLatest, Pending()), effects)
+      updated(
+        (
+          Ready(portState),
+          portState.flightsLatest,
+          portState.crunchMinutesLatest,
+          portState.staffMinutesLatest,
+          Pending()
+        ),
+        effects
+      )
   }
 
   private def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
@@ -76,7 +90,9 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       .map(portState => SetPortState(viewMode, portState))
       .recoverWith {
         case throwable =>
-          log.error(s"Call to crunch-state failed (${throwable.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
+          log.error(
+            s"Call to crunch-state failed (${throwable.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}"
+          )
           Future(RetryActionAfter(GetInitialPortState(viewMode), PollDelay.recoveryDelay))
       }
   }

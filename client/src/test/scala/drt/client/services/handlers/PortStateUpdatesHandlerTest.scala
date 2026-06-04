@@ -6,16 +6,18 @@ import drt.client.services.handlers.PortStateUpdatesHandler.splitsToManifestKeys
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.models.ManifestKey
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ LiveFeedSource, PortCode }
 import uk.gov.homeoffice.drt.time.SDateLike
 import utest._
-
 
 object PortStateUpdatesHandlerTest extends TestSuite {
   val scheduled: SDateLike = SDate("2025-05-01T12:00")
   val arrival: Arrival = ArrivalGenerator.arrival(
     feedSource = LiveFeedSource,
-    iata = "BA100", schDt = scheduled.toISOString, origin = PortCode("JFK"), previousPort = Option(PortCode("CDG")),
+    iata = "BA100",
+    schDt = scheduled.toISOString,
+    origin = PortCode("JFK"),
+    previousPort = Option(PortCode("CDG"))
   )
   val splits: Splits = Splits(Set.empty, ApiSplitsWithHistoricalEGateAndFTPercentages, None)
   val flight: ApiFlightWithSplits = ApiFlightWithSplits(arrival, Set(splits))
@@ -23,7 +25,9 @@ object PortStateUpdatesHandlerTest extends TestSuite {
 
   val tests: Tests = Tests {
     test("manifestArrivalKey should") {
-      test("return a ManifestKey with the PreviousPort as the origin when there's a matching arrival with a previous port") {
+      test(
+        "return a ManifestKey with the PreviousPort as the origin when there's a matching arrival with a previous port"
+      ) {
         val key = PortStateUpdatesHandler.manifestArrivalKey(flight.unique, flights)
 
         assert(key.origin == PortCode("CDG"))
@@ -37,7 +41,6 @@ object PortStateUpdatesHandlerTest extends TestSuite {
         assert(key == ManifestKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled))
       }
     }
-
 
     test("splitsToManifestKeys should") {
       test("return ManifestKeys that use the previous port from a matched flight") {

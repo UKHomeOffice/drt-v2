@@ -1,10 +1,10 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions._
-import drt.shared.{StaffMovement, StaffMovements, UUID}
+import drt.shared.{ StaffMovement, StaffMovements, UUID }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.LocalDate
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 import scala.collection.immutable._
 
@@ -28,15 +28,19 @@ object TerminalStaffingTests extends TestSuite {
         assert(expected == result)
       }
 
-      test("should display movements for the day provided, including movement pairs that begin or end during that day") - {
+      test(
+        "should display movements for the day provided, including movement pairs that begin or end during that day"
+      ) - {
         val uidLast = newUuidString
         val uidNext = newUuidString
         val crossingLastMidnight = Seq(
           StaffMovement(T1, "before last midnight", SDate("2017-07-21T22:00").millisSinceEpoch, 1, uidLast, None, None),
-          StaffMovement(T1, "after last midnight", SDate("2017-07-22T02:00").millisSinceEpoch, 1, uidLast, None, None))
+          StaffMovement(T1, "after last midnight", SDate("2017-07-22T02:00").millisSinceEpoch, 1, uidLast, None, None)
+        )
         val crossingNextMidnight = Seq(
           StaffMovement(T1, "before next midnight", SDate("2017-07-22T22:00").millisSinceEpoch, 1, uidNext, None, None),
-          StaffMovement(T1, "after next midnight", SDate("2017-07-23T02:00").millisSinceEpoch, 1, uidNext, None, None))
+          StaffMovement(T1, "after next midnight", SDate("2017-07-23T02:00").millisSinceEpoch, 1, uidNext, None, None)
+        )
         val sm = StaffMovements(crossingLastMidnight ++ crossingNextMidnight)
 
         val expected = crossingLastMidnight ++ crossingNextMidnight
@@ -50,14 +54,57 @@ object TerminalStaffingTests extends TestSuite {
         val uidToday = newUuidString
         val uidTomorrow = newUuidString
         val pairYesterday = Seq(
-          StaffMovement(T1, "reason start", SDate("2017-07-21" + T1 + "0:00").millisSinceEpoch, 1, uidYesterday, None, None),
-          StaffMovement(T1, "reason end", SDate("2017-07-21" + T1 + "2:00").millisSinceEpoch, 1, uidYesterday, None, None))
+          StaffMovement(
+            T1,
+            "reason start",
+            SDate("2017-07-21" + T1 + "0:00").millisSinceEpoch,
+            1,
+            uidYesterday,
+            None,
+            None
+          ),
+          StaffMovement(
+            T1,
+            "reason end",
+            SDate("2017-07-21" + T1 + "2:00").millisSinceEpoch,
+            1,
+            uidYesterday,
+            None,
+            None
+          )
+        )
         val pairToday = Seq(
-          StaffMovement(T1, "reason start", SDate("2017-07-22" + T1 + "0:00").millisSinceEpoch, 1, uidToday, None, None),
-          StaffMovement(T1, "reason end", SDate("2017-07-22" + T1 + "2:00").millisSinceEpoch, 1, uidToday, None, None))
+          StaffMovement(
+            T1,
+            "reason start",
+            SDate("2017-07-22" + T1 + "0:00").millisSinceEpoch,
+            1,
+            uidToday,
+            None,
+            None
+          ),
+          StaffMovement(T1, "reason end", SDate("2017-07-22" + T1 + "2:00").millisSinceEpoch, 1, uidToday, None, None)
+        )
         val pairTomorrow = Seq(
-          StaffMovement(T1, "reason start", SDate("2017-07-23" + T1 + "0:00").millisSinceEpoch, 1, uidTomorrow, None, None),
-          StaffMovement(T1, "reason end", SDate("2017-07-23" + T1 + "2:00").millisSinceEpoch, 1, uidTomorrow, None, None))
+          StaffMovement(
+            T1,
+            "reason start",
+            SDate("2017-07-23" + T1 + "0:00").millisSinceEpoch,
+            1,
+            uidTomorrow,
+            None,
+            None
+          ),
+          StaffMovement(
+            T1,
+            "reason end",
+            SDate("2017-07-23" + T1 + "2:00").millisSinceEpoch,
+            1,
+            uidTomorrow,
+            None,
+            None
+          )
+        )
         val sm = StaffMovements(pairYesterday ++ pairToday ++ pairTomorrow)
 
         val expected = pairToday

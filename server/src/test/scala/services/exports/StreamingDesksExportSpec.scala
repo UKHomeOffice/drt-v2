@@ -3,13 +3,13 @@ package services.exports
 import actors.routing.minutes.MockMinutesLookup
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{ MinutesContainer, StaffMinute }
 import drt.shared.TM
 import services.crunch.CrunchTestLike
 import services.exports.CsvTestHelper._
-import uk.gov.homeoffice.drt.models.{CrunchMinute, TQM}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.models.{ CrunchMinute, TQM }
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk, NonEeaDesk }
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2 }
 import uk.gov.homeoffice.drt.time.SDate
 
 class StreamingDesksExportSpec extends CrunchTestLike {
@@ -50,7 +50,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       deployedWait = Option(depWait),
       maybeDeployedPaxInQueue = None,
       actDesks = Option(actDesk),
-      actWait = Option(actWait),
+      actWait = Option(actWait)
     ))
 
     val shifts = 1
@@ -61,9 +61,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
 
     val staffMinutesContainer = MinutesContainer[StaffMinute, TM](List(
       StaffMinute(T1, minute1.millisSinceEpoch, shifts, misc, moves),
-      StaffMinute(T1, minute2.millisSinceEpoch, shifts, misc, moves),
+      StaffMinute(T1, minute2.millisSinceEpoch, shifts, misc, moves)
     ))
-
 
     "When I ask for a desk recs CSV I should get back a stream of CSV strings matching those minutes" >> {
 
@@ -78,7 +77,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
@@ -104,7 +103,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
@@ -130,7 +129,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup,
         staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(resultStreamToCSV(resultSource), 4)
@@ -158,7 +157,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(resultStreamToCSV(resultSource), 4)
@@ -186,7 +185,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
@@ -215,7 +214,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = resultStreamToCSV(resultSource).split("\n").length
@@ -245,7 +244,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val headingLines = 2
@@ -271,7 +270,6 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         start = minute1,
         end = minute2,
@@ -280,7 +278,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
@@ -331,7 +329,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       deployedWait = Option(depWait),
       maybeDeployedPaxInQueue = None,
       actDesks = Option(actDesk),
-      actWait = Option(actWait),
+      actWait = Option(actWait)
     ))
 
     val shifts = 1
@@ -358,7 +356,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         crunchMinuteLookup = crunchMinuteLookup,
         staffMinuteLookup = staffMinuteLookup,
         maybePit = None,
-        periodMinutes = 15,
+        periodMinutes = 15
       )
 
       val result = takeCSVLines(resultStreamToCSV(resultSource), 6)

@@ -1,7 +1,7 @@
 package drt.server.feeds.legacy.bhx
 
 import uk.co.bhx.online.flightinformation.FlightInformationSoap
-import uk.gov.homeoffice.drt.arrivals.{ForecastArrival, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{ ForecastArrival, LiveArrival }
 
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 

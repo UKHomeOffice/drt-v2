@@ -33,7 +33,8 @@ class DeskRecMinuteSpec extends Specification {
     }
     "When maybePaxInQueue is updated" >> {
       val drm = DeskRecMinute(T1, EeaDesk, 0L, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue.map(_ + 1))
-      drm.maybeUpdated(cm, nowMillis) === Option(cm.copy(maybePaxInQueue = maybePaxInQueue.map(_ + 1), lastUpdated = Option(nowMillis)))
+      drm.maybeUpdated(cm, nowMillis) ===
+        Option(cm.copy(maybePaxInQueue = maybePaxInQueue.map(_ + 1), lastUpdated = Option(nowMillis)))
     }
   }
 
@@ -52,7 +53,8 @@ class DeskRecMinuteSpec extends Specification {
       maybeDeployedPaxInQueue = Option(4),
       actDesks = Option(5),
       actWait = Option(6),
-      lastUpdated = Option(0L))
+      lastUpdated = Option(0L)
+    )
 
     "We should be able to construct a DeskRecMinute from a CrunchMinute" >> {
       DeskRecMinute.from(crunchMinute) === DeskRecMinute(
@@ -63,7 +65,7 @@ class DeskRecMinuteSpec extends Specification {
         workLoad = 2,
         deskRec = 3,
         waitTime = 4,
-        maybePaxInQueue = Option(1),
+        maybePaxInQueue = Option(1)
       )
     }
 

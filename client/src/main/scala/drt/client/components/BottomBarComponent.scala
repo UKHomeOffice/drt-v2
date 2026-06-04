@@ -1,11 +1,10 @@
 package drt.client.components
 
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-
 
 @js.native
 trait BottomBarProps extends js.Object {
@@ -16,7 +15,11 @@ trait BottomBarProps extends js.Object {
 }
 
 object BottomBarProps {
-  def apply(teamEmail: String, onClickAccessibilityStatement: js.Function0[Unit], feedbackUrl: String): BottomBarProps = {
+  def apply(
+      teamEmail: String,
+      onClickAccessibilityStatement: js.Function0[Unit],
+      feedbackUrl: String
+  ): BottomBarProps = {
     val p = (new js.Object).asInstanceOf[BottomBarProps]
     p.accessibilityStatementUrl = "#accessibility/"
     p.email = teamEmail

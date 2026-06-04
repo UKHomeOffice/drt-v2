@@ -1,10 +1,10 @@
 package uk.gov.homeoffice.drt.routes
 
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import play.api.Configuration
-import play.api.mvc.{Headers, Session}
+import play.api.mvc.{ Headers, Session }
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
+import uk.gov.homeoffice.drt.auth.{ LoggedInUser, Roles }
 import uk.gov.homeoffice.drt.db.tables.UserTableLike
 
 trait UserRoleProviderLike {
@@ -12,7 +12,8 @@ trait UserRoleProviderLike {
 
   val userService: UserTableLike
 
-  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Forwarded-Groups").map(_.split(",")).map(_.map(_.split("role:").last))
+  def userRolesFromHeader(headers: Headers): Set[Role] =
+    headers.get("X-Forwarded-Groups").map(_.split(",")).map(_.map(_.split("role:").last))
       .map(_.flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
@@ -25,6 +26,7 @@ trait UserRoleProviderLike {
       email = email,
       userName = headers.get("X-Forwarded-Preferred-Username").getOrElse(email),
       id = headers.get("X-Forwarded-Preferred-Username").getOrElse(email),
-      roles = roles)
+      roles = roles
+    )
   }
 }

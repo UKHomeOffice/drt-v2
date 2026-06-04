@@ -21,9 +21,12 @@ trait MockedChromaSendReceive extends WithSendAndReceive {
       req.uri.path match {
         case Uri.Path(chromaTokenPath) if chromaTokenPath.contains("/chroma/token") =>
           HttpResponse().withEntity(
-            HttpEntity(ContentTypes.`application/json`,
+            HttpEntity(
+              ContentTypes.`application/json`,
               """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
-                |"token_type":"bearer","expires_in":86399}""".stripMargin))
+                |"token_type":"bearer","expires_in":86399}""".stripMargin
+            )
+          )
 
         case Uri.Path(chromaPayh) if chromaPayh.contains("/chroma/live/") =>
           log.info("Sending mocked chroma flights.")

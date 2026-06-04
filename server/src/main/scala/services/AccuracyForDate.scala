@@ -2,15 +2,15 @@ package services
 
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
-case class AccuracyForDate(forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Double]],
-                           terminalActuals: Map[Terminal, Double],
-                           today: LocalDate
-                          )
-                          (implicit ec: ExecutionContext) {
+case class AccuracyForDate(
+    forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Double]],
+    terminalActuals: Map[Terminal, Double],
+    today: LocalDate
+)(implicit ec: ExecutionContext) {
   private val log = LoggerFactory.getLogger(getClass)
 
   def accuracy(date: LocalDate, daysBeforeDate: Int): Option[Future[Map[Terminal, Option[Double]]]] = {

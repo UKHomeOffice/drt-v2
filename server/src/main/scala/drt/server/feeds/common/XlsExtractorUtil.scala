@@ -1,6 +1,6 @@
 package drt.server.feeds.common
 
-import org.apache.poi.ss.usermodel.{CellType, Row, Sheet, Workbook}
+import org.apache.poi.ss.usermodel.{ CellType, Row, Sheet, Workbook }
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 import java.util.Date
@@ -24,21 +24,25 @@ object XlsExtractorUtil {
 
   val stringCell: (Int, Row) => String = (index, row) => row.getCell(index).getStringCellValue
 
-  val headingIndexByName: Row => Map[String, Int] = headingRow => (headingRow.getFirstCellNum to headingRow.getLastCellNum collect {
-    case index if headingRow.getCell(index) != null && headingRow.getCell(1).getCellType != CellType.BLANK => stringCell(index, headingRow) -> index
-  }).toMap
+  val headingIndexByName: Row => Map[String, Int] = headingRow =>
+    (headingRow.getFirstCellNum to headingRow.getLastCellNum collect {
+      case index if headingRow.getCell(index) != null && headingRow.getCell(1).getCellType != CellType.BLANK =>
+        stringCell(index, headingRow) -> index
+    }).toMap
 
-  val tryNumericThenStringCellDoubleOption: (Int, Row) => Double = (index, row) => Try(numericCellOption(index, row)
-    .getOrElse(0.0))
-    .getOrElse(stringCellOption(index, row)
-      .map(_.toDouble)
+  val tryNumericThenStringCellDoubleOption: (Int, Row) => Double = (index, row) =>
+    Try(numericCellOption(index, row)
       .getOrElse(0.0))
+      .getOrElse(stringCellOption(index, row)
+        .map(_.toDouble)
+        .getOrElse(0.0))
 
-  val tryNumericThenStringCellIntOption: (Int, Row) => Int = (index, row) => Try(numericCellOption(index, row)
-    .map(_.toInt)
-    .getOrElse(0))
-    .getOrElse(stringCellOption(index, row)
+  val tryNumericThenStringCellIntOption: (Int, Row) => Int = (index, row) =>
+    Try(numericCellOption(index, row)
       .map(_.toInt)
       .getOrElse(0))
+      .getOrElse(stringCellOption(index, row)
+        .map(_.toInt)
+        .getOrElse(0))
 
 }

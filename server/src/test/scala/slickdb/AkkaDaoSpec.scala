@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import slickdb.dao.AkkaDao
 import uk.gov.homeoffice.drt.testsystem.db.AkkaDbH2
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +28,7 @@ class AkkaDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
     SnapshotRow("persistence-id-a", 3, today.millisSinceEpoch),
     SnapshotRow("persistence-id-b", 4, twoDaysBeforeRetention.millisSinceEpoch),
     SnapshotRow("persistence-id-b", 5, oneDayBeforeRetention.millisSinceEpoch),
-    SnapshotRow("persistence-id-b", 6, today.millisSinceEpoch),
+    SnapshotRow("persistence-id-b", 6, today.millisSinceEpoch)
   )
   private val journalRows = Seq(
     JournalRow(1, "persistence-id-a", 1),
@@ -36,7 +36,7 @@ class AkkaDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
     JournalRow(3, "persistence-id-a", 3),
     JournalRow(4, "persistence-id-b", 4),
     JournalRow(5, "persistence-id-b", 5),
-    JournalRow(6, "persistence-id-b", 6),
+    JournalRow(6, "persistence-id-b", 6)
   )
 
   before {
@@ -49,7 +49,8 @@ class AkkaDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
     "return the latest sequence number from before the retention period" in {
       val dao = AkkaDao(akkaDb, () => today)
 
-      val result = Await.result(dao.getSequenceNumberBeforeRetentionPeriod("persistence-id-a", retentionPeriod7Days), 1.second)
+      val result =
+        Await.result(dao.getSequenceNumberBeforeRetentionPeriod("persistence-id-a", retentionPeriod7Days), 1.second)
 
       result should be(Some(2))
     }
@@ -57,7 +58,8 @@ class AkkaDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
     "return None if there are no snapshots before the retention period" in {
       val dao = AkkaDao(akkaDb, () => today.addDays(-7))
 
-      val result = Await.result(dao.getSequenceNumberBeforeRetentionPeriod("persistence-id-a", retentionPeriod7Days), 1.second)
+      val result =
+        Await.result(dao.getSequenceNumberBeforeRetentionPeriod("persistence-id-a", retentionPeriod7Days), 1.second)
 
       result should be(None)
     }
@@ -76,7 +78,7 @@ class AkkaDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
         SnapshotRow("persistence-id-a", 3, today.millisSinceEpoch),
         SnapshotRow("persistence-id-b", 4, twoDaysBeforeRetention.millisSinceEpoch),
         SnapshotRow("persistence-id-b", 5, oneDayBeforeRetention.millisSinceEpoch),
-        SnapshotRow("persistence-id-b", 6, today.millisSinceEpoch),
+        SnapshotRow("persistence-id-b", 6, today.millisSinceEpoch)
       ))
     }
     "return (0, 0) and not delete any row if there are no snapshots or journal entries with a sequence number lower than the given sequence number" in {
@@ -106,14 +108,14 @@ class AkkaDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
       snapshots should ===(Seq(
         SnapshotRow("persistence-id-b", 4, twoDaysBeforeRetention.millisSinceEpoch),
         SnapshotRow("persistence-id-b", 5, oneDayBeforeRetention.millisSinceEpoch),
-        SnapshotRow("persistence-id-b", 6, today.millisSinceEpoch),
+        SnapshotRow("persistence-id-b", 6, today.millisSinceEpoch)
       ))
 
       val journal = Await.result(akkaDb.run(akkaDb.journalTable.result), 1.second)
       journal should ===(Seq(
         JournalRow(4, "persistence-id-b", 4),
         JournalRow(5, "persistence-id-b", 5),
-        JournalRow(6, "persistence-id-b", 6),
+        JournalRow(6, "persistence-id-b", 6)
       ))
     }
     "return 0 and not delete any rows if there are no snapshots or journal entries for the given persistence id" in {

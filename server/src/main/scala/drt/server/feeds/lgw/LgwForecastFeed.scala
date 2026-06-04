@@ -3,7 +3,7 @@ package drt.server.feeds.lgw
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.actor.typed.ActorRef
 import org.apache.pekko.stream.scaladsl.Source
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed }
 
 object LgwForecastFeed {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)

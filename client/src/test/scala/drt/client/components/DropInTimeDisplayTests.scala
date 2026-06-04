@@ -1,7 +1,6 @@
 package drt.client.components
 
-import utest.{TestSuite, assert, _}
-
+import utest.{ assert, TestSuite, _ }
 
 object DropInTimeDisplayTests extends TestSuite with DropInTimeDisplay {
 

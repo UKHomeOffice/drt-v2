@@ -9,13 +9,13 @@ import controllers.model.RedListCountsJsonFormats._
 import drt.server.feeds.StoreFeedImportArrivals
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.server.feeds.stn.STNForecastXLSExtractor
-import drt.shared.{NeboArrivals, RedListPassengers}
+import drt.shared.{ NeboArrivals, RedListPassengers }
 import play.api.libs.Files
 import play.api.libs.json.Json._
 import play.api.libs.json.OWrites
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.auth.Roles.{NeboUpload, PortFeedUpload}
+import uk.gov.homeoffice.drt.auth.Roles.{ NeboUpload, PortFeedUpload }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.PortCode
 
@@ -24,14 +24,14 @@ import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Try
 
-
 case class ApiResponseBody(message: String)
 
 object ApiResponseBody {
   implicit val w: OWrites[ApiResponseBody] = writes[ApiResponseBody]
 }
 
-class ImportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class ImportsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
 
   def feedImportRedListCounts: Action[AnyContent] = authByRole(NeboUpload) {
     Action.async { request =>
@@ -47,7 +47,8 @@ class ImportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
                     .ask(RedListCounts(updatedRedListCounts))
                   Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
                 }.recover {
-                  case e => log.warning(s"Error while updating redListPassenger", e)
+                  case e =>
+                    log.warning(s"Error while updating redListPassenger", e)
                     BadRequest("Failed to update the red List Passenger")
                 }
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
@@ -82,7 +83,8 @@ class ImportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
           val extractedArrivals = airportConfig.portCode match {
             case PortCode("LHR") => LHRForecastCSVExtractor(filePath)
             case PortCode("STN") => STNForecastXLSExtractor(filePath)
-            case port => log.info(s"$port -> Not valid port for upload")
+            case port            =>
+              log.info(s"$port -> Not valid port for upload")
               List.empty
           }
 

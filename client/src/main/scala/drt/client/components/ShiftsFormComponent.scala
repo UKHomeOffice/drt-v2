@@ -1,7 +1,7 @@
 package drt.client.components
 
 import japgolly.scalajs.react.component.JsFn.Component
-import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
+import japgolly.scalajs.react.{ Children, CtorType, JsFnComponent }
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -19,7 +19,14 @@ trait ShiftForm extends js.Object {
 }
 
 object ShiftForm {
-  def apply(id: Int, name: String, startTime: String, endTime: String, defaultStaffNumber: Int, startDate: ShiftDate): ShiftForm = {
+  def apply(
+      id: Int,
+      name: String,
+      startTime: String,
+      endTime: String,
+      defaultStaffNumber: Int,
+      startDate: ShiftDate
+  ): ShiftForm = {
     val p = (new js.Object).asInstanceOf[ShiftForm]
     p.id = id
     p.name = name
@@ -43,14 +50,15 @@ trait ShiftFormProps extends js.Object {
 }
 
 object ShiftFormProps {
-  def apply(port: String,
-            terminal: String,
-            interval: Int,
-            initialShifts: Seq[ShiftForm],
-            confirmHandler: Seq[ShiftForm] => Unit,
-            formMode: String,
-            disableAdd: Boolean
-           ): ShiftFormProps = {
+  def apply(
+      port: String,
+      terminal: String,
+      interval: Int,
+      initialShifts: Seq[ShiftForm],
+      confirmHandler: Seq[ShiftForm] => Unit,
+      formMode: String,
+      disableAdd: Boolean
+  ): ShiftFormProps = {
     val p = (new js.Object).asInstanceOf[ShiftFormProps]
     p.port = port
     p.terminal = terminal

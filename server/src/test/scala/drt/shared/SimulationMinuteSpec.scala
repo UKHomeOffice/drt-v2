@@ -20,7 +20,8 @@ class SimulationMinuteSpec extends Specification {
     maybeDeployedPaxInQueue = Option(4),
     actDesks = Option(5),
     actWait = Option(6),
-    lastUpdated = Option(0L))
+    lastUpdated = Option(0L)
+  )
 
   "Given a SimulationMinute and a CrunchMinute" >> {
     "We should be able to construct a SimulationMinute from a CrunchMinute" >> {
@@ -30,7 +31,7 @@ class SimulationMinuteSpec extends Specification {
         minute = 0L,
         desks = 2,
         waitTime = 3,
-        maybePaxInQueue = Option(4),
+        maybePaxInQueue = Option(4)
       )
     }
     "When they have the same values `maybeUpdated` should return None" >> {

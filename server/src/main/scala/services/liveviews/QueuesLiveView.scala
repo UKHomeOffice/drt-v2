@@ -6,23 +6,24 @@ import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.dao.QueueSlotDao
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{ SDate, UtcDate }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object QueuesLiveView {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def updateQueuesLiveView(queueSlotDao: QueueSlotDao,
-                           aggregatedDb: AggregatedDbTables,
-                           portCode: PortCode,
-                          )
-                          (implicit ec: ExecutionContext): (UtcDate, Iterable[CrunchMinute]) => Future[Int] = {
+  def updateQueuesLiveView(
+      queueSlotDao: QueueSlotDao,
+      aggregatedDb: AggregatedDbTables,
+      portCode: PortCode
+  )(implicit ec: ExecutionContext): (UtcDate, Iterable[CrunchMinute]) => Future[Int] = {
     val slotSizeMinutes = 15
     val insertOrUpdate = queueSlotDao.updateSlots(portCode, slotSizeMinutes)
 
     (date, minutes) => {
-      val slotsToInsert = CrunchMinutes.groupByMinutes(slotSizeMinutes, minutes.toSeq, date)(d => SDate(d).millisSinceEpoch)
+      val slotsToInsert =
+        CrunchMinutes.groupByMinutes(slotSizeMinutes, minutes.toSeq, date)(d => SDate(d).millisSinceEpoch)
 
       aggregatedDb
         .run(insertOrUpdate(slotsToInsert))

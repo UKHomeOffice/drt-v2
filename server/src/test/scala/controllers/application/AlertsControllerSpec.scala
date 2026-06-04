@@ -5,7 +5,7 @@ import drt.shared.Alert
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
+import play.api.test.{ FakeRequest, Helpers }
 
 class AlertsControllerSpec extends PlaySpec with MockitoSugar {
 
@@ -28,16 +28,17 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
     "add an alert" in {
 
       val controller = new AlertsController(Helpers.stubControllerComponents(), drtSystemInterface)
-      val alert: Alert = Alert("title", "message", "alertClass", System.currentTimeMillis() + 100000, System.currentTimeMillis())
+      val alert: Alert =
+        Alert("title", "message", "alertClass", System.currentTimeMillis() + 100000, System.currentTimeMillis())
       import Alert.rw
       val jsonString: String = upickle.default.write(alert)
       val resultAdd = controller.addAlert().apply(FakeRequest(POST, "/alerts")
         .withTextBody(jsonString)
-        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+        .withHeaders(
+          "X-Forwarded-Email" -> "test@test.com",
           "X-Forwarded-Groups" -> "create-alerts,TEST",
           "Content-Type" -> "application/json"
-        )
-      )
+        ))
       status(resultAdd) mustBe 202
 
       val result = controller.getAlerts(System.currentTimeMillis() - 10000).apply(FakeRequest())
@@ -54,7 +55,8 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
       val controller = new AlertsController(Helpers.stubControllerComponents(), drtSystemInterface)
 
       val result = controller.deleteAlerts().apply(FakeRequest(POST, "/alerts/delete")
-        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+        .withHeaders(
+          "X-Forwarded-Email" -> "test@test.com",
           "X-Forwarded-Groups" -> "create-alerts,TEST",
           "Content-Type" -> "application/json"
         ))

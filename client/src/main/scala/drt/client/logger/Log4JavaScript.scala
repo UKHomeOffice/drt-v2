@@ -1,10 +1,9 @@
 package drt.client.logger
 
 import scala.annotation.elidable
-import scala.annotation.elidable.{FINE, FINEST, INFO, WARNING, SEVERE}
+import scala.annotation.elidable.{ FINE, FINEST, INFO, SEVERE, WARNING }
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-
 
 @js.native
 @JSImport("log4javascript", "Level")
@@ -86,7 +85,6 @@ private[logger] class AjaxAppender(url: String) extends Appender {
   def addHeader(header: String, value: String): Unit = js.native
 }
 
-
 @JSImport("log4javascript", JSImport.Namespace)
 @js.native
 private[logger] object Log4JavaScript extends js.Object {
@@ -115,7 +113,7 @@ class L4JSLogger(jsLogger: JSLogger) extends Logger {
    *
    * Specify level as a compiler parameter
    * > scalac -Xelide-below INFO
-  */
+   */
   @elidable(FINEST) override def trace(msg: String, e: Exception): Unit = jsLogger.trace(msg, undefOrError(e))
 
   @elidable(FINEST) override def trace(msg: String): Unit = jsLogger.trace(msg)

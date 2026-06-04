@@ -3,43 +3,44 @@ package services.crunch.staffing
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.scaladsl.Flow
-import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.stream.{ Materializer, UniqueKillSwitch }
 import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, NotUsed}
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute, StaffMinutes}
-import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements, TM}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.{ Done, NotUsed }
+import drt.shared.CrunchApi.{ MinutesContainer, StaffMinute, StaffMinutes }
+import drt.shared.{ FixedPointAssignments, ShiftAssignments, StaffMovements, TM }
+import org.slf4j.{ Logger, LoggerFactory }
 import services.crunch.deskrecs.DrtRunnableGraph
 import services.graphstages.Staffing
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import scala.collection.SortedSet
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object RunnableStaffing extends DrtRunnableGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import SDate.implicits.sdateFromMillisLocal
 
-  def apply(staffingQueueActor: ActorRef,
-            staffQueue: SortedSet[TerminalUpdateRequest],
-            shiftAssignmentsReadActor: ActorRef,
-            fixedPointsActor: ActorRef,
-            movementsActor: ActorRef,
-            staffMinutesActor: ActorRef,
-            now: () => SDateLike,
-            setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
-           )
-           (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+  def apply(
+      staffingQueueActor: ActorRef,
+      staffQueue: SortedSet[TerminalUpdateRequest],
+      shiftAssignmentsReadActor: ActorRef,
+      fixedPointsActor: ActorRef,
+      movementsActor: ActorRef,
+      staffMinutesActor: ActorRef,
+      now: () => SDateLike,
+      setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done]
+  )(implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
 
     val shiftsProvider = (r: TerminalUpdateRequest) => shiftAssignmentsReadActor.ask(r).mapTo[ShiftAssignments]
     val fixedPointsProvider = (r: TerminalUpdateRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
     val movementsProvider = (r: TerminalUpdateRequest) => movementsActor.ask(r).mapTo[StaffMovements]
 
-    val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now, setUpdatedAtForDay)
+    val staffMinutesFlow =
+      RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now, setUpdatedAtForDay)
 
     val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
       startQueuedRequestProcessingGraph(
@@ -47,18 +48,18 @@ object RunnableStaffing extends DrtRunnableGraph {
         persistentQueueActor = staffingQueueActor,
         initialQueue = staffQueue,
         sinkActor = staffMinutesActor,
-        graphName = "staffing",
+        graphName = "staffing"
       )
     (staffingUpdateRequestQueue, staffingUpdateKillSwitch)
   }
 
-  def staffMinutesFlow(shiftsProvider: TerminalUpdateRequest => Future[ShiftAssignments],
-                       fixedPointsProvider: TerminalUpdateRequest => Future[FixedPointAssignments],
-                       movementsProvider: TerminalUpdateRequest => Future[StaffMovements],
-                       now: () => SDateLike,
-                       setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
-                      )
-                      (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
+  def staffMinutesFlow(
+      shiftsProvider: TerminalUpdateRequest => Future[ShiftAssignments],
+      fixedPointsProvider: TerminalUpdateRequest => Future[FixedPointAssignments],
+      movementsProvider: TerminalUpdateRequest => Future[StaffMovements],
+      now: () => SDateLike,
+      setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done]
+  )(implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
     Flow[TerminalUpdateRequest]
       .wireTap(processingRequest => log.info(s"${processingRequest.date} staffing crunch request started"))
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
@@ -66,14 +67,24 @@ object RunnableStaffing extends DrtRunnableGraph {
       .mapAsync(1) { case (cr, sa, fp) => movementsProvider(cr).map(sm => (cr, sa, fp, sm)) }
       .via(toStaffMinutes(now, setUpdatedAtForDay))
 
-  private def toStaffMinutes(now: () => SDateLike,
-                             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
-                            ): Flow[(TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), MinutesContainer[StaffMinute, TM], NotUsed] =
+  private def toStaffMinutes(
+      now: () => SDateLike,
+      setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done]
+  ): Flow[
+    (TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements),
+    MinutesContainer[StaffMinute, TM],
+    NotUsed
+  ] =
     Flow[(TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
       .collect { case (processingRequest: TerminalUpdateRequest, sa, fp, sm) =>
         setUpdatedAtForDay(processingRequest.terminal, processingRequest.date, now().millisSinceEpoch)
 
-        val staff = Staffing.staffAvailableByTerminalAndQueue(processingRequest.start.millisSinceEpoch, sa, fp, Option(sm.movements))
+        val staff = Staffing.staffAvailableByTerminalAndQueue(
+          processingRequest.start.millisSinceEpoch,
+          sa,
+          fp,
+          Option(sm.movements)
+        )
 
         StaffMinutes(processingRequest.minutesInMillis.map { minute =>
           val m = SDate(minute, europeLondonTimeZone)
@@ -81,7 +92,14 @@ object RunnableStaffing extends DrtRunnableGraph {
           val fixedPoints = staff.fixedPoints.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
           val movements = staff.movements.terminalStaffAt(processingRequest.terminal, minute)
 
-          StaffMinute(processingRequest.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))
+          StaffMinute(
+            processingRequest.terminal,
+            minute,
+            shifts,
+            fixedPoints,
+            movements,
+            lastUpdated = Option(now().millisSinceEpoch)
+          )
         }).asContainer
       }
 }

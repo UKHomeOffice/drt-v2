@@ -1,19 +1,20 @@
 package manifests.queues
 
-import org.slf4j.{Logger, LoggerFactory}
-import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
+import org.slf4j.{ Logger, LoggerFactory }
+import queueus.{ AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments }
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.Splits
 import uk.gov.homeoffice.drt.models.ManifestLike
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.InvalidSource
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{ SplitRatio, SplitRatios, SplitSources }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{ ApiPaxTypeAndQueueCount, PaxTypeAndQueue }
 
-
-case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
-                            terminalSplitRatios: Map[Terminal, SplitRatios],
-                            adjustments: QueueAdjustments = AdjustmentsNoop) {
+case class SplitsCalculator(
+    queueAllocator: PaxTypeQueueAllocation,
+    terminalSplitRatios: Map[Terminal, SplitRatios],
+    adjustments: QueueAdjustments = AdjustmentsNoop
+) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalDefaultSplits(terminalName: Terminal): Splits = {

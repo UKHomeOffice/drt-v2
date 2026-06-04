@@ -1,6 +1,6 @@
 package services.staffing
 
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2 }
 import drt.shared._
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
@@ -47,7 +47,8 @@ class StaffTimeSlotsSpec extends Specification {
       val expectedEnd2 = SDate("2018-01-02T00:14").millisSinceEpoch
       val expected = Set(
         StaffAssignment("shift1220170", T1, expectedStart1, expectedEnd1, 1, None),
-        StaffAssignment("shift0120180", T1, expectedStart2, expectedEnd2, 1, None))
+        StaffAssignment("shift0120180", T1, expectedStart2, expectedEnd2, 1, None)
+      )
 
       val result = replaceShiftMonthWithTimeSlotsForMonth(existingShifts, slots).assignments.toSet
 
@@ -112,7 +113,8 @@ class StaffTimeSlotsSpec extends Specification {
       val expectedEnd2 = SDate("2018-01-02T00:14").millisSinceEpoch
       val expected = Set(
         StaffAssignment("shift0120180", T2, expectedStart1, expectedEnd1, 10, None),
-        StaffAssignment("shift0120180", T1, expectedStart2, expectedEnd2, 1, None))
+        StaffAssignment("shift0120180", T1, expectedStart2, expectedEnd2, 1, None)
+      )
 
       val result = replaceShiftMonthWithTimeSlotsForMonth(existingShifts, slots).assignments.toSet
 
@@ -154,7 +156,8 @@ class StaffTimeSlotsSpec extends Specification {
       val end2 = SDate("2018-02-05T00:14").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(
         StaffAssignment("shift0120180", T1, start1, end1, 10, None),
-        StaffAssignment("shift0120180", T1, start2, end2, 10, None)))
+        StaffAssignment("shift0120180", T1, start2, end2, 10, None)
+      ))
       val month = SDate("2018-01-02T00:00")
 
       val expectedStart = SDate("2018-01-05T00:00").millisSinceEpoch

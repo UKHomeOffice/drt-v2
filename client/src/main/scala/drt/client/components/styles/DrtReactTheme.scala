@@ -11,7 +11,6 @@ object DrtReactTheme extends js.Object {
   val components: js.Object = js.native
 }
 
-
 @js.native
 trait Palette extends js.Object {
   val primary: PrimaryPalette = js.native
@@ -44,4 +43,5 @@ trait GreyPalette extends js.Object {
   val `400`: String = js.native
   val `500`: String = js.native
   val `700`: String = js.native
-  val `900`: String = js.native}
+  val `900`: String = js.native
+}

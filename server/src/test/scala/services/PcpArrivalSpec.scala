@@ -16,50 +16,53 @@ class PcpArrivalSpec extends SpecificationLike {
     "Given an Arrival with only a scheduled time, " +
       "when we ask for the best chocks time, " +
       "then we should get the scheduled time plus the time to chox in millis" >> {
-      val result = flight.bestArrivalTime(considerPredictions = true)
-      val expected = sch.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
+        val result = flight.bestArrivalTime(considerPredictions = true)
+        val expected = sch.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
 
     "Given an Arrival with an estimated time, " +
       "when we ask for the best chocks time, " +
       "then we should get the estimated time plus the time to chox in millis" >> {
-      val est = sch.addMinutes(1)
-      val result = flight.copy(Estimated = Option(est.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
-      val expected = est.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
+        val est = sch.addMinutes(1)
+        val result = flight.copy(Estimated = Option(est.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
+        val expected = est.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
 
     "Given an Arrival with a touchdown (act) time, " +
       "when we ask for the best chocks time, " +
       "then we should get the touchdown time plus the time to chox in millis" >> {
-      val touchdown = sch.addMinutes(2)
-      val result = flight.copy(Actual = Option(touchdown.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
-      val expected = touchdown.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
+        val touchdown = sch.addMinutes(2)
+        val result =
+          flight.copy(Actual = Option(touchdown.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
+        val expected = touchdown.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
 
     "Given an Arrival with an estimated chox time, " +
       "when we ask for the best chocks time, " +
       "then we should get the estimated chocks time in millis" >> {
-      val estChox = sch.addMinutes(2)
-      val result = flight.copy(EstimatedChox = Option(estChox.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
-      val expected = estChox.millisSinceEpoch
+        val estChox = sch.addMinutes(2)
+        val result =
+          flight.copy(EstimatedChox = Option(estChox.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
+        val expected = estChox.millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
 
     "Given an Arrival with an actual chocks time, " +
       "when we ask for the best chocks time, " +
       "then we should get the actual chocks time in millis" >> {
-      val actChox = sch.addMinutes(2)
-      val result = flight.copy(ActualChox = Option(actChox.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
-      val expected = actChox.millisSinceEpoch
+        val actChox = sch.addMinutes(2)
+        val result =
+          flight.copy(ActualChox = Option(actChox.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
+        val expected = actChox.millisSinceEpoch
 
-      result === expected
-    }
+        result === expected
+      }
   }
 }

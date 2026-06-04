@@ -1,8 +1,8 @@
 package actors.daily
 
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{ MillisSinceEpoch, MinutesContainer }
 import org.apache.pekko.persistence.SaveSnapshotSuccess
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
@@ -10,24 +10,29 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.models.MinuteLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike, UtcDate }
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 
-
-abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage, RM <: GeneratedMessage](utcDate: UtcDate,
-                                                                                                                                             terminal: Terminal,
-                                                                                                                                             now: () => SDateLike,
-                                                                                                                                             override val maybePointInTime: Option[MillisSinceEpoch],
-                                                                                                                                            ) extends RecoveryActorLike {
+abstract class TerminalDayLikeActor[VAL <: MinuteLike[
+  VAL,
+  INDEX
+], INDEX <: WithTimeAccessor, M <: GeneratedMessage, RM <: GeneratedMessage](
+    utcDate: UtcDate,
+    terminal: Terminal,
+    now: () => SDateLike,
+    override val maybePointInTime: Option[MillisSinceEpoch]
+) extends RecoveryActorLike {
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   val loggerSuffix: String = maybePointInTime match {
-    case None => ""
+    case None      => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
   }
-  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-${utcDate.year}%04d-${utcDate.month}%02d-${utcDate.day}%02d$loggerSuffix")
+  override val log: Logger = LoggerFactory.getLogger(
+    f"$getClass-$terminal-${utcDate.year}%04d-${utcDate.month}%02d-${utcDate.day}%02d$loggerSuffix"
+  )
 
   val persistenceIdType: String
 
@@ -35,7 +40,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   val onUpdate: Option[(UtcDate, Iterable[VAL]) => Future[Unit]] = None
 
-  override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d"
+  override def persistenceId: String =
+    f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d"
 
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
@@ -47,8 +53,13 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   override def postRecoveryComplete(): Unit = {
     super.postRecoveryComplete()
     val lastMinuteOfDay = SDate(lastMinuteMillis)
-    if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
-      log.info(f"Creating final snapshot for $terminal for historic day ${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d")
+    if (
+      maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 &&
+      lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight
+    ) {
+      log.info(
+        f"Creating final snapshot for $terminal for historic day ${utcDate.year}-${utcDate.month}%02d-${utcDate.day}%02d"
+      )
       saveSnapshot(stateToMessage)
     }
   }
@@ -71,13 +82,18 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def removalsMinutes(state: mutable.Map[INDEX, VAL]): Iterable[INDEX]
 
-  private def diffFromMinutes(state: mutable.Map[INDEX, VAL], incoming: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
+  private def diffFromMinutes(
+      state: mutable.Map[INDEX, VAL],
+      incoming: Iterable[MinuteLike[VAL, INDEX]]
+  ): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
     incoming
-      .map(cm => state.get(cm.key) match {
-        case None => Option(cm.toUpdatedMinute(nowMillis))
-        case Some(existingCm) => cm.maybeUpdated(existingCm, nowMillis)
-      })
+      .map(cm =>
+        state.get(cm.key) match {
+          case None             => Option(cm.toUpdatedMinute(nowMillis))
+          case Some(existingCm) => cm.maybeUpdated(existingCm, nowMillis)
+        }
+      )
       .collect { case Some(update) => update }
   }
 
@@ -92,7 +108,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     (diffFromMinutes(state, container.minutes), removalsMinutes(state)) match {
       case (noDifferences, noRemovals) if noDifferences.isEmpty && noRemovals.isEmpty => sender() ! Set.empty[Long]
-      case (updates, removals) =>
+      case (updates, removals)                                                        =>
         updateStateFromDiff(updates, removals)
         onUpdate.foreach(_(utcDate, state.values))
         val messageToPersist = containerToMessage(updates, removals)
@@ -119,7 +135,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     firstMinuteMillis <= msgMinute(msg) && msgMinute(msg) <= lastMinuteMillis
 
   private val isApplicable: M => Boolean = maybePointInTime match {
-    case None => withinWindow
+    case None      => withinWindow
     case Some(pit) => (msg: M) => (msgLastUpdated(msg) <= pit) && withinWindow(msg)
   }
 

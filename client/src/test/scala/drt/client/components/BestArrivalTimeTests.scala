@@ -32,12 +32,15 @@ object BestArrivalTimeTests extends TestSuite {
         assert(result == expected)
       }
 
-      test("Given a flight with Scheduled time and Est Arrival and Act Arrival then we should get back the Act Arrival") - {
+      test(
+        "Given a flight with Scheduled time and Est Arrival and Act Arrival then we should get back the Act Arrival"
+      ) - {
         val touchdown = "2017-11-17T12:35"
         val arrival = ArrivalGenerator.live(
           schDt = scheduled,
           estDt = estimated,
-          actDt = touchdown).toArrival(LiveFeedSource)
+          actDt = touchdown
+        ).toArrival(LiveFeedSource)
 
         val expected = SDate(touchdown).addMinutes(minutesToChox).millisSinceEpoch
 

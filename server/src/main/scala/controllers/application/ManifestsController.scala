@@ -4,28 +4,31 @@ import com.google.inject.Inject
 import drt.shared.ErrorResponse
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents, Request }
 import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.models.{ManifestKey, PassengerInfo, VoyageManifests}
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.models.{ ManifestKey, PassengerInfo, VoyageManifests }
+import uk.gov.homeoffice.drt.time.{ SDate, UtcDate }
 import upickle.default._
 
 import scala.concurrent.Future
 
-
-class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class ManifestsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
 
   private val manifestsForDay: UtcDate => Future[VoyageManifests] =
-    (date: UtcDate) => ctrl.applicationService.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
+    (date: UtcDate) =>
+      ctrl.applicationService.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
 
-  private val manifestsForFlights: List[ManifestKey] => Future[VoyageManifests] = ManifestsController.manifestsForFlights(manifestsForDay)
+  private val manifestsForFlights: List[ManifestKey] => Future[VoyageManifests] =
+    ManifestsController.manifestsForFlights(manifestsForDay)
 
   def getManifestSummariesForDay(utcDateString: String): Action[AnyContent] =
     authByRole(EnhancedApiView) {
       Action.async {
         UtcDate.parse(utcDateString) match {
-          case Some(utcDate) => manifestsForDay(utcDate).map(manifests => Ok(ManifestsController.manifestSummaries(manifests)))
+          case Some(utcDate) =>
+            manifestsForDay(utcDate).map(manifests => Ok(ManifestsController.manifestSummaries(manifests)))
           case _ => Future(BadRequest(write(ErrorResponse("Invalid scheduled date"))))
         }
       }
@@ -40,8 +43,7 @@ class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInte
             .getOrElse(Set())
 
           manifestsForFlights(arrivalKeys.toList)
-            .map(manifests => Ok(ManifestsController.manifestSummaries(manifests))
-          )
+            .map(manifests => Ok(ManifestsController.manifestSummaries(manifests)))
 
         case _ =>
           Future(BadRequest(write(ErrorResponse("Invalid request body"))))
@@ -51,9 +53,9 @@ class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInte
 }
 
 object ManifestsController {
-  def manifestsForFlights(manifestsProvider: UtcDate => Future[VoyageManifests])
-                         (arrivalKeys: List[ManifestKey])
-                         (implicit mat: Materializer): Future[VoyageManifests] = {
+  def manifestsForFlights(manifestsProvider: UtcDate => Future[VoyageManifests])(
+      arrivalKeys: List[ManifestKey]
+  )(implicit mat: Materializer): Future[VoyageManifests] = {
     val distinctArrivalDays = arrivalKeys.map(k => SDate(k.scheduled).toUtcDate).distinct
     Source(distinctArrivalDays)
       .mapAsync(1)(manifestsProvider)

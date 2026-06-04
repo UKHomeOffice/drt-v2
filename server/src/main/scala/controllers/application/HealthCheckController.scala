@@ -1,19 +1,27 @@
 package controllers.application
 
 import com.google.inject.Inject
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents }
 import providers.MinutesProvider
-import services.healthcheck.{ApiHealthCheck, ArrivalUpdatesHealthCheck, DeskUpdatesHealthCheck, LandingTimesHealthCheck}
+import services.healthcheck.{
+  ApiHealthCheck,
+  ArrivalUpdatesHealthCheck,
+  DeskUpdatesHealthCheck,
+  LandingTimesHealthCheck
+}
 import spray.json.DefaultJsonProtocol._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.time.SDate
 
-
-class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-  private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp)
-  private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp)
-  private val arrivalUpdatesHealthCheck: Int => ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp, ctrl.now)
+class HealthCheckController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
+  private val apiHealthCheck: ApiHealthCheck =
+    ApiHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp)
+  private val landingTimesHealthCheck: LandingTimesHealthCheck =
+    LandingTimesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp)
+  private val arrivalUpdatesHealthCheck: Int => ArrivalUpdatesHealthCheck =
+    ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp, ctrl.now)
   private val deskUpdatesHealthCheck: DeskUpdatesHealthCheck = DeskUpdatesHealthCheck(
     ctrl.now,
     ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp,
@@ -32,14 +40,16 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     landingTimesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] = Action.async { _ =>
-    val start = SDate(from)
-    val end = SDate(to)
-    arrivalUpdatesHealthCheck(lastUpdatedMinutes).healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
-  }
+  def receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] =
+    Action.async { _ =>
+      val start = SDate(from)
+      val end = SDate(to)
+      arrivalUpdatesHealthCheck(lastUpdatedMinutes).healthy(start, end, minimumToConsider).map(p =>
+        Ok(p.toJson.compactPrint)
+      )
+    }
 
   def deskUpdates(): Action[AnyContent] = Action.async { _ =>
     deskUpdatesHealthCheck.healthy().map(p => Ok(p.toJson.compactPrint))
   }
 }
-

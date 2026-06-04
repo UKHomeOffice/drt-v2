@@ -1,21 +1,21 @@
 package controllers
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
+import actors.PartitionedPortStateActor.{ GetStateForDateRange, GetUpdatesSince }
 import actors.TestDrtSystemActorsLike
 import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi._
 import drt.shared.PortState
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, ArrivalsDiff }
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
-import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
+import uk.gov.homeoffice.drt.testsystem.{ MockDrtParameters, TestDrtSystem }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class TestDrtSystemSpec extends CrunchTestLike {
   sequential
@@ -96,7 +96,13 @@ class TestDrtSystemSpec extends CrunchTestLike {
     Thread.sleep(100)
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
-    Await.result(drtSystem.actorService.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1.second)
+    Await.result(
+      drtSystem.actorService.portStateActor.ask(GetStateForDateRange(
+        lastMidnight.millisSinceEpoch,
+        nextMidnight.millisSinceEpoch
+      )).mapTo[PortState],
+      1.second
+    )
   }
 
   private def doesFlightExist(drtSystem: TestDrtSystem, arrival: Arrival): Boolean =
@@ -104,7 +110,9 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
   private def doesCrunchMinuteExist(drtSystem: TestDrtSystem, drm: DeskRecMinute): Boolean = {
     val ps = getPortState(drtSystem)
-    ps.crunchMinutes.values.toSeq.exists(cm => cm.terminal == drm.terminal && cm.queue == drm.queue && cm.minute == drm.minute)
+    ps.crunchMinutes.values.toSeq.exists(cm =>
+      cm.terminal == drm.terminal && cm.queue == drm.queue && cm.minute == drm.minute
+    )
   }
 
   private def doesStaffMinuteExist(drtSystem: TestDrtSystem, sm: StaffMinute): Boolean = {
@@ -117,6 +125,15 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
     val sinceMillis = drtSystem.now().addMinutes(-1).millisSinceEpoch
-    Await.result(drtSystem.actorService.portStateActor.ask(GetUpdatesSince(sinceMillis, sinceMillis, sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1.second)
+    Await.result(
+      drtSystem.actorService.portStateActor.ask(GetUpdatesSince(
+        sinceMillis,
+        sinceMillis,
+        sinceMillis,
+        lastMidnight.millisSinceEpoch,
+        nextMidnight.millisSinceEpoch
+      )).mapTo[Option[PortStateUpdates]],
+      1.second
+    )
   }
 }

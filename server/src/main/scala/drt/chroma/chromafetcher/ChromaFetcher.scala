@@ -1,18 +1,18 @@
 package drt.chroma.chromafetcher
 
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
-import org.apache.pekko.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, MediaTypes}
+import org.apache.pekko.http.scaladsl.model.headers.{ Accept, Authorization, OAuth2BearerToken }
+import org.apache.pekko.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, MediaTypes }
 import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight, ChromaToken}
-import drt.chroma.{ChromaConfig, ChromaFeedType}
+import drt.chroma.chromafetcher.ChromaFetcher.{ ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight, ChromaToken }
+import drt.chroma.{ ChromaConfig, ChromaFeedType }
 import drt.http.WithSendAndReceive
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object ChromaFetcher {
 
@@ -20,37 +20,40 @@ object ChromaFetcher {
 
   sealed trait ChromaFlightLike
 
-  case class ChromaLiveFlight(Operator: String,
-                              Status: String,
-                              EstDT: String,
-                              ActDT: String,
-                              EstChoxDT: String,
-                              ActChoxDT: String,
-                              Gate: String,
-                              Stand: String,
-                              MaxPax: Int,
-                              ActPax: Int,
-                              TranPax: Int,
-                              RunwayID: String,
-                              BaggageReclaimId: String,
-                              FlightID: Int,
-                              AirportID: String,
-                              Terminal: String,
-                              ICAO: String,
-                              IATA: String,
-                              Origin: String,
-                              SchDT: String) extends ChromaFlightLike
+  case class ChromaLiveFlight(
+      Operator: String,
+      Status: String,
+      EstDT: String,
+      ActDT: String,
+      EstChoxDT: String,
+      ActChoxDT: String,
+      Gate: String,
+      Stand: String,
+      MaxPax: Int,
+      ActPax: Int,
+      TranPax: Int,
+      RunwayID: String,
+      BaggageReclaimId: String,
+      FlightID: Int,
+      AirportID: String,
+      Terminal: String,
+      ICAO: String,
+      IATA: String,
+      Origin: String,
+      SchDT: String
+  ) extends ChromaFlightLike
 
   case class ChromaForecastFlight(
-                                   EstPax: Int,
-                                   EstTranPax: Int,
-                                   FlightID: Int,
-                                   AirportID: String,
-                                   Terminal: String,
-                                   ICAO: String,
-                                   IATA: String,
-                                   Origin: String,
-                                   SchDT: String) extends ChromaFlightLike
+      EstPax: Int,
+      EstTranPax: Int,
+      FlightID: Int,
+      AirportID: String,
+      Terminal: String,
+      ICAO: String,
+      IATA: String,
+      Origin: String,
+      SchDT: String
+  ) extends ChromaFlightLike
 
 }
 
@@ -58,15 +61,17 @@ object ChromaFlightMarshallers {
 
   import ChromaParserProtocol._
 
-  def live(implicit mat: Materializer): HttpResponse => Future[List[ChromaLiveFlight]] = r => Unmarshal(r).to[List[ChromaLiveFlight]]
+  def live(implicit mat: Materializer): HttpResponse => Future[List[ChromaLiveFlight]] =
+    r => Unmarshal(r).to[List[ChromaLiveFlight]]
 
-  def forecast(implicit mat: Materializer): HttpResponse => Future[List[ChromaForecastFlight]] = r => Unmarshal(r).to[List[ChromaForecastFlight]]
+  def forecast(implicit mat: Materializer): HttpResponse => Future[List[ChromaForecastFlight]] =
+    r => Unmarshal(r).to[List[ChromaForecastFlight]]
 }
 
-
-abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: ChromaFeedType,
-                                                         rToFs: HttpResponse => Future[List[F]])
-                                                        (implicit val system: ActorSystem, mat: Materializer) extends ChromaConfig with WithSendAndReceive {
+abstract case class ChromaFetcher[F <: ChromaFlightLike](
+    override val feedType: ChromaFeedType,
+    rToFs: HttpResponse => Future[List[F]]
+)(implicit val system: ActorSystem, mat: Materializer) extends ChromaConfig with WithSendAndReceive {
   import ChromaParserProtocol._
   import system.dispatcher
 
@@ -105,7 +110,8 @@ abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: 
 
   def currentFlights: Future[Try[Seq[F]]] = {
     log.debug(s"requesting token")
-    val tokenRequest = HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity)
+    val tokenRequest =
+      HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity)
     val flightsRequest = HttpRequest(method = HttpMethods.GET, uri = url)
 
     tokenPipeline(tokenRequest)

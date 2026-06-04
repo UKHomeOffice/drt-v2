@@ -1,19 +1,19 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess }
 import drt.shared._
-import services.crunch.VoyageManifestGenerator.{euPassport, inTransitFlag}
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
-import uk.gov.homeoffice.drt.models.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
+import services.crunch.VoyageManifestGenerator.{ euPassport, inTransitFlag }
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventTypes, VoyageNumber }
+import uk.gov.homeoffice.drt.models.{ ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest }
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, PortCode, Queues }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{Seq, SortedMap}
+import scala.collection.immutable.{ Seq, SortedMap }
 import scala.concurrent.duration._
 
 class TransferPaxInApiSpec extends CrunchTestLike {
@@ -53,9 +53,9 @@ class TransferPaxInApiSpec extends CrunchTestLike {
           iata = "BA0001",
           terminal = T1,
           totalPax = Option(2),
-          transPax = Option(1))
+          transPax = Option(1)
         )
-
+      )
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
@@ -91,7 +91,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
       val portCode = PortCode("LHR")
 
       val inputManifests = ManifestsFeedSuccess(
-        DqManifests(0,
+        DqManifests(
+          0,
           Set(
             VoyageManifest(
               EventTypes.DC,
@@ -101,14 +102,15 @@ class TransferPaxInApiSpec extends CrunchTestLike {
               CarrierCode("TS"),
               ManifestDateOfArrival("2017-01-01"),
               ManifestTimeOfArrival("00:00"),
-              List(euPassport, inTransitFlag))
-          ))
+              List(euPassport, inTransitFlag)
+            )
+          )
+        )
       )
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = lhrAirportConfig,
-
+        airportConfig = lhrAirportConfig
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))

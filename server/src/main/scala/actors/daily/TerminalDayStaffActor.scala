@@ -1,15 +1,18 @@
 package actors.daily
 
-import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared.{CrunchApi, TM}
+import drt.shared.CrunchApi.{ MillisSinceEpoch, StaffMinute }
+import drt.shared.{ CrunchApi, TM }
 import org.apache.pekko.actor.Props
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinuteRemovalMessage, StaffMinutesMessage}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{
+  StaffMinuteMessage,
+  StaffMinuteRemovalMessage,
+  StaffMinutesMessage
+}
+import uk.gov.homeoffice.drt.time.{ SDateLike, UtcDate }
 
 import scala.collection.mutable
-
 
 object TerminalDayStaffActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
@@ -19,12 +22,17 @@ object TerminalDayStaffActor {
     Props(new TerminalDayStaffActor(date, terminal, now, Option(pointInTime)))
 }
 
-class TerminalDayStaffActor(utcDate: UtcDate,
-                            terminal: Terminal,
-                            val now: () => SDateLike,
-                            maybePointInTime: Option[MillisSinceEpoch],
-                           )
-  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage, StaffMinuteRemovalMessage](utcDate, terminal, now, maybePointInTime) {
+class TerminalDayStaffActor(
+    utcDate: UtcDate,
+    terminal: Terminal,
+    val now: () => SDateLike,
+    maybePointInTime: Option[MillisSinceEpoch]
+) extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage, StaffMinuteRemovalMessage](
+      utcDate,
+      terminal,
+      now,
+      maybePointInTime
+    ) {
 
   override val persistenceIdType: String = "staff"
 
@@ -45,7 +53,9 @@ class TerminalDayStaffActor(utcDate: UtcDate,
 
   override def containerToMessage(differences: Iterable[StaffMinute], removals: Iterable[TM]): GeneratedMessage = {
     val updates = differences.map(m => staffMinuteToMessage(m.toMinute)).toSeq
-    val removalMsgs = removals.map(r => StaffMinuteRemovalMessage(terminalName = Option(terminal.toString), minute = Option(r.minute))).toSeq
+    val removalMsgs = removals.map(r =>
+      StaffMinuteRemovalMessage(terminalName = Option(terminal.toString), minute = Option(r.minute))
+    ).toSeq
     StaffMinutesMessage(updates, removalMsgs)
   }
 
@@ -54,7 +64,8 @@ class TerminalDayStaffActor(utcDate: UtcDate,
 
   override val valFromMessage: StaffMinuteMessage => StaffMinute = staffMinuteFromMessage
 
-  override val indexFromMessage: StaffMinuteRemovalMessage => TM = (pm: StaffMinuteRemovalMessage) => TM(terminal, pm.getMinute)
+  override val indexFromMessage: StaffMinuteRemovalMessage => TM =
+    (pm: StaffMinuteRemovalMessage) => TM(terminal, pm.getMinute)
 
   override def removalsMinutes(state: mutable.Map[TM, StaffMinute]): Iterable[TM] = Seq.empty
 }

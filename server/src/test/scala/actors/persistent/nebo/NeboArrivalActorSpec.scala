@@ -2,12 +2,12 @@ package actors.persistent.nebo
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.NeboArrivalMessageConversion
-import org.apache.pekko.actor.{ActorRef, PoisonPill, Props}
+import org.apache.pekko.actor.{ ActorRef, PoisonPill, Props }
 import org.apache.pekko.pattern.ask
-import org.apache.pekko.persistence.{RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
-import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.persistence.{ RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer }
+import org.apache.pekko.testkit.{ ImplicitSender, TestProbe }
 import com.typesafe.config.ConfigFactory
-import drt.shared.{NeboArrivals, RedListPassengers}
+import drt.shared.{ NeboArrivals, RedListPassengers }
 import org.specs2.specification.BeforeEach
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
@@ -17,7 +17,6 @@ import util.RandomString
 import java.io.File
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-
 
 object NeboArrivalActorTest {
   def props(redListPassengers: RedListPassengers, testProbeRef: ActorRef): Props =
@@ -49,13 +48,18 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
     val urnSecondSet = RandomString.getNRandomString(1, 10)
     val redListPassengers = RedListPassengers("abc", PortCode("ab"), SDate("2017-10-25T00:00:00Z"), urnFirstSet)
 
-    val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
+    val neboArrivalActor: ActorRef =
+      system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
     val neboArrivals = Await.result(neboArrivalActor.ask(redListPassengers).mapTo[NeboArrivals], 1.seconds)
-    val newNeboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
+    val newNeboArrivalActor: ActorRef =
+      system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
 
-    val neboArrivalsCombined = Await.result(newNeboArrivalActor
-      .ask(redListPassengers.copy(urns = urnSecondSet))
-      .mapTo[NeboArrivals], 1.seconds)
+    val neboArrivalsCombined = Await.result(
+      newNeboArrivalActor
+        .ask(redListPassengers.copy(urns = urnSecondSet))
+        .mapTo[NeboArrivals],
+      1.seconds
+    )
     neboArrivals.urns === urnFirstSet.toSet
     neboArrivalsCombined.urns === urnFirstSet.toSet ++ urnSecondSet.toSet
   }
@@ -64,17 +68,19 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
 
     val urns = RandomString.getNRandomString(5, 10)
     val redListPassengers = RedListPassengers("abc", PortCode("ab"), SDate("2017-10-25T00:00:00Z"), urns)
-    val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
+    val neboArrivalActor: ActorRef =
+      system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
 
     val probe = TestProbe("red-list")
     probe.watch(neboArrivalActor)
-    //sending the red list passengers to persist which test serialisation
+    // sending the red list passengers to persist which test serialisation
     Await.ready(neboArrivalActor.ask(redListPassengers), 1.second)
     neboArrivalActor ! PoisonPill
     probe.expectTerminated(neboArrivalActor)
 
-    //using new actor to get actor state and test deSerialisation
-    val newNeboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
+    // using new actor to get actor state and test deSerialisation
+    val newNeboArrivalActor: ActorRef =
+      system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
 
     val neboArrivals: NeboArrivals = Await.result(newNeboArrivalActor.ask(GetState).mapTo[NeboArrivals], 1.seconds)
     neboArrivals.urns === urns.toSet

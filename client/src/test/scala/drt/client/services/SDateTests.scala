@@ -2,11 +2,10 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.JSDateConversions.SDate.JSSDate
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike, UtcDate}
-import utest.{TestSuite, _}
+import uk.gov.homeoffice.drt.time.{ LocalDate, MilliDate, SDateLike, UtcDate }
+import utest.{ TestSuite, _ }
 
 import scala.scalajs.js.Date
-
 
 object SDateTests extends TestSuite {
   val tests: Tests = Tests {
@@ -34,12 +33,14 @@ object SDateTests extends TestSuite {
 
       test("round trip the above magic numbers 1481364000000d is 2016/12/10 10:00") - {
         val sdate: SDateLike = SDate.JSSDate(1481364000000L)
-        assert((2016, 12, 10, 10, 0) == Tuple5(sdate.getFullYear, sdate.getMonth, sdate.getDate, sdate.getHours, sdate.getMinutes))
+        assert((2016, 12, 10, 10, 0) ==
+          Tuple5(sdate.getFullYear, sdate.getMonth, sdate.getDate, sdate.getHours, sdate.getMinutes))
       }
 
       test("round trip the above magic numbers 1482148800000L is 2016/12/19 12:00") - {
         val sdate: SDateLike = SDate.JSSDate(1482148800000L)
-        assert((2016, 12, 19, 12, 0) == Tuple5(sdate.getFullYear, sdate.getMonth, sdate.getDate, sdate.getHours, sdate.getMinutes))
+        assert((2016, 12, 19, 12, 0) ==
+          Tuple5(sdate.getFullYear, sdate.getMonth, sdate.getDate, sdate.getHours, sdate.getMinutes))
       }
 
       test("a new js date takes the time and assumes it is in the system locale timezone") - {
@@ -72,7 +73,9 @@ object SDateTests extends TestSuite {
       }
 
       test("When parsing a string to an option of an SDate") - {
-        test("Given a valid datetime string ending in a z (zulu time) falling inside BST, then you should get back the correct time as an SDate Option") - {
+        test(
+          "Given a valid datetime string ending in a z (zulu time) falling inside BST, then you should get back the correct time as an SDate Option"
+        ) - {
           val dateString = "2025-10-26T00:00:00Z"
 
           val result = SDate.parse(dateString)
@@ -86,7 +89,9 @@ object SDateTests extends TestSuite {
               assert(false)
           }
         }
-        test("Given a valid datetime string falling inside BST then you should get back the correct time as an SDate Option") - {
+        test(
+          "Given a valid datetime string falling inside BST then you should get back the correct time as an SDate Option"
+        ) - {
           val dateString = "2025-10-26T00:00"
 
           val result = SDate.parse(dateString)
@@ -100,7 +105,9 @@ object SDateTests extends TestSuite {
               assert(false)
           }
         }
-        test("Given a valid date string falling inside BST then you should get back the correct time as an SDate Option") - {
+        test(
+          "Given a valid date string falling inside BST then you should get back the correct time as an SDate Option"
+        ) - {
           val dateString = "2025-10-26"
 
           val result = SDate.parse(dateString)
@@ -114,7 +121,9 @@ object SDateTests extends TestSuite {
               assert(false)
           }
         }
-        test("Given a valid datetime string falling inside UTC then you should get back the correct time as an SDate Option") - {
+        test(
+          "Given a valid datetime string falling inside UTC then you should get back the correct time as an SDate Option"
+        ) - {
           val dateString = "2025-10-27T00:00"
 
           val result = SDate.parse(dateString)
@@ -128,7 +137,9 @@ object SDateTests extends TestSuite {
               assert(false)
           }
         }
-        test("Given a valid date string falling inside UTC then you should get back the correct time as an SDate Option") - {
+        test(
+          "Given a valid date string falling inside UTC then you should get back the correct time as an SDate Option"
+        ) - {
           val dateString = "2025-10-27"
 
           val result = SDate.parse(dateString)
@@ -158,7 +169,7 @@ object SDateTests extends TestSuite {
           assert(actual == 1490708640000L)
         }
         test("should take dates as UTC but return as local time with millisecond constructor") - {
-          val d = SDate(MilliDate(1490708453000L)) //2017-03-28 13:40 GMT
+          val d = SDate(MilliDate(1490708453000L)) // 2017-03-28 13:40 GMT
           val actual = d.toString
           assert(actual == "2017-03-28T1440")
         }
@@ -170,7 +181,7 @@ object SDateTests extends TestSuite {
           assert(actual == "2017-03-01T1444")
         }
         test("should take dates as UTC but return as local time with millisecond constructor") - {
-          val d = SDate(MilliDate(1481364000000L)) //2016-12-10T10:00:00
+          val d = SDate(MilliDate(1481364000000L)) // 2016-12-10T10:00:00
           val actual = d.toString
           assert(actual == "2016-12-10T1000")
         }
@@ -181,7 +192,9 @@ object SDateTests extends TestSuite {
       }
     }
 
-    test("When creating an SDateLike from a LocalDate then I should get back an SDate at midnight localtime on that day") - {
+    test(
+      "When creating an SDateLike from a LocalDate then I should get back an SDate at midnight localtime on that day"
+    ) - {
       test("Given a BST date, I should get back BST midnight") - {
         val localDate = LocalDate(2020, 7, 2)
         val expected = SDate("2020-07-01T23:00Z")

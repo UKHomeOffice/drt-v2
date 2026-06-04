@@ -4,7 +4,6 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol
 import org.specs2.mutable.SpecificationLike
 
-
 class ChromaParserSpec extends SpecificationLike {
 
   import ChromaParserProtocol._
@@ -39,7 +38,8 @@ class ChromaParserSpec extends SpecificationLike {
         """.stripMargin.parseJson
 
       chromaFlightJson.convertTo[List[ChromaLiveFlight]] should beEqualTo(List(
-        ChromaLiveFlight("Flybe",
+        ChromaLiveFlight(
+          "Flybe",
           "On Chocks",
           "2016-06-02T10:55:00Z",
           "2016-06-02T10:55:00Z",
@@ -58,7 +58,9 @@ class ChromaParserSpec extends SpecificationLike {
           "BEE1272",
           "BE1272",
           "AMS",
-          "2016-06-02T09:55:00Z")))
+          "2016-06-02T09:55:00Z"
+        )
+      ))
     }
   }
   isolated

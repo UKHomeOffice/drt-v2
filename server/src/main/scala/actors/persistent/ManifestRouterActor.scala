@@ -3,43 +3,50 @@ package actors.persistent
 import actors.PartitionedPortStateActor._
 import actors.persistent.ManifestRouterActor.GetManifestsForDateRange
 import actors.persistent.staffing.GetFeedStatuses
-import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
-import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
+import actors.routing.minutes.MinutesActorLike.{ ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest }
+import drt.server.feeds.{ DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.StatusReply
-import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import org.apache.pekko.persistence.{ SaveSnapshotFailure, SaveSnapshotSuccess }
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.util.Timeout
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.models.VoyageManifests
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
+import uk.gov.homeoffice.drt.ports.{ ApiFeedSource, FeedSource }
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
-import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage, feedStatusesToMessage}
-import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{
+  VoyageManifestLatestFileNameMessage,
+  VoyageManifestStateSnapshotMessage
+}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{
+  feedStatusFromFeedStatusMessage,
+  feedStatusToMessage,
+  feedStatusesFromFeedStatusesMessage,
+  feedStatusesToMessage
+}
+import uk.gov.homeoffice.drt.time.{ DateRange, SDate, SDateLike, UtcDate }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ ExecutionContext, ExecutionContextExecutor, Future }
 import scala.language.postfixOps
 
 object ManifestRouterActor extends StreamingFeedStatusUpdates {
   override val sourceType: FeedSource = ApiFeedSource
   override val persistenceId: String = "arrival-manifests"
 
-  private def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
-                                  (start: SDateLike,
-                                   end: SDateLike,
-                                   maybePit: Option[MillisSinceEpoch],
-                                  )
-                                  (implicit ec: ExecutionContext): Source[(UtcDate, VoyageManifests), NotUsed] =
+  private def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)(
+      start: SDateLike,
+      end: SDateLike,
+      maybePit: Option[MillisSinceEpoch]
+  )(implicit ec: ExecutionContext): Source[(UtcDate, VoyageManifests), NotUsed] =
     DateRange
       .utcDateRangeSource(start, end)
       .mapAsync(1)(d => manifestsByDayLookup(d, maybePit).map(m => (d, m)))
@@ -47,12 +54,15 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
   case class GetManifestsForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeMillisLike
 }
 
-case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
+case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses])
+    extends FeedStateLike {
   override def feedSource: FeedSource = ApiFeedSource
 }
 
-class ManifestRouterActor(manifestLookup: ManifestLookup,
-                          manifestsUpdate: ManifestsUpdate) extends RecoveryActorLike {
+class ManifestRouterActor(
+    manifestLookup: ManifestLookup,
+    manifestsUpdate: ManifestsUpdate
+) extends RecoveryActorLike {
   override def persistenceId: String = ManifestRouterActor.persistenceId
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -123,7 +133,8 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       persistFeedStatus(newStatus)
 
     case PointInTimeQuery(pit, GetManifestsForDateRange(startMillis, endMillis)) =>
-      sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
+      sender() !
+        ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
 
     case GetManifestsForDateRange(startMillis, endMillis) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), None)
@@ -177,7 +188,8 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateEffectsStream(effects: Source[Set[TerminalUpdateRequest], NotUsed]): Future[Set[TerminalUpdateRequest]] =
+  private def combineUpdateEffectsStream(effects: Source[Set[TerminalUpdateRequest], NotUsed])
+      : Future[Set[TerminalUpdateRequest]] =
     effects
       .fold[Set[TerminalUpdateRequest]](Set.empty[TerminalUpdateRequest])(_ ++ _)
       .log(getClass.getName)

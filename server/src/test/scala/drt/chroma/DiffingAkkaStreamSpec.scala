@@ -19,13 +19,29 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
         .runWith(TestSink.probe[List[ChromaLiveFlight]])
         .request(1)
         .expectNext(List(
-          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight(
+            "Tnt Airways Sa",
+            "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
-            "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))
+            "2016-08-04T04:53:00Z",
+            "",
+            "207",
+            0,
+            0,
+            0,
+            "24",
+            "",
+            1200980,
+            "EDI",
+            "FRT",
+            "TAY025N",
+            "3V025N",
+            "LGG",
+            "2016-08-04T04:35:00Z"
+          )
+        ))
         .expectComplete()
     }
   }
@@ -37,21 +53,54 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
       source.map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
         .runWith(TestSink.probe[List[ChromaLiveFlight]])
         .requestNext(List(
-          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight(
+            "Tnt Airways Sa",
+            "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
-            "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))
+            "2016-08-04T04:53:00Z",
+            "",
+            "207",
+            0,
+            0,
+            0,
+            "24",
+            "",
+            1200980,
+            "EDI",
+            "FRT",
+            "TAY025N",
+            "3V025N",
+            "LGG",
+            "2016-08-04T04:35:00Z"
+          )
+        ))
         .requestNext(List(
-          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
+          ChromaLiveFlight(
+            "Tnt Airways Sa",
+            "On Chocks",
             "2016-08-04T04:40:00Z",
             "2016-08-04T04:37:00Z",
             "",
-            "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          ), flight2))
+            "2016-08-04T04:53:00Z",
+            "",
+            "207",
+            0,
+            0,
+            0,
+            "24",
+            "",
+            1200980,
+            "EDI",
+            "FRT",
+            "TAY025N",
+            "3V025N",
+            "LGG",
+            "2016-08-04T04:35:00Z"
+          ),
+          flight2
+        ))
         .expectComplete()
     }
   }

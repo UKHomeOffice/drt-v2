@@ -1,8 +1,8 @@
 package actors.routing
 
 import actors.PartitionedPortStateActor._
-import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
-import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
+import actors.routing.FlightsRouterActor.{ AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor }
+import actors.routing.minutes.MinutesActorLike.{ FlightsLookup, FlightsUpdate }
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._
@@ -10,10 +10,10 @@ import drt.shared._
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, NotUsed}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.{ Done, NotUsed }
+import org.slf4j.{ Logger, LoggerFactory }
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
@@ -23,8 +23,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time._
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.{ExecutionContext, Future}
-
+import scala.concurrent.{ ExecutionContext, Future }
 
 object FlightsRouterActor {
   private val log: Logger = LoggerFactory.getLogger(getClass)
@@ -46,14 +45,13 @@ object FlightsRouterActor {
     pcpStartInRange || pcpEndInRange
   }
 
-  def multiTerminalFlightsByDaySource(flightsLookupByDayAndTerminal: FlightsLookup)
-                                     (start: SDateLike,
-                                      end: SDateLike,
-                                      terminals: Iterable[Terminal],
-                                      maybePit: Option[MillisSinceEpoch],
-                                      paxFeedSourceOrder: List[FeedSource],
-                                     )
-                                     (implicit ec: ExecutionContext): Source[(UtcDate, FlightsWithSplits), NotUsed] = {
+  def multiTerminalFlightsByDaySource(flightsLookupByDayAndTerminal: FlightsLookup)(
+      start: SDateLike,
+      end: SDateLike,
+      terminals: Iterable[Terminal],
+      maybePit: Option[MillisSinceEpoch],
+      paxFeedSourceOrder: List[FeedSource]
+  )(implicit ec: ExecutionContext): Source[(UtcDate, FlightsWithSplits), NotUsed] = {
     val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
 
     val reduceAndSort: (Terminal => Future[FlightsWithSplits]) => Future[FlightsWithSplits] =
@@ -71,18 +69,21 @@ object FlightsRouterActor {
       .filter { case (_, flights) => flights.nonEmpty }
   }
 
-  private val reduceAndSortFlightsWithSplits: Iterable[FlightsWithSplits] => FlightsWithSplits = (allFlightsWithSplits: Iterable[FlightsWithSplits]) => {
-    val reducedFlightsWithSplits = allFlightsWithSplits
-      .reduce(_ ++ _)
-      .flights.values.toList.sortBy { fws =>
-        val arrival = fws.apiFlight
-        (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
-      }
-    FlightsWithSplits(reducedFlightsWithSplits)
-  }
+  private val reduceAndSortFlightsWithSplits: Iterable[FlightsWithSplits] => FlightsWithSplits =
+    (allFlightsWithSplits: Iterable[FlightsWithSplits]) => {
+      val reducedFlightsWithSplits = allFlightsWithSplits
+        .reduce(_ ++ _)
+        .flights.values.toList.sortBy { fws =>
+          val arrival = fws.apiFlight
+          (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
+        }
+      FlightsWithSplits(reducedFlightsWithSplits)
+    }
 
-  def runAndCombine(eventualSource: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]])
-                   (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] =
+  def runAndCombine(eventualSource: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]])(implicit
+      mat: Materializer,
+      ec: ExecutionContext
+  ): Future[FlightsWithSplits] =
     eventualSource
       .flatMap { source =>
         source
@@ -90,19 +91,23 @@ object FlightsRouterActor {
           .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _._2))
       }
 
-  def persistSplits(flightsRouterActor: ActorRef)
-                   (implicit timeout: Timeout, ec: ExecutionContext): Iterable[(UniqueArrival, Splits)] => Future[Done] =
-    splits => flightsRouterActor
-      .ask(SplitsForArrivals(splits.toMap.view.mapValues(s => Set(s)).toMap))
-      .map(_ => Done)
+  def persistSplits(flightsRouterActor: ActorRef)(implicit
+      timeout: Timeout,
+      ec: ExecutionContext
+  ): Iterable[(UniqueArrival, Splits)] => Future[Done] =
+    splits =>
+      flightsRouterActor
+        .ask(SplitsForArrivals(splits.toMap.view.mapValues(s => Set(s)).toMap))
+        .map(_ => Done)
 
 }
 
-class FlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
-                         flightsByDayLookup: FlightsLookup,
-                         updateFlights: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
-                         paxFeedSourceOrder: List[FeedSource],
-                        ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate), TerminalUpdateRequest] {
+class FlightsRouterActor(
+    terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
+    flightsByDayLookup: FlightsLookup,
+    updateFlights: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
+    paxFeedSourceOrder: List[FeedSource]
+) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate), TerminalUpdateRequest] {
   private var historicSplitsRequestActor: Option[ActorRef] = None
   private var historicPaxRequestActor: Option[ActorRef] = None
 
@@ -124,7 +129,13 @@ class FlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterab
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
     case PointInTimeQuery(pit, request: DateRangeMillisLike with TerminalRequest) =>
-      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), Option(pit), paxFeedSourceOrder)
+      sender() ! flightsLookupService(
+        SDate(request.from),
+        SDate(request.to),
+        Seq(request.terminal),
+        Option(pit),
+        paxFeedSourceOrder
+      )
 
     case GetFlightsForTerminals(startMillis, endMillis, terminals) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None, paxFeedSourceOrder)
@@ -137,10 +148,15 @@ class FlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterab
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
     case request: DateRangeMillisLike with TerminalRequest =>
-      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), None, paxFeedSourceOrder)
+      sender() !
+        flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), None, paxFeedSourceOrder)
   }
 
-  private val flightsLookupService: (SDateLike, SDateLike, Iterable[Terminal], Option[MillisSinceEpoch], List[FeedSource]) => Source[(UtcDate, FlightsWithSplits), NotUsed] =
+  private val flightsLookupService
+      : (SDateLike, SDateLike, Iterable[Terminal], Option[MillisSinceEpoch], List[FeedSource]) => Source[
+        (UtcDate, FlightsWithSplits),
+        NotUsed
+      ] =
     FlightsRouterActor.multiTerminalFlightsByDaySource(flightsByDayLookup)
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
@@ -192,16 +208,21 @@ class FlightsRouterActor(terminalsForDateRange: (LocalDate, LocalDate) => Iterab
       val dates = (startMillis to endMillis by MilliTimes.oneHourMillis)
         .map(millis => SDate(millis).toUtcDate)
         .toSet
-      terminalsForDateRange(SDate(startMillis).toLocalDate, SDate(endMillis).toLocalDate).flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
+      terminalsForDateRange(SDate(startMillis).toLocalDate, SDate(endMillis).toLocalDate).flatMap(t =>
+        dates.map(d => ((t, d), RemoveSplits))
+      ).toMap
   }
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[TerminalUpdateRequest]] =
+  override def updatePartition(
+      partition: (Terminal, UtcDate),
+      updates: FlightUpdates
+  ): Future[Set[TerminalUpdateRequest]] =
     updateFlights(historicSplitsRequestActor, historicPaxRequestActor)(partition, updates)
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {
-    case _: RedListCounts => true
+    case _: RedListCounts     => true
     case _: SplitsForArrivals => true
-    case _: PaxForArrivals => false
-    case _: ArrivalsDiff => true
+    case _: PaxForArrivals    => false
+    case _: ArrivalsDiff      => true
   }
 }

@@ -3,23 +3,33 @@ package actors.persistent.staffing
 import actors._
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements, staffMovementMessagesToStaffMovements, terminalUpdateRequests}
+import actors.persistent.staffing.StaffMovementsActor.{
+  staffMovementMessagesToStaffMovements,
+  terminalUpdateRequests,
+  AddStaffMovements,
+  RemoveStaffMovements
+}
 import actors.routing.SequentialWritesActor
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
-import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
+import org.apache.pekko.pattern.{ ask, StatusReply }
 import org.apache.pekko.persistence._
 import org.apache.pekko.util.Timeout
-import drt.shared.{StaffMovement, StaffMovements}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.shared.{ StaffMovement, StaffMovements }
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
+import uk.gov.homeoffice.drt.actor.{ PersistentDrtActor, RecoveryActorLike }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{
+  RemoveStaffMovementMessage,
+  StaffMovementMessage,
+  StaffMovementsMessage,
+  StaffMovementsStateSnapshotMessage
+}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate, SDateLike }
 
 import scala.collection.immutable
 
@@ -35,29 +45,30 @@ trait StaffMovementsActorLike {
   }
 
   val eventToState: (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
-    (state, msg) => msg match {
-      case msg: StaffMovementsMessage =>
-        val uUid = msg.staffMovements.headOption.flatMap(_.uUID).getOrElse("")
-        if (state.staffMovements.movements.exists(_.uUID == uUid)) {
-          log.warn(s"Received duplicate staff movement message with UUID $uUid")
-          (state, Seq())
-        } else {
-          val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
-          val newState = state.updated(state.staffMovements + movementsToAdd)
-          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd))
+    (state, msg) =>
+      msg match {
+        case msg: StaffMovementsMessage =>
+          val uUid = msg.staffMovements.headOption.flatMap(_.uUID).getOrElse("")
+          if (state.staffMovements.movements.exists(_.uUID == uUid)) {
+            log.warn(s"Received duplicate staff movement message with UUID $uUid")
+            (state, Seq())
+          } else {
+            val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
+            val newState = state.updated(state.staffMovements + movementsToAdd)
+            val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd))
+            (newState, subscriberEvents)
+          }
+
+        case msg: RemoveStaffMovementMessage =>
+          val uuidToRemove = msg.getUUID
+          val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
+          val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
+          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove))
           (newState, subscriberEvents)
-        }
 
-      case msg: RemoveStaffMovementMessage =>
-        val uuidToRemove = msg.getUUID
-        val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
-        val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
-        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove))
-        (newState, subscriberEvents)
-
-      case _ =>
-        (state, Seq())
-    }
+        case _ =>
+          (state, Seq())
+      }
 
   val query: (() => StaffMovementsState, () => ActorRef) => PartialFunction[Any, Unit] =
     (getState, getSender) => {
@@ -69,7 +80,7 @@ trait StaffMovementsActorLike {
           val sdate = SDate(localDate)
           movement.terminal == terminal && (
             sdate.millisSinceEpoch <= movement.time || movement.time <= sdate.getLocalNextMidnight.millisSinceEpoch
-            )
+          )
         })
     }
 
@@ -92,7 +103,6 @@ object StaffMovementsActor extends StaffMovementsActorLike {
 
   case class RemoveStaffMovements(movementUuidsToRemove: String) extends MovementUpdate
 
-
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements =
     StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
@@ -106,14 +116,15 @@ object StaffMovementsActor extends StaffMovementsActorLike {
     createdBy = sm.createdBy
   )
 
-  def sequentialWritesProps(now: () => SDateLike,
-                            expireBeforeMillis: () => SDateLike,
-                            requestAndTerminateActor: ActorRef,
-                            system: ActorSystem
-                           )
-                           (implicit timeout: Timeout): Props =
+  def sequentialWritesProps(
+      now: () => SDateLike,
+      expireBeforeMillis: () => SDateLike,
+      requestAndTerminateActor: ActorRef,
+      system: ActorSystem
+  )(implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[MovementUpdate](update => {
-      val actor = system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis)), "staff-movements-actor-writes")
+      val actor =
+        system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis)), "staff-movements-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 
@@ -131,15 +142,16 @@ object StaffMovementsActor extends StaffMovementsActorLike {
 case class StaffMovementsState(staffMovements: StaffMovements) {
   def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
 
-  def +(movementsToAdd: Seq[StaffMovement]): StaffMovementsState = copy(staffMovements = staffMovements + movementsToAdd)
+  def +(movementsToAdd: Seq[StaffMovement]): StaffMovementsState =
+    copy(staffMovements = staffMovements + movementsToAdd)
 
   def -(movementsToRemove: Seq[String]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
 }
 
-
-class StaffMovementsActor(val now: () => SDateLike,
-                          val expireBefore: () => SDateLike,
-                         ) extends ExpiryActorLike[StaffMovements] with RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
+class StaffMovementsActor(
+    val now: () => SDateLike,
+    val expireBefore: () => SDateLike
+) extends ExpiryActorLike[StaffMovements] with RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = StaffMovementsActor.persistenceId
@@ -151,7 +163,8 @@ class StaffMovementsActor(val now: () => SDateLike,
 
   def initialState: StaffMovementsState = StaffMovementsState(StaffMovements(List()))
 
-  override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
+  override def stateToMessage: GeneratedMessage =
+    StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
 
   def updateState(data: StaffMovements): Unit = state = state.updated(data)
 
@@ -187,7 +200,7 @@ class StaffMovementsActor(val now: () => SDateLike,
         val sdate = SDate(localDate)
         movement.terminal == terminal && (
           sdate.millisSinceEpoch <= movement.time || movement.time <= sdate.getLocalNextMidnight.millisSinceEpoch
-          )
+        )
       })
 
     case AddStaffMovements(movementsToAdd) =>
@@ -195,7 +208,8 @@ class StaffMovementsActor(val now: () => SDateLike,
       purgeExpiredAndUpdateState(updatedStaffMovements)
 
       val movements = StaffMovements(movementsToAdd)
-      val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
+      val messagesToPersist =
+        StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), StatusReply.Ack)))
 
     case RemoveStaffMovements(uuidToRemove) =>
@@ -220,7 +234,6 @@ class StaffMovementsActor(val now: () => SDateLike,
 
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
-
 
   private def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
     staffMovements.movements.map(staffMovementToStaffMovementMessage)

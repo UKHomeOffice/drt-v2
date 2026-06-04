@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{ GetStateForDateRange, PointInTimeQuery }
 import actors._
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
@@ -8,39 +8,39 @@ import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import org.apache.pekko.actor.typed.scaladsl.adapter.ClassicActorSystemOps
-import org.apache.pekko.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
+import org.apache.pekko.actor.{ typed, ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler }
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, NotUsed}
+import org.apache.pekko.{ Done, NotUsed }
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
-import drt.chroma.{ChromaFeedType, ChromaLive}
+import drt.chroma.chromafetcher.{ ChromaFetcher, ChromaFlightMarshallers }
+import drt.chroma.{ ChromaFeedType, ChromaLive }
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.acl.AclFeed
-import drt.server.feeds.bhx.{BHXClient, BHXFeed}
+import drt.server.feeds.bhx.{ BHXClient, BHXFeed }
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
-import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
-import drt.server.feeds.cwl.{CWLClient, CWLFeed}
+import drt.server.feeds.common.{ ManualUploadArrivalFeed, ProdHttpClient }
+import drt.server.feeds.cwl.{ CWLClient, CWLFeed }
 import drt.server.feeds.edi.EdiFeed
 import drt.server.feeds.gla.GlaFeed
-import drt.server.feeds.lcy.{LCYClient, LCYFeed}
+import drt.server.feeds.lcy.{ LCYClient, LCYFeed }
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
-import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LgwForecastFeed}
+import drt.server.feeds.lgw.{ LGWAzureClient, LGWFeed, LgwForecastFeed }
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
-import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
-import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed, FeedPoller}
+import drt.server.feeds.ltn.{ LtnFeedRequester, LtnLiveFeed }
+import drt.server.feeds.mag.{ MagFeed, ProdFeedRequester }
+import drt.server.feeds.{ ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed, FeedPoller }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTimeZone
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
-import services.{Retry, RetryDelays, StreamSupervision}
+import services.{ Retry, RetryDelays, StreamSupervision }
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals._
@@ -49,17 +49,24 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.ModelPersistence
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
-import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
+import uk.gov.homeoffice.drt.service.ProdFeedService.{
+  getFeedArrivalsLookup,
+  partitionUpdates,
+  partitionUpdatesBase,
+  updateFeedArrivals
+}
 import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 object ProdFeedService {
-  def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(FeedSource, Boolean, Option[FiniteDuration], ActorRef)],
-                                 )
-                                 (implicit ec: ExecutionContext, mat: Materializer): Seq[(DateLike, Terminal) => Future[FeedArrivalSet]] =
+  def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(FeedSource, Boolean, Option[FiniteDuration], ActorRef)])(
+      implicit
+      ec: ExecutionContext,
+      mat: Materializer
+  ): Seq[(DateLike, Terminal) => Future[FeedArrivalSet]] =
     feedActorsWithPrimary
       .map {
         case (feedSource, isPrimary, maybeFuzzyThreshold, actor) =>
@@ -67,41 +74,52 @@ object ProdFeedService {
             val start = SDate(date)
             val end = start.addDays(1).addMinutes(-1)
             actor
-              .ask(FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(start.toUtcDate, end.toUtcDate, terminal))(Timeout(30.seconds))
+              .ask(FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(
+                start.toUtcDate,
+                end.toUtcDate,
+                terminal
+              ))(Timeout(30.seconds))
               .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
               .flatMap(s => s.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
-              .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => fa.unique -> fa.toArrival(feedSource)).toMap))
+              .map(f =>
+                FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => fa.unique -> fa.toArrival(feedSource)).toMap)
+              )
           }
           arrivalsForDate
       }
 
-  def getFeedArrivalsLookup(source: FeedSource,
-                            props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
-                            nowMillis: () => Long,
-                            requestAndTerminateActor: ActorRef,
-                           )
-                           (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Option[MillisSinceEpoch] => UtcDate => Terminal => Future[Seq[FeedArrival]] =
+  def getFeedArrivalsLookup(
+      source: FeedSource,
+      props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
+      nowMillis: () => Long,
+      requestAndTerminateActor: ActorRef
+  )(implicit
+      system: ActorSystem,
+      timeout: Timeout,
+      ec: ExecutionContext
+  ): Option[MillisSinceEpoch] => UtcDate => Terminal => Future[Seq[FeedArrival]] =
     FeedArrivalsRouterActor.feedArrivalsDayLookup(
       now = nowMillis,
       requestAndTerminateActor = requestAndTerminateActor,
       props = (d, t, mp, n) => props(d.year, d.month, d.day, t, source, mp, n, 250)
     )
 
-  def updateFeedArrivals(source: FeedSource,
-                         props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
-                         nowMillis: () => Long,
-                         requestAndTerminateActor: ActorRef,
-                        )
-                        (implicit system: ActorSystem, timeout: Timeout): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+  def updateFeedArrivals(
+      source: FeedSource,
+      props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
+      nowMillis: () => Long,
+      requestAndTerminateActor: ActorRef
+  )(implicit system: ActorSystem, timeout: Timeout): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     FeedArrivalsRouterActor.updateArrivals(
       requestAndTerminateActor,
-      (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
+      (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250)
     )
 
-  def partitionUpdatesBase(terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
-                           now: () => SDateLike,
-                           forecastMaxDays: Int,
-                          ): PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]] = {
+  def partitionUpdatesBase(
+      terminalsForDateRange: (LocalDate, LocalDate) => Iterable[Terminal],
+      now: () => SDateLike,
+      forecastMaxDays: Int
+  ): PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]] = {
     case arrivals =>
       val terminals = terminalsForDateRange(now().toLocalDate, now().addDays(forecastMaxDays).toLocalDate)
       val dates = DateRange(now().toUtcDate, now().addDays(forecastMaxDays).toUtcDate)
@@ -110,7 +128,8 @@ object ProdFeedService {
         terminal <- terminals
         day <- dates
       } yield {
-        (terminal, day) -> FeedArrivals(arrivals.arrivals.filter(a => a.terminal == terminal && SDate(a.scheduled).toUtcDate == day))
+        (terminal, day) ->
+          FeedArrivals(arrivals.arrivals.filter(a => a.terminal == terminal && SDate(a.scheduled).toUtcDate == day))
       }
       partitions.toMap
   }
@@ -161,24 +180,27 @@ trait FeedService {
     LiveFeedSource -> liveFeedStatusWriteActor,
     LiveBaseFeedSource -> liveBaseFeedStatusWriteActor,
     ForecastFeedSource -> forecastFeedStatusWriteActor,
-    AclFeedSource -> forecastBaseFeedStatusWriteActor,
+    AclFeedSource -> forecastBaseFeedStatusWriteActor
   )
 
   val updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit =
     (feedSource: FeedSource, feedResponse: ArrivalsFeedResponse) => feedStatusWriteActors(feedSource) ! feedResponse
 
   val aclLastCheckedAt: () => Future[MillisSinceEpoch] =
-    () => feedStatusWriteActors(AclFeedSource)
-      .ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
-      .map {
-        _.feedStatuses.lastSuccessAt.getOrElse(0L)
-      }
+    () =>
+      feedStatusWriteActors(AclFeedSource)
+        .ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
+        .map {
+          _.feedStatuses.lastSuccessAt.getOrElse(0L)
+        }
 
   val maybeAclFeed: Option[AclFeed]
 
-  val fcstBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast-base")
+  val fcstBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] =
+    system.spawn(FeedPoller(), "arrival-feed-forecast-base")
   val fcstFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast")
-  val liveBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live-base")
+  val liveBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] =
+    system.spawn(FeedPoller(), "arrival-feed-live-base")
   val liveFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live")
 
   private val ciriumIsPrimary: Boolean = !airportConfig.feedSources.contains(LiveFeedSource)
@@ -190,25 +212,27 @@ trait FeedService {
     LiveFeedSource -> (true, None, liveFeedArrivalsActor)
   )
     .collect {
-      case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) => (fs, isPrimary, maybeFuzzyThreshold, actor)
+      case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) =>
+        (fs, isPrimary, maybeFuzzyThreshold, actor)
     }
 
-  lazy val aclArrivalsForDate: UtcDate => Future[ArrivalsState] = activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
-    case Some((_, _, _, actor)) =>
-      (date: UtcDate) =>
-        actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(date, date))
-          .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
-          .flatMap(_.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
-          .map(f => ArrivalsState.empty(AclFeedSource) ++ f.map(_.toArrival(AclFeedSource)))
-    case None =>
-      (_: UtcDate) => Future.successful(ArrivalsState.empty(AclFeedSource))
-  }
+  lazy val aclArrivalsForDate: UtcDate => Future[ArrivalsState] =
+    activeFeedActorsWithPrimary.find(_._1 == AclFeedSource) match {
+      case Some((_, _, _, actor)) =>
+        (date: UtcDate) =>
+          actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(date, date))
+            .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
+            .flatMap(_.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
+            .map(f => ArrivalsState.empty(AclFeedSource) ++ f.map(_.toArrival(AclFeedSource)))
+      case None =>
+        (_: UtcDate) => Future.successful(ArrivalsState.empty(AclFeedSource))
+    }
 
   lazy val feedActors: Map[FeedSource, ActorRef] = Map(
     AclFeedSource -> forecastBaseFeedArrivalsActor,
     ForecastFeedSource -> forecastFeedArrivalsActor,
     LiveBaseFeedSource -> liveBaseFeedArrivalsActor,
-    LiveFeedSource -> liveFeedArrivalsActor,
+    LiveFeedSource -> liveFeedArrivalsActor
   )
 
   val flightModelPersistence: ModelPersistence = Flight()
@@ -220,7 +244,10 @@ trait FeedService {
   private val forecastArrivalsFeedStatusActor: ActorRef =
     system.actorOf(PortForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-arrivals-feed-status")
   private val forecastBaseArrivalsFeedStatusActor: ActorRef =
-    system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
+    system.actorOf(
+      AclForecastArrivalsActor.streamingUpdatesProps(journalType),
+      name = "forecast-base-arrivals-feed-status"
+    )
   private val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
@@ -229,19 +256,20 @@ trait FeedService {
     LiveBaseFeedSource -> liveBaseArrivalsFeedStatusActor,
     ForecastFeedSource -> forecastArrivalsFeedStatusActor,
     AclFeedSource -> forecastBaseArrivalsFeedStatusActor,
-    ApiFeedSource -> manifestsFeedStatusActor,
+    ApiFeedSource -> manifestsFeedStatusActor
   )
 
-  private def flightValuesScheduledForDate[T](date: LocalDate,
-                                              maybeAtTime: Option[SDateLike],
-                                              extractValue: Iterable[Arrival] => T,
-                                             ): Future[Map[Terminal, T]] = {
+  private def flightValuesScheduledForDate[T](
+      date: LocalDate,
+      maybeAtTime: Option[SDateLike],
+      extractValue: Iterable[Arrival] => T
+  ): Future[Map[Terminal, T]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
     val request = maybeAtTime match {
       case Some(atTime) => PointInTimeQuery(atTime.millisSinceEpoch, rangeRequest)
-      case None => rangeRequest
+      case None         => rangeRequest
     }
 
     flightLookups.flightsRouterActor.ask(request)
@@ -269,12 +297,13 @@ trait FeedService {
       .map(_.toMap)
   }
 
-  val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate, atTime: SDateLike) =>
-    flightValuesScheduledForDate(
-      date,
-      Option(atTime),
-      arrivals => arrivals.toSeq
-    )
+  val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] =
+    (date: LocalDate, atTime: SDateLike) =>
+      flightValuesScheduledForDate(
+        date,
+        Option(atTime),
+        arrivals => arrivals.toSeq
+      )
 
   val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate) =>
     flightValuesScheduledForDate(
@@ -307,9 +336,9 @@ trait FeedService {
 
   def queryActorWithRetry[A](actor: ActorRef, toAsk: Any): Future[Option[A]] = {
     val future = actor.ask(toAsk)(new Timeout(2.minutes)).map {
-      case Some(state: A) if state.isInstanceOf[A] => Option(state)
+      case Some(state: A) if state.isInstanceOf[A]    => Option(state)
       case state: A if !state.isInstanceOf[Option[A]] => Option(state)
-      case _ => None
+      case _                                          => None
     }
 
     implicit val scheduler: Scheduler = system.scheduler
@@ -336,11 +365,15 @@ trait FeedService {
   }
 
   def arrivalsNoOp: Feed[typed.ActorRef[FeedTick]] =
-    Feed(Feed.actorRefSource
-      .map { _ =>
-        system.log.info(s"No op arrivals feed")
-        ArrivalsFeedSuccess(Seq(), SDate.now())
-      }, 100.days, 100.days)
+    Feed(
+      Feed.actorRefSource
+        .map { _ =>
+          system.log.info(s"No op arrivals feed")
+          ArrivalsFeedSuccess(Seq(), SDate.now())
+        },
+      100.days,
+      100.days
+    )
 
   def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Feed[typed.ActorRef[FeedTick]]
 
@@ -352,41 +385,53 @@ trait FeedService {
 }
 
 @Singleton
-case class ProdFeedService(journalType: StreamingJournalLike,
-                           airportConfig: AirportConfig,
-                           now: () => SDateLike,
-                           params: DrtParameters,
-                           config: Configuration,
-                           paxFeedSourceOrder: List[FeedSource],
-                           flightLookups: FlightLookupsLike,
-                           manifestLookups: ManifestLookupsLike,
-                           requestAndTerminateActor: ActorRef,
-                           forecastMaxDays: Int,
-                           override val legacyFeedArrivalsBeforeDate: SDateLike
-                          )
-                          (implicit
-                           val system: ActorSystem,
-                           val ec: ExecutionContext,
-                           val timeout: Timeout,
-                          ) extends FeedService {
+case class ProdFeedService(
+    journalType: StreamingJournalLike,
+    airportConfig: AirportConfig,
+    now: () => SDateLike,
+    params: DrtParameters,
+    config: Configuration,
+    paxFeedSourceOrder: List[FeedSource],
+    flightLookups: FlightLookupsLike,
+    manifestLookups: ManifestLookupsLike,
+    requestAndTerminateActor: ActorRef,
+    forecastMaxDays: Int,
+    override val legacyFeedArrivalsBeforeDate: SDateLike
+)(implicit
+    val system: ActorSystem,
+    val ec: ExecutionContext,
+    val timeout: Timeout
+) extends FeedService {
   private val nowMillis = () => now().millisSinceEpoch
 
-  private def feedArrivalsRouter(source: FeedSource,
-                                 partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
-                                 name: String): ActorRef =
-    system.actorOf(Props(new FeedArrivalsRouterActor(
-      terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal),
-      arrivalsByDayLookup = getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
-      updateArrivals = updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
-      partitionUpdates = partitionUpdates,
-    )), name = name)
+  private def feedArrivalsRouter(
+      source: FeedSource,
+      partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+      name: String
+  ): ActorRef =
+    system.actorOf(
+      Props(new FeedArrivalsRouterActor(
+        terminalsForDateRange = QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal),
+        arrivalsByDayLookup =
+          getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+        updateArrivals =
+          updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+        partitionUpdates = partitionUpdates
+      )),
+      name = name
+    )
 
-  override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
+  override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(
+    AclFeedSource,
     partitionUpdatesBase(QueueConfig.terminalsForDateRange(airportConfig.queuesByTerminal), now, forecastMaxDays),
-    "forecast-base-arrivals-actor")
-  override val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
-  override val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
-  override val liveFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveFeedSource, partitionUpdates, "live-arrivals-actor")
+    "forecast-base-arrivals-actor"
+  )
+  override val forecastFeedArrivalsActor: ActorRef =
+    feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
+  override val liveBaseFeedArrivalsActor: ActorRef =
+    feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
+  override val liveFeedArrivalsActor: ActorRef =
+    feedArrivalsRouter(LiveFeedSource, partitionUpdates, "live-arrivals-actor")
 
   override val maybeAclFeed: Option[AclFeed] =
     if (params.aclDisabled) None
@@ -409,7 +454,8 @@ case class ProdFeedService(journalType: StreamingJournalLike,
     ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
   }
 
-  private def createArrivalFeed(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+  private def createArrivalFeed(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+      : Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     implicit val timeout: Timeout = new Timeout(10.seconds)
     val arrivalFeed = ManualUploadArrivalFeed(arrivalsImportActor)
     source.mapAsync(1)(_ => arrivalFeed.requestFeed)
@@ -424,8 +470,16 @@ case class ProdFeedService(journalType: StreamingJournalLike,
       case PortCode("LHR") | PortCode("STN") =>
         Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
-        Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
-      case _ => system.log.info(s"No Forecast Feed defined.")
+        Feed(
+          BHXForecastFeedLegacy(
+            params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")),
+            Feed.actorRefSource
+          ),
+          5.seconds,
+          30.seconds
+        )
+      case _ =>
+        system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }
 
@@ -438,17 +492,40 @@ case class ProdFeedService(journalType: StreamingJournalLike,
         val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
         Feed(LHRFlightFeed(contentProvider, Feed.actorRefSource), 5.seconds, 1.minute)
       case "LGW" =>
-        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
+        val lgwNamespace =
+          params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
-        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
+        val lgwServiceBusUri =
+          params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
         val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
         Feed(LGWFeed(azureClient)(system).source(Feed.actorRefSource), 5.seconds, 100.milliseconds)
       case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
-        Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
+        Feed(
+          BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource),
+          5.seconds,
+          80.seconds
+        )
       case "CWL" if params.cwlIataEndPointUrl.nonEmpty =>
-        Feed(CWLFeed(CWLClient(params.cwlIataUsername, params.cwlIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
+        Feed(
+          CWLFeed(CWLClient(params.cwlIataUsername, params.cwlIataEndPointUrl), Feed.actorRefSource),
+          5.seconds,
+          80.seconds
+        )
       case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
-        Feed(LCYFeed(LCYClient(ProdHttpClient(), params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 5.seconds, 80.seconds)
+        Feed(
+          LCYFeed(
+            LCYClient(
+              ProdHttpClient(),
+              params.lcyLiveUsername,
+              params.lcyLiveEndPointUrl,
+              params.lcyLiveUsername,
+              params.lcyLivePassword
+            ),
+            Feed.actorRefSource
+          ),
+          5.seconds,
+          80.seconds
+        )
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -456,7 +533,7 @@ case class ProdFeedService(journalType: StreamingJournalLike,
         val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
         val timeZone = params.maybeLtnLiveFeedTimeZone match {
           case Some(tz) => DateTimeZone.forID(tz)
-          case None => DateTimeZone.UTC
+          case None     => DateTimeZone.UTC
         }
         val requester = LtnFeedRequester(url, token, username, password)
         Feed(LtnLiveFeed(requester, timeZone).source(Feed.actorRefSource), 5.seconds, 30.seconds)
@@ -472,20 +549,32 @@ case class ProdFeedService(journalType: StreamingJournalLike,
             claimRole <- config.getOptional[String]("feeds.mag.claim.role")
             claimSub <- config.getOptional[String]("feeds.mag.claim.sub")
           } yield {
-            MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).source(Feed.actorRefSource)
+            MagFeed(
+              privateKey,
+              claimIss,
+              claimRole,
+              claimSub,
+              now,
+              airportConfig.portCode,
+              ProdFeedRequester
+            ).source(Feed.actorRefSource)
           }
           maybeFeed
             .map(f => Feed(f, 5.seconds, 30.seconds))
-            .getOrElse({
+            .getOrElse {
               log.error(s"No feed credentials supplied. Live feed can't be set up")
               arrivalsNoOp
-            })
+            }
         }
       case "GLA" =>
         val (url: String, username: String, password: String, token: String) = azinqConfig
         Feed(GlaFeed(url, username, password, token), 5.seconds, 1.minute)
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
-        Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30.seconds)
+        Feed(
+          CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource),
+          5.seconds,
+          30.seconds
+        )
       case "EDI" =>
         val (url: String, username: String, password: String, token: String) = azinqConfig
         Feed(EdiFeed(url, username, password, token), 5.seconds, 1.minute)
@@ -494,7 +583,7 @@ case class ProdFeedService(journalType: StreamingJournalLike,
     }
 
   override def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Feed[typed.ActorRef[FeedTick]] = maybeAclFeed match {
-    case None => arrivalsNoOp
+    case None          => arrivalsNoOp
     case Some(aclFeed) =>
       val initialDelay =
         if (config.get[Boolean]("acl.check-on-startup")) 10.seconds
@@ -503,18 +592,25 @@ case class ProdFeedService(journalType: StreamingJournalLike,
 
       log.info(s"Checking ACL every ${frequency.toHours} hours. Initial delay: ${initialDelay.toMinutes} minutes")
 
-      Feed(Feed.actorRefSource.map { _ =>
-        system.log.info(s"Requesting ACL feed")
-        aclFeed.requestArrivals
-      }, initialDelay, frequency)
+      Feed(
+        Feed.actorRefSource.map { _ =>
+          system.log.info(s"Requesting ACL feed")
+          aclFeed.requestArrivals
+        },
+        initialDelay,
+        frequency
+      )
   }
 
   override def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
       log.info(s"Using Cirium Live Base Feed")
-      Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30.seconds)
-    }
-    else {
+      Feed(
+        CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource),
+        5.seconds,
+        30.seconds
+      )
+    } else {
       log.info(s"Using Noop Base Live Feed")
       arrivalsNoOp
     }

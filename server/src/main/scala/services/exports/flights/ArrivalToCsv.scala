@@ -6,14 +6,16 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 
 object ArrivalToCsv {
 
-  private val arrivalHeadings: String = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
+  private val arrivalHeadings: String =
+    "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   val arrivalHeadingsWithTransfer: String = arrivalHeadings + ",Transfer Pax"
 
-  def arrivalToCsvFields(arrival: Arrival,
-                         millisToDateOnly: MillisSinceEpoch => String,
-                         millisToLocalDateTimeString: MillisSinceEpoch => String,
-                         paxFeedSourceOrder: List[FeedSource],
-                        ): List[String] =
+  def arrivalToCsvFields(
+      arrival: Arrival,
+      millisToDateOnly: MillisSinceEpoch => String,
+      millisToLocalDateTimeString: MillisSinceEpoch => String,
+      paxFeedSourceOrder: List[FeedSource]
+  ): List[String] =
     List(
       arrival.flightCodeString,
       arrival.flightCodeString,
@@ -30,11 +32,12 @@ object ArrivalToCsv {
       arrival.bestPaxEstimate(paxFeedSourceOrder).getPcpPax.map(_.toString).getOrElse("")
     )
 
-  def arrivalWithTransferToCsvFields(arrival: Arrival,
-                                     millisToDateOnly: MillisSinceEpoch => String,
-                                     millisToLocalDateTimeString: MillisSinceEpoch => String,
-                                     paxFeedSourceOrder: List[FeedSource],
-                                    ): List[String] =
+  def arrivalWithTransferToCsvFields(
+      arrival: Arrival,
+      millisToDateOnly: MillisSinceEpoch => String,
+      millisToLocalDateTimeString: MillisSinceEpoch => String,
+      paxFeedSourceOrder: List[FeedSource]
+  ): List[String] =
     arrivalToCsvFields(arrival, millisToDateOnly, millisToLocalDateTimeString, paxFeedSourceOrder) :+
       arrival.bestPaxEstimate(paxFeedSourceOrder).passengers.transit.getOrElse(0).toString
 }

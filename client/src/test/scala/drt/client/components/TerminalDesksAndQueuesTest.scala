@@ -5,7 +5,7 @@ import drt.client.services.StaffMovementMinute
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared.TM
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import utest.{TestSuite, Tests, test}
+import utest.{ test, TestSuite, Tests }
 
 object TerminalDesksAndQueuesTest extends TestSuite {
   def tests: Tests = Tests {

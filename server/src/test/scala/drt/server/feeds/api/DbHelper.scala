@@ -1,11 +1,11 @@
 package drt.server.feeds.api
 
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
-import uk.gov.homeoffice.drt.db.tables.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
+import uk.gov.homeoffice.drt.db.tables.{ ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow }
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.sql.Timestamp
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.DurationInt
 
 object DbHelper {
@@ -21,7 +21,15 @@ object DbHelper {
     Await.ready(tables.run(TableQuery[tables.ProcessedJsonTable] += row), 1.second)
   }
 
-  def addPaxRecord(tables: AggregatedDbTables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
+  def addPaxRecord(
+      tables: AggregatedDbTables,
+      arrivalPort: String,
+      departurePort: String,
+      voyageNumber: Int,
+      scheduled: SDateLike,
+      paxId: String,
+      jsonFileName: String
+  ): Any = {
     import tables.profile.api._
 
     val scheduledTs = new Timestamp(scheduled.millisSinceEpoch)
@@ -45,7 +53,8 @@ object DbHelper {
       nationality_country_code = "GBR",
       passenger_identifier = paxId,
       in_transit = false,
-      json_file = jsonFileName)
+      json_file = jsonFileName
+    )
 
     Await.ready(tables.run(TableQuery[tables.VoyageManifestPassengerInfoTable] += row), 1.second)
   }

@@ -1,7 +1,7 @@
 package drt.client.components
 
 import japgolly.scalajs.react.component.JsFn.Component
-import japgolly.scalajs.react.{Children, CtorType, JsFnComponent}
+import japgolly.scalajs.react.{ Children, CtorType, JsFnComponent }
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -15,10 +15,11 @@ trait RemoveShiftFormProps extends js.Object {
 }
 
 object RemoveShiftFormProps {
-  def apply(shift: ShiftForm,
-            removeShiftConfirmHandler: ShiftForm => Unit,
-            cancelRemoveShiftHandler: () => Unit
-           ): RemoveShiftFormProps = {
+  def apply(
+      shift: ShiftForm,
+      removeShiftConfirmHandler: ShiftForm => Unit,
+      cancelRemoveShiftHandler: () => Unit
+  ): RemoveShiftFormProps = {
     val p = (new js.Object).asInstanceOf[RemoveShiftFormProps]
     p.shift = shift
     p.onConfirm = (shiftForm: ShiftForm) => removeShiftConfirmHandler(shiftForm)
@@ -32,7 +33,8 @@ object ConfirmRemoveShiftComponent {
   @JSImport("@drt/drt-react", "ConfirmRemoveShift")
   object RawComponent extends js.Object
 
-  val component: Component[RemoveShiftFormProps, CtorType.Props] = JsFnComponent[RemoveShiftFormProps, Children.None](RawComponent)
+  val component: Component[RemoveShiftFormProps, CtorType.Props] =
+    JsFnComponent[RemoveShiftFormProps, Children.None](RawComponent)
 
   def apply(props: RemoveShiftFormProps): VdomElement = {
     component(props)

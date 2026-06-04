@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, ModelRW}
-import drt.client.actions.Actions.{HideLoader, ShowLoader}
+import diode.{ ActionResult, ModelRW }
+import drt.client.actions.Actions.{ HideLoader, ShowLoader }
 import drt.client.services.LoadingState
 
 class LoaderHandler[M](modelRW: ModelRW[M, LoadingState]) extends LoggingActionHandler(modelRW) {

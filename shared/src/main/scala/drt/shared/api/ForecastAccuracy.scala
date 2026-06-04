@@ -4,7 +4,7 @@ import ujson.Value
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default
-import upickle.default.{read, writeJs}
+import upickle.default.{ read, writeJs }
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
@@ -23,16 +23,18 @@ object ForecastAccuracy {
         }
       ujson.Obj.from(Seq(
         "localDate" -> writeJs(fa.localDate),
-        "pax" -> writeJs(terminalDaysAccuracy)))
+        "pax" -> writeJs(terminalDaysAccuracy)
+      ))
     },
-    v => ForecastAccuracy(
-      read[LocalDate](v("localDate")),
-      read[Map[Terminal, Map[String, Option[Double]]]](v("pax")).mapValues {
-        accuracies =>
-          SortedMap[Int, Option[Double]]() ++ accuracies.map {
-            case (dStr, acc) => Integer.parseInt(dStr) -> acc
-          }
-      }.toMap
-    )
+    v =>
+      ForecastAccuracy(
+        read[LocalDate](v("localDate")),
+        read[Map[Terminal, Map[String, Option[Double]]]](v("pax")).mapValues {
+          accuracies =>
+            SortedMap[Int, Option[Double]]() ++ accuracies.map {
+              case (dStr, acc) => Integer.parseInt(dStr) -> acc
+            }
+        }.toMap
+      )
   )
 }

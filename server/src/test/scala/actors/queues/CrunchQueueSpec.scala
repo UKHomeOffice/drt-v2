@@ -4,18 +4,17 @@ import actors.persistent.SortedActorRefSource
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.stream.javadsl.RunnableGraph
 import org.apache.pekko.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
-import org.apache.pekko.stream.scaladsl.{GraphDSL, Sink}
-import org.apache.pekko.stream.{ClosedShape, Materializer}
-import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.stream.scaladsl.{ GraphDSL, Sink }
+import org.apache.pekko.stream.{ ClosedShape, Materializer }
+import org.apache.pekko.testkit.{ ImplicitSender, TestProbe }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 
 import scala.collection.SortedSet
-
 
 class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
   val myNow: () => SDateLike = () => SDate("2020-05-06", europeLondonTimeZone)
@@ -24,10 +23,9 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
   def startQueueActor(probe: TestProbe, initialQueue: SortedSet[TerminalUpdateRequest]): ActorRef = {
     val source = new SortedActorRefSource(TestProbe().ref, initialQueue, "desk-recs")
     val graph = GraphDSL.createGraph(source) {
-      implicit builder =>
-        crunchRequests =>
-          crunchRequests ~> Sink.actorRef(probe.ref, "complete")
-          ClosedShape
+      implicit builder => crunchRequests =>
+        crunchRequests ~> Sink.actorRef(probe.ref, "complete")
+        ClosedShape
     }
     RunnableGraph.fromGraph(graph).run(Materializer.createMaterializer(system))
   }

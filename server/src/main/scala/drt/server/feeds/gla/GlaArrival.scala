@@ -2,30 +2,30 @@ package drt.server.feeds.gla
 
 import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import drt.server.feeds.AzinqArrival
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
-
-case class GlaArrival(AIBT: Option[String],
-                      AirlineIATA: String,
-                      AirlineICAO: String,
-                      ALDT: Option[String],
-                      AODBProbableDateTime: Option[String],
-                      CarouselCode: Option[String],
-                      DepartureArrivalType: String,
-                      EIBT: Option[String],
-                      FlightNumber: String,
-                      FlightStatusDesc: String,
-                      GateCode: Option[String],
-                      MaxPax: Option[Int],
-                      OriginDestAirportIATA: String,
-                      Runway: Option[String],
-                      ScheduledDateTime: String,
-                      StandCode: Option[String],
-                      TerminalCode: String,
-                      TotalPassengerCount: Option[Int]
-                     ) extends AzinqArrival {
+case class GlaArrival(
+    AIBT: Option[String],
+    AirlineIATA: String,
+    AirlineICAO: String,
+    ALDT: Option[String],
+    AODBProbableDateTime: Option[String],
+    CarouselCode: Option[String],
+    DepartureArrivalType: String,
+    EIBT: Option[String],
+    FlightNumber: String,
+    FlightStatusDesc: String,
+    GateCode: Option[String],
+    MaxPax: Option[Int],
+    OriginDestAirportIATA: String,
+    Runway: Option[String],
+    ScheduledDateTime: String,
+    StandCode: Option[String],
+    TerminalCode: String,
+    TotalPassengerCount: Option[Int]
+) extends AzinqArrival {
 
   override val isValid: Boolean = DepartureArrivalType == "A"
 
@@ -56,7 +56,6 @@ object AzinqGlaArrivalJsonFormats extends SprayJsonSupport with DefaultJsonProto
     "ScheduledDateTime",
     "StandCode",
     "TerminalCode",
-    "TotalPassengerCount",
+    "TotalPassengerCount"
   )
 }
-

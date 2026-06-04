@@ -1,27 +1,27 @@
 package services.crunch.deskrecs
 
-import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, PassengersMinute}
-import drt.shared.{ArrivalGenerator, CrunchApi}
+import drt.shared.CrunchApi.{ DeskRecMinute, MillisSinceEpoch, PassengersMinute }
+import drt.shared.{ ArrivalGenerator, CrunchApi }
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.fixed.FixedTerminalDeskLimitsSpec.dummyPaxForQueue
-import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
-import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
+import services.graphstages.{ DynamicWorkloadCalculator, FlightFilter }
+import services.{ OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider }
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, FlightsWithSplits, Splits }
 import uk.gov.homeoffice.drt.egates.Desk
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
+import uk.gov.homeoffice.drt.ports.{ ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypeAndQueue, PortCode }
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.QueueConfig
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, MilliTimes, SDate, SDateLike }
 
-import scala.collection.immutable.{Map, NumericRange, SortedMap}
+import scala.collection.immutable.{ Map, NumericRange, SortedMap }
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
   val gbrToDesk = 18
@@ -37,7 +37,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
 
-      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk, gbrToDesk), None))
+      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) ->
+        PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk, gbrToDesk), None))
 
       loads === expected
     }
@@ -47,12 +48,13 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val pax2 = 2
       val flights = List(
         (pax1, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax1, None, None))),
-        (pax2, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax2, None, None))),
+        (pax2, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax2, None, None)))
       )
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
 
-      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk, gbrToDesk, gbrToDesk), None))
+      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) ->
+        PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk, gbrToDesk, gbrToDesk), None))
 
       loads === expected
     }
@@ -60,17 +62,20 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val scheduled = SDate("2022-08-11T12:00")
       val pax = 2
       val flights = List(
-        (pax, Set(
-          ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax.toDouble / 2, None, None),
-          ApiPaxTypeAndQueueCount(GBRNational, EGate, pax.toDouble / 2, None, None),
-        )),
+        (
+          pax,
+          Set(
+            ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax.toDouble / 2, None, None),
+            ApiPaxTypeAndQueueCount(GBRNational, EGate, pax.toDouble / 2, None, None)
+          )
+        )
       )
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
 
       val expected = Map(
         TQM(T1, EeaDesk, scheduledMillis) -> PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk), None),
-        TQM(T1, EGate, scheduledMillis) -> PassengersMinute(T1, EGate, scheduledMillis, List(gbrToEgate), None),
+        TQM(T1, EGate, scheduledMillis) -> PassengersMinute(T1, EGate, scheduledMillis, List(gbrToEgate), None)
       )
 
       loads === expected
@@ -85,7 +90,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
         .filter(m => m.queue == EeaDesk && m.minute == scheduled.millisSinceEpoch)
 
       val expected = List(
-        DeskRecMinute(T1, EeaDesk, 1660219200000L, pax, pax * gbrToDesk, 10, 0, Some(2)),
+        DeskRecMinute(T1, EeaDesk, 1660219200000L, pax, pax * gbrToDesk, 10, 0, Some(2))
       )
 
       loads === expected
@@ -93,19 +98,30 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
   }
 
   object MockTerminalDeskLimits extends TerminalDeskLimitsLike {
-    override val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]] = _ => Map(
-      EeaDesk -> IndexedSeq.fill(24)(10),
-      EGate -> IndexedSeq.fill(24)(10),
-      NonEeaDesk -> IndexedSeq.fill(24)(10),
-    )
+    override val minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]] = _ =>
+      Map(
+        EeaDesk -> IndexedSeq.fill(24)(10),
+        EGate -> IndexedSeq.fill(24)(10),
+        NonEeaDesk -> IndexedSeq.fill(24)(10)
+      )
 
     override val paxForQueue: (NumericRange[MillisSinceEpoch], Queue) => Future[Seq[Int]] = dummyPaxForQueue
 
-    override def maxDesksForMinutes(minuteMillis: NumericRange[MillisSinceEpoch], queue: Queue, existingAllocations: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] =
-      Future.successful(WorkloadProcessorsProvider(DeskRecs.desksForMillis(minuteMillis, IndexedSeq.fill(24)(10)).map(x => WorkloadProcessors(Seq.fill(x)(Desk)))))
+    override def maxDesksForMinutes(
+        minuteMillis: NumericRange[MillisSinceEpoch],
+        queue: Queue,
+        existingAllocations: Map[Queue, List[Int]]
+    ): Future[WorkloadProcessorsProvider] =
+      Future.successful(WorkloadProcessorsProvider(DeskRecs.desksForMillis(minuteMillis, IndexedSeq.fill(24)(10)).map(
+        x => WorkloadProcessors(Seq.fill(x)(Desk))
+      )))
   }
 
-  private def getDeskRecs(scheduled: SDateLike, flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])], provider: PortDesksAndWaitsProvider): Future[CrunchApi.DeskRecMinutes] = {
+  private def getDeskRecs(
+      scheduled: SDateLike,
+      flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])],
+      provider: PortDesksAndWaitsProvider
+  ): Future[CrunchApi.DeskRecMinutes] = {
     val start = scheduled.millisSinceEpoch
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val loads = getFlightLoads(scheduled, flightParams, provider)
@@ -114,21 +130,25 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       loads,
       MockTerminalDeskLimits,
       "test",
-      T1,
+      T1
     )
   }
 
-  private def getFlightLoads(scheduled: SDateLike,
-                             flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])],
-                             provider: PortDesksAndWaitsProvider): Map[TQM, PassengersMinute] = {
+  private def getFlightLoads(
+      scheduled: SDateLike,
+      flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])],
+      provider: PortDesksAndWaitsProvider
+  ): Map[TQM, PassengersMinute] = {
     val start = scheduled.millisSinceEpoch
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val flights = flightParams.zipWithIndex.map {
       case ((pax, splits), idx) =>
-        val arrival = ArrivalGenerator.arrival(iata = s"BA${idx.toString}",
+        val arrival = ArrivalGenerator.arrival(
+          iata = s"BA${idx.toString}",
           origin = PortCode(idx.toString),
-          terminal = T1, sch = scheduled.millisSinceEpoch,
-          totalPax = Option(pax),
+          terminal = T1,
+          sch = scheduled.millisSinceEpoch,
+          totalPax = Option(pax)
         ).toArrival(LiveFeedSource).copy(PcpTime = Option(scheduled.millisSinceEpoch))
         ApiFlightWithSplits(
           arrival,
@@ -141,10 +161,9 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       flights = FlightsWithSplits(flights),
       RedListUpdates.empty,
       _ => (_: Queue, _: MillisSinceEpoch) => Open,
-      _ => None,
+      _ => None
     )
   }
-
 
   private def getProvider = {
     val queues: (LocalDate, LocalDate, Terminal) => Seq[Queue] = QueueConfig.queuesForDateRangeAndTerminal(
@@ -153,15 +172,17 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val divertedQueues = Map[Queue, Queue]()
     val terminalDesks = Map[Terminal, Int](T1 -> 10)
     val flexedQueuesPriority = List(EeaDesk, EGate, NonEeaDesk)
-    val slas = (_: LocalDate, queue: Queue) => Future.successful(Map[Queue, Int](EeaDesk -> 25, EGate -> 20, NonEeaDesk -> 45)(queue))
+    val slas = (_: LocalDate, queue: Queue) =>
+      Future.successful(Map[Queue, Int](EeaDesk -> 25, EGate -> 20, NonEeaDesk -> 45)(queue))
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(
       PaxTypeAndQueue(GBRNational, EeaDesk) -> 18d,
-      PaxTypeAndQueue(GBRNational, EGate) -> 20d,
+      PaxTypeAndQueue(GBRNational, EGate) -> 20d
     ))
     val minutesToCrunch = 3
     val offsetMinutes = 0
     val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = true) _
-    val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks((_, _) => Seq.empty), FlightFilter(List()), 45, identity)
+    val workLoadCalc =
+      DynamicWorkloadCalculator(procTimes, QueueFallbacks((_, _) => Seq.empty), FlightFilter(List()), 45, identity)
 
     PortDesksAndWaitsProvider(
       queues,

@@ -1,8 +1,8 @@
 package drt.client.services.handlers
 
 import diode.AnyAction.aType
-import diode.data.{Empty, Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW, NoAction}
+import diode.data.{ Empty, Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW, NoAction }
 import drt.client.actions.Actions.SetAllShiftAssignments
 import drt.client.logger.log
 import drt.client.services.DrtApi
@@ -23,7 +23,6 @@ case class RemoveShift(shift: Option[Shift], shiftName: String)
 
 case class SetShifts(staffShifts: Seq[Shift])
 
-
 class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActionHandler(modelRW) {
 
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -41,8 +40,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
           case t =>
             log.error(msg = s"Failed to save shift: ${t.getMessage}")
             NoAction
-        }
-      )
+        })
       updated(Pot.empty, apiCallEffect)
 
     case UpdateShift(shift, shiftName) =>

@@ -1,7 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{ EgateBank, EgateBanksUpdate, EgateBanksUpdates }
 
 class EgateWorkloadProcessorsProviderSpec extends Specification {
   "A processor provider" should {

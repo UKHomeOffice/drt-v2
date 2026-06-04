@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
-import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.services.PollDelay
@@ -24,7 +24,7 @@ class UserHasPortAccessHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends Log
           .map(r => SetUserHasPortAccess(r.status == 200))
           .recover {
             case e: AjaxException if e.xhr.status == 401 => SetUserHasPortAccess(false)
-            case _ => RetryActionAfter(GetUserHasPortAccess, PollDelay.recoveryDelay)
+            case _                                       => RetryActionAfter(GetUserHasPortAccess, PollDelay.recoveryDelay)
           }
       ))
 

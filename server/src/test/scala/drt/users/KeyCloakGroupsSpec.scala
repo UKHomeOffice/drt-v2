@@ -2,13 +2,12 @@ package drt.users
 
 import java.util.UUID
 
-import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import org.apache.pekko.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import drt.shared.KeyCloakApi.{ KeyCloakGroup, KeyCloakUser }
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-
+import scala.concurrent.{ Await, Future }
 
 class KeyCloakGroupsSpec extends CrunchTestLike {
   val staticUuid: String = UUID.randomUUID().toString
@@ -45,7 +44,7 @@ class KeyCloakGroupsSpec extends CrunchTestLike {
   )
 
   class TestKeyCloakClient(groupUsers: Map[String, List[KeyCloakUser]], allUsers: Map[Int, List[KeyCloakUser]])
-    extends KeyCloakClient("", "") {
+      extends KeyCloakClient("", "") {
 
     override def sendAndReceive: HttpRequest => Future[HttpResponse] = _ => Future(HttpResponse())
 
@@ -53,7 +52,8 @@ class KeyCloakGroupsSpec extends CrunchTestLike {
       groupUsers(groupName)
     )
 
-    override def getUsers(max: Int, offset: Int): Future[List[KeyCloakUser]] = Future(allUsers.getOrElse(offset, List()))
+    override def getUsers(max: Int, offset: Int): Future[List[KeyCloakUser]] =
+      Future(allUsers.getOrElse(offset, List()))
   }
 
   val usersByGroup: Map[String, List[KeyCloakUser]] = Map(
@@ -68,102 +68,110 @@ class KeyCloakGroupsSpec extends CrunchTestLike {
     "When I ask for a csv export of users with their groups " +
     "Then I should get a map of users to their groups" >> {
 
-    val usersPage1 = List(
-      testUsers("user1"),
-      testUsers("user2"),
-      testUsers("user3"),
-      testUsers("user4")
-    )
+      val usersPage1 = List(
+        testUsers("user1"),
+        testUsers("user2"),
+        testUsers("user3"),
+        testUsers("user4")
+      )
 
-    val fakeClient = new TestKeyCloakClient(usersByGroup, Map(0 -> usersPage1))
+      val fakeClient = new TestKeyCloakClient(usersByGroup, Map(0 -> usersPage1))
 
+      val result = Await.result(
+        KeyCloakGroups(testGroups, fakeClient)
+          .usersWithGroupsByUser(testGroups),
+        2 seconds
+      )
 
-    val result = Await.result(KeyCloakGroups(testGroups, fakeClient)
-      .usersWithGroupsByUser(testGroups), 2 seconds)
+      val resultByUserNameToSet: Map[String, Set[String]] = result.map {
+        case (user, g) => user.username -> g.toSet
+      }
 
-    val resultByUserNameToSet: Map[String, Set[String]] = result.map {
-      case (user, g) => user.username -> g.toSet
+      val expected: Map[String, Set[String]] = Map(
+        "user1" -> Set("BHX", "EMA", "LHR", "LGW"),
+        "user2" -> Set("BHX", "EDI"),
+        "user3" -> Set("LHR"),
+        "user4" -> Set("LHR", "LGW")
+      )
+
+      resultByUserNameToSet === expected
     }
-
-    val expected: Map[String, Set[String]] = Map(
-      "user1" -> Set("BHX", "EMA", "LHR", "LGW"),
-      "user2" -> Set("BHX", "EDI"),
-      "user3" -> Set("LHR"),
-      "user4" -> Set("LHR", "LGW")
-    )
-
-    resultByUserNameToSet === expected
-  }
 
   "Given a list of groups and a corresponding list of users in each of those groups " +
     "When I ask for a csv export of users with their groups " +
     "Then I should see a list of users with all the groups each is in" >> {
 
-    val usersPage1 = List(
-      testUsers("user1"),
-      testUsers("user2"),
-      testUsers("user3"),
-      testUsers("user4")
-    )
+      val usersPage1 = List(
+        testUsers("user1"),
+        testUsers("user2"),
+        testUsers("user3"),
+        testUsers("user4")
+      )
 
-    val fakeClient = new TestKeyCloakClient(usersByGroup, Map(0 -> usersPage1))
+      val fakeClient = new TestKeyCloakClient(usersByGroup, Map(0 -> usersPage1))
 
-    val result = Await
-      .result(KeyCloakGroups(testGroups, fakeClient)
-        .usersWithGroupsCsvContent
-        .map(_.split("\n").toSet), 1 second)
+      val result = Await
+        .result(
+          KeyCloakGroups(testGroups, fakeClient)
+            .usersWithGroupsCsvContent
+            .map(_.split("\n").toSet),
+          1 second
+        )
 
-    val expected = Set(
-      """Email,First Name,Last Name,Enabled,Groups""",
-      """user1,,,true,"BHX, EMA, LGW, LHR"""",
-      """user2,,,true,"BHX, EDI"""",
-      """user3,,,true,"LHR"""",
-      """user4,,,true,"LGW, LHR""""
-    )
+      val expected = Set(
+        """Email,First Name,Last Name,Enabled,Groups""",
+        """user1,,,true,"BHX, EMA, LGW, LHR"""",
+        """user2,,,true,"BHX, EDI"""",
+        """user3,,,true,"LHR"""",
+        """user4,,,true,"LGW, LHR""""
+      )
 
-    result === expected
-  }
+      result === expected
+    }
 
   "Given a list of groups and a corresponding list of users in each of those groups " +
     "And a number of users who are not in any group" +
     "When I ask for a csv export of users with their groups " +
     "Then I should see a list of users with all the groups each is in and all the users with no  groups" >> {
 
-    val usersPage1 = List(
-      testUsers("user1"),
-      testUsers("user2"),
-      testUsers("user3"),
-      testUsers("user4"),
-      testUsers("user5"),
-      testUsers("user6")
-    )
+      val usersPage1 = List(
+        testUsers("user1"),
+        testUsers("user2"),
+        testUsers("user3"),
+        testUsers("user4"),
+        testUsers("user5"),
+        testUsers("user6")
+      )
 
-    val usersPage2 = List(
-      testUsers("user7"),
-      testUsers("user8"),
-      testUsers("user9")
-    )
+      val usersPage2 = List(
+        testUsers("user7"),
+        testUsers("user8"),
+        testUsers("user9")
+      )
 
-    val fakeClient = new TestKeyCloakClient(usersByGroup, Map(0 -> usersPage1, 50 -> usersPage2))
+      val fakeClient = new TestKeyCloakClient(usersByGroup, Map(0 -> usersPage1, 50 -> usersPage2))
 
-    val result = Await
-      .result(KeyCloakGroups(testGroups, fakeClient)
-        .usersWithGroupsCsvContent
-        .map(_.split("\n").toSet), 1 second)
+      val result = Await
+        .result(
+          KeyCloakGroups(testGroups, fakeClient)
+            .usersWithGroupsCsvContent
+            .map(_.split("\n").toSet),
+          1 second
+        )
 
-    val expected = Set(
-      """Email,First Name,Last Name,Enabled,Groups""",
-      """user1,,,true,"BHX, EMA, LGW, LHR"""",
-      """user2,,,true,"BHX, EDI"""",
-      """user3,,,true,"LHR"""",
-      """user4,,,true,"LGW, LHR"""",
-      """user5,,,true,""""",
-      """user6,,,true,""""",
-      """user7,,,true,""""",
-      """user8,,,true,""""",
-      """user9,,,true,"""""
-    )
+      val expected = Set(
+        """Email,First Name,Last Name,Enabled,Groups""",
+        """user1,,,true,"BHX, EMA, LGW, LHR"""",
+        """user2,,,true,"BHX, EDI"""",
+        """user3,,,true,"LHR"""",
+        """user4,,,true,"LGW, LHR"""",
+        """user5,,,true,""""",
+        """user6,,,true,""""",
+        """user7,,,true,""""",
+        """user8,,,true,""""",
+        """user9,,,true,"""""
+      )
 
-    result === expected
-  }
+      result === expected
+    }
 }

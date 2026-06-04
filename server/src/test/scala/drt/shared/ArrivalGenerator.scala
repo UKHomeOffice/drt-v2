@@ -2,30 +2,31 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
+import uk.gov.homeoffice.drt.ports.{ FeedSource, PortCode }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 object ArrivalGenerator {
-  def arrival(iata: String = "",
-              sch: MillisSinceEpoch = 0L,
-              maxPax: Option[Int] = None,
-              terminal: Terminal = Terminal("T1"),
-              origin: PortCode = PortCode(""),
-              previousPort: Option[PortCode] = None,
-              operator: Option[Operator] = None,
-              status: ArrivalStatus = ArrivalStatus(""),
-              est: MillisSinceEpoch = 0L,
-              act: MillisSinceEpoch = 0L,
-              estChox: MillisSinceEpoch = 0L,
-              actChox: MillisSinceEpoch = 0L,
-              gate: Option[String] = None,
-              stand: Option[String] = None,
-              runwayId: Option[String] = None,
-              baggageReclaimId: Option[String] = None,
-              totalPax: Option[Int] = None,
-              transPax: Option[Int] = None,
-             ): LiveArrival = {
+  def arrival(
+      iata: String = "",
+      sch: MillisSinceEpoch = 0L,
+      maxPax: Option[Int] = None,
+      terminal: Terminal = Terminal("T1"),
+      origin: PortCode = PortCode(""),
+      previousPort: Option[PortCode] = None,
+      operator: Option[Operator] = None,
+      status: ArrivalStatus = ArrivalStatus(""),
+      est: MillisSinceEpoch = 0L,
+      act: MillisSinceEpoch = 0L,
+      estChox: MillisSinceEpoch = 0L,
+      actChox: MillisSinceEpoch = 0L,
+      gate: Option[String] = None,
+      stand: Option[String] = None,
+      runwayId: Option[String] = None,
+      baggageReclaimId: Option[String] = None,
+      totalPax: Option[Int] = None,
+      transPax: Option[Int] = None
+  ): LiveArrival = {
     val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(iata)
 
     LiveArrival(
@@ -48,12 +49,18 @@ object ArrivalGenerator {
       gate = gate,
       stand = stand,
       runway = runwayId,
-      baggageReclaim = baggageReclaimId,
+      baggageReclaim = baggageReclaimId
     )
   }
 
-  def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1, feedSource: FeedSource): ApiFlightWithSplits = ApiFlightWithSplits(
-    arrival(sch = date.millisSinceEpoch, terminal = terminal).toArrival(feedSource), Set(), Option(date.millisSinceEpoch)
+  def flightWithSplitsForDayAndTerminal(
+      date: SDateLike,
+      terminal: Terminal = T1,
+      feedSource: FeedSource
+  ): ApiFlightWithSplits = ApiFlightWithSplits(
+    arrival(sch = date.millisSinceEpoch, terminal = terminal).toArrival(feedSource),
+    Set(),
+    Option(date.millisSinceEpoch)
   )
 
   def arrivalForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): LiveArrival =

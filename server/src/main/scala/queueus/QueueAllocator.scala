@@ -2,11 +2,10 @@ package queueus
 
 import manifests.queues.FastTrackFromCSV
 import uk.gov.homeoffice.drt.models.ManifestLike
-import uk.gov.homeoffice.drt.ports.PaxTypes.{NonVisaNational, VisaNational}
+import uk.gov.homeoffice.drt.ports.PaxTypes.{ NonVisaNational, VisaNational }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{PaxType, Queues}
-
+import uk.gov.homeoffice.drt.ports.{ PaxType, Queues }
 
 trait QueueAllocator {
   def queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]
@@ -17,13 +16,21 @@ trait QueueAllocator {
     queueRatios.getOrElse(terminal, Map()).getOrElse(paxType, Seq())
 }
 
-case class TerminalQueueAllocator(queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]) extends QueueAllocator {
-  override def forTerminalAndManifest(terminal: Terminal, manifest: ManifestLike)(paxType: PaxType): Seq[(Queue, Double)] =
+case class TerminalQueueAllocator(queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]])
+    extends QueueAllocator {
+  override def forTerminalAndManifest(
+      terminal: Terminal,
+      manifest: ManifestLike
+  )(paxType: PaxType): Seq[(Queue, Double)] =
     queueRatio(terminal, paxType)
 }
 
-case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]) extends QueueAllocator {
-  override def forTerminalAndManifest(terminal: Terminal, manifest: ManifestLike)(paxType: PaxType): Seq[(Queue, Double)] =
+case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]])
+    extends QueueAllocator {
+  override def forTerminalAndManifest(
+      terminal: Terminal,
+      manifest: ManifestLike
+  )(paxType: PaxType): Seq[(Queue, Double)] =
     if (paxType == NonVisaNational || paxType == VisaNational)
       FastTrackFromCSV.fastTrackCarriers
         .find(ftc => ftc.iataCode == manifest.carrierCode || ftc.icaoCode == manifest.carrierCode)

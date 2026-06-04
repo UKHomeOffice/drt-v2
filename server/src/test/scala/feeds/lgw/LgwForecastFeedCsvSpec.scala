@@ -1,12 +1,11 @@
 package feeds.lgw
 
-import drt.server.feeds.lgw.{LgwForecastFeedCsvParser, LgwForecastSftpService}
+import drt.server.feeds.lgw.{ LgwForecastFeedCsvParser, LgwForecastSftpService }
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.ports.Terminals.S
 
-import scala.io.{BufferedSource, Source}
-
+import scala.io.{ BufferedSource, Source }
 
 class LgwForecastFeedCsvSpec extends Specification {
   "I should be able to fetch file contents via sftp" >> {
@@ -41,7 +40,7 @@ class LgwForecastFeedCsvSpec extends Specification {
       origin = "ALC",
       previousPort = None,
       terminal = S,
-      scheduled = 1675427700000L,
+      scheduled = 1675427700000L
     )
   }
 }

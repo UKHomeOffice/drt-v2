@@ -1,9 +1,8 @@
 package drt.client.components
 
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 object AlertsComponentTests extends TestSuite {
-
 
   def tests: Tests = Tests {
     "When testing the URL for DRT to determine the environment" - {

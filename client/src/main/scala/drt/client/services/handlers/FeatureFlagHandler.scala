@@ -1,9 +1,9 @@
 package drt.client.services.handlers
 
-import diode.data.{Pending, Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.data.{ Pending, Pot, Ready }
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import drt.shared.FeatureFlags
 import upickle.default.read
 

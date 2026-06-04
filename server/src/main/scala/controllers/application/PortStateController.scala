@@ -1,27 +1,32 @@
 package controllers.application
 
 import actors.CrunchManagerActor._
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{
+  GetStateForDateRange,
+  GetStateForTerminalDateRange,
+  GetUpdatesSince,
+  PointInTimeQuery
+}
 import com.google.inject.Inject
-import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
-import drt.shared.{CrunchApi, PortState}
+import drt.shared.CrunchApi.{ ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates }
+import drt.shared.{ CrunchApi, PortState }
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import play.api.mvc.{ Action, AnyContent, ControllerComponents, Request }
 import services.crunch.CrunchManager.queueDaysToReProcess
 import services.exports.Forecast
-import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
+import uk.gov.homeoffice.drt.auth.Roles.{ DesksAndQueuesView, SuperAdmin }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ DateRange, LocalDate, SDate, SDateLike }
 import upickle.default.write
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
-
-class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class PortStateController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
+    extends AuthController(cc, ctrl) {
 
   def getCrunch: Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async { request: Request[AnyContent] =>
@@ -58,7 +63,12 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (startOfWeekMidnight, endOfForecast)
   }
 
-  def forecastSummary(terminalName: String, startDay: MillisSinceEpoch, numberOfDays: Int, periodInterval: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
+  def forecastSummary(
+      terminalName: String,
+      startDay: MillisSinceEpoch,
+      numberOfDays: Int,
+      periodInterval: Int
+  ): Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async {
       val terminal = Terminal(terminalName)
       val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
@@ -72,8 +82,16 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           case portState: PortState =>
             val queues = ctrl.applicationService.queuesForDateRangeAndTerminal
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
-            val hf: CrunchApi.ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues)
+            val fp = Forecast.forecastPeriod(
+              airportConfig,
+              terminal,
+              startOfForecast,
+              endOfForecast,
+              portState,
+              periodInterval
+            )
+            val hf: CrunchApi.ForecastHeadlineFigures =
+              Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, queues)
             Option(ForecastPeriodWithHeadlines(fp, hf))
         }
         .recover {
@@ -85,12 +103,13 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
   }
 
-  private def portStateUpdatesForRange(startMillis: MillisSinceEpoch,
-                                       endMillis: MillisSinceEpoch,
-                                       flightsSince: MillisSinceEpoch,
-                                       queuesSince: MillisSinceEpoch,
-                                       staffSince: MillisSinceEpoch,
-                                      ): Future[Option[PortStateUpdates]] =
+  private def portStateUpdatesForRange(
+      startMillis: MillisSinceEpoch,
+      endMillis: MillisSinceEpoch,
+      flightsSince: MillisSinceEpoch,
+      queuesSince: MillisSinceEpoch,
+      staffSince: MillisSinceEpoch
+  ): Future[Option[PortStateUpdates]] =
     ctrl.actorService.portStateActor
       .ask(GetUpdatesSince(flightsSince, queuesSince, staffSince, startMillis, endMillis))
       .mapTo[Option[PortStateUpdates]]
@@ -145,10 +164,11 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         to <- LocalDate.parse(toStr)
       } yield {
         val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch }.toSet
-        crunchManagerActor ! (calcType match {
-          case PaxLoadsCalc => RecalculatePaxLoads(datesToReCrunch)
-          case DeskRecsCalc => RecalculateDeskRecs(datesToReCrunch)
-        })
+        crunchManagerActor !
+          (calcType match {
+            case PaxLoadsCalc => RecalculatePaxLoads(datesToReCrunch)
+            case DeskRecsCalc => RecalculateDeskRecs(datesToReCrunch)
+          })
         Ok(s"Queued dates $from to $to for ${calcType.getClass}")
       }
       maybeFuture.getOrElse(BadRequest(s"Unable to parse dates '$fromStr' or '$toStr'"))
@@ -157,7 +177,13 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   def recalculateSplits: Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
       queueDaysToReProcess(crunchManagerActor, offsetMinutes, 1, now, m => RecalculateLiveSplits(m))
-      queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => RecalculateHistoricSplits(m))
+      queueDaysToReProcess(
+        crunchManagerActor,
+        offsetMinutes,
+        forecastLengthDays,
+        now,
+        m => RecalculateHistoricSplits(m)
+      )
       Ok("Recalculating live splits")
     }
   }

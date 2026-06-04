@@ -1,14 +1,14 @@
 package drt.server.feeds.lgw
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals
-import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
+import uk.gov.homeoffice.drt.ports.Terminals.{ InvalidTerminal, N, S }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import scala.xml.Node
 
 case class ResponseToArrivals(data: String) {
@@ -20,7 +20,7 @@ case class ResponseToArrivals(data: String) {
       .map(nodeToArrival)
   } match {
     case Success(arrivals) => arrivals.toList
-    case Failure(t) =>
+    case Failure(t)        =>
       log.error(s"Failed to get an Arrival from the Gatwick XML.", t)
       List.empty[LiveArrival]
   }
@@ -54,7 +54,7 @@ case class ResponseToArrivals(data: String) {
       gate = (n \\ "PassengerGate").headOption.map(n => n text).filterNot(_.isBlank),
       stand = (n \\ "ArrivalStand").headOption.map(n => n text).filterNot(_.isBlank),
       runway = parseRunwayId(n).filterNot(_.isBlank),
-      baggageReclaim = Try(n \\ "BaggageClaimUnit" text).toOption.filterNot(_.isBlank),
+      baggageReclaim = Try(n \\ "BaggageClaimUnit" text).toOption.filterNot(_.isBlank)
     )
     log.debug(s"parsed arrival: $arrival")
     arrival
@@ -62,24 +62,25 @@ case class ResponseToArrivals(data: String) {
 
   private def parseTerminal(n: Node): Terminals.Terminal = {
     val terminal = (n \\ "AirportResources" \ "Resource")
-      .find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "AircraftTerminal" text).getOrElse("")
+      .find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "AircraftTerminal" text).getOrElse(
+        ""
+      )
     val mappedTerminal = terminal match {
       case "1" => S
       case "2" => N
-      case _ => InvalidTerminal
+      case _   => InvalidTerminal
     }
     mappedTerminal
   }
 
-  private def flightNumber(n: Node): String =
-    ((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text
+  private def flightNumber(n: Node): String = ((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text
 
   private def parseStatus(n: Node): String = {
     val aidxCodeOrIdahoCode = ((n \ "FlightLeg").head \ "LegData").head \ "OperationalStatus" text
 
     aidxCodeOrIdahoCode match {
-      case "DV" => "Diverted"
-      case "DX" | "CX" => "Cancelled"
+      case "DV"         => "Diverted"
+      case "DX" | "CX"  => "Cancelled"
       case "EST" | "ES" => "Estimated"
       case "EXP" | "EX" => "Expected"
       case "FRB" | "FB" => "First Bag Delivered"
@@ -100,7 +101,7 @@ case class ResponseToArrivals(data: String) {
       case "RST" | "RS" => "Return to Stand (Departure Only)"
       case "OFB" | "TX" => "Taxied (Departure Only)"
       case "TKO" | "AB" => "Airborne (Departure Only)"
-      case unknownCode => unknownCode
+      case unknownCode  => unknownCode
     }
   }
 
@@ -109,15 +110,21 @@ case class ResponseToArrivals(data: String) {
   }
 
   private def parseRunwayId(n: Node): Option[String] = {
-    (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "Runway" text)
+    (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n =>
+      n \\ "Runway" text
+    )
   }
 
   private def parsePaxCount(n: Node, qualifier: String): Option[Int] = {
-    (n \\ "CabinClass").find(n => (n \ "@Class").isEmpty).flatMap(n => (n \ "PaxCount").find(n => (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt))
+    (n \\ "CabinClass").find(n => (n \ "@Class").isEmpty).flatMap(n =>
+      (n \ "PaxCount").find(n => (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt)
+    )
   }
 
   def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[MillisSinceEpoch] = {
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => SDate.parseString(n text).millisSinceEpoch)
+    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n =>
+      (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)
+    ).map(n => SDate.parseString(n text).millisSinceEpoch)
   }
 
 }

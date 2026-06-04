@@ -1,7 +1,7 @@
 package services
 
 import uk.gov.homeoffice.drt.time.SDate
-import utest.{TestSuite, _}
+import utest.{ TestSuite, _ }
 
 object ServerShiftDateTests extends TestSuite {
   def tests = TestSuite {
@@ -15,7 +15,8 @@ object ServerShiftDateTests extends TestSuite {
         val baseDate = SDate(2016, february, 1, 10, 23)
         val wtf = baseDate.addDays(39)
 
-        val ymdhm: (Int, Int, Int, Int, Int) = (wtf.getFullYear, wtf.getMonth, wtf.getDate, wtf.getHours, wtf.getMinutes)
+        val ymdhm: (Int, Int, Int, Int, Int) =
+          (wtf.getFullYear, wtf.getMonth, wtf.getDate, wtf.getHours, wtf.getMinutes)
 
         val march = 3
         val expected = (2016, march, 11, 10, 23)
@@ -26,7 +27,8 @@ object ServerShiftDateTests extends TestSuite {
         val baseDate = SDate(2016, february, 1, 0, 0)
         val date = baseDate.addHours(1)
 
-        val ymdhm: (Int, Int, Int, Int, Int) = (date.getFullYear, date.getMonth, date.getDate, date.getHours, date.getMinutes)
+        val ymdhm: (Int, Int, Int, Int, Int) =
+          (date.getFullYear, date.getMonth, date.getDate, date.getHours, date.getMinutes)
 
         val expected = (2016, february, 1, 1, 0)
         assert(ymdhm == expected)

@@ -30,7 +30,11 @@ class ProcessorsSpec extends Specification {
   }
 
   "Given three units of sizes 1, 2, 3" >> {
-    val processor = WorkloadProcessors(Seq(EgateBank(IndexedSeq(true)), EgateBank(IndexedSeq(true, true)), EgateBank(IndexedSeq(true, true, true))))
+    val processor = WorkloadProcessors(Seq(
+      EgateBank(IndexedSeq(true)),
+      EgateBank(IndexedSeq(true, true)),
+      EgateBank(IndexedSeq(true, true, true))
+    ))
     "The cumulative capacity should be (0, 1, 3, 6)" >> {
       processor.cumulativeCapacity === Iterable(0, 1, 3, 6)
     }

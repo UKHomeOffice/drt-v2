@@ -1,6 +1,6 @@
 package drt.client.components
 
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -15,7 +15,11 @@ trait IAccessibilityStatementProps extends js.Object {
 }
 
 object IAccessibilityStatementProps {
-  def apply(teamEmail: String, emailUsToReportAProblemHandler: js.Function0[Unit], scrollSection: String): IAccessibilityStatementProps = {
+  def apply(
+      teamEmail: String,
+      emailUsToReportAProblemHandler: js.Function0[Unit],
+      scrollSection: String
+  ): IAccessibilityStatementProps = {
     val p = (new js.Object).asInstanceOf[IAccessibilityStatementProps]
     p.accessibilityStatementUrl = "#accessibility"
     p.teamEmail = teamEmail

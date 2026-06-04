@@ -25,8 +25,7 @@ object FlightsApi {
           (arrival.unique, histApiPax)
         }
         .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax) }
-        .toMap
-      )
+        .toMap)
   }
 
   case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Passengers]]) extends FlightUpdates {

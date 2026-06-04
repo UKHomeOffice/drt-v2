@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.components.TerminalDesksAndQueues.{Deployments, Recommended}
+import drt.client.components.TerminalDesksAndQueues.{ Deployments, Recommended }
 import japgolly.scalajs.react.test.ReactTestUtils
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.models.CrunchMinute

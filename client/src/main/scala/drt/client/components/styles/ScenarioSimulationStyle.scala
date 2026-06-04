@@ -2,7 +2,6 @@ package drt.client.components.styles
 import scalacss.internal.mutable.StyleSheet
 import ScalaCssImplicits.CssSettings._
 
-
 case class ScenarioSimulationStyle(common: CommonStyle = DefaultCommonStyle) extends StyleSheet.Inline {
 
   import dsl._

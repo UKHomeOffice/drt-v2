@@ -9,8 +9,8 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2, Terminal }
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike, UtcDate }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -18,14 +18,16 @@ import scala.concurrent.duration.DurationInt
 class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
   val myNow: SDateLike = SDate("2023-10-20T12:00")
 
-  private def flightsStream(flights: Seq[ApiFlightWithSplits]): (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = {
+  private def flightsStream(flights: Seq[ApiFlightWithSplits])
+      : (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = {
     (_: UtcDate, _: UtcDate) =>
       Source(List(
         (UtcDate(2023, 10, 20), flights)
       ))
   }
 
-  private def crunchMinutesStream(minutes: Seq[CrunchMinute]): (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = {
+  private def crunchMinutesStream(minutes: Seq[CrunchMinute])
+      : (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = {
     (_: UtcDate, _: UtcDate) =>
       Source(List(
         (UtcDate(2023, 10, 20), minutes)
@@ -33,13 +35,29 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
   }
 
   private def crunchMinute(terminal: Terminal, lastUpdated: Long) = {
-    CrunchMinute(terminal, EeaDesk, myNow.millisSinceEpoch, 1, 1, 1, 1, None, None, None, None, None, None, Option(lastUpdated))
+    CrunchMinute(
+      terminal,
+      EeaDesk,
+      myNow.millisSinceEpoch,
+      1,
+      1,
+      1,
+      1,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      Option(lastUpdated)
+    )
   }
 
-  private def check(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                    minutes: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
-                    expected: Option[Boolean],
-                   ): MatchResult[Option[Boolean]] = {
+  private def check(
+      flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+      minutes: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
+      expected: Option[Boolean]
+  ): MatchResult[Option[Boolean]] = {
     val healthCheck = DeskUpdatesHealthCheck(() => myNow, flights, minutes)
     val result = Await.result(healthCheck.healthy(), 1.second)
     result === expected
@@ -53,7 +71,8 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
     }
   }
 
-  private val t1Arrival = ArrivalGenerator.live(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(LiveFeedSource)
+  private val t1Arrival =
+    ArrivalGenerator.live(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(LiveFeedSource)
 
   "Given one T1 flight and no crunch minutes" >> {
     "desk updates should be None" >> {
@@ -71,7 +90,7 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
       ))
       val minutes = crunchMinutesStream(Seq(
-        crunchMinute(T1, myNow.millisSinceEpoch),
+        crunchMinute(T1, myNow.millisSinceEpoch)
       ))
       check(flights, minutes, None)
     }
@@ -83,7 +102,7 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-11).millisSinceEpoch))
       ))
       val minutes = crunchMinutesStream(Seq(
-        crunchMinute(T1, myNow.addMinutes(-11).millisSinceEpoch),
+        crunchMinute(T1, myNow.addMinutes(-11).millisSinceEpoch)
       ))
       check(flights, minutes, Option(false))
     }

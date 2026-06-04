@@ -3,7 +3,7 @@ package drt.server.feeds.api
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.stream.KillSwitches
-import org.apache.pekko.stream.scaladsl.{Keep, Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Keep, Sink, Source }
 import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
@@ -13,17 +13,19 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
-case class MockManifestArrivalKeys(keysWithProcessedAts: List[(MillisSinceEpoch, Iterable[UniqueArrivalKey])]) extends ManifestArrivalKeys {
+case class MockManifestArrivalKeys(keysWithProcessedAts: List[(MillisSinceEpoch, Iterable[UniqueArrivalKey])])
+    extends ManifestArrivalKeys {
   var queuedKeysWithProcessedAts: List[(MillisSinceEpoch, Iterable[UniqueArrivalKey])] = keysWithProcessedAts
-  override def nextKeys(since: MillisSinceEpoch): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])] = queuedKeysWithProcessedAts match {
-    case (processedAt, keys) :: tail =>
-      queuedKeysWithProcessedAts = tail
-      Future.successful((Option(processedAt), keys))
-    case _ =>
-      Future.successful((None, Iterable()))
-  }
+  override def nextKeys(since: MillisSinceEpoch): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])] =
+    queuedKeysWithProcessedAts match {
+      case (processedAt, keys) :: tail =>
+        queuedKeysWithProcessedAts = tail
+        Future.successful((Option(processedAt), keys))
+      case _ =>
+        Future.successful((None, Iterable()))
+    }
 }
 
 case class MockManifestProcessor(probe: ActorRef) extends ManifestProcessor {
@@ -61,7 +63,7 @@ class ApiFeedImplTest extends CrunchTestLike {
       val probe = TestProbe("apiFeed")
       val mockArrivalKeys = MockManifestArrivalKeys(List(
         (processedAt1220, Iterable(key1, key2)),
-        (processedAt1230, Iterable(key3)),
+        (processedAt1230, Iterable(key3))
       ))
       val mockProcessor = MockManifestProcessor(probe.ref)
       val feed = ApiFeedImpl(mockArrivalKeys, mockProcessor, 100.milliseconds)

@@ -1,6 +1,5 @@
 package drt.client.spa
 
-
 sealed trait TerminalPageMode {
   val asString: String
 }
@@ -8,12 +7,12 @@ sealed trait TerminalPageMode {
 object TerminalPageModes {
   def fromString(modeStr: String): TerminalPageMode = modeStr.toLowerCase match {
     case "dashboard" => Dashboard
-    case "current" => Current
-    case "snapshot" => Snapshot
-    case "planning" => Planning
-    case "staffing" => Staffing
-    case "shifts" => Shifts
-    case unknown =>
+    case "current"   => Current
+    case "snapshot"  => Snapshot
+    case "planning"  => Planning
+    case "staffing"  => Staffing
+    case "shifts"    => Shifts
+    case unknown     =>
       throw new Exception(s"Unknown terminal page mode '$unknown'")
   }
 
@@ -42,5 +41,3 @@ object TerminalPageModes {
   }
 
 }
-
-

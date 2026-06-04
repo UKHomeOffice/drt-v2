@@ -1,8 +1,8 @@
 package services
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.{europeLondonTimeZone, utcTimeZone}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.{ europeLondonTimeZone, utcTimeZone }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, UtcDate }
 
 import scala.concurrent.duration.DurationInt
 
@@ -313,7 +313,7 @@ class ServerSDateSpec extends Specification {
       }
     }
   }
-  //make sure we add the javascript tests for LocalDate and UtcDate
+  // make sure we add the javascript tests for LocalDate and UtcDate
 
   "When creating an SDateLike from a LocalDate then I should get back an SDate at midnight localtime on that day" >> {
     "Given a BST date, I should get back BST midnight" >> {

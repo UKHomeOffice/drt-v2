@@ -3,7 +3,7 @@ package actors.serializers
 import drt.shared.CrunchApi.PassengersMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{ PassengersMinuteMessage, PassengersMinutesMessage }
 
 object PassengersMinutesMessageConversion {
   def passengerMinutesToMessage(px: Iterable[PassengersMinute]): PassengersMinutesMessage = {

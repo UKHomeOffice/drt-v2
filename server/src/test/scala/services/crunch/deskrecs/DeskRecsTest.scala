@@ -4,13 +4,13 @@ import drt.shared.CrunchApi
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.models.TQM
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, EeaDesk }
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, Terminal }
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class DeskRecsTest extends AnyWordSpec with Matchers {
   "minDesksByWorkload" should {
@@ -42,16 +42,17 @@ class DeskRecsTest extends AnyWordSpec with Matchers {
   "paxForQueue" should {
     "return pax numbers for the correct queue given a passengersminute provider" in {
       val provider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]] =
-        (_, _, _) => Future.successful(Map(
-          TQM(T1, EeaDesk, 120000l) -> CrunchApi.PassengersMinute(T1, EeaDesk, 120000l, Seq.fill(5)(5), None),
-          TQM(T1, EeaDesk, 60000l) -> CrunchApi.PassengersMinute(T1, EeaDesk, 60000l, Seq.fill(6)(5), None),
-          TQM(T1, EeaDesk, 0l) -> CrunchApi.PassengersMinute(T1, EeaDesk, 0l, Seq.fill(7)(5), None),
-          TQM(T1, EGate, 120000l) -> CrunchApi.PassengersMinute(T1, EGate, 120000l, Seq.fill(15)(5), None),
-          TQM(T1, EGate, 60000l) -> CrunchApi.PassengersMinute(T1, EGate, 60000l, Seq.fill(15)(5), None),
-          TQM(T1, EGate, 0l) -> CrunchApi.PassengersMinute(T1, EGate, 0l, Seq.fill(15)(5), None),
-        ))
+        (_, _, _) =>
+          Future.successful(Map(
+            TQM(T1, EeaDesk, 120000L) -> CrunchApi.PassengersMinute(T1, EeaDesk, 120000L, Seq.fill(5)(5), None),
+            TQM(T1, EeaDesk, 60000L) -> CrunchApi.PassengersMinute(T1, EeaDesk, 60000L, Seq.fill(6)(5), None),
+            TQM(T1, EeaDesk, 0L) -> CrunchApi.PassengersMinute(T1, EeaDesk, 0L, Seq.fill(7)(5), None),
+            TQM(T1, EGate, 120000L) -> CrunchApi.PassengersMinute(T1, EGate, 120000L, Seq.fill(15)(5), None),
+            TQM(T1, EGate, 60000L) -> CrunchApi.PassengersMinute(T1, EGate, 60000L, Seq.fill(15)(5), None),
+            TQM(T1, EGate, 0L) -> CrunchApi.PassengersMinute(T1, EGate, 0L, Seq.fill(15)(5), None)
+          ))
       val paxForT1 = DeskRecs.paxForQueue(provider)
-      val paxForEeaDesk = Await.result(paxForT1(T1)(0l to 120000 by 60000, EeaDesk), 1.second)
+      val paxForEeaDesk = Await.result(paxForT1(T1)(0L to 120000 by 60000, EeaDesk), 1.second)
 
       paxForEeaDesk shouldBe Seq(7, 6, 5)
     }

@@ -12,7 +12,7 @@ case class ArrivalsPageStyles(common: CommonStyle = DefaultCommonStyle) extends 
     paddingBottom(5.px),
     display.block,
     whiteSpace.nowrap,
-    overflow.hidden,
+    overflow.hidden
   )
 
 }

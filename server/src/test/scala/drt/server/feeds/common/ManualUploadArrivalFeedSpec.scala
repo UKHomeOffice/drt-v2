@@ -1,6 +1,6 @@
 package drt.server.feeds.common
 
-import org.apache.pekko.actor.{Actor, Props}
+import org.apache.pekko.actor.{ Actor, Props }
 import org.apache.pekko.util.Timeout
 import drt.server.feeds.ArrivalsFeedFailure
 import services.crunch.CrunchTestLike

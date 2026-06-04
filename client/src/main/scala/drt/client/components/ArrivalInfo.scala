@@ -1,20 +1,24 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.{Pending, Pot, Ready}
+import diode.data.{ Pending, Pot, Ready }
 import drt.client.components.FlightTableComponents.maybeLocalTimeWithPopup
 import drt.shared._
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagMod, TagOf}
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.vdom.{ TagMod, TagOf }
+import japgolly.scalajs.react.{ CtorType, _ }
 import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource }
 
 object ArrivalInfo {
 
-  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]], airportConfig: AirportConfig, paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
+  case class Props(
+      arrivalSources: Pot[List[Option[FeedSourceArrival]]],
+      airportConfig: AirportConfig,
+      paxFeedSourceOrder: List[FeedSource]
+  ) extends UseValueEq
 
   def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSourcesTable")
     .render_P { props =>
@@ -22,15 +26,22 @@ object ArrivalInfo {
         case Ready(sources) =>
           <.div(
             <.h2(s"Feed sources for arrival"),
-            <.table(^.className := "arrivals-table table-striped",
+            <.table(
+              ^.className := "arrivals-table table-striped",
               tableHead,
               <.tbody(
                 sources.collect { case Some(sourceArrival) =>
-                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival, props.airportConfig, props.paxFeedSourceOrder))
+                  FeedSourceRow.component(FeedSourceRow.Props(
+                    sourceArrival,
+                    props.airportConfig,
+                    props.paxFeedSourceOrder
+                  ))
                 }.toTagMod
-              )))
+              )
+            )
+          )
         case Pending(_) => <.div("Waiting for sources")
-        case _ => <.div("No feed sources display")
+        case _          => <.div("No feed sources display")
       }
     }
     .build
@@ -56,7 +67,7 @@ object ArrivalInfo {
 
     val portColumnThs = columns
       .map {
-        case (label, None) => <.th(label)
+        case (label, None)            => <.th(label)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
       .toTagMod
@@ -67,7 +78,11 @@ object ArrivalInfo {
 
 object FeedSourceRow {
 
-  case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig, paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
+  case class Props(
+      feedSourceArrival: FeedSourceArrival,
+      airportConfig: AirportConfig,
+      paxFeedSourceOrder: List[FeedSource]
+  ) extends UseValueEq
 
   def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource): String =
     if (isCiriumAsPortLive) "Live arrival"
@@ -79,8 +94,10 @@ object FeedSourceRow {
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
-      val paxTotal: String = arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse("-")
-      val paxTrans: String = arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.transit.map(_.toString).getOrElse("-")
+      val paxTotal: String =
+        arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse("-")
+      val paxTrans: String =
+        arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.transit.map(_.toString).getOrElse("-")
       val prevPort: String = arrival.PreviousPort.map(_.iata).getOrElse("n/a")
       val flightFields = List[TagMod](
         <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
@@ -97,7 +114,7 @@ object FeedSourceRow {
         <.td(maybeLocalTimeWithPopup(arrival.EstimatedChox)),
         <.td(maybeLocalTimeWithPopup(arrival.ActualChox)),
         <.td(paxTotal),
-        <.td(paxTrans),
+        <.td(paxTrans)
       )
 
       <.tr(flightFields.toTagMod)

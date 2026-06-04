@@ -6,44 +6,51 @@ import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import actors.persistent.staffing.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
 import actors.routing.SequentialWritesActor
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
-import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
+import org.apache.pekko.pattern.{ ask, StatusReply }
 import org.apache.pekko.persistence._
 import org.apache.pekko.util.Timeout
-import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
-import org.slf4j.{Logger, LoggerFactory}
+import drt.shared.{ FixedPointAssignments, StaffAssignment, StaffAssignmentLike }
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
+import uk.gov.homeoffice.drt.actor.{ PersistentDrtActor, RecoveryActorLike }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{
+  FixedPointMessage,
+  FixedPointsMessage,
+  FixedPointsStateSnapshotMessage
+}
+import uk.gov.homeoffice.drt.time.{ MilliTimes, SDate, SDateLike }
 
 import scala.collection.immutable
-
 
 trait FixedPointsActorLike {
   def persistenceId: String = "fixedPoints-store"
 
   import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
-
   val snapshotMessageToState: Any => FixedPointAssignments = {
     case snapshot: FixedPointsStateSnapshotMessage =>
       fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
   }
 
-  val eventToState: (() => SDateLike, Int) => (FixedPointAssignments, Any) => (FixedPointAssignments, immutable.Iterable[TerminalUpdateRequest]) =
-    (now, forecastMaxDays) => (state: FixedPointAssignments, msg: Any) => msg match {
-      case msg: FixedPointsMessage =>
-        val newState = fixedPointMessagesToFixedPoints(msg.fixedPoints)
-        val diff = state.diff(newState)
-        val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays)
-        (newState, subscriberEvents)
-      case _ => (state, Seq.empty)
-    }
+  val eventToState: (() => SDateLike, Int) => (FixedPointAssignments, Any) => (
+      FixedPointAssignments,
+      immutable.Iterable[TerminalUpdateRequest]
+  ) =
+    (now, forecastMaxDays) =>
+      (state: FixedPointAssignments, msg: Any) =>
+        msg match {
+          case msg: FixedPointsMessage =>
+            val newState = fixedPointMessagesToFixedPoints(msg.fixedPoints)
+            val diff = state.diff(newState)
+            val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays)
+            (newState, subscriberEvents)
+          case _ => (state, Seq.empty)
+        }
 
   val query: (() => FixedPointAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
     (getState, getSender) => {
@@ -56,28 +63,29 @@ trait FixedPointsActorLike {
           assignment.terminal == terminal && (
             sdate.millisSinceEpoch <= assignment.end ||
               assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch
-            )
+          )
         })
     }
 
-
-  def streamingUpdatesProps(journalType: StreamingJournalLike,
-                            now: () => SDateLike,
-                            forecastMaxDays: Int,
-                           ): Props =
+  def streamingUpdatesProps(
+      journalType: StreamingJournalLike,
+      now: () => SDateLike,
+      forecastMaxDays: Int
+  ): Props =
     Props(new StreamingUpdatesActor[FixedPointAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       FixedPointAssignments.empty,
       snapshotMessageToState,
       eventToState(now, forecastMaxDays),
-      query,
+      query
     ))
 
-  def terminalUpdateRequests(fixedPoints: FixedPointAssignments,
-                             now: () => SDateLike,
-                             forecastMaxDays: Int,
-                            ): immutable.Iterable[TerminalUpdateRequest] =
+  def terminalUpdateRequests(
+      fixedPoints: FixedPointAssignments,
+      now: () => SDateLike,
+      forecastMaxDays: Int
+  ): immutable.Iterable[TerminalUpdateRequest] =
     fixedPoints.assignments.groupBy(_.terminal).collect {
       case (terminal, _) if fixedPoints.assignments.nonEmpty =>
         val earliest = now().millisSinceEpoch
@@ -93,17 +101,16 @@ object FixedPointsActor extends FixedPointsActorLike {
 
   case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsUpdate
 
-  def sequentialWritesProps(now: () => SDateLike,
-                            requestAndTerminateActor: ActorRef,
-                            system: ActorSystem
-                           )
-                           (implicit timeout: Timeout): Props =
+  def sequentialWritesProps(
+      now: () => SDateLike,
+      requestAndTerminateActor: ActorRef,
+      system: ActorSystem
+  )(implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[FixedPointsUpdate](update => {
       val actor = system.actorOf(Props(new FixedPointsActor(now)), "fixed-points-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 }
-
 
 class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
 
@@ -121,7 +128,8 @@ class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
 
   import FixedPointsMessageParser._
 
-  override def stateToMessage: GeneratedMessage = FixedPointsStateSnapshotMessage(fixedPointsToFixedPointsMessages(state, now()))
+  override def stateToMessage: GeneratedMessage =
+    FixedPointsStateSnapshotMessage(fixedPointsToFixedPointsMessages(state, now()))
 
   def updateState(fixedPoints: FixedPointAssignments): Unit = state = fixedPoints
 
@@ -148,7 +156,7 @@ class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
         assignment.terminal == terminal && (
           sdate.millisSinceEpoch <= assignment.end ||
             assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch
-          )
+        )
       })
 
     case SetFixedPoints(fixedPointStaffAssignments) =>
@@ -157,7 +165,8 @@ class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
         updateState(FixedPointAssignments(fixedPointStaffAssignments))
 
         val createdAt = now()
-        val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
+        val fixedPointsMessage =
+          FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
         persistAndMaybeSnapshotWithAck(fixedPointsMessage, List((sender(), StatusReply.Ack)))
       } else {
         log.info(s"No change. Nothing to persist")
@@ -180,28 +189,32 @@ class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
 object FixedPointsMessageParser {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def staffAssignmentToMessage(assignment: StaffAssignmentLike, createdAt: SDateLike): FixedPointMessage = FixedPointMessage(
-    name = Option(assignment.name),
-    terminalName = Option(assignment.terminal.toString),
-    numberOfStaff = Option(assignment.numberOfStaff.toString),
-    startTimestamp = Option(assignment.start),
-    endTimestamp = Option(assignment.end),
-    createdAt = Option(createdAt.millisSinceEpoch)
-  )
+  def staffAssignmentToMessage(assignment: StaffAssignmentLike, createdAt: SDateLike): FixedPointMessage =
+    FixedPointMessage(
+      name = Option(assignment.name),
+      terminalName = Option(assignment.terminal.toString),
+      numberOfStaff = Option(assignment.numberOfStaff.toString),
+      startTimestamp = Option(assignment.start),
+      endTimestamp = Option(assignment.end),
+      createdAt = Option(createdAt.millisSinceEpoch)
+    )
 
-  private def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage): StaffAssignment = StaffAssignment(
-    name = fixedPointMessage.name.getOrElse(""),
-    terminal = Terminal(fixedPointMessage.terminalName.getOrElse("")),
-    start = fixedPointMessage.startTimestamp.getOrElse(0L),
-    end = fixedPointMessage.endTimestamp.getOrElse(0L),
-    numberOfStaff = fixedPointMessage.numberOfStaff.getOrElse("0").toInt,
-    createdBy = None
-  )
+  private def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage): StaffAssignment =
+    StaffAssignment(
+      name = fixedPointMessage.name.getOrElse(""),
+      terminal = Terminal(fixedPointMessage.terminalName.getOrElse("")),
+      start = fixedPointMessage.startTimestamp.getOrElse(0L),
+      end = fixedPointMessage.endTimestamp.getOrElse(0L),
+      numberOfStaff = fixedPointMessage.numberOfStaff.getOrElse("0").toInt,
+      createdBy = None
+    )
 
-  def fixedPointsToFixedPointsMessages(fixedPointStaffAssignments: FixedPointAssignments, createdAt: SDateLike): Seq[FixedPointMessage] =
+  def fixedPointsToFixedPointsMessages(
+      fixedPointStaffAssignments: FixedPointAssignments,
+      createdAt: SDateLike
+  ): Seq[FixedPointMessage] =
     fixedPointStaffAssignments.assignments.map(a => staffAssignmentToMessage(a, createdAt))
 
   def fixedPointMessagesToFixedPoints(fixedPointMessages: Seq[FixedPointMessage]): FixedPointAssignments =
     FixedPointAssignments(fixedPointMessages.map(fixedPointMessageToStaffAssignment))
 }
-

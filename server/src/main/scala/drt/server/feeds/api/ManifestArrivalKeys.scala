@@ -2,21 +2,22 @@ package drt.server.feeds.api
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTimeZone
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 import uk.gov.homeoffice.drt.models.UniqueArrivalKey
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait ManifestArrivalKeys {
   def nextKeys(since: MillisSinceEpoch): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])]
 }
 
-case class DbManifestArrivalKeys(tables: AggregatedDbTables, destinationPortCode: PortCode)
-                                (implicit ec: ExecutionContext) extends ManifestArrivalKeys {
+case class DbManifestArrivalKeys(tables: AggregatedDbTables, destinationPortCode: PortCode)(implicit
+    ec: ExecutionContext
+) extends ManifestArrivalKeys {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
@@ -27,7 +28,7 @@ case class DbManifestArrivalKeys(tables: AggregatedDbTables, destinationPortCode
     tables.run(manifestsQuery(ts))
       .map {
         case Some((arrivalKeys, nextTs)) => (Option(nextTs), arrivalKeys)
-        case _ => (None, Vector())
+        case _                           => (None, Vector())
       }
       .recover {
         case t =>
@@ -53,10 +54,14 @@ case class DbManifestArrivalKeys(tables: AggregatedDbTables, destinationPortCode
           val nextTs = rows.map(_._4).max
           val keys = rows.map {
             case (origin, voyageNumber, scheduled, _) =>
-              UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
+              UniqueArrivalKey(
+                destinationPortCode,
+                PortCode(origin),
+                VoyageNumber(voyageNumber),
+                SDate(scheduled, DateTimeZone.UTC)
+              )
           }
           Option(keys, nextTs)
-        }
-        else None
+        } else None
       }
 }

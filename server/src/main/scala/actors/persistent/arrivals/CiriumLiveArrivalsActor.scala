@@ -3,12 +3,12 @@ package actors.persistent.arrivals
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.StreamingFeedStatusUpdates
 import actors.persistent.staffing.GetFeedStatuses
-import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.persistence.{ SaveSnapshotFailure, SaveSnapshotSuccess }
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedSuccess }
+import org.slf4j.{ Logger, LoggerFactory }
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
-import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
-import uk.gov.homeoffice.drt.ports.{FeedSource, LiveBaseFeedSource}
+import uk.gov.homeoffice.drt.actor.commands.Commands.{ AddUpdatesSubscriber, GetState }
+import uk.gov.homeoffice.drt.ports.{ FeedSource, LiveBaseFeedSource }
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -17,8 +17,10 @@ object CiriumLiveArrivalsActor extends StreamingFeedStatusUpdates {
   override val sourceType: FeedSource = LiveBaseFeedSource
 }
 
-class CiriumLiveArrivalsActor(val now: () => SDateLike,
-                              expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, LiveBaseFeedSource) {
+class CiriumLiveArrivalsActor(
+    val now: () => SDateLike,
+    expireAfterMillis: Int
+) extends ArrivalsActor(now, expireAfterMillis, LiveBaseFeedSource) {
   override def persistenceId: String = CiriumLiveArrivalsActor.persistenceId
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)

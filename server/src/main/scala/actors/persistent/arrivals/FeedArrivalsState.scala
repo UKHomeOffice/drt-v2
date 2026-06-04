@@ -1,14 +1,16 @@
 package actors.persistent.arrivals
 
-import uk.gov.homeoffice.drt.arrivals.{FeedArrival, UniqueArrival}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStateLike}
+import uk.gov.homeoffice.drt.arrivals.{ FeedArrival, UniqueArrival }
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStateLike }
 import uk.gov.homeoffice.drt.ports.FeedSource
 
 import scala.collection.immutable.SortedMap
 
-case class FeedArrivalsState[A <: FeedArrival](arrivals: Map[UniqueArrival, A],
-                                               feedSource: FeedSource,
-                                               maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
+case class FeedArrivalsState[A <: FeedArrival](
+    arrivals: Map[UniqueArrival, A],
+    feedSource: FeedSource,
+    maybeSourceStatuses: Option[FeedSourceStatuses]
+) extends FeedStateLike {
   def clear(): FeedArrivalsState[A] = {
     copy(arrivals = SortedMap(), maybeSourceStatuses = None)
   }
@@ -18,7 +20,7 @@ case class FeedArrivalsState[A <: FeedArrival](arrivals: Map[UniqueArrival, A],
       val arrival = arrivals
         .get(a.unique)
         .map(_.update(a))
-        .collect({ case a: A => a })
+        .collect { case a: A => a }
         .getOrElse(a)
       (a.unique, arrival)
     }))
@@ -29,5 +31,6 @@ case class FeedArrivalsState[A <: FeedArrival](arrivals: Map[UniqueArrival, A],
 }
 
 object FeedArrivalsState {
-  def empty[A <: FeedArrival](feedSource: FeedSource): FeedArrivalsState[A] = FeedArrivalsState[A](Map(), feedSource, None)
+  def empty[A <: FeedArrival](feedSource: FeedSource): FeedArrivalsState[A] =
+    FeedArrivalsState[A](Map(), feedSource, None)
 }

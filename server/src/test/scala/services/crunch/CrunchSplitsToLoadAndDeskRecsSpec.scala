@@ -1,21 +1,24 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import drt.server.feeds.{ ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess }
 import drt.shared._
 import services.crunch.VoyageManifestGenerator._
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
-import uk.gov.homeoffice.drt.models.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventTypes, VoyageNumber }
+import uk.gov.homeoffice.drt.models.{ ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest }
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
-import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{
+  eeaMachineReadableToDesk,
+  eeaMachineReadableToEGate,
+  eeaNonMachineReadableToDesk
+}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{ SplitRatio, SplitRatios, SplitSources }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.ports.{ PortCode, Queues }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
-import scala.collection.immutable.{List, Map, Seq, SortedMap}
+import scala.collection.immutable.{ List, Map, Seq, SortedMap }
 import scala.concurrent.duration._
-
 
 class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
   isolated
@@ -44,11 +47,13 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             )),
             terminalProcessingTimes = Map(T1 -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
-              eeaMachineReadableToEGate -> 35d / 60))
+              eeaMachineReadableToEGate -> 35d / 60
+            ))
           )
           val crunch = runCrunchGraph(TestConfig(
             now = () => SDate(scheduled),
-            airportConfig = airportConfigWithEgates))
+            airportConfig = airportConfigWithEgates
+          ))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -85,7 +90,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val expected = Map(
             T1 -> Map(
               Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0),
-              Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
+              Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
+            )
           )
 
           crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -111,7 +117,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             now = () => SDate(scheduled),
             airportConfig = defaultAirportConfig.copy(
               slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
-              queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate))),
+              queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) ->
+                SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate))),
               terminalProcessingTimes = Map(T1 -> Map(
                 eeaMachineReadableToDesk -> 0.35,
                 eeaMachineReadableToEGate -> 0.35,
@@ -119,12 +126,14 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               )),
               terminalPaxSplits = Map(T1 -> SplitRatios(
                 SplitSources.TerminalAverage,
-                List(SplitRatio(eeaMachineReadableToDesk, 0.25),
+                List(
+                  SplitRatio(eeaMachineReadableToDesk, 0.25),
                   SplitRatio(eeaMachineReadableToEGate, 0.25),
                   SplitRatio(eeaNonMachineReadableToDesk, 0.5)
                 )
               ))
-            )))
+            )
+          ))
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
           val expected = Map(T1 -> Map(
@@ -158,7 +167,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                 slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
                 terminalProcessingTimes = Map(T1 -> Map(
                   eeaMachineReadableToDesk -> 20d / 60,
-                  eeaMachineReadableToEGate -> 35d / 60)),
+                  eeaMachineReadableToEGate -> 35d / 60
+                )),
                 terminalPaxSplits = Map(T1 -> SplitRatios(
                   SplitSources.TerminalAverage,
                   SplitRatio(eeaMachineReadableToDesk, 0.25)
@@ -171,7 +181,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             val expected = Map(
               T1 -> Map(
                 Queues.EeaDesk -> Seq(20.0, 0.0, 0.0, 0.0, 0.0),
-                Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
+                Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
+              )
             )
 
             crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -192,27 +203,47 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val scheduled = "2017-01-01T00:00Z"
 
-            val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(10))
+            val arrival = ArrivalGenerator.live(
+              origin = PortCode("JFK"),
+              schDt = scheduled,
+              iata = "BA0001",
+              terminal = T1,
+              totalPax = Option(10)
+            )
 
-            val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
-              VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"),
-                ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
-                manifestPax(10, euPassport)
+            val voyageManifests = ManifestsFeedSuccess(DqManifests(
+              0,
+              Set(
+                VoyageManifest(
+                  EventTypes.DC,
+                  PortCode("STN"),
+                  PortCode("JFK"),
+                  VoyageNumber("0001"),
+                  CarrierCode("BA"),
+                  ManifestDateOfArrival("2017-01-01"),
+                  ManifestTimeOfArrival("00:00"),
+                  manifestPax(10, euPassport)
+                )
               )
-            )))
+            ))
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),
               airportConfig = defaultAirportConfig.copy(
                 slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25),
-                queuesByTerminal = SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate))),
+                queuesByTerminal =
+                  SortedMap(LocalDate(2014, 1, 1) -> SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate))),
                 terminalPaxTypeQueueAllocation = defaultAirportConfig.terminalPaxTypeQueueAllocation.updated(
-                  T1, defaultAirportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+                  T1,
+                  defaultAirportConfig.terminalPaxTypeQueueAllocation(T1).updated(
+                    EeaMachineReadable,
+                    List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2)
                   )
                 ),
                 terminalProcessingTimes = Map(T1 -> Map(
                   eeaMachineReadableToDesk -> 20d / 60,
-                  eeaMachineReadableToEGate -> 35d / 60))
+                  eeaMachineReadableToEGate -> 35d / 60
+                ))
               )
             ))
 

@@ -2,18 +2,18 @@ package controllers.application.exports
 
 import controllers.ArrivalGenerator
 import controllers.application.TestDrtModule
-import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
+import drt.server.feeds.{ DqManifests, ManifestsFeedSuccess }
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
+import play.api.test.{ FakeRequest, Helpers }
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.auth.Roles.ApiView
 import uk.gov.homeoffice.drt.models._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ AclFeedSource, PaxAge, PortCode }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await
@@ -33,12 +33,20 @@ class FlightsExportControllerSpec extends PlaySpec {
 
       val flightsRouter = drtSystemInterface.actorService.flightsRouterActor
       val arrivalT1 = ArrivalGenerator
-        .arrival(iata = "BA0001", terminal = T1, schDt = "2023-11-06T05:00Z", feedSource = AclFeedSource , totalPax= Some(100), transPax = None)
+        .arrival(
+          iata = "BA0001",
+          terminal = T1,
+          schDt = "2023-11-06T05:00Z",
+          feedSource = AclFeedSource,
+          totalPax = Some(100),
+          transPax = None
+        )
 
       flightsRouter ! ArrivalsDiff(Seq(arrivalT1), Seq())
 
       def manifestForDate(date: String): VoyageManifest = {
-        VoyageManifest(EventTypes.DC,
+        VoyageManifest(
+          EventTypes.DC,
           drtSystemInterface.airportConfig.portCode,
           PortCode("JFK"),
           VoyageNumber("0001"),
@@ -46,23 +54,30 @@ class FlightsExportControllerSpec extends PlaySpec {
           ManifestDateOfArrival(date),
           ManifestTimeOfArrival("05:00"),
           List(
-            PassengerInfoJson(Option(DocumentType("P")),
+            PassengerInfoJson(
+              Option(DocumentType("P")),
               Nationality("GBR"),
               EeaFlag("EEA"),
               Option(PaxAge(19)),
               Option(PortCode("LHR")),
               InTransit("N"),
               Option(Nationality("GBR")),
-              Option(Nationality("GBR")), None),
-            PassengerInfoJson(Option(DocumentType("P")),
+              Option(Nationality("GBR")),
+              None
+            ),
+            PassengerInfoJson(
+              Option(DocumentType("P")),
               Nationality("GBR"),
               EeaFlag("EEA"),
               Option(PaxAge(54)),
               Option(PortCode("LHR")),
               InTransit("N"),
               Option(Nationality("GBR")),
-              Option(Nationality("GBR")), None)
-          ))
+              Option(Nationality("GBR")),
+              None
+            )
+          )
+        )
       }
 
       val creationDate = SDate("2023-11-05T12:00Z")
@@ -73,13 +88,20 @@ class FlightsExportControllerSpec extends PlaySpec {
 
       drtSystemInterface.applicationService.manifestsRouterActorReadOnly ! manifestFeedSuccess
 
-      val result = Await.ready(controller.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString = "2023-11-06",
-        pointInTime = SDate("2023-11-06T00:00").millisSinceEpoch,
-        terminalName = "T1")
-        .apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
-          "X-Forwarded-Preferred-Username" -> "test",
-          "X-Forwarded-User" -> "test",
-          "X-Forwarded-Groups" -> s"TEST,${ApiView.name}")), 1.second)
+      val result = Await.ready(
+        controller.exportFlightsWithSplitsForDayAtPointInTimeCSV(
+          localDateString = "2023-11-06",
+          pointInTime = SDate("2023-11-06T00:00").millisSinceEpoch,
+          terminalName = "T1"
+        )
+          .apply(FakeRequest().withHeaders(
+            "X-Forwarded-Email" -> "test@test.com",
+            "X-Forwarded-Preferred-Username" -> "test",
+            "X-Forwarded-User" -> "test",
+            "X-Forwarded-Groups" -> s"TEST,${ApiView.name}"
+          )),
+        1.second
+      )
 
       status(result) mustBe OK
 

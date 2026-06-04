@@ -4,20 +4,20 @@ import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import org.apache.pekko.http.scaladsl.model._
-import org.apache.pekko.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import org.apache.pekko.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.cwl._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed }
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{ T1, T2 }
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.xml.{NodeSeq, XML}
+import scala.concurrent.{ Await, Future }
+import scala.xml.{ NodeSeq, XML }
 
 class CWLFeedSpec extends CrunchTestLike {
   sequential
@@ -123,15 +123,17 @@ class CWLFeedSpec extends CrunchTestLike {
     result === 0
   }
 
-  case class CWLMockClient(xmlResponse: String, cwlLiveFeedUser: String = "", soapEndPoint: String = "") extends CWLClientLike {
+  case class CWLMockClient(xmlResponse: String, cwlLiveFeedUser: String = "", soapEndPoint: String = "")
+      extends CWLClientLike {
 
-
-    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                   (implicit system: ActorSystem): Future[HttpResponse] = Future(HttpResponse(
+    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+        system: ActorSystem
+    ): Future[HttpResponse] = Future(HttpResponse(
       entity = HttpEntity(
         contentType = ContentType(MediaTypes.`application/xml`, HttpCharsets.`UTF-8`),
         xmlResponse
-      )))
+      )
+    ))
   }
 
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" >> {
@@ -141,11 +143,52 @@ class CWLFeedSpec extends CrunchTestLike {
       .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     result === List(
-      LiveArrival(Some("TOM"), Some(189), None, None, T1, 7623, "TOM", None, "PFO", None, 1535842800000L, None, Some(1535842800000L), None, Some(1535843100000L), "ARR", Some("44"), Some("54L"), None, None),
-      LiveArrival(Some("FR"), Some(189), None, None, T2, 8045, "FR", None, "CHQ", None, 1537311600000L, None, Some(1537311600000L), None, Some(1537311900000L), "ARR", Some("1"), Some("1"), None, None)
+      LiveArrival(
+        Some("TOM"),
+        Some(189),
+        None,
+        None,
+        T1,
+        7623,
+        "TOM",
+        None,
+        "PFO",
+        None,
+        1535842800000L,
+        None,
+        Some(1535842800000L),
+        None,
+        Some(1535843100000L),
+        "ARR",
+        Some("44"),
+        Some("54L"),
+        None,
+        None
+      ),
+      LiveArrival(
+        Some("FR"),
+        Some(189),
+        None,
+        None,
+        T2,
+        8045,
+        "FR",
+        None,
+        "CHQ",
+        None,
+        1537311600000L,
+        None,
+        Some(1537311600000L),
+        None,
+        Some(1537311900000L),
+        "ARR",
+        Some("1"),
+        Some("1"),
+        None,
+        None
+      )
     )
   }
-
 
   "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" >> {
     val client = CWLMockClient(rateLimitReachedResponse)
@@ -163,12 +206,18 @@ class CWLFeedSpec extends CrunchTestLike {
     result must haveClass[ArrivalsFeedFailure]
   }
 
-  case class CWLMockClientWithUpdates(initialResponses: List[ArrivalsFeedResponse], updateResponses: List[ArrivalsFeedResponse]) extends CWLClientLike {
+  case class CWLMockClientWithUpdates(
+      initialResponses: List[ArrivalsFeedResponse],
+      updateResponses: List[ArrivalsFeedResponse]
+  ) extends CWLClientLike {
 
     var mockInitialResponse: immutable.Seq[ArrivalsFeedResponse] = initialResponses
     var mockUpdateResponses: immutable.Seq[ArrivalsFeedResponse] = updateResponses
 
-    override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = mockInitialResponse match {
+    override def initialFlights(implicit
+        actorSystem: ActorSystem,
+        materializer: Materializer
+    ): Future[ArrivalsFeedResponse] = mockInitialResponse match {
       case head :: tail =>
         mockInitialResponse = tail
         Future(head)
@@ -176,7 +225,10 @@ class CWLFeedSpec extends CrunchTestLike {
         Future(ArrivalsFeedFailure("No more mock esponses"))
     }
 
-    override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] =
+    override def updateFlights(implicit
+        actorSystem: ActorSystem,
+        materializer: Materializer
+    ): Future[ArrivalsFeedResponse] =
       mockUpdateResponses match {
         case head :: tail =>
           mockUpdateResponses = tail
@@ -186,8 +238,9 @@ class CWLFeedSpec extends CrunchTestLike {
           Future(ArrivalsFeedFailure("No more mock esponses"))
       }
 
-    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                   (implicit system: ActorSystem): Future[HttpResponse] = ???
+    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit
+        system: ActorSystem
+    ): Future[HttpResponse] = ???
 
     override val cwlLiveFeedUser: String = ""
     override val soapEndPoint: String = ""
@@ -243,7 +296,8 @@ class CWLFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T23:00:00.000Z</OperationTime>
           |</LegData>
-          """.stripMargin)
+          """.stripMargin
+      )
 
     val expected = "2018-09-01T23:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -260,8 +314,8 @@ class CWLFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-          """.stripMargin)
-
+          """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -278,7 +332,8 @@ class CWLFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-          """.stripMargin)
+          """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -295,7 +350,8 @@ class CWLFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-          """.stripMargin)
+          """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
@@ -312,8 +368,8 @@ class CWLFeedSpec extends CrunchTestLike {
           |   <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
           |   <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="ACT">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
-          """.stripMargin)
-
+          """.stripMargin
+      )
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"

@@ -5,12 +5,16 @@ import play.api.mvc.InjectedController
 import uk.gov.homeoffice.drt.ShiftMeta
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.{LegacyShiftAssignmentsService, ShiftAssignmentsService, ShiftMetaInfoService}
+import uk.gov.homeoffice.drt.service.staffing.{
+  LegacyShiftAssignmentsService,
+  ShiftAssignmentsService,
+  ShiftMetaInfoService
+}
 import uk.gov.homeoffice.drt.time.SDate
 
 import java.sql.Timestamp
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.{ Inject, Singleton }
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait IShiftMetaInfoMigration {
 
@@ -40,7 +44,12 @@ trait IShiftMetaInfoMigration {
     }
   }
 
-  private def markMigrationRecord(port: String, terminal: Terminal, now: Timestamp, shiftMetaInfoService: ShiftMetaInfoService): Future[Any] = {
+  private def markMigrationRecord(
+      port: String,
+      terminal: Terminal,
+      now: Timestamp,
+      shiftMetaInfoService: ShiftMetaInfoService
+  ): Future[Any] = {
     shiftMetaInfoService.insertShiftMetaInfo(ShiftMeta(port, terminal.toString, Some(now.getTime))).map { _ =>
       log.info(s"Marked shift meta info for $port $terminal")
     }.recover {
@@ -50,8 +59,10 @@ trait IShiftMetaInfoMigration {
     }
   }
 
-
-  def checkAndMarkShiftAssignmentsMigration(dateTime: Long, shiftMetaInfoService: ShiftMetaInfoService): Future[Seq[Any]] = {
+  def checkAndMarkShiftAssignmentsMigration(
+      dateTime: Long,
+      shiftMetaInfoService: ShiftMetaInfoService
+  ): Future[Seq[Any]] = {
     val now = new java.sql.Timestamp(dateTime)
     val port = ctrl.airportConfig.portCode.iata
     val terminals: Seq[Terminal] = ctrl.airportConfig.terminalsForDate(SDate(dateTime).toLocalDate).toSeq
@@ -84,11 +95,12 @@ trait IShiftMetaInfoMigration {
 }
 
 @Singleton
-class ShiftMetaInfoMigrationController @Inject()(
-                                                  override val ctrl: DrtSystemInterface,
-                                                  override val legacyShiftAssignmentsService: LegacyShiftAssignmentsService,
-                                                  override val shiftAssignmentsService: ShiftAssignmentsService)(implicit val ec: ExecutionContext)
-  extends InjectedController with IShiftMetaInfoMigration {
+class ShiftMetaInfoMigrationController @Inject() (
+    override val ctrl: DrtSystemInterface,
+    override val legacyShiftAssignmentsService: LegacyShiftAssignmentsService,
+    override val shiftAssignmentsService: ShiftAssignmentsService
+)(implicit val ec: ExecutionContext)
+    extends InjectedController with IShiftMetaInfoMigration {
 
   checkAndMarkShiftAssignmentsMigration(System.currentTimeMillis(), ctrl.shiftMetaInfoService)
 }

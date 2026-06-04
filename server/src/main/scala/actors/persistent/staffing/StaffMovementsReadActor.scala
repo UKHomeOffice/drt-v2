@@ -1,14 +1,19 @@
 package actors.persistent.staffing
 
 import actors.persistent.staffing.StaffMovementsActor.staffMovementMessagesToStaffMovements
-import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import org.apache.pekko.persistence.{ Recovery, SnapshotSelectionCriteria }
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{
+  RemoveStaffMovementMessage,
+  StaffMovementsMessage,
+  StaffMovementsStateSnapshotMessage
+}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 class StaffMovementsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike)
-  extends StaffMovementsActor(() => pointInTime, expireBefore) {
+    extends StaffMovementsActor(() => pointInTime, expireBefore) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: StaffMovementsStateSnapshotMessage => state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
+    case snapshot: StaffMovementsStateSnapshotMessage =>
+      state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

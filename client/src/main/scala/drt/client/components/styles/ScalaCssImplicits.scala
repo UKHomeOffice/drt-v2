@@ -12,7 +12,7 @@ import scala.scalajs.js.Dictionary
 import scala.scalajs.js.JSConverters.JSRichOption
 import scala.scalajs.js.JSNumberOps.enableJSNumberOps
 
-trait WithScalaCssImplicits extends ScalaCssReactImplicits{
+trait WithScalaCssImplicits extends ScalaCssReactImplicits {
 
   val CssSettings: Exports with Settings = scalacss.devOrProdDefaults
 
@@ -38,7 +38,7 @@ trait WithScalaCssImplicits extends ScalaCssReactImplicits{
       // Map CSS property name to react style naming convention.
       // For example: padding-top => paddingTop
       val propertyName = property.attr.id.split("-") match {
-        case Array(head, other@_*) => head + other.map(_.capitalize).mkString
+        case Array(head, other @ _*) => head + other.map(_.capitalize).mkString
       }
       result(propertyName) = property.value
     }

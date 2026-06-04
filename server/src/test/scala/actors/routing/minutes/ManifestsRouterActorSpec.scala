@@ -3,27 +3,27 @@ package actors.routing.minutes
 import actors.ManifestLookupsLike
 import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.staffing.GetFeedStatuses
-import actors.persistent.{ApiFeedState, ManifestRouterActor}
-import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
+import actors.persistent.{ ApiFeedState, ManifestRouterActor }
+import actors.routing.minutes.MinutesActorLike.{ ManifestLookup, ManifestsUpdate }
+import drt.server.feeds.{ DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
-import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.{ ActorRef, ActorSystem, Props }
 import org.apache.pekko.pattern.ask
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{ Sink, Source }
 import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.arrivals.{ CarrierCode, EventTypes, VoyageNumber }
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses }
 import uk.gov.homeoffice.drt.models._
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode, Terminals}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.ports.{ ApiFeedSource, PaxAge, PortCode, Terminals }
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike, UtcDate }
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class ManifestsRouterActorSpec extends CrunchTestLike {
 
@@ -129,7 +129,8 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       "Then it should respond with the feed statuses when asked" >> {
         manifestRouterActor ! manifestFeedFailure
 
-        val result: Option[FeedSourceStatuses] = Await.result(manifestRouterActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]], 1.second)
+        val result: Option[FeedSourceStatuses] =
+          Await.result(manifestRouterActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]], 1.second)
 
         result === Option(
           FeedSourceStatuses(
@@ -151,9 +152,15 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val testProbe = TestProbe()
       val manifestRouterActor = manifestRouterActorWithTestProbe(testProbe)
 
-      val result = Await.result(manifestRouterActor.ask(
-        ManifestRouterActor.GetManifestsForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
-      ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]], 1.second)
+      val result = Await.result(
+        manifestRouterActor.ask(
+          ManifestRouterActor.GetManifestsForDateRange(
+            SDate("2020-11-01T00:00Z").millisSinceEpoch,
+            SDate("2020-11-02T23:59Z").millisSinceEpoch
+          )
+        ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]],
+        1.second
+      )
 
       result.runWith(Sink.seq)
 
@@ -169,13 +176,18 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestRouterActor = manifestRouterActorWithTestProbe(testProbe)
 
       val pit = SDate("2020-11-05T00:00Z").millisSinceEpoch
-      val result = Await.result(manifestRouterActor.ask(
-        PointInTimeQuery(
-          pit,
-          ManifestRouterActor.GetManifestsForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
-        )
-
-      ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]], 1.second)
+      val result = Await.result(
+        manifestRouterActor.ask(
+          PointInTimeQuery(
+            pit,
+            ManifestRouterActor.GetManifestsForDateRange(
+              SDate("2020-11-01T00:00Z").millisSinceEpoch,
+              SDate("2020-11-02T23:59Z").millisSinceEpoch
+            )
+          )
+        ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]],
+        1.second
+      )
 
       result.runWith(Sink.seq)
 
@@ -210,16 +222,16 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       val expected = Seq(
         (UtcDate(2020, 11, 1), VoyageManifests(Set(manifest1))),
-        (UtcDate(2020, 11, 2), VoyageManifests(Set(manifest2))),
+        (UtcDate(2020, 11, 2), VoyageManifests(Set(manifest2)))
       )
 
       result === expected
     }
   }
 
-
   def manifestForDate(date: String): VoyageManifest = {
-    VoyageManifest(EventTypes.DC,
+    VoyageManifest(
+      EventTypes.DC,
       defaultAirportConfig.portCode,
       PortCode("JFK"),
       VoyageNumber("0001"),
@@ -230,9 +242,27 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
         PassengerInfoJson(
           Option(DocumentType("P")),
           Nationality("GBR"),
-          EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None),
-        PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-      ))
+          EeaFlag("EEA"),
+          Option(PaxAge(11)),
+          Option(PortCode("LHR")),
+          InTransit("N"),
+          Option(Nationality("GBR")),
+          Option(Nationality("GBR")),
+          None
+        ),
+        PassengerInfoJson(
+          Option(DocumentType("P")),
+          Nationality("GBR"),
+          EeaFlag("EEA"),
+          Option(PaxAge(11)),
+          Option(PortCode("LHR")),
+          InTransit("N"),
+          Option(Nationality("GBR")),
+          Option(Nationality("GBR")),
+          None
+        )
+      )
+    )
   }
 
   def manifestRouterActorWithTestProbe(probe: TestProbe): ActorRef = {

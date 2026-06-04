@@ -5,7 +5,7 @@ import org.apache.pekko.testkit.TestProbe
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
 
 class StaffMinutesCheckerSpec extends Specification {
   "Given a StaffMinutesChecker with LHR's config and max-forecast-days of 2" >> {

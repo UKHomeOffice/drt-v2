@@ -2,24 +2,39 @@ package actors.persistent.arrivals
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import org.apache.pekko.actor.Props
-import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.persistence.{ Recovery, SnapshotSelectionCriteria }
 import drt.shared.FeedSourceArrival
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, UniqueArrival }
+import uk.gov.homeoffice.drt.ports.Terminals.{ A1, A2, T1, Terminal }
+import uk.gov.homeoffice.drt.ports.{ FeedSource, PortCode }
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{
+  FlightMessage,
+  FlightStateSnapshotMessage,
+  FlightsDiffMessage
+}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.flightMessageToApiFlight
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object ArrivalLookupActor {
-  def props(portCode: PortCode, pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceId: String, feedSource: FeedSource): Props = Props(
+  def props(
+      portCode: PortCode,
+      pointInTime: SDateLike,
+      arrivalToLookup: UniqueArrival,
+      persistenceId: String,
+      feedSource: FeedSource
+  ): Props = Props(
     new ArrivalLookupActor(portCode, pointInTime, arrivalToLookup, persistenceId, feedSource)
   )
 }
 
-class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceIdString: String, feedSource: FeedSource)
-  extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
+class ArrivalLookupActor(
+    portCode: PortCode,
+    pointInTime: SDateLike,
+    arrivalToLookup: UniqueArrival,
+    persistenceIdString: String,
+    feedSource: FeedSource
+) extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
   override def persistenceId: String = persistenceIdString
 
   def now: () => SDateLike = () => pointInTime
@@ -39,7 +54,7 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
   private def maybeMatchingArrivalMessage(msg: FlightMessage, toLookup: UniqueArrival): Option[FlightMessage] = {
     val flightNumber = msg.iATA.getOrElse("") match {
       case Arrival.flightCodeRegex(_, numeric, _) => numeric.toInt
-      case _ => -1
+      case _                                      => -1
     }
     val origin = PortCode(msg.origin.getOrElse(""))
     val scheduled = msg.scheduled.getOrElse(0L)
@@ -68,7 +83,7 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff@FlightsDiffMessage(Some(createdMillis), _, _, _) =>
+    case diff @ FlightsDiffMessage(Some(createdMillis), _, _, _) =>
       if (createdMillis <= pointInTime.millisSinceEpoch) consumeDiffsMessage(diff)
     case _ =>
   }

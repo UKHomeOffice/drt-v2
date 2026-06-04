@@ -2,20 +2,21 @@ package services
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.GetFeedStatuses
-import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.{ Actor, ActorRef, Props }
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatuses}
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStatuses }
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class MockFeedsActor(lastUpdated: MillisSinceEpoch) extends Actor {
   override def receive: Receive = {
-    case GetFeedStatuses => sender() ! FeedSourceStatuses(ApiFeedSource, FeedStatuses(List(), Option(lastUpdated), None, None))
+    case GetFeedStatuses => sender() !
+        FeedSourceStatuses(ApiFeedSource, FeedStatuses(List(), Option(lastUpdated), None, None))
   }
 }
 
@@ -55,7 +56,10 @@ class HealthCheckerSpec extends CrunchTestLike {
 
   "Given a HealthChecker with feeds threshold of 20 mins and response threshold of 5 seconds" >> {
     MockNow.currentNow = myNow().addMinutes(-5)
-    val hc = HealthChecker(Seq(ActorResponseTimeHealthCheck(quickPsActor, 5000), FeedsHealthCheck(List(goodFeedActor), 20.minutes, Map(), myNow, feedsGracePeriod60Mins)))
+    val hc = HealthChecker(Seq(
+      ActorResponseTimeHealthCheck(quickPsActor, 5000),
+      FeedsHealthCheck(List(goodFeedActor), 20.minutes, Map(), myNow, feedsGracePeriod60Mins)
+    ))
     MockNow.currentNow = myNow()
 
     "When a feed actor returns a last checked within the threshold" >> {
@@ -80,7 +84,13 @@ class HealthCheckerSpec extends CrunchTestLike {
 
     "When a feed actor returns a last checked of more minutes (21) than the threshold (20) and we're still in the grace period" >> {
       MockNow.currentNow = myNow().addMinutes(-5)
-      val hc = HealthChecker(Seq(FeedsHealthCheck(List(lateFeedActor), 20.minutes, Map(), MockNow.now, feedsGracePeriod60Mins)))
+      val hc = HealthChecker(Seq(FeedsHealthCheck(
+        List(lateFeedActor),
+        20.minutes,
+        Map(),
+        MockNow.now,
+        feedsGracePeriod60Mins
+      )))
       MockNow.currentNow = myNow()
 
       "I should get a passing health check" >> {
@@ -90,7 +100,13 @@ class HealthCheckerSpec extends CrunchTestLike {
 
     "When a feed actor returns a last checked of more minutes (21) than the threshold (20), and we're outside the grace period" >> {
       MockNow.currentNow = myNow().addMinutes(-65)
-      val hc = HealthChecker(Seq(FeedsHealthCheck(List(lateFeedActor), 20.minutes, Map(), MockNow.now, feedsGracePeriod60Mins)))
+      val hc = HealthChecker(Seq(FeedsHealthCheck(
+        List(lateFeedActor),
+        20.minutes,
+        Map(),
+        MockNow.now,
+        feedsGracePeriod60Mins
+      )))
       MockNow.currentNow = myNow()
 
       "I should get a failing health check" >> {
@@ -100,7 +116,13 @@ class HealthCheckerSpec extends CrunchTestLike {
 
     "When a feed actor returns a last checked of more minutes (21) than the default threshold (20), but less than the feed's threshold (25) and the port state comes back " >> {
       MockNow.currentNow = myNow().addMinutes(-65)
-      val hc = HealthChecker(Seq(FeedsHealthCheck(List(lateFeedActor), 20.minutes, Map(ApiFeedSource -> 25.minutes), MockNow.now, feedsGracePeriod60Mins)))
+      val hc = HealthChecker(Seq(FeedsHealthCheck(
+        List(lateFeedActor),
+        20.minutes,
+        Map(ApiFeedSource -> 25.minutes),
+        MockNow.now,
+        feedsGracePeriod60Mins
+      )))
       MockNow.currentNow = myNow()
 
       "I should get a passing health check" >> {

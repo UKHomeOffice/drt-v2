@@ -1,23 +1,29 @@
 package services
 
-import org.renjin.sexp.{DoubleVector, IntVector}
-import org.slf4j.{Logger, LoggerFactory}
+import org.renjin.sexp.{ DoubleVector, IntVector }
+import org.slf4j.{ Logger, LoggerFactory }
 
 import java.io.InputStream
-import javax.script.{ScriptEngine, ScriptEngineManager}
+import javax.script.{ ScriptEngine, ScriptEngineManager }
 import scala.collection.immutable.IndexedSeq
 import scala.util.Try
 
-case class OptimizerCrunchResult(recommendedDesks: IndexedSeq[Int],
-                                 waitTimes: Seq[Int],
-                                 paxInQueue: IndexedSeq[Double],
-                                )
+case class OptimizerCrunchResult(
+    recommendedDesks: IndexedSeq[Int],
+    waitTimes: Seq[Int],
+    paxInQueue: IndexedSeq[Double]
+)
 
 object TryRenjin {
   val log: Logger = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
 
-  def crunch(workloads: Iterable[Double], minDesks: Iterable[Int], maxDesks: Iterable[Int], config: OptimiserConfig): Try[OptimizerCrunchResult] = {
+  def crunch(
+      workloads: Iterable[Double],
+      minDesks: Iterable[Int],
+      maxDesks: Iterable[Int],
+      config: OptimiserConfig
+  ): Try[OptimizerCrunchResult] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
@@ -28,7 +34,12 @@ object TryRenjin {
   }
 
   case class Optimizer(engine: ScriptEngine) {
-    def crunch(workloads: Iterable[Double], minDesks: Iterable[Int], maxDesks: Iterable[Int], config: OptimiserConfig): Try[OptimizerCrunchResult] = {
+    def crunch(
+        workloads: Iterable[Double],
+        minDesks: Iterable[Int],
+        maxDesks: Iterable[Int],
+        config: OptimiserConfig
+    ): Try[OptimizerCrunchResult] = {
       val tryCrunchRes = Try {
         loadOptimiserScript
         initialiseWorkloads(workloads)
@@ -43,14 +54,18 @@ object TryRenjin {
         engine.put("weight_sla", 10)
 
         val adjustedXMax = if (workloads.size > 60) {
-          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
+          engine.eval(
+            "rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)"
+          )
           val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
           fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
         } else maxDesks
 
         engine.put("adjustedXMax", adjustedXMax.toArray)
 
-        engine.eval("optimised <- optimise.win(w, xmin=xmin, xmax=adjustedXMax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)")
+        engine.eval(
+          "optimised <- optimise.win(w, xmin=xmin, xmax=adjustedXMax, sla=sla, weight.churn=weight_churn, weight.pax=weight_pax, weight.staff=weight_staff, weight.sla=weight_sla)"
+        )
 
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map deskRecs.getElementAsInt

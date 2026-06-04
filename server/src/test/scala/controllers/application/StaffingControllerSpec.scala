@@ -7,14 +7,19 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
-import play.api.mvc.{AnyContentAsEmpty, AnyContentAsText, Headers}
+import play.api.mvc.{ AnyContentAsEmpty, AnyContentAsText, Headers }
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, LegacyShiftAssignmentsService, ShiftAssignmentsService, StaffMovementsService}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.service.staffing.{
+  FixedPointsService,
+  LegacyShiftAssignmentsService,
+  ShiftAssignmentsService,
+  StaffMovementsService
+}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDate, SDateLike }
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -27,7 +32,10 @@ case class MockFixedPointsService(fixedPoints: Seq[StaffAssignmentLike]) extends
 }
 
 case class MockStaffMovementsService(movements: Seq[StaffMovement]) extends StaffMovementsService {
-  override def movementsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]] =
+  override def movementsForDate(
+      date: LocalDate,
+      maybePointInTime: Option[MillisSinceEpoch]
+  ): Future[Seq[StaffMovement]] =
     Future.successful(movements)
 
   override def addMovements(movements: List[StaffMovement]): Future[Done.type] = Future.successful(Done)
@@ -39,13 +47,20 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
-
   val now: () => SDateLike = () => SDate("2024-06-26T12:00")
 
   val fixedPoints: Seq[StaffAssignmentLike] =
-    Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None))
+    Seq(StaffAssignment(
+      "assignment",
+      T1,
+      SDate("2024-07-01T05:00").millisSinceEpoch,
+      SDate("2024-07-01T12:00").millisSinceEpoch,
+      1,
+      None
+    ))
 
-  val movements: Seq[StaffMovement] = Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
+  val movements: Seq[StaffMovement] =
+    Seq(StaffMovement(T1, "some reason", SDate("2024-07-01T05:00").millisSinceEpoch, 1, "abc", None, None))
 
   val staffingController: StaffingController = newStaffingController(newDrtInterface())
 
@@ -66,7 +81,12 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:edit,LHR")
       val result = staffingController
         .saveFixedPoints
-        .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(FixedPointAssignments(fixedPoints)))))
+        .apply(FakeRequest(
+          method = "POST",
+          uri = "",
+          headers = authHeader,
+          body = AnyContentAsText(write(FixedPointAssignments(fixedPoints)))
+        ))
 
       status(result) must ===(ACCEPTED)
     }
@@ -132,7 +152,8 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(OK)
       contentAsString(result) must ===(
         """Terminal,Reason,Time,Staff Change,Made by
-          |T1,some reason,2024-07-01 06:00,1,""".stripMargin)
+          |T1,some reason,2024-07-01 06:00,1,""".stripMargin
+      )
     }
   }
 
@@ -186,11 +207,10 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       Helpers.stubControllerComponents(),
       interface,
       MockFixedPointsService(fixedPoints),
-      MockStaffMovementsService(movements),
+      MockStaffMovementsService(movements)
     )
 
   private def newDrtInterface(): DrtSystemInterface = {
     new TestDrtModule(Lhr.config).provideDrtSystemInterface
   }
 }
-

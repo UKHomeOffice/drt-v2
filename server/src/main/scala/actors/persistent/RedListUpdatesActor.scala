@@ -1,6 +1,6 @@
 package actors.persistent
 
-import actors.persistent.RedListUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
+import actors.persistent.RedListUpdatesActor.{ AddSubscriber, ReceivedSubscriberAck, SendToSubscriber }
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.RedListUpdatesMessageConversion
 import org.apache.pekko.persistence._
@@ -8,17 +8,21 @@ import org.apache.pekko.stream.QueueOfferResult.Enqueued
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import org.apache.pekko.util.Timeout
 import drt.shared.redlist._
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
-import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
-import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
-import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.actor.{ PersistentDrtActor, RecoveryActorLike }
+import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates.{
+  RedListUpdatesMessage,
+  RemoveUpdateMessage,
+  SetRedListUpdateMessage
+}
+import uk.gov.homeoffice.drt.redlist.{ DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate }
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 object RedListUpdatesActor {
   case class AddSubscriber(subscriber: SourceQueueWithComplete[List[RedListUpdateCommand]])
@@ -77,7 +81,7 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
         if (!awaitingSubscriberAck) {
           if (subscriberMessageQueue.nonEmpty) {
             log.info("Sending red list updates to subscriber")
-            sub.offer(subscriberMessageQueue).onComplete{
+            sub.offer(subscriberMessageQueue).onComplete {
               case Success(result) =>
                 if (result != Enqueued) log.error(s"Failed to enqueue red list updates")
                 self ! ReceivedSubscriberAck

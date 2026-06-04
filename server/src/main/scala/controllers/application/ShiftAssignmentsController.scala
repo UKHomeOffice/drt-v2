@@ -2,21 +2,21 @@ package controllers.application
 
 import drt.shared.ShiftAssignments
 import play.api.mvc._
-import uk.gov.homeoffice.drt.auth.Roles.{FixedPointsView, StaffEdit}
+import uk.gov.homeoffice.drt.auth.Roles.{ FixedPointsView, StaffEdit }
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.ShiftAssignmentsService
 import uk.gov.homeoffice.drt.time.SDate
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import javax.inject._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.implicitConversions
 
-
-class ShiftAssignmentsController @Inject()(cc: ControllerComponents,
-                                           ctrl: DrtSystemInterface,
-                                           shiftAssignmentsService: ShiftAssignmentsService,
-                                          )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
+class ShiftAssignmentsController @Inject() (
+    cc: ControllerComponents,
+    ctrl: DrtSystemInterface,
+    shiftAssignmentsService: ShiftAssignmentsService
+)(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
   def getShiftAssignmentsForDate(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate

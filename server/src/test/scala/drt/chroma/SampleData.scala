@@ -1,33 +1,81 @@
 package drt.chroma
 
-import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
+import org.apache.pekko.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse, StatusCodes }
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 
 trait SampleData {
 
-  val flight1: ChromaLiveFlight = ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
+  val flight1: ChromaLiveFlight = ChromaLiveFlight(
+    "Tnt Airways Sa",
+    "On Chocks",
     "2016-08-04T04:40:00Z",
     "2016-08-04T04:37:00Z",
     "",
-    "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-    1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
+    "2016-08-04T04:53:00Z",
+    "",
+    "207",
+    0,
+    0,
+    0,
+    "24",
+    "",
+    1200980,
+    "EDI",
+    "FRT",
+    "TAY025N",
+    "3V025N",
+    "LGG",
+    "2016-08-04T04:35:00Z"
   )
-  val flight2 = ChromaLiveFlight("Star Air", "On Chocks", "", "2016-08-04T05:32:00Z", "",
-    "2016-08-04T05:41:00Z", "", "212",
-    0, 0, 0, "24", "", 1200986, "EDI",
-    "FRT", "SRR6566", "S66566", "CGN",
-    "2016-08-04T05:15:00Z")
-  val flightWithUnknownStatus: ChromaLiveFlight = ChromaLiveFlight("Tnt Airways Sa", "Non existent status",
+  val flight2 = ChromaLiveFlight(
+    "Star Air",
+    "On Chocks",
+    "",
+    "2016-08-04T05:32:00Z",
+    "",
+    "2016-08-04T05:41:00Z",
+    "",
+    "212",
+    0,
+    0,
+    0,
+    "24",
+    "",
+    1200986,
+    "EDI",
+    "FRT",
+    "SRR6566",
+    "S66566",
+    "CGN",
+    "2016-08-04T05:15:00Z"
+  )
+  val flightWithUnknownStatus: ChromaLiveFlight = ChromaLiveFlight(
+    "Tnt Airways Sa",
+    "Non existent status",
     "2016-08-04T04:40:00Z",
     "2016-08-04T04:37:00Z",
     "",
-    "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-    1200980, "EDI", "T1", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
+    "2016-08-04T04:53:00Z",
+    "",
+    "207",
+    0,
+    0,
+    0,
+    "24",
+    "",
+    1200980,
+    "EDI",
+    "T1",
+    "TAY025N",
+    "3V025N",
+    "LGG",
+    "2016-08-04T04:35:00Z"
   )
 
   val successfulChromaResponse1 = HttpResponse(
     status = StatusCodes.OK,
-    entity = HttpEntity(ContentTypes.`application/json`,
+    entity = HttpEntity(
+      ContentTypes.`application/json`,
       """
         |[
         |  {
@@ -75,12 +123,15 @@ trait SampleData {
         |    "SchDT": "2016-08-04T05:15:00Z"
         |  }
         |  ]
-      """.stripMargin))
+      """.stripMargin
+    )
+  )
 
   val successfulChromaResponse2 =
     HttpResponse(
       status = StatusCodes.OK,
-      entity = HttpEntity(ContentTypes.`application/json`,
+      entity = HttpEntity(
+        ContentTypes.`application/json`,
         """
           |[{
           |    "Operator": "Klm",
@@ -104,7 +155,9 @@ trait SampleData {
           |    "Origin": "AMS",
           |    "SchDT": "2016-08-04T16:00:00Z"
           |}]
-        """.stripMargin))
+        """.stripMargin
+      )
+    )
 }
 
 object SampleData extends SampleData

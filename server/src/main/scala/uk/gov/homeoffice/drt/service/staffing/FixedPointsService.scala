@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import drt.shared.{FixedPointAssignments, StaffAssignmentLike}
+import drt.shared.{ FixedPointAssignments, StaffAssignmentLike }
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
 
 import scala.concurrent.Future

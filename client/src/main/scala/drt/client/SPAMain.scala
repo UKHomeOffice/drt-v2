@@ -4,29 +4,51 @@ import diode.Action
 import diode.data.Pot
 import diode.react.ReactConnectProxy
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Hourly, Recommended, Quarterly, TableView, TimeInterval}
+import drt.client.components.TerminalDesksAndQueues.{
+  ChartsView,
+  Deployments,
+  DeskType,
+  DisplayType,
+  Hourly,
+  Quarterly,
+  Recommended,
+  TableView,
+  TimeInterval
+}
 import drt.client.components.styles._
-import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
+import drt.client.components.{
+  AccessibilityStatementComponent,
+  FeedsStatusPage,
+  ForecastUploadComponent,
+  GlobalStyles,
+  IAccessibilityStatementProps,
+  Layout,
+  PortConfigPage,
+  PortDashboardPage,
+  TerminalComponent,
+  TrainingHubComponent,
+  UserDashboardPage
+}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.{GetFeedSourceStatuses, GetUserPreferences}
-import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing}
-import drt.client.spa.{TerminalPageMode, TerminalPageModes}
+import drt.client.services.handlers.{ GetFeedSourceStatuses, GetUserPreferences }
+import drt.client.spa.TerminalPageModes.{ Current, Shifts, Staffing }
+import drt.client.spa.{ TerminalPageMode, TerminalPageModes }
 import drt.shared.DrtPortConfigs
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import org.scalajs.dom.{console, window}
+import org.scalajs.dom.{ console, window }
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, PortCode }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import scala.scalajs.js.annotation.{ JSExport, JSExportTopLevel }
 import scala.util.Try
 
 object SPAMain {
@@ -35,7 +57,7 @@ object SPAMain {
 
     def href: String = window.location.href.split("#").headOption match {
       case Some(head) => head + url
-      case None => url
+      case None       => url
     }
 
     val portCodeStr: String = dom.document.getElementById("port-code").getAttribute("value")
@@ -73,7 +95,6 @@ object SPAMain {
     override val paramName = "time"
   }
 
-
   object UrlDateParameter extends UrlDateLikeParameter {
     override val paramName = "date"
   }
@@ -98,7 +119,7 @@ object SPAMain {
       override val value: Option[String] = timeInterval.map {
         case "30" => "30"
         case "15" => "15"
-        case _ => "60"
+        case _    => "60"
       }
     }
   }
@@ -137,7 +158,7 @@ object SPAMain {
   case class AccessibilityStatementLoc(section: Option[String] = None) extends Loc {
     override val url: String = section match {
       case Some(s) => s"$AccessibilityStatementLoc.hashValue/$s"
-      case None => AccessibilityStatementLoc.hashValue
+      case None    => AccessibilityStatementLoc.hashValue
     }
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Accessibility Statement", maybeTerminal)
@@ -146,31 +167,35 @@ object SPAMain {
   object TerminalPageTabLoc {
     val hashValue: String = "#terminal"
 
-    def apply(terminalName: String,
-              mode: TerminalPageMode,
-              subMode: String,
-              queryParams: Map[String, String]): TerminalPageTabLoc =
+    def apply(
+        terminalName: String,
+        mode: TerminalPageMode,
+        subMode: String,
+        queryParams: Map[String, String]
+    ): TerminalPageTabLoc =
       TerminalPageTabLoc(terminalName, mode.toString, subMode, queryParams)
   }
 
-  case class TerminalPageTabLoc(terminalName: String,
-                                modeStr: String = "current",
-                                subMode: String = "arrivals",
-                                queryParams: Map[String, String] = Map.empty[String, String]
-                               ) extends Loc {
-    private val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
+  case class TerminalPageTabLoc(
+      terminalName: String,
+      modeStr: String = "current",
+      subMode: String = "arrivals",
+      queryParams: Map[String, String] = Map.empty[String, String]
+  ) extends Loc {
+    private val queryString =
+      if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
     override val url = s"${TerminalPageTabLoc.hashValue}/$terminalName/$modeStr/$subMode$queryString"
 
     def pageName = (modeStr.toLowerCase, subMode.toLowerCase) match {
-      case ("current", "arrivals") => "Arrivals"
+      case ("current", "arrivals")       => "Arrivals"
       case ("current", "desksandqueues") => "Desks and queues"
-      case ("current", "staffing") => "Staff movements"
-      case ("current", "simulations") => "Simulate day"
-      case ("dashboard", "summary") => "Terminal dashboard"
-      case ("planning", _) => "Staff planning"
-      case ("staffing", _) => "Monthly staffing"
-      case ("shifts", _) => "Shifts"
-      case _ => ""
+      case ("current", "staffing")       => "Staff movements"
+      case ("current", "simulations")    => "Simulate day"
+      case ("dashboard", "summary")      => "Terminal dashboard"
+      case ("planning", _)               => "Staff planning"
+      case ("staffing", _)               => "Monthly staffing"
+      case ("shifts", _)                 => "Shifts"
+      case _                             => ""
     }
 
     override def title(maybeTerminal: Option[Terminal]): String = title(pageName, maybeTerminal)
@@ -181,16 +206,20 @@ object SPAMain {
 
     val maybeViewDate: Option[LocalDate] = queryParams.get(UrlDateParameter.paramName)
       .filter(_.matches(".+"))
-      .flatMap(dateStr => Try {
-        val parts = dateStr.split("-")
-        LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt)
-      }.toOption)
+      .flatMap(dateStr =>
+        Try {
+          val parts = dateStr.split("-")
+          LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt)
+        }.toOption
+      )
     val maybeTimeMachineDate: Option[SDateLike] = queryParams.get(UrlTimeMachineDateParameter.paramName)
       .filter(_.matches(".+"))
       .flatMap(dateStr => Try(parseDateString(dateStr)).toOption)
     val timeSelectString: Option[String] = queryParams.get(UrlTimeSelectedParameter.paramName)
-    val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+:[0-9]+"))
-    val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+:[0-9]+[ +1]*"))
+    val timeRangeStartString: Option[String] =
+      queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+:[0-9]+"))
+    val timeRangeEndString: Option[String] =
+      queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+:[0-9]+[ +1]*"))
 
     val deskType: DeskType = queryParams.get(UrlViewType.paramName)
       .map(vt => if (Recommended.queryParamsValue == vt) Recommended else Deployments).getOrElse(Deployments)
@@ -212,9 +241,9 @@ object SPAMain {
     def withUrlParameters(urlParameters: UrlParameter*): TerminalPageTabLoc = {
       val updatedParams = urlParameters.foldLeft(queryParams) {
         case (paramsSoFar, newParam) => newParam.value match {
-          case Some(newValue) => paramsSoFar.updated(newParam.name, newValue)
-          case _ => paramsSoFar - newParam.name
-        }
+            case Some(newValue) => paramsSoFar.updated(newParam.name, newValue)
+            case _              => paramsSoFar - newParam.name
+          }
       }
       copy(queryParams = updatedParams)
     }
@@ -227,8 +256,8 @@ object SPAMain {
 
     def dateFromUrlOrNow: SDateLike = maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
 
-    def updateRequired(p: TerminalPageTabLoc): Boolean =
-      (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
+    def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) ||
+      (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
 
     def loadAction: Action = mode match {
       case Staffing | Shifts =>
@@ -237,7 +266,11 @@ object SPAMain {
         SetViewMode(viewMode)
     }
 
-    def update(mode: TerminalPageMode, subMode: String, queryParams: Map[String, String] = Map[String, String]()): TerminalPageTabLoc =
+    def update(
+        mode: TerminalPageMode,
+        subMode: String,
+        queryParams: Map[String, String] = Map[String, String]()
+    ): TerminalPageTabLoc =
       copy(modeStr = mode.asString, subMode = subMode, queryParams = queryParams)
   }
 
@@ -275,9 +308,9 @@ object SPAMain {
     override val url = s"${TrainingHubLoc.hashValue}/$modeStr"
 
     private val subTitle = modeStr match {
-      case "dropInBooking" => "Book a drop-in"
+      case "dropInBooking"    => "Book a drop-in"
       case "trainingMaterial" => "Training material"
-      case _ => ""
+      case _                  => ""
     }
 
     override def title(maybeTerminal: Option[Terminal]): String = title(s"Training hub - $subTitle", maybeTerminal)
@@ -361,7 +394,7 @@ object SPAMain {
     val url = window.location.href
     url match {
       case terminalRegex(t) => Some(Terminal(t))
-      case _ => None
+      case _                => None
     }
   }
 
@@ -374,14 +407,18 @@ object SPAMain {
 
     val proxy: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
 
-    dynamicRouteCT((AccessibilityStatementLoc.hashValue / string("[a-zA-Z0-9-]+").option).caseClass[AccessibilityStatementLoc]) ~>
+    dynamicRouteCT(
+      (AccessibilityStatementLoc.hashValue / string("[a-zA-Z0-9-]+").option).caseClass[AccessibilityStatementLoc]
+    ) ~>
       dynRenderR { case (page: AccessibilityStatementLoc, _) =>
         proxy(ac =>
           AccessibilityStatementComponent(
             IAccessibilityStatementProps(
               ac().map(_.contactEmail.toString).getOrElse(""),
               () => sendReportProblemGaEvent(ac().map(_.portCode.iata).getOrElse("")),
-              page.section.getOrElse("")))
+              page.section.getOrElse("")
+            )
+          )
         )
       }
   }
@@ -411,7 +448,9 @@ object SPAMain {
     val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
 
     dynamicRouteCT(
-      (TerminalPageTabLoc.hashValue / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
+      (TerminalPageTabLoc.hashValue / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab /
+        "" ~ queryToMap).caseClass[TerminalPageTabLoc]
+    ) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         ThemeProvider(DrtReactTheme)(TerminalComponent(props))
@@ -432,7 +471,8 @@ object SPAMain {
     val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
 
     dynamicRouteCT(
-      (TrainingHubLoc.hashValue / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
+      (TrainingHubLoc.hashValue / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]
+    ) ~>
       dynRenderR { case (page: TrainingHubLoc, router) =>
         proxy { p =>
           val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
@@ -444,7 +484,14 @@ object SPAMain {
   private def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
     val proxy = SPACircuit.connect(m =>
-      PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
+      PortConfigPage.Props(
+        m.redListUpdates,
+        m.egateBanksUpdates,
+        m.slaConfigs,
+        m.loggedInUserPot,
+        m.airportConfig,
+        m.gateStandWalkTime
+      )
     )
     staticRoute(PortConfigLoc.hashValue, PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
   }
@@ -454,7 +501,8 @@ object SPAMain {
 
     val proxy = SPACircuit.connect(_.airportConfig)
 
-    staticRoute(ForecastFileUploadLoc.hashValue, ForecastFileUploadLoc) ~> renderR(_ => proxy(ac => ForecastUploadComponent(ac())))
+    staticRoute(ForecastFileUploadLoc.hashValue, ForecastFileUploadLoc) ~>
+      renderR(_ => proxy(ac => ForecastUploadComponent(ac())))
   }
 
   val pathToThisApp: String = dom.document.location.pathname
@@ -474,13 +522,25 @@ object SPAMain {
 
   def exportUrl(exportType: ExportType, viewMode: ViewMode): String = viewMode match {
     case ViewDay(localDate, Some(tmDate)) =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$localDate/${tmDate.millisSinceEpoch}${exportType.maybeTerminal.map(t => s"/${t.toString}").getOrElse("")}")
+      SPAMain.absoluteUrl(
+        s"export/${exportType.toUrlString}/snapshot/$localDate/${tmDate.millisSinceEpoch}${exportType.maybeTerminal.map(
+            t => s"/${t.toString}"
+          ).getOrElse("")}"
+      )
     case view =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}${exportType.maybeTerminal.map(t => s"/${t.toString}").getOrElse("")}")
+      SPAMain.absoluteUrl(
+        s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}${exportType.maybeTerminal.map(
+            t => s"/${t.toString}"
+          ).getOrElse("")}"
+      )
   }
 
   def exportDatesUrl(exportType: ExportType, start: LocalDate, end: LocalDate): String =
-    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}${exportType.maybeTerminal.map(t => s"/${t.toString}").getOrElse("")}")
+    SPAMain.absoluteUrl(
+      s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}${exportType.maybeTerminal.map(t =>
+          s"/${t.toString}"
+        ).getOrElse("")}"
+    )
 
   @JSExportTopLevel("SPAMain")
   protected def getInstance(): this.type = this

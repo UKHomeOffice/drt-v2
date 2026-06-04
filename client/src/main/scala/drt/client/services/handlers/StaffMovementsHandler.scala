@@ -2,22 +2,24 @@ package drt.client.services.handlers
 
 import diode.Implicits.runAfterImpl
 import diode._
-import diode.data.{Pot, Ready}
+import diode.data.{ Pot, Ready }
 import drt.client.actions.Actions._
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay, StaffMovementMinute, ViewMode}
-import drt.shared.{StaffMovement, StaffMovements, TM}
+import drt.client.services.{ DrtApi, PollDelay, StaffMovementMinute, ViewMode }
+import drt.shared.{ StaffMovement, StaffMovements, TM }
 import drt.client.services.JSDateConversions.SDate
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
-                               modelRW: ModelRW[M, (Pot[StaffMovements], Map[TM, Seq[StaffMovementMinute]], Set[String])]) extends LoggingActionHandler(modelRW) {
+class StaffMovementsHandler[M](
+    getCurrentViewMode: () => ViewMode,
+    modelRW: ModelRW[M, (Pot[StaffMovements], Map[TM, Seq[StaffMovementMinute]], Set[String])]
+) extends LoggingActionHandler(modelRW) {
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetStaffMovements(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -45,14 +47,16 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {
         case (Ready(sms), localAdded, localRemoved) =>
-          val updatedStaffMovements = StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time))
+          val updatedStaffMovements =
+            StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time))
           updated(
             (Ready(updatedStaffMovements), localAdded, localRemoved + movementsPairUuid),
             Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
               .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
                 case _ =>
                   RetryActionAfter(RemoveStaffMovements(movementsPairUuid), PollDelay.recoveryDelay)
-              }))
+              })
+          )
 
         case _ => noChange
       }

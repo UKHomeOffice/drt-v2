@@ -17,7 +17,6 @@ class STNForecastXLSExtractorSpec extends Specification {
       )
       .toSet
 
-
     val expected = Set(
       (SDate("2020-08-03T23:00").millisSinceEpoch, "TST1001", "AGP", "INTERNATIONAL", 50),
       (SDate("2020-08-04T00:15").millisSinceEpoch, "TST1002", "DLM", "INTERNATIONAL", 50),
@@ -44,7 +43,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         flightCodeSuffix = None,
         origin = "AGP",
         previousPort = None,
-        scheduled = SDate("2020-08-03T23:00").millisSinceEpoch,
+        scheduled = SDate("2020-08-03T23:00").millisSinceEpoch
       ),
       ForecastArrival(
         operator = None,
@@ -57,7 +56,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         flightCodeSuffix = None,
         origin = "DLM",
         previousPort = None,
-        scheduled = SDate("2020-08-04T00:15").millisSinceEpoch,
+        scheduled = SDate("2020-08-04T00:15").millisSinceEpoch
       ),
       ForecastArrival(
         operator = None,
@@ -70,7 +69,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         flightCodeSuffix = None,
         origin = "CGN",
         previousPort = None,
-        scheduled = SDate("2020-08-04T06:05").millisSinceEpoch,
+        scheduled = SDate("2020-08-04T06:05").millisSinceEpoch
       ),
       ForecastArrival(
         operator = None,
@@ -83,7 +82,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         flightCodeSuffix = None,
         origin = "SXF",
         previousPort = None,
-        scheduled = SDate("2020-08-04T06:20").millisSinceEpoch,
+        scheduled = SDate("2020-08-04T06:20").millisSinceEpoch
       )
     )
     result === expected

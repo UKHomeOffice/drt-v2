@@ -5,11 +5,18 @@ import slick.lifted.ProvenShape
 import uk.gov.homeoffice.drt.training.FeatureGuide
 
 import java.sql.Timestamp
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import FeatureGuide.serializeToJsonString
 import uk.gov.homeoffice.drt.db.AggregatedDbTables
 
-case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String, published: Boolean)
+case class FeatureGuideRow(
+    id: Option[Int],
+    uploadTime: Timestamp,
+    fileName: Option[String],
+    title: Option[String],
+    markdownContent: String,
+    published: Boolean
+)
 
 class FeatureGuide(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
   def id: Rep[Option[Int]] = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
@@ -42,7 +49,8 @@ case class FeatureGuideTable(table: AggregatedDbTables) extends FeatureGuideTabl
 
   def getAll()(implicit ec: ExecutionContext): Future[String] = {
     selectAll.map(_.map(row =>
-      FeatureGuide(row.id, row.uploadTime.getTime, row.fileName, row.title, row.markdownContent, row.published))).map(serializeToJsonString)
+      FeatureGuide(row.id, row.uploadTime.getTime, row.fileName, row.title, row.markdownContent, row.published)
+    )).map(serializeToJsonString)
   }
 
   def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]] = {

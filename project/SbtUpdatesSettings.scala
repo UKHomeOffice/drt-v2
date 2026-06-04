@@ -1,16 +1,17 @@
-import com.timushev.sbt.updates.UpdatesKeys.dependencyUpdates
-import com.timushev.sbt.updates.UpdatesPlugin.autoImport.{dependencyUpdatesFailBuild, dependencyUpdatesFilter, moduleFilterRemoveValue}
-import sbt.Keys.*
-import sbt.{Def, *}
+import com.timushev.sbt.updates.UpdatesPlugin.autoImport.{
+  dependencyUpdatesFailBuild,
+  dependencyUpdatesFilter,
+  moduleFilterRemoveValue
+}
+import sbt.*
 
 object SbtUpdatesSettings {
-
-  lazy val sbtUpdatesSettings: Seq[Def.Setting[?]] = Seq(
+  val sbtUpdatesSettings: Seq[Def.Setting[?]] = Seq(
     dependencyUpdatesFailBuild := false,
-    (Compile / compile) := ((Compile / compile) dependsOn dependencyUpdates).value,
     dependencyUpdatesFilter -= moduleFilter("org.scala-lang"),
-    dependencyUpdatesFilter -= moduleFilter("org.apache.pekko")
-    //Scala and Pekko to be manually updated periodically
-    //If needed add other exclusions below
+    dependencyUpdatesFilter -= moduleFilter("org.apache.pekko"),
+    dependencyUpdatesFilter -= moduleFilter("com.typesafe.slick")
+    // Pekko and Slick updates are intentionally reviewed manually because they are higher risk in this repo.
+    // Keep them out of the default dependencyUpdates output so the report stays focused on lower-risk upgrades.
   )
 }

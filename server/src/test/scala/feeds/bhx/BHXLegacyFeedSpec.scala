@@ -8,11 +8,11 @@ import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, ForecastArrival, LiveArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 
-import java.util.{Calendar, GregorianCalendar, TimeZone}
+import java.util.{ Calendar, GregorianCalendar, TimeZone }
 import javax.xml.datatype.DatatypeFactory
 
 class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
@@ -111,7 +111,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         gate = Some("44"),
         stand = Some("57R"),
         runway = Some("R1"),
-        baggageReclaim = Some("7A"),
+        baggageReclaim = Some("7A")
       )
     }
 
@@ -134,27 +134,30 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         flightCodeSuffix = suffix.map(_.suffix),
         origin = "CPH",
         previousPort = None,
-        scheduled = 1338623160000L,
+        scheduled = 1338623160000L
       )
     }
 
-    "an exploratory test" in {
-      skipped("exploratory test for the BHX live feed")
-      val f = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
-      val soapService =
-        f.getFlightInformationSoap match {
-          case binder: BindingProvider =>
-            val endpointURL = "https://online.example.co.uk:4443/flightinformationservice/FlightInformation.asmx"
-            binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", "300000")
-            binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", "300000")
-            binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointURL)
-            binder
-          case flightInformationSoap => flightInformationSoap
-        }
-      val feed = BHXFeed(soapService)
-      feed.getLiveArrivals
-      ok
-    }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
+    "an exploratory test" in
+      {
+        skipped("exploratory test for the BHX live feed")
+        val f = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
+        val soapService =
+          f.getFlightInformationSoap match {
+            case binder: BindingProvider =>
+              val endpointURL = "https://online.example.co.uk:4443/flightinformationservice/FlightInformation.asmx"
+              binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", "300000")
+              binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", "300000")
+              binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointURL)
+              binder
+            case flightInformationSoap => flightInformationSoap
+          }
+        val feed = BHXFeed(soapService)
+        feed.getLiveArrivals
+        ok
+      }.pendingUntilFixed(
+        "used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address"
+      )
   }
 
 }

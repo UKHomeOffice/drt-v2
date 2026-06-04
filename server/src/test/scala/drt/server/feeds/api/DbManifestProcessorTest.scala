@@ -1,7 +1,7 @@
 package drt.server.feeds.api
 
 import drt.server.feeds.api.DbHelper.addPaxRecord
-import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
+import drt.server.feeds.{ DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess }
 import org.apache.pekko.Done
 import org.apache.pekko.testkit.TestProbe
 import org.specs2.specification.BeforeEach
@@ -16,11 +16,11 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.Try
 
 class DbManifestProcessorTest
-  extends CrunchTestLike with BeforeEach {
+    extends CrunchTestLike with BeforeEach {
 
   override def before: Any = {
     clearDatabase()
@@ -97,8 +97,9 @@ class DbManifestProcessorTest
     }
   }
 
-  private def processAndCheckIapiManifestPax(key: UniqueArrivalKey, expectedPaxIds: Set[String])
-                                            (implicit probe: TestProbe): Any = {
+  private def processAndCheckIapiManifestPax(key: UniqueArrivalKey, expectedPaxIds: Set[String])(implicit
+      probe: TestProbe
+  ): Any = {
     processor(probe).process(Seq(key), SDate.now().millisSinceEpoch)
 
     probe.fishForMessage(1.second) {
@@ -108,8 +109,9 @@ class DbManifestProcessorTest
     }
   }
 
-  private def processAndCheckNonIapiManifestPax(key: UniqueArrivalKey, expectedPaxCount: Int)
-                                               (implicit probe: TestProbe): Any = {
+  private def processAndCheckNonIapiManifestPax(key: UniqueArrivalKey, expectedPaxCount: Int)(implicit
+      probe: TestProbe
+  ): Any = {
     processor(probe).process(Seq(key), SDate.now().millisSinceEpoch)
 
     probe.fishForMessage(1.second) {

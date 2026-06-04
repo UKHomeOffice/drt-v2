@@ -1,13 +1,11 @@
 package drt.server.feeds.lhr
 
-
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
-import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival}
+import org.slf4j.{ Logger, LoggerFactory }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, ForecastArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.util.Try
-
 
 object LHRForecastFeed {
   def log: Logger = LoggerFactory.getLogger(getClass)
@@ -28,7 +26,7 @@ object LHRForecastFeed {
         flightCodeSuffix = suffix.map(_.suffix),
         origin = flightRow.origin,
         previousPort = None,
-        scheduled = flightRow.scheduledDate.millisSinceEpoch,
+        scheduled = flightRow.scheduledDate.millisSinceEpoch
       )
     }
   }

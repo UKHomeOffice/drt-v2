@@ -6,9 +6,9 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 
-
 class ForecastAccuracyComparisonSpec extends Specification {
-  def ua(flightNumber: Int): UniqueArrival = UniqueArrival(flightNumber, T1, SDate("2023-07-24T12:00").millisSinceEpoch, PortCode("JFK"))
+  def ua(flightNumber: Int): UniqueArrival =
+    UniqueArrival(flightNumber, T1, SDate("2023-07-24T12:00").millisSinceEpoch, PortCode("JFK"))
 
   "Given one actual arrival and a matching forecast arrival the coverage should be 100%" >> {
     ForecastAccuracyComparison.percentageForecastOfActuals(Set(ua(1)), Set(ua(1))) === 1.0
@@ -23,7 +23,7 @@ class ForecastAccuracyComparisonSpec extends Specification {
   val actuals: Map[UniqueArrival, Int] = Map(
     ua(1) -> 100,
     ua(2) -> 150,
-    ua(3) -> 90,
+    ua(3) -> 90
   )
 
   "Given flights where the forecast matches with the actuals, the average flight error should be 0%" >> {
@@ -38,7 +38,7 @@ class ForecastAccuracyComparisonSpec extends Specification {
     val forecasts = Map(
       ua(1) -> 110,
       ua(2) -> 165,
-      ua(3) -> 99,
+      ua(3) -> 99
     )
     ForecastAccuracyComparison.maybeAverageFlightError(actuals, forecasts, 0.5) === Option(0.1)
   }
@@ -47,7 +47,7 @@ class ForecastAccuracyComparisonSpec extends Specification {
     val forecasts = Map(
       ua(1) -> 110,
       ua(2) -> 165,
-      ua(3) -> 99,
+      ua(3) -> 99
     )
     ForecastAccuracyComparison.maybeAbsoluteError(actuals, forecasts, 0.5) === Option(0.1)
   }
@@ -56,7 +56,7 @@ class ForecastAccuracyComparisonSpec extends Specification {
     val forecasts = Map(
       ua(1) -> 90,
       ua(2) -> 135,
-      ua(3) -> 81,
+      ua(3) -> 81
     )
     ForecastAccuracyComparison.maybeAbsoluteError(actuals, forecasts, 0.5) === Option(-0.1)
   }
@@ -65,14 +65,14 @@ class ForecastAccuracyComparisonSpec extends Specification {
     val forecasts = Map(
       ua(1) -> 110,
       ua(2) -> 120,
-      ua(3) -> 117,
+      ua(3) -> 117
     )
     ForecastAccuracyComparison.maybeAverageFlightError(actuals, forecasts, 0.5) === Option(0.2)
   }
 
   "Given flights where there is only 33% coverage and a minimum coverage set at 34% then we should get None" >> {
     val forecasts = Map(
-      ua(1) -> 110,
+      ua(1) -> 110
     )
     ForecastAccuracyComparison.maybeAverageFlightError(actuals, forecasts, 0.34) === None
   }

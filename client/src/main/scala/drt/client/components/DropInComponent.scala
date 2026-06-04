@@ -4,16 +4,16 @@ import diode.AnyAction.aType
 import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ReactConnectProxy
-import drt.client.components.styles.{DrtReactTheme, WithScalaCssImplicits}
+import drt.client.components.styles.{ DrtReactTheme, WithScalaCssImplicits }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CreateDropInRegistration, GetDropInRegistrations}
-import drt.shared.{DropIn, DropInRegistration}
+import drt.client.services.handlers.{ CreateDropInRegistration, GetDropInRegistrations }
+import drt.shared.{ DropIn, DropInRegistration }
 import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
+import io.kinoplan.scalajs.react.material.ui.core.system.{ SxProps, ThemeProvider }
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
+import japgolly.scalajs.react.{ BackendScope, Callback, CtorType, ReactEvent, ScalaComponent }
 
 import scala.language.postfixOps
 
@@ -46,12 +46,13 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
 
   case class Props(dropIns: Seq[DropIn])
 
-  class Backend($: BackendScope[Props, State]) {
+  class Backend($ : BackendScope[Props, State]) {
 
-    val modelRCP: ReactConnectProxy[DropInRegistrationModel] = SPACircuit.connect(model => DropInRegistrationModel(
-      dropInRegistrations = model.dropInRegistrations
-    ))
-
+    val modelRCP: ReactConnectProxy[DropInRegistrationModel] = SPACircuit.connect(model =>
+      DropInRegistrationModel(
+        dropInRegistrations = model.dropInRegistrations
+      )
+    )
 
     def componentDidMount() = Callback {
       SPACircuit.dispatch(GetDropInRegistrations())
@@ -63,10 +64,12 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
     }
 
     def openDialog(dropIn: DropIn)(e: ReactEvent) = {
-      $.modState(s => s.copy(
-        dropIn = Option(dropIn),
-        showDialog = true
-      ))
+      $.modState(s =>
+        s.copy(
+          dropIn = Option(dropIn),
+          showDialog = true
+        )
+      )
     }
 
     def handCloseDialog(e: ReactEvent) = {
@@ -74,7 +77,9 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
     }
 
     def handConfirmDialog(e: ReactEvent) = {
-      Callback($.state.runNow().dropIn.map(dropIn => SPACircuit.dispatch(CreateDropInRegistration(dropIn.id.map(_.toString).getOrElse(""))))) >>
+      Callback($.state.runNow().dropIn.map(dropIn =>
+        SPACircuit.dispatch(CreateDropInRegistration(dropIn.id.map(_.toString).getOrElse("")))
+      )) >>
         Callback(SPACircuit.dispatch(GetDropInRegistrations())) >>
         $.modState(s => s.copy(showDialog = false)) >>
         $.modState(s => s.copy(confirmRegister = true))
@@ -90,18 +95,26 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
             props.dropIns.nonEmpty match {
               case true =>
                 ThemeProvider(DrtReactTheme)(
-                  MuiGrid(sx = SxProps(Map(
-                    "backgroundColor" -> "#FFFFFF",
-                    "paddingTop" -> "24px",
-                    "paddingLeft" -> "12px",
-                    "paddingRight" -> "12px",
-                    "overflow" -> "hidden"
-                  )))(MuiTypography(sx = SxProps(Map("marginBottom" -> "16px")))(
-                    "To book a drop-in session, please click the 'Book' button on the row that is most convenient for you."),
+                  MuiGrid(sx =
+                    SxProps(Map(
+                      "backgroundColor" -> "#FFFFFF",
+                      "paddingTop" -> "24px",
+                      "paddingLeft" -> "12px",
+                      "paddingRight" -> "12px",
+                      "overflow" -> "hidden"
+                    ))
+                  )(
+                    MuiTypography(sx = SxProps(Map("marginBottom" -> "16px")))(
+                      "To book a drop-in session, please click the 'Book' button on the row that is most convenient for you."
+                    ),
                     MuiGrid(container = true, spacing = 2, sx = SxProps(Map("width" -> "60%")))(
-                      MuiGrid(item = true, xs = 12, sx = SxProps(Map(
-                        "backgroundColor" -> "#FFFFFF",
-                      )))(
+                      MuiGrid(
+                        item = true,
+                        xs = 12,
+                        sx = SxProps(Map(
+                          "backgroundColor" -> "#FFFFFF"
+                        ))
+                      )(
                         model.dropInRegistrations.renderReady(dropInRegistrations => {
                           MuiTable()(
                             MuiTableHead()(
@@ -109,7 +122,7 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
                                 MuiTableCell(sx = SxProps(Map("fontWeight" -> "bold")))("Date"),
                                 MuiTableCell(sx = SxProps(Map("fontWeight" -> "bold")))("Time"),
                                 MuiTableCell(sx = SxProps(Map("fontWeight" -> "bold")))("Duration"),
-                                MuiTableCell()(""),
+                                MuiTableCell()("")
                               )
                             ),
                             MuiTableBody()(
@@ -118,35 +131,50 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
                                   val button: VdomNode =
                                     dropInRegistrations.exists(_.dropInId == tableItem.id.getOrElse(0)) match {
                                       case true =>
-                                        MuiButton(variant = "outlined", disableRipple = true, color = "success")("Booked")
+                                        MuiButton(
+                                          variant = "outlined",
+                                          disableRipple = true,
+                                          color = "success"
+                                        )("Booked")
                                       case false =>
-                                        MuiButton(variant = "outlined", color = "primary")("Book", ^.onClick ==> openDialog(tableItem))
+                                        MuiButton(
+                                          variant = "outlined",
+                                          color = "primary"
+                                        )("Book", ^.onClick ==> openDialog(tableItem))
                                     }
                                   MuiTableRow()(
                                     MuiTableCell()(SDate(tableItem.startTime).`DD-Month-YYYY`),
                                     MuiTableCell()(SDate(tableItem.startTime).prettyTimeWithMeridian),
                                     MuiTableCell()(differenceInHours(tableItem.startTime, tableItem.endTime)),
-                                    MuiTableCell()(button),
+                                    MuiTableCell()(button)
                                   )
-                              })
+                              }
+                            )
                           )
                         })
-                      ))
+                      )
+                    )
                   )
                 )
               case false =>
-                MuiTypography(variant = "h6", sx = SxProps(
-                  Map("paddingTop" -> "24px",
-                    "paddingBottom" -> "24px",
-                    "display" -> "flex",
-                    "justifyContent" -> "center",
-                    "alignItems" -> "center")
-                ))("No drop-in sessions available. Please check back later.")
+                MuiTypography(
+                  variant = "h6",
+                  sx = SxProps(
+                    Map(
+                      "paddingTop" -> "24px",
+                      "paddingBottom" -> "24px",
+                      "display" -> "flex",
+                      "justifyContent" -> "center",
+                      "alignItems" -> "center"
+                    )
+                  )
+                )("No drop-in sessions available. Please check back later.")
             }
           }
           <.div(
             showDropIns,
-            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-Month-YYYY`).getOrElse(""),
+            DropInDialog(
+              state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-Month-YYYY`).getOrElse(""),
               state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTimeWithMeridian).getOrElse(""),
               state.dropIn.map(dropIn => differenceInHours(dropIn.startTime, dropIn.endTime)).getOrElse(""),
               state.showDialog,
@@ -154,8 +182,10 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
               handConfirmDialog,
               "Confirm your booking",
               "You are about to book a drop-in session for the date and time shown above. Please confirm this is correct.",
-              "Confirm booking"),
-            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-Month-YYYY`).getOrElse(""),
+              "Confirm booking"
+            ),
+            DropInDialog(
+              state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-Month-YYYY`).getOrElse(""),
               state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTimeWithMeridian).getOrElse(""),
               state.dropIn.map(dropIn => differenceInHours(dropIn.startTime, dropIn.endTime)).getOrElse(""),
               state.confirmRegister,
@@ -163,9 +193,11 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
               handleConfirmedClose,
               "Booking Confirmed",
               "Your booking is confirmed please check your email for invite to teams meeting link.",
-              "Continue"),
+              "Continue"
+            )
           )
-        }))
+        })
+      )
     }
 
   }

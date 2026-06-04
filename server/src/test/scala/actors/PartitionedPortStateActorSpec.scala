@@ -1,14 +1,13 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
-import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import actors.PartitionedPortStateActor.{ GetStateForDateRange, PointInTimeQuery }
+import org.apache.pekko.actor.{ Actor, ActorRef, Props }
 import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
 import scala.concurrent.duration._
-
 
 class DummyActor extends Actor {
   override def receive: Receive = {

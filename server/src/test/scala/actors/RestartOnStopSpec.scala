@@ -3,16 +3,15 @@ package actors
 import actors.StoppableActor.StopYourself
 import actors.supervised.RestartOnStop
 import org.apache.pekko.Done
-import org.apache.pekko.actor.{Actor, ActorSystem, Props}
+import org.apache.pekko.actor.{ Actor, ActorSystem, Props }
 import org.apache.pekko.pattern.StatusReply
-import org.apache.pekko.testkit.{ImplicitSender, TestKit}
+import org.apache.pekko.testkit.{ ImplicitSender, TestKit }
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.BeforeAfterAll
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
-
 
 object StoppableActor {
   case object StopYourself
@@ -34,7 +33,7 @@ class StoppableActor extends Actor {
 }
 
 class RestartOnStopSpec()
-  extends TestKit(ActorSystem())
+    extends TestKit(ActorSystem())
     with ImplicitSender
     with SpecificationLike
     with BeforeAfterAll {

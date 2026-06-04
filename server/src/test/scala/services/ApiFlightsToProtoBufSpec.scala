@@ -1,11 +1,14 @@
 package services
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{ Arrival, ArrivalStatus, Operator, Passengers, Predictions }
 import uk.gov.homeoffice.drt.ports.Terminals.T2
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ ApiFeedSource, PortCode }
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{apiFlightToFlightMessage, flightMessageToApiFlight}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{
+  apiFlightToFlightMessage,
+  flightMessageToApiFlight
+}
 import uk.gov.homeoffice.drt.time.SDate
 
 class ApiFlightsToProtoBufSpec extends Specification {
@@ -34,7 +37,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource),
         CarrierScheduled = Option(100L),
-        PassengerSources = Map(ApiFeedSource -> Passengers(Option(150),Option(10)))
+        PassengerSources = Map(ApiFeedSource -> Passengers(Option(150), Option(10)))
       )
       val flightMessage = apiFlightToFlightMessage(apiFlight)
       val deserialised = flightMessageToApiFlight(flightMessage)

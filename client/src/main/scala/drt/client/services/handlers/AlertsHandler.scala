@@ -2,17 +2,17 @@ package drt.client.services.handlers
 
 import diode.Implicits.runAfterImpl
 import diode.data._
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{ ActionResult, Effect, ModelRW }
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{DrtApi, PollDelay}
+import drt.client.services.{ DrtApi, PollDelay }
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
-import upickle.default.{read, write}
+import upickle.default.{ read, write }
 
 import scala.concurrent.Future
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
@@ -59,7 +59,7 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends PotActionH
 
       val pot = value match {
         case Ready(alerts) => Ready(alert :: alerts)
-        case _ => Ready(List(alert))
+        case _             => Ready(List(alert))
       }
 
       updated(pot, Effect(responseFuture))

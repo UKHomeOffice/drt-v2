@@ -1,23 +1,23 @@
 package actors.persistent.arrivals
 
 import actors.persistent.staffing.GetFeedStatuses
-import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import org.slf4j.{Logger, LoggerFactory}
+import org.apache.pekko.persistence.{ SaveSnapshotFailure, SaveSnapshotSuccess }
+import drt.server.feeds.{ ArrivalsFeedFailure, ArrivalsFeedSuccess }
+import org.slf4j.{ Logger, LoggerFactory }
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
-import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
+import uk.gov.homeoffice.drt.actor.{ PersistentDrtActor, RecoveryActorLike, Sizes }
+import uk.gov.homeoffice.drt.feeds.{ FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess }
 import uk.gov.homeoffice.drt.ports.FeedSource
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{ FeedStatusMessage, FlightStateSnapshotMessage }
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.SDateLike
 
-
-class ArrivalFeedStatusActor(feedSource: FeedSource,
-                             override val persistenceId: String,
-                            ) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+class ArrivalFeedStatusActor(
+    feedSource: FeedSource,
+    override val persistenceId: String
+) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
   override protected val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
@@ -30,8 +30,10 @@ class ArrivalFeedStatusActor(feedSource: FeedSource,
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
-      state = state.copy(maybeSourceStatuses = feedStatusesFromSnapshotMessage(stateMessage)
-        .map(fs => FeedSourceStatuses(feedSource, fs)))
+      state = state.copy(maybeSourceStatuses =
+        feedStatusesFromSnapshotMessage(stateMessage)
+          .map(fs => FeedSourceStatuses(feedSource, fs))
+      )
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {

@@ -1,12 +1,12 @@
 package drt.users
 
 import org.apache.pekko.http.scaladsl.model._
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import drt.shared.KeyCloakApi.{ KeyCloakGroup, KeyCloakUser }
 import drt.users.KeyCloakUserParserProtocol._
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class KeyCloakApiSpec extends CrunchTestLike {
 
@@ -132,19 +132,18 @@ class KeyCloakApiSpec extends CrunchTestLike {
   "When querying the keycloak API to get a list of all users " +
     "Given an auth token then I should get back a list of users" >> {
 
-    val token = "testToken"
-    val kc = new KeyCloakClient(token, keyCloakUrl) {
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => {
+      val token = "testToken"
+      val kc = new KeyCloakClient(token, keyCloakUrl) {
+        def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => {
 
-        Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, usersJson)))
+          Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, usersJson)))
+        }
       }
+
+      val users: List[KeyCloakUser] = Await.result(kc.getUsers(), 30 seconds)
+
+      users === expectedUsers
     }
-
-    val users: List[KeyCloakUser] = Await.result(kc.getUsers(), 30 seconds)
-
-    users === expectedUsers
-  }
-
 
   val groupsJson =
     """    [{
