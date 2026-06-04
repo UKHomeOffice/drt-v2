@@ -160,7 +160,14 @@ object FlightTable {
               ),
               <.div(
                 ^.className := "dashboard-arrivals-popup",
-                ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig, props.paxFeedSourceOrder))
+                ArrivalInfo.SourcesTable(
+                  ArrivalInfo.Props(
+                    sourcesPot,
+                    props.airportConfig,
+                    props.paxFeedSourceOrder,
+                    Callback(SPACircuit.dispatch(RemoveArrivalSources))
+                  )
+                )
               )
             )
           case _ => <.div()

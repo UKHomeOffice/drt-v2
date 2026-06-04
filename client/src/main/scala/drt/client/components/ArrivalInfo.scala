@@ -17,7 +17,8 @@ object ArrivalInfo {
   case class Props(
       arrivalSources: Pot[List[Option[FeedSourceArrival]]],
       airportConfig: AirportConfig,
-      paxFeedSourceOrder: List[FeedSource]
+      paxFeedSourceOrder: List[FeedSource],
+      onClose: Callback
   ) extends UseValueEq
 
   def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSourcesTable")
@@ -25,7 +26,18 @@ object ArrivalInfo {
       props.arrivalSources match {
         case Ready(sources) =>
           <.div(
-            <.h2(s"Feed sources for arrival"),
+            <.div(
+              ^.className := "arrivals-sources-header",
+              <.h2("Feed sources for arrival"),
+              <.a(
+                ^.href := "#",
+                ^.className := "arrivals-sources-close",
+                ^.onClick ==> ((e: ReactMouseEventFromHtml) => e.preventDefaultCB >> props.onClose),
+                <.strong("X"),
+                " ",
+                <.span(^.className := "arrivals-sources-close__text", "Close")
+              )
+            ),
             <.table(
               ^.className := "arrivals-table table-striped",
               tableHead,
