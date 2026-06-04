@@ -159,7 +159,7 @@ object FlightTable {
                 ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))
               ),
               <.div(
-                ^.className := "dashboard-arrivals-popup",
+                ^.className := "dashboard-arrivals-popup arrivals-sources-popup",
                 ArrivalInfo.SourcesTable(
                   ArrivalInfo.Props(
                     sourcesPot,
