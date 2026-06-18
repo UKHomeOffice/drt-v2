@@ -153,13 +153,15 @@ object FlightTable {
         (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
           case (true, Some((_, sourcesPot))) =>
             <.div(
-              ^.tabIndex := 0,
               <.div(
                 ^.className := "popover-overlay",
                 ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))
               ),
               <.div(
                 ^.className := "dashboard-arrivals-popup arrivals-sources-popup",
+                ^.role := "dialog",
+                VdomAttr("aria-modal") := "true",
+                ^.aria.label := "Feed sources for arrival",
                 ArrivalInfo.SourcesTable(
                   ArrivalInfo.Props(
                     sourcesPot,

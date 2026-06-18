@@ -11,6 +11,7 @@ import japgolly.scalajs.react.{ CtorType, _ }
 import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
 import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource }
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 
 object ArrivalInfo {
 
@@ -21,41 +22,96 @@ object ArrivalInfo {
       onClose: Callback
   ) extends UseValueEq
 
-  def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSourcesTable")
-    .render_P { props =>
-      props.arrivalSources match {
-        case Ready(sources) =>
-          <.div(
-            <.div(
-              ^.className := "arrivals-sources-header",
-              <.h2("Feed sources for arrival"),
-              <.a(
-                ^.href := "#",
-                ^.className := "arrivals-sources-close",
-                ^.onClick ==> ((e: ReactMouseEventFromHtml) => e.preventDefaultCB >> props.onClose),
-                <.strong("X"),
-                " ",
-                <.span(^.className := "arrivals-sources-close__text", "Close")
-              )
-            ),
-            <.table(
-              ^.className := "arrivals-table table-striped",
-              tableHead,
-              <.tbody(
-                sources.collect { case Some(sourceArrival) =>
-                  FeedSourceRow.component(FeedSourceRow.Props(
-                    sourceArrival,
-                    props.airportConfig,
-                    props.paxFeedSourceOrder
-                  ))
-                }.toTagMod
-              )
-            )
-          )
-        case Pending(_) => <.div("Waiting for sources")
-        case _          => <.div("No feed sources display")
+  private val modalSelector = ".arrivals-sources-modal"
+  private val focusableSelector = "a[href], button:not([disabled]), input, select, textarea, [tabindex='0']"
+
+  def shouldWrapFocus(modal: dom.Element, activeElement: dom.Element, shiftKey: Boolean): Option[dom.Element] = {
+    val focusableElements = modal.querySelectorAll(focusableSelector)
+    if (focusableElements.length > 0) {
+      val firstElement = focusableElements.item(0)
+      val lastElement = focusableElements.item(focusableElements.length - 1)
+      val wrapToFirst = !shiftKey && activeElement == lastElement
+      val wrapToLast = shiftKey && activeElement == firstElement
+
+      if (wrapToFirst) Some(firstElement)
+      else if (wrapToLast) Some(lastElement)
+      else None
+    } else None
+  }
+
+  private def trapFocus(e: ReactKeyboardEventFromHtml): Callback =
+    if (e.key == "Tab") {
+      Callback {
+        Option(dom.document.querySelector(modalSelector)).foreach { modal =>
+          shouldWrapFocus(modal, dom.document.activeElement, e.shiftKey) match {
+            case Some(elementToFocus) =>
+              elementToFocus match {
+                case el: dom.HTMLElement =>
+                  e.preventDefault()
+                  el.focus()
+                case _ =>
+              }
+            case None =>
+          }
+        }
       }
+    } else Callback.empty
+
+  private def tableContent(props: Props): VdomNode = props.arrivalSources match {
+    case Ready(sources) =>
+      <.table(
+        ^.className := "arrivals-table table-striped",
+        tableHead,
+        <.tbody(
+          sources.collect { case Some(sourceArrival) =>
+            FeedSourceRow.component(FeedSourceRow.Props(
+              sourceArrival,
+              props.airportConfig,
+              props.paxFeedSourceOrder
+            ))
+          }.toTagMod
+        )
+      )
+    case Pending(_) => <.div("Waiting for sources")
+    case _          => <.div("No feed sources display")
+  }
+
+  val SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSourcesTable")
+    .render_P { props =>
+      <.div(
+        ^.className := "arrivals-sources-modal",
+        ^.onKeyDown ==> trapFocus,
+        <.div(
+          ^.className := "arrivals-sources-header",
+          <.h2(
+            ^.className := "arrivals-sources-title",
+            ^.tabIndex := 0,
+            "Feed sources for arrival"
+          ),
+          MuiButton(variant = "text", size = "small")(
+            ^.className := "arrivals-sources-close",
+            ^.aria.label := "Close feed sources for arrival",
+            ^.onClick --> props.onClose,
+            "Close"
+          )
+        ),
+        <.div(
+          ^.className := "arrivals-sources-table-focus",
+          ^.tabIndex := 0,
+          ^.aria.label := "Feed sources table",
+          tableContent(props)
+        )
+      )
     }
+    .componentDidMount(_ =>
+      Callback {
+        dom.document.querySelector(".arrivals-sources-title") match {
+          case el: dom.HTMLElement =>
+            el.focus()
+          case _ =>
+        }
+      }
+    )
     .build
 
   def tableHead: TagOf[TableSection] = {
