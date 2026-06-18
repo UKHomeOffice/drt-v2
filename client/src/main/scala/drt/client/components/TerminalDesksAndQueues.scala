@@ -473,6 +473,14 @@ object TerminalDesksAndQueues {
       )
     }
     .renderBackend[Backend]
+    .componentDidUpdate { _ =>
+      Callback {
+        Option(org.scalajs.dom.document.querySelector("input[type='radio']:checked")).collect {
+          case el: org.scalajs.dom.html.Input =>
+            el.focus()
+        }
+      }
+    }
     .build
 
   def apply(props: Props): VdomElement = component(props)
