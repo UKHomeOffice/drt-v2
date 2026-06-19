@@ -19,6 +19,7 @@ import drt.client.components.styles._
 import drt.client.components.{
   AccessibilityStatementComponent,
   FeedsStatusPage,
+  FocusTracker,
   ForecastUploadComponent,
   GlobalStyles,
   IAccessibilityStatementProps,
@@ -386,7 +387,7 @@ object SPAMain {
               SPACircuit.dispatch(GetUserDashboardState)
             case _ =>
           }
-        )
+        ) >> Callback(FocusTracker.restore())
     }
 
   private def maybeTerminal: Option[Terminal] = {
@@ -561,6 +562,7 @@ object SPAMain {
 
     sendInitialRequests()
 
+    FocusTracker.init()
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     router().renderIntoDOM(dom.document.getElementById("root"))
   }
