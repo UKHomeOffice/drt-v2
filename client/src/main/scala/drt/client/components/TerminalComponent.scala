@@ -5,13 +5,12 @@ import diode.data.Pot
 import diode.{ FastEqLowPri, UseValueEq }
 import drt.client.SPAMain
 import drt.client.SPAMain._
-import drt.client.actions.Actions.{ GetAllShiftAssignments, GetForecast }
+import drt.client.actions.Actions.GetAllShiftAssignments
 import drt.client.components.TerminalDesksAndQueues.Recommended
-import drt.client.components.ToolTips._
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.GetShifts
 import drt.client.services._
+import drt.client.services.handlers.GetShifts
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared.CrunchApi.StaffMinute
@@ -30,15 +29,12 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.models.{ CrunchMinute, UserPreferences }
 import uk.gov.homeoffice.drt.ports.Queues.Transfer
-import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{ AirportConfig, AirportInfo, FeedSource, PortCode, Queues }
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 
-import scala.collection.immutable
 import scala.collection.immutable.{ HashSet, SortedMap }
-import scala.util.Try
 
 object TerminalComponent {
 
@@ -462,6 +458,7 @@ object TerminalComponent {
         )
       )).flatMap(_ => Callback(SPACircuit.dispatch(GetAllShiftAssignments)))
     }
+    .componentDidUpdate(_ => Callback(FocusTracker.restore()))
     .build
 
   private def terminalTabs(

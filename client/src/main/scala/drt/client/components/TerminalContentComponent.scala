@@ -15,11 +15,9 @@ import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiMenu, MuiMenuItem }
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiMenu, MuiMenuItem }
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{ <, ^, VdomAttr, VdomElement, _ }
@@ -433,6 +431,8 @@ object TerminalContentComponent {
     ScalaComponent.builder[Props]("TerminalContentComponent")
       .initialStateFromProps(p => State(p.terminalPageTab.subMode))
       .renderBackend[TerminalContentComponent.Backend]
+      .componentDidMount(_ => Callback(FocusTracker.restore()))
+      .componentDidUpdate(_ => Callback(FocusTracker.restore()))
       .build
 
   def apply(props: Props): VdomElement = component(props)

@@ -11,27 +11,24 @@ import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.services.{ SPACircuit, StaffMovementMinute, ViewMode }
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiTypography }
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiTypography }
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, ScalaComponent }
-import org.scalajs.dom.{ DOMList, Node }
 import org.scalajs.dom.html.{ Div, TableCell }
+import org.scalajs.dom.{ DOMList, Node }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.models.{ CrunchMinute, UserPreferences }
-import uk.gov.homeoffice.drt.ports.Queues.{ EGate, Queue, Transfer }
+import uk.gov.homeoffice.drt.ports.Queues.{ EGate, Queue }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{ AirportConfig, Queues }
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.SortedMap
 import scala.scalajs.js
 
 object TerminalDesksAndQueues {
@@ -109,7 +106,7 @@ object TerminalDesksAndQueues {
       showWaitColumn: Boolean
   ) extends UseValueEq
 
-  class Backend() {
+  class Backend {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
