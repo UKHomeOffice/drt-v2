@@ -12,14 +12,15 @@ import scala.collection.SortedMap
 
 class FlightManifestSummaryFromManifestSpec extends Specification {
 
-  private val dateAfterEgateAgeEligibilityChange = "2023-07-26"
+  private val dateAfterEgateAgeEligibilityChange = "2026-07-09"
 
   "When extracting passenger info " >> {
-    "Given a manifest with multiple GB passengers aged 9, 20 and 30 " >> {
+    "Given a manifest with multiple GB passengers aged 7, 9, 20 and 30 " >> {
       "Then I should get a matching PassengerInfoSummary" >> {
 
         val voyageManifest = manifestWithPassengerAgesAndNats(
           List(
+            (Nationality("GBR"), 7),
             (Nationality("GBR"), 9),
             (Nationality("GBR"), 20),
             (Nationality("GBR"), 30)
@@ -36,16 +37,16 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
             SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch
           ),
           SortedMap(
-            AgeRange(0, Option(9)) -> 1,
-            AgeRange(10, Option(17)) -> 0,
+            AgeRange(0, Option(7)) -> 1,
+            AgeRange(8, Option(17)) -> 1,
             AgeRange(18, Option(24)) -> 1,
             AgeRange(25, Option(49)) -> 1,
             AgeRange(50, Option(65)) -> 0,
             AgeRange(66, None) -> 0
           ),
-          Map(Nationality("GBR") -> 3),
+          Map(Nationality("GBR") -> 4),
           Map(
-            PaxTypes.GBRNational -> 2,
+            PaxTypes.GBRNational -> 3,
             PaxTypes.GBRNationalBelowEgateAge -> 1
           )
         ))
@@ -76,8 +77,8 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
             SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch
           ),
           SortedMap(
-            AgeRange(0, Option(9)) -> 0,
-            AgeRange(10, Option(17)) -> 0,
+            AgeRange(0, Option(7)) -> 0,
+            AgeRange(8, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 0,
             AgeRange(25, Option(49)) -> 1,
             AgeRange(50, Option(65)) -> 0,
@@ -119,8 +120,8 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
             SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch
           ),
           SortedMap(
-            AgeRange(0, Option(9)) -> 0,
-            AgeRange(10, Option(17)) -> 0,
+            AgeRange(0, Option(7)) -> 0,
+            AgeRange(8, Option(17)) -> 0,
             AgeRange(18, Option(24)) -> 0,
             AgeRange(25, Option(49)) -> 6,
             AgeRange(50, Option(65)) -> 0,
