@@ -57,7 +57,7 @@ object FlightChartComponent {
         `type` = "bar"
       )
 
-      val sortedAges = props.manifestSummary.ageRanges.toList.sortBy(_._1.title)
+      val sortedAges = props.manifestSummary.ageRanges.toList
       val ageData = ChartJsData(
         labels = sortedAges.map(_._1.title),
         data = sortedAges.map(_._2.toDouble),
