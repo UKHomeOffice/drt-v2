@@ -3,27 +3,29 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageTabLoc
-import drt.client.actions.Actions.{ RemoveArrivalSources, UpdateFlightHighlight }
+import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.WalkTimes
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
-import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^
-import japgolly.scalajs.react.vdom.html_<^.{ <, ^, _ }
-import japgolly.scalajs.react.{ Callback, CtorType, _ }
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.{Callback, CtorType, _}
 import org.scalajs.dom.html.Div
-import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, UniqueArrival }
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
-import uk.gov.homeoffice.drt.models.{ AgeRange, FlightManifestSummary, ManifestKey, UserPreferences }
+import uk.gov.homeoffice.drt.models.{AgeRange, FlightManifestSummary, ManifestKey, UserPreferences}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource, PortCode }
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
@@ -31,6 +33,8 @@ import scala.scalajs.js.JSConverters._
 import scala.util.Try
 
 object FlightTable {
+  private val egateAgeEligibilityDateChange = "2026-07-08"
+
   case class Props(
       queueOrder: Seq[Queue],
       hasEstChox: Boolean,
@@ -59,18 +63,23 @@ object FlightTable {
 
   case class State(showHighlightedRows: Boolean)
 
-  val ageGroups: js.Array[String] =
+  private[components] def ageGroupsForViewDate(viewDate: LocalDate): js.Array[String] = {
+    val beforeEligibilityChange = SDate(viewDate).millisSinceEpoch < SDate(egateAgeEligibilityDateChange).millisSinceEpoch
+
     js.Array(
-      AgeRange(0, 9).title,
-      AgeRange(10, 17).title,
+      (if (beforeEligibilityChange) AgeRange(0, 9) else AgeRange(0, 7)).title,
+      (if (beforeEligibilityChange) AgeRange(10, 17) else AgeRange(8, 17)).title,
       AgeRange(18, 24).title,
       AgeRange(25, 49).title,
       AgeRange(50, 65).title,
       AgeRange(65, None).title
     )
+  }
 
   class Backend(scope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
+      val ageGroups = ageGroupsForViewDate(props.terminalPageTab.viewMode.localDate)
+
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
@@ -200,6 +209,7 @@ object FlightTable {
           } else EmptyVdom
         ),
         <.div {
+
           FlightTableContent(
             FlightTableContent.Props(
               flights = props.flights,

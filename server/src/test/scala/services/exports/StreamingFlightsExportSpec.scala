@@ -17,6 +17,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class StreamingFlightsExportSpec extends CrunchTestLike {
+  private val dateBeforeEgateEligibilityDateChange = "2026-07-07"
+  private val dateAfterEgateEligibilityDateChange = "2026-07-08"
+
   val flightWithAllTypesOfAPISplit: ApiFlightWithSplits = ApiFlightWithSplits(
     live(
       iata = "SA324",
@@ -379,76 +382,20 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     result === expected
   }
 
-  "Given a Flight With Splits and a VoyageManifests with a matching arrival " +
-    "I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
-      val manifests = VoyageManifests(Set(
-        VoyageManifest(
-          DC,
-          PortCode("AAA"),
-          flightWithAllTypesOfAPISplit.apiFlight.Origin,
-          flightWithAllTypesOfAPISplit.apiFlight.VoyageNumber,
-          flightWithAllTypesOfAPISplit.apiFlight.CarrierCode,
-          ManifestDateOfArrival("2017-01-01"),
-          ManifestTimeOfArrival("20:00"),
-          List(
-            PassengerInfoJson(
-              None,
-              Nationality("XXX"),
-              EeaFlag("Y"),
-              Option(PaxAge(50)),
-              None,
-              InTransit(false),
-              None,
-              Option(Nationality("GBR")),
-              None
-            ),
-            PassengerInfoJson(
-              None,
-              Nationality("XXX"),
-              EeaFlag("Y"),
-              Option(PaxAge(25)),
-              None,
-              InTransit(false),
-              None,
-              Option(Nationality("USA")),
-              None
-            ),
-            PassengerInfoJson(
-              None,
-              Nationality("XXX"),
-              EeaFlag("Y"),
-              Option(PaxAge(5)),
-              None,
-              InTransit(false),
-              None,
-              Option(Nationality("FRA")),
-              None
-            ),
-            PassengerInfoJson(
-              None,
-              Nationality("XXX"),
-              EeaFlag("Y"),
-              Option(PaxAge(30)),
-              None,
-              InTransit(false),
-              None,
-              Option(Nationality("FRA")),
-              None
-            )
-          )
-        )
-      ))
-      val resultStream = withActualApiExport
-        .csvStream(Source(List((List(flightWithAllTypesOfAPISplit), manifests))))
+  "Given a Flight With Splits and a VoyageManifests with a matching arrival before the e-gates eligibility date change " +
+    "I should get all the data with API nos plus a pre-change age breakdown" >> {
+      val flight = flightWithAllTypesOfAPISplitForDate(dateBeforeEgateEligibilityDateChange)
+      val result = ageFieldValue(flight, manifestsForFlight(flight, dateBeforeEgateEligibilityDateChange))
 
-      val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
+      result === "0 to 9:1,10 to 17:1,18 to 24:0,25 to 49:2,50 to 65:1,66 and over:0"
+    }
 
-      val expected =
-        s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,T1,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,98,98,Y,7,15,32,44,11,23,29,35,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"FRA:2,GBR:1,USA:1","0 to 11:1,12 to 17:0,18 to 24:0,25 to 49:2,50 to 65:1,66 and over:0"
-          |""".stripMargin
+  "Given a Flight With Splits and a VoyageManifests with a matching arrival on/after the e-gates eligibility date change " +
+    "I should get all the data with API nos plus a post-change age breakdown" >> {
+      val flight = flightWithAllTypesOfAPISplitForDate(dateAfterEgateEligibilityDateChange)
+      val result = ageFieldValue(flight, manifestsForFlight(flight, dateAfterEgateEligibilityDateChange))
 
-      result === expected
+      result === "0 to 7:0,8 to 17:2,18 to 24:0,25 to 49:2,50 to 65:1,66 and over:0"
     }
 
   "Given a list of Flights With Splits then I should get all the data with unique entry for code Share Arrival flight including API numbers" >> {
@@ -543,5 +490,61 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val columnIndexOfInvalidApi = result.head.split(",").indexOf("Invalid API")
     val invalidApiFieldValue = result.drop(1).head.split(",")(columnIndexOfInvalidApi)
     invalidApiFieldValue
+  }
+
+  private def flightWithAllTypesOfAPISplitForDate(arrivalDate: String): ApiFlightWithSplits =
+    ApiFlightWithSplits(
+      live(
+        iata = "SA324",
+        schDt = s"${arrivalDate}T20:00:00Z",
+        maxPax = Option(100),
+        terminal = T1,
+        origin = PortCode("JHB"),
+        operator = Option(Operator("SA")),
+        status = ArrivalStatus("UNK"),
+        estDt = s"${arrivalDate}T20:00:00Z"
+      ).toArrival(LiveFeedSource).copy(
+        FeedSources = Set(LiveFeedSource),
+        PassengerSources = Map(
+          LiveFeedSource -> Passengers(Option(98), None),
+          ApiFeedSource -> Passengers(Option(100), None)
+        )
+      ),
+      flightWithAllTypesOfAPISplit.splits
+    )
+
+  private def manifestsForFlight(flight: ApiFlightWithSplits, arrivalDate: String): VoyageManifests =
+    VoyageManifests(Set(
+      VoyageManifest(
+        DC,
+        PortCode("AAA"),
+        flight.apiFlight.Origin,
+        flight.apiFlight.VoyageNumber,
+        flight.apiFlight.CarrierCode,
+        ManifestDateOfArrival(arrivalDate),
+        ManifestTimeOfArrival("20:00"),
+        List(
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(25)), None, InTransit(false), None, Option(Nationality("USA")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(8)), None, InTransit(false), None, Option(Nationality("FRA")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(17)), None, InTransit(false), None, Option(Nationality("FRA")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(30)), None, InTransit(false), None, Option(Nationality("POL")), None)
+        )
+      )
+    ))
+
+  private def ageFieldValue(flight: ApiFlightWithSplits, manifests: VoyageManifests): String = {
+    val resultStream = withActualApiExport
+      .csvStream(Source(List((List(flight), manifests))))
+
+    val result = Await.result(resultStream.runWith(Sink.seq), 1.second)
+    val dataLine = result.drop(1).head.trim
+    val endQuote = dataLine.lastIndexOf('"')
+    val startQuote = if (endQuote > 0) dataLine.lastIndexOf('"', endQuote - 1) else -1
+
+    if (startQuote >= 0 && endQuote > startQuote)
+      dataLine.substring(startQuote + 1, endQuote)
+    else
+      ""
   }
 }

@@ -73,7 +73,7 @@ object FlightChartComponent {
         if (shouldBreakIntoTwoRows) ^.width := s"${natsChartWidth}px" else ^.width := "100%"
 
       val isBeforeAgeEligibilityChangeDate: Long => Boolean =
-        scheduled => scheduled < SDate("2023-07-25T00:00").millisSinceEpoch
+        scheduled => scheduled < SDate("2026-07-08T09:00Z").millisSinceEpoch
 
       val paxTypeData: ChartJsData = ChartJsData(
         labels = sortedPaxTypes.map {
