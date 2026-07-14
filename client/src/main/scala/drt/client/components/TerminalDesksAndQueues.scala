@@ -4,6 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType }
 import drt.client.actions.Actions.{ RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation }
+import drt.client.components.govuk.AppRadioGroup
 import drt.client.components.ToolTips._
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
@@ -16,7 +17,7 @@ import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiTypography }
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, ScalaComponent }
+import japgolly.scalajs.react.{ Callback, CtorType, ScalaComponent }
 import org.scalajs.dom.html.{ Div, TableCell }
 import org.scalajs.dom.{ DOMList, Node }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -202,34 +203,28 @@ object TerminalDesksAndQueues {
         <.th(^.className := "total-deployed", ^.colSpan := 6, "Staffing")
       )
 
-      def toggleDeskType(newDeskType: DeskType) = (e: ReactEventFromInput) => {
-        e.preventDefault()
+      def setDeskType(newDeskType: DeskType): Callback = Callback {
         GoogleEventTracker.sendEvent(s"$terminal", "Select desk type", newDeskType.toString)
-        props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlViewType(Option(newDeskType)))
+      } >> props.router.set(
+        props.terminalPageTab.withUrlParameters(UrlViewType(Option(newDeskType)))
+      )
+
+      def setTimeInterval(timeInterval: TimeInterval): Callback = Callback {
+        GoogleEventTracker.sendEvent(
+          s"$terminal",
+          s"Select ${timeInterval.queryParamsValue} interval",
+          timeInterval.toString
         )
+        SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes =
+          if (timeInterval == Hourly) 60 else 15
+        )))
       }
 
-      def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) =>
-        Callback {
-          e.preventDefault()
-          GoogleEventTracker.sendEvent(
-            s"$terminal",
-            s"Select ${timeInterval.queryParamsValue} interval",
-            timeInterval.toString
-          )
-          SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes =
-            if (timeInterval == Hourly) 60 else 15
-          )))
-        }
-
-      def toggleDisplayType(newDisplayType: DisplayType) = (e: ReactEventFromInput) => {
-        e.preventDefault()
+      def setDisplayType(newDisplayType: DisplayType): Callback = Callback {
         GoogleEventTracker.sendEvent(s"$terminal", "Select display type", newDisplayType.toString)
-        props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
-        )
-      }
+      } >> props.router.set(
+        props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
+      )
 
       def requestDeskRecsRecalculation(): Callback = Callback {
         SPACircuit.dispatch(RequestDateDeskRecsRecalculation(props.viewStart.toLocalDate))
@@ -239,67 +234,63 @@ object TerminalDesksAndQueues {
         SPACircuit.dispatch(RequestDatePaxLoadsRecalculation(props.viewStart.toLocalDate))
       }
 
-      def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
-        val deskTypeControls = List(
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.deskType == Recommended,
-              ^.onChange ==> toggleDeskType(Recommended),
-              ^.id := "show-recs"
+      def viewTypeControls: TagMod = {
+        val deskTypeControls = AppRadioGroup(
+          AppRadioGroup.Props(
+            name = "desk-type",
+            legend = "Staffing",
+            selectedValue = state.deskType.queryParamsValue,
+            items = Seq(
+              AppRadioGroup.RadioItem(
+                Recommended.queryParamsValue,
+                <.span("Recommended", " ", recommendationsTooltip),
+                id = Option("show-recs")
+              ),
+              AppRadioGroup.RadioItem(
+                Deployments.queryParamsValue,
+                <.span("Available", " ", availableStaffDeploymentsTooltip),
+                id = Option("show-deps")
+              )
             ),
-            <.label(^.`for` := "show-recs", "Recommended", " ", recommendationsTooltip)
-          ),
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.deskType == Deployments,
-              ^.onChange ==> toggleDeskType(Deployments),
-              ^.id := "show-deps"
-            ),
-            <.label(^.`for` := "show-deps", "Available", " ", availableStaffDeploymentsTooltip)
+            onChange = {
+              case value if value == Recommended.queryParamsValue => setDeskType(Recommended)
+              case value if value == Deployments.queryParamsValue => setDeskType(Deployments)
+              case _                                               => Callback.empty
+            }
           )
         )
 
-        val displayTypeControls = List(
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.displayType == TableView,
-              ^.onChange ==> toggleDisplayType(TableView),
-              ^.id := "display-table"
+        val displayTypeControls = AppRadioGroup(
+          AppRadioGroup.Props(
+            name = "display-type",
+            legend = "View",
+            selectedValue = state.displayType.queryParamsValue,
+            items = Seq(
+              AppRadioGroup.RadioItem(TableView.queryParamsValue, "Table", id = Option("display-table")),
+              AppRadioGroup.RadioItem(ChartsView.queryParamsValue, "Chart", id = Option("display-charts"))
             ),
-            <.label(^.`for` := "display-table", "Table")
-          ),
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.displayType == ChartsView,
-              ^.onChange ==> toggleDisplayType(ChartsView),
-              ^.id := "display-charts"
-            ),
-            <.label(^.`for` := "display-charts", "Chart")
+            onChange = {
+              case value if value == TableView.queryParamsValue  => setDisplayType(TableView)
+              case value if value == ChartsView.queryParamsValue => setDisplayType(ChartsView)
+              case _                                              => Callback.empty
+            }
           )
         )
 
-        val displayIntervalControls = List(
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.timeInterval == Quarterly,
-              ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Quarterly)),
-              ^.id := "display-quaterly-interval"
+        val displayIntervalControls = AppRadioGroup(
+          AppRadioGroup.Props(
+            name = "display-interval",
+            legend = "Time interval",
+            selectedValue = state.timeInterval.queryParamsValue,
+            items = Seq(
+              AppRadioGroup.RadioItem(Quarterly.queryParamsValue, "15 minute", id = Option("display-quaterly-interval")),
+              AppRadioGroup.RadioItem(Hourly.queryParamsValue, "Hour", id = Option("display-hourly-interval"))
             ),
-            <.label(^.`for` := "display-quaterly-interval", "15 minute")
-          ),
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.timeInterval == Hourly,
-              ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Hourly)),
-              ^.id := "display-hourly-interval"
-            ),
-            <.label(^.`for` := "display-hourly-interval", "Hour")
+            onChange = {
+              case value if value == Quarterly.queryParamsValue => setTimeInterval(Quarterly)
+              case value if value == Hourly.queryParamsValue    => setTimeInterval(Hourly)
+              case _                                             => Callback.empty
+            }
           )
         )
 
@@ -308,19 +299,15 @@ object TerminalDesksAndQueues {
           <.div(
             ^.className := "view-controls-label",
             "Staffing",
-            <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)
+            <.div(^.className := "view-controls-selector", deskTypeControls)
           ),
           <.span(^.className := "separator"),
-          <.div(
-            ^.className := "view-controls-label",
-            "View",
-            <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)
-          ),
+          <.div(^.className := "view-controls-label", <.div(^.className := "view-controls-selector", displayTypeControls)),
           <.span(^.className := "separator"),
           <.div(
             ^.className := "view-controls-label",
             "Time interval",
-            <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)
+            <.div(^.className := "view-controls-selector", displayIntervalControls)
           )
         )
       }
@@ -365,7 +352,7 @@ object TerminalDesksAndQueues {
             <.div(
               ^.className := "desks-and-queues-top",
               ^.aria.labelledBy := "desk-queues-description",
-              viewTypeControls(props.featureFlags.displayWaitTimesToggle),
+              viewTypeControls,
               if (props.loggedInUser.hasRole(SuperAdmin)) <.div(
                 ^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
                 adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
