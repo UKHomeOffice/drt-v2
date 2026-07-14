@@ -87,7 +87,7 @@ describe('API splits', () => {
 
   it('should count multiple entries with the same PassengerIdentifier as one passenger', () => {
     const apiManifest = manifestForDateTime(
-      scheduledTimeBeforeEligibilityChange,
+      scheduledTime,
       ofPassengerProfile(ukAdultWithId("1"), 3).concat(
         ofPassengerProfile(ukAdultWithId("2"), 3)
       )
@@ -98,30 +98,35 @@ describe('API splits', () => {
         "arrivalKey": {
           "origin": {"iata": "AMS"},
           "voyageNumber": {"$type": "uk.gov.homeoffice.drt.arrivals.VoyageNumber", "numeric": 123},
-          "scheduled": scheduledTimeBeforeEligibilityChange.unix() * 1000
+          "scheduled": scheduledTime.unix() * 1000
         },
-        "ageRanges": ageRangesForEligibilityDate(scheduledTimeBeforeEligibilityChange, 0, 2),
+        "ageRanges": ageRangesForEligibilityDate(scheduledTime, 0, 2),
         "nationalities": [[{"code": "GBR"}, 2]],
         "paxTypes": [["GBRNational", 2]]
       }]
 
-    csrfTokenForArrivalsDate(scheduledTimeBeforeEligibilityChange)
+    csrfTokenForArrivalsDate(scheduledTime)
       .then((csrfToken) => {
         cy.addFlight(
           {
             "ActPax": 2,
-            "SchDT": scheduledTimeBeforeEligibilityChange.format()
+            "ICAO": "TS0123",
+            "IATA": "TS0123",
+            "EstDT": scheduledTime.format(),
+            "ActDT": scheduledTime.format(),
+            "EstChoxDT": scheduledTime.format(),
+            "ActChoxDT": scheduledTime.format(),
+            "SchDT": scheduledTime.format()
           },
           csrfToken.toString()
         )
         cy.addManifest(apiManifest, csrfToken.toString())
       })
-      .get("#arrivals")
-      .contains("TS0123")
+      .waitForFlightToAppear("TS0123")
       .get(paxRagGreenSelector)
       .request({
         method: 'GET',
-        url: "/manifest-summaries/" + scheduledTimeBeforeEligibilityChange.format("YYYY-MM-DD") + "/summary",
+        url: "/manifest-summaries/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
       }).then((resp) => {
       expect(resp.body).to.equal(JSON.stringify(summaryWith2Pax), "Api splits incorrect for regular users")
     })
@@ -133,7 +138,7 @@ describe('API splits', () => {
     const ukAdults = ofPassengerProfile(passengerProfiles.euPassport, 10);
     const ukChildren = ofPassengerProfile(passengerProfiles.euChild, 1);
     const apiManifest = manifestForDateTime(
-      scheduledTimeAfterEligibilityChange,
+        scheduledTime,
       ukAdults.concat(ukChildren)
     )
 
@@ -142,10 +147,10 @@ describe('API splits', () => {
         "arrivalKey": {
           "origin": {"iata": "AMS"},
           "voyageNumber": {"$type": "uk.gov.homeoffice.drt.arrivals.VoyageNumber", "numeric": 123},
-          "scheduled": scheduledTimeAfterEligibilityChange.unix() * 1000
+          "scheduled": scheduledTime.unix() * 1000
         },
 
-        "ageRanges": ageRangesForEligibilityDate(scheduledTimeAfterEligibilityChange, 1, 10),
+        "ageRanges": ageRangesForEligibilityDate(scheduledTime, 1, 10),
 
         "nationalities": [
           [{"code": "ITA"}, 1],
@@ -159,36 +164,32 @@ describe('API splits', () => {
       }
     ]
 
-    csrfTokenForArrivalsDate(scheduledTimeAfterEligibilityChange)
+    csrfTokenForArrivalsDate(scheduledTime)
       .then((csrfToken) => {
         cy.addFlight(
           {
             "ActPax": 11,
-            "EstDT": scheduledTimeAfterEligibilityChange.format(),
-            "ActDT": scheduledTimeAfterEligibilityChange.format(),
-            "EstChoxDT": scheduledTimeAfterEligibilityChange.format(),
-            "ActChoxDT": scheduledTimeAfterEligibilityChange.format(),
-            "SchDT": scheduledTimeAfterEligibilityChange.format()
+            "ICAO": "TS0123",
+            "IATA": "TS0123",
+            "EstDT": scheduledTime.format(),
+            "ActDT": scheduledTime.format(),
+            "EstChoxDT": scheduledTime.format(),
+            "ActChoxDT": scheduledTime.format(),
+            "SchDT": scheduledTime.format()
           },
           csrfToken.toString()
         )
         cy.addManifest(apiManifest, csrfToken.toString())
       })
-      .then(() => {
-        cy.visit('#terminal/T1/current/arrivals/?date=' + scheduledTimeAfterEligibilityChange.format("YYYY-MM-DD"))
-        cy.choose24Hours()
-      })
-      .get("#arrivals", {timeout: 30000})
-      .contains("TS0123", {timeout: 30000})
+      .waitForFlightToAppear("TS0123")
       .get(paxRagGreenSelector, {timeout: 5000})
-      .wait(100)
       .get('.egate-queue-pax')
       .contains("8")
       .get('.eeadesk-queue-pax')
       .contains("3")
       .request({
         method: 'GET',
-        url: "/manifest-summaries/" + scheduledTimeAfterEligibilityChange.format("YYYY-MM-DD") + "/summary",
+        url: "/manifest-summaries/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
       })
       .then((resp) => {
         expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")

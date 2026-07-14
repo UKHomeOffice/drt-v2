@@ -5,6 +5,7 @@ import diode.data.Pot
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType }
 import drt.client.actions.Actions.{ RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation }
 import drt.client.components.ToolTips._
+import drt.client.components.govuk.{ RadioOption, Radios, RadiosProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.handlers.UpdateUserPreferences
@@ -203,17 +204,15 @@ object TerminalDesksAndQueues {
         <.th(^.className := "total-deployed", ^.colSpan := 6, "Staffing")
       )
 
-      def toggleDeskType(newDeskType: DeskType) = (e: ReactEventFromInput) => {
-        e.preventDefault()
+      def toggleDeskType(newDeskType: DeskType): Callback = {
         GoogleEventTracker.sendEvent(s"$terminal", "Select desk type", newDeskType.toString)
         props.router.set(
           props.terminalPageTab.withUrlParameters(UrlViewType(Option(newDeskType)))
         )
       }
 
-      def handleTimeInterval = (e: ReactEventFromInput, timeInterval: TimeInterval) =>
+      def handleTimeInterval(timeInterval: TimeInterval): Callback =
         Callback {
-          e.preventDefault()
           GoogleEventTracker.sendEvent(
             s"$terminal",
             s"Select ${timeInterval.queryParamsValue} interval",
@@ -224,8 +223,7 @@ object TerminalDesksAndQueues {
           )))
         }
 
-      def toggleDisplayType(newDisplayType: DisplayType) = (e: ReactEventFromInput) => {
-        e.preventDefault()
+      def toggleDisplayType(newDisplayType: DisplayType): Callback = {
         GoogleEventTracker.sendEvent(s"$terminal", "Select display type", newDisplayType.toString)
         props.router.set(
           props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
@@ -241,87 +239,69 @@ object TerminalDesksAndQueues {
       }
 
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
-        val deskTypeControls = List(
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.deskType == Recommended,
-              ^.onChange ==> toggleDeskType(Recommended),
-              ^.id := "show-recs"
-            ),
-            <.label(^.`for` := "show-recs", "Recommended", " ", recommendationsTooltip)
-          ),
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.deskType == Deployments,
-              ^.onChange ==> toggleDeskType(Deployments),
-              ^.id := "show-deps"
-            ),
-            <.label(^.`for` := "show-deps", "Available", " ", availableStaffDeploymentsTooltip)
+        val deskTypeControls = Radios(RadiosProps(
+          name = "deskType",
+          small = true,
+          inline = true,
+          value = if (state.deskType == Recommended) "recommended" else "deployments",
+          onChange = ((value: String) => {
+            val newDeskType = if (value == "recommended") Recommended else Deployments
+            toggleDeskType(newDeskType).runNow()
+          }): js.Function1[String, Unit],
+          options = js.Array(
+            RadioOption("recommended", <.span("Recommended", " ", recommendationsTooltip)).toJs,
+            RadioOption("deployments", <.span("Available", " ", availableStaffDeploymentsTooltip)).toJs
           )
-        )
+        ))
 
-        val displayTypeControls = List(
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.displayType == TableView,
-              ^.onChange ==> toggleDisplayType(TableView),
-              ^.id := "display-table"
-            ),
-            <.label(^.`for` := "display-table", "Table")
-          ),
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.displayType == ChartsView,
-              ^.onChange ==> toggleDisplayType(ChartsView),
-              ^.id := "display-charts"
-            ),
-            <.label(^.`for` := "display-charts", "Chart")
+        val displayTypeControls = Radios(RadiosProps(
+          name = "displayType",
+          small = true,
+          inline = true,
+          value = if (state.displayType == TableView) "table" else "charts",
+          onChange = ((value: String) => {
+            val newDisplayType = if (value == "table") TableView else ChartsView
+            toggleDisplayType(newDisplayType).runNow()
+          }): js.Function1[String, Unit],
+          options = js.Array(
+            RadioOption("table", "Table").toJs,
+            RadioOption("charts", "Chart").toJs
           )
-        )
+        ))
 
-        val displayIntervalControls = List(
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.timeInterval == Quarterly,
-              ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Quarterly)),
-              ^.id := "display-quaterly-interval"
-            ),
-            <.label(^.`for` := "display-quaterly-interval", "15 minute")
-          ),
-          <.div(
-            ^.className := s"controls-radio-wrapper",
-            <.input.radio(
-              ^.checked := state.timeInterval == Hourly,
-              ^.onChange ==> ((e: ReactEventFromInput) => handleTimeInterval(e, Hourly)),
-              ^.id := "display-hourly-interval"
-            ),
-            <.label(^.`for` := "display-hourly-interval", "Hour")
+        val displayIntervalControls = Radios(RadiosProps(
+          name = "displayInterval",
+          small = true,
+          inline = true,
+          value = if (state.timeInterval == Quarterly) "quarterly" else "hourly",
+          onChange = ((value: String) => {
+            val timeInterval = if (value == "quarterly") Quarterly else Hourly
+            handleTimeInterval(timeInterval).runNow()
+          }): js.Function1[String, Unit],
+          options = js.Array(
+            RadioOption("quarterly", "15 minute").toJs,
+            RadioOption("hourly", "Hour").toJs
           )
-        )
+        ))
 
         <.div(
           ^.className := "view-controls",
           <.div(
             ^.className := "view-controls-label",
             "Staffing",
-            <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod)
+            <.div(^.className := "view-controls-selector", deskTypeControls)
           ),
           <.span(^.className := "separator"),
           <.div(
             ^.className := "view-controls-label",
             "View",
-            <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod)
+            <.div(^.className := "view-controls-selector", displayTypeControls)
           ),
           <.span(^.className := "separator"),
           <.div(
             ^.className := "view-controls-label",
             "Time interval",
-            <.div(^.className := "view-controls-selector", displayIntervalControls.toTagMod)
+            <.div(^.className := "view-controls-selector", displayIntervalControls)
           )
         )
       }
