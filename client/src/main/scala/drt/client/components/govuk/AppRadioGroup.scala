@@ -21,6 +21,7 @@ object AppRadioGroup {
       items: Seq[RadioItem],
       onChange: String => Callback,
       inline: Boolean = true,
+      small: Boolean = false,
       describedBy: Option[String] = None
   )
 
@@ -30,10 +31,13 @@ object AppRadioGroup {
   def apply(props: Props): VdomElement = {
     <.fieldset(
       ^.className := "govuk-fieldset",
-      <.legend(^.className := "govuk-fieldset__legend govuk-fieldset__legend--s", props.legend),
+      <.legend(^.className := "govuk-fieldset__legend govuk-fieldset__legend--m", props.legend),
       <.div(
-        ^.className :=
-          (if (props.inline) "govuk-radios govuk-radios--inline drt-govuk-radios-poc" else "govuk-radios drt-govuk-radios-poc"),
+        ^.className := {
+          val inlineClass = Option.when(props.inline)(" govuk-radios--inline").getOrElse("")
+          val smallClass = Option.when(props.small)(" govuk-radios--small").getOrElse("")
+          s"govuk-radios$inlineClass$smallClass drt-govuk-radios-poc"
+        },
         props.items.toTagMod { item =>
           val id = item.id.getOrElse(inputId(props.name, item.value))
           val hintId = s"$id-hint"

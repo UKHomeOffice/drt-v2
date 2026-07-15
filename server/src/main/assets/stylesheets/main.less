@@ -9,6 +9,7 @@
 @import 'tippy-themes/material.css';
 @import 'tippy-themes/translucent.css';
 @import 'flickity.css';
+@import 'govuk-frontend.min.css';
 
 // Scope flight-chart tooltip overflow handling to the dedicated tooltip theme only.
 // This avoids changing tooltip behaviour elsewhere in the app while keeping the chart popup
@@ -772,12 +773,34 @@ table.headlines tr:nth-child(odd) {
 
 .desks-and-queues-top {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   align-items: flex-start;
   align-content: flex-start;
-  gap: 10px;
+  gap: 10px 16px;
   margin-bottom: 15px;
   background-color: #E6E9F1;
+}
+
+.view-controls-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+  align-items: flex-start;
+}
+
+.view-controls-actions .re-crunch {
+  margin-top: 0;
+  margin-right: 0;
+}
+
+@media (max-width: 900px) {
+  .view-controls-actions {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 .terminal-nav-wrapper {
@@ -1094,6 +1117,8 @@ rect.bordered {
 .view-controls {
   display: flex;
   gap: 10px;
+  flex: 1 1 auto;
+  min-width: max-content;
 }
 
 .view-controls-label {
@@ -1110,41 +1135,104 @@ rect.bordered {
 
 .view-controls-selector {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: flex-start;
   border-radius: 5px;
   margin: 2px 0;
   padding: 5px 0px;
   font-weight: normal;
-  gap: 10px;
+  gap: 6px 12px;
 }
 
-/* POC GovUK-style radios wrapper used in desks-and-queues controls. */
+.view-controls-selector .govuk-fieldset {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+/* GovUK-style radios wrapper used in desks-and-queues controls. */
 .drt-govuk-radios-poc {
+  gap: 6px;
+}
+
+.drt-govuk-radios-poc .govuk-radios__item {
+  margin-bottom: 0;
+}
+
+/* Keep radios inline on wider viewports. */
+.view-controls-selector .govuk-radios.govuk-radios--inline {
   display: flex;
-  gap: 10px;
-}
-
-.govuk-fieldset {
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.govuk-fieldset__legend {
-  font-size: 14px;
-  margin-bottom: 4px;
-}
-
-.govuk-radios__item {
-  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 5px;
+  column-gap: 8px;
 }
 
-.govuk-radios__input,
-.govuk-radios__label,
-.govuk-radios__hint {
-  margin: 0;
+.view-controls-selector .govuk-radios.govuk-radios--inline .govuk-radios__item {
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+/* On narrow screens, let the radio items stack vertically. */
+@media (max-width: 640px) {
+  .view-controls-selector .govuk-radios.govuk-radios--inline {
+    display: block;
+  }
+
+  .view-controls-selector .govuk-radios.govuk-radios--inline .govuk-radios__item {
+    margin-right: 0;
+    margin-bottom: 5px;
+  }
+}
+
+.view-controls-selector .govuk-radios.govuk-radios--small .govuk-radios__input {
+  margin-left: -10px;
+}
+
+.view-controls-selector .govuk-radios.govuk-radios--small .govuk-radios__label {
+  max-width: none;
+  padding-left: 1px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.view-controls-selector .govuk-radios.govuk-radios--small .tooltip-trigger,
+.view-controls-selector .govuk-radios.govuk-radios--small .tippy-info-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.view-controls-selector .govuk-radios.govuk-radios--small .govuk-radios__label:before {
+  top: 10px;
+  left: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.view-controls-selector .govuk-radios.govuk-radios--small .govuk-radios__label:after {
+  top: 17px;
+  left: 7px;
+  border-width: 5px;
+}
+
+/* GOV.UK target sizes in this toolbar: 19px desktop, 16px on smaller screens. */
+.view-controls-selector .govuk-fieldset__legend,
+.view-controls-selector .govuk-radios__label {
+  font-size: 19px !important;
+  line-height: 1.3157894737;
+}
+
+.view-controls-selector .govuk-fieldset__legend {
+  margin-bottom: 3px;
+}
+
+@media (max-width: 640px) {
+  .view-controls-selector .govuk-fieldset__legend,
+  .view-controls-selector .govuk-radios__label {
+    font-size: 16px !important;
+    line-height: 1.25;
+  }
 }
 
 .controls-radio-wrapper {

@@ -30,8 +30,6 @@ import uk.gov.homeoffice.drt.ports.{ AirportConfig, Queues }
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.scalajs.js
-
 object TerminalDesksAndQueues {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -256,7 +254,9 @@ object TerminalDesksAndQueues {
               case value if value == Recommended.queryParamsValue => setDeskType(Recommended)
               case value if value == Deployments.queryParamsValue => setDeskType(Deployments)
               case _                                               => Callback.empty
-            }
+            },
+            inline = true,
+            small = true
           )
         )
 
@@ -273,7 +273,9 @@ object TerminalDesksAndQueues {
               case value if value == TableView.queryParamsValue  => setDisplayType(TableView)
               case value if value == ChartsView.queryParamsValue => setDisplayType(ChartsView)
               case _                                              => Callback.empty
-            }
+            },
+            inline = true,
+            small = true
           )
         )
 
@@ -290,7 +292,9 @@ object TerminalDesksAndQueues {
               case value if value == Quarterly.queryParamsValue => setTimeInterval(Quarterly)
               case value if value == Hourly.queryParamsValue    => setTimeInterval(Hourly)
               case _                                             => Callback.empty
-            }
+            },
+            inline = true,
+            small = true
           )
         )
 
@@ -298,7 +302,6 @@ object TerminalDesksAndQueues {
           ^.className := "view-controls",
           <.div(
             ^.className := "view-controls-label",
-            "Staffing",
             <.div(^.className := "view-controls-selector", deskTypeControls)
           ),
           <.span(^.className := "separator"),
@@ -306,7 +309,6 @@ object TerminalDesksAndQueues {
           <.span(^.className := "separator"),
           <.div(
             ^.className := "view-controls-label",
-            "Time interval",
             <.div(^.className := "view-controls-selector", displayIntervalControls)
           )
         )
@@ -354,7 +356,7 @@ object TerminalDesksAndQueues {
               ^.aria.labelledBy := "desk-queues-description",
               viewTypeControls,
               if (props.loggedInUser.hasRole(SuperAdmin)) <.div(
-                ^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
+                ^.className := "view-controls-actions",
                 adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
                 adminRecalcButton(requestPaxLoadsRecalculation, "Recalc Pax Loads")
               )

@@ -22,6 +22,7 @@
     "core-js": "3.23.3",
     "css-loader": "6.7.2",
     "flickity": "2.3.0",
+    "govuk-frontend": "^6.4.0",
     "handsontable": "^16.2.0",
     "jsdom": "^27.4.0",
     "log4javascript": "1.4.15",
