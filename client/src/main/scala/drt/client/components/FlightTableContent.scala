@@ -30,6 +30,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.{ HashSet, Seq }
 import scala.scalajs.js
+import drt.client.util.DateUtil
 
 object FlightTableContent {
   case class Props(
@@ -65,19 +66,6 @@ object FlightTableContent {
           !e.target.checked
         )))
       }
-
-    private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
-      val searchFormForDate = searchForm(selectedDate, terminalPageTab)
-
-      val fromSDate = SDate(searchFormForDate.fromTime.valueOf().toLong)
-      val toSDate = SDate(searchFormForDate.toTime.valueOf().toLong)
-      val from = fromSDate.toHoursAndMinutes
-      val to = toSDate.toHoursAndMinutes
-      if (fromSDate.toLocalDate != toSDate.toLocalDate)
-        s"${searchFormForDate.displayText} ($from ${fromSDate.toLocalDate.ddmmyyyy} to $to ${toSDate.toLocalDate.ddmmyyyy})"
-      else
-        s"${searchFormForDate.displayText} ($from to $to)"
-    }
 
     def render(props: Props): VdomElement = {
       val flightDisplayFilter = props.airportConfig.portCode match {
@@ -119,7 +107,7 @@ object FlightTableContent {
               <.div(
                 ^.style := js.Dictionary("paddingTop" -> "10px"),
                 MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(
-                  s"Arrivals, ${displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}"
+                  s"Arrivals, ${DateUtil.displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}"
                 )
               ),
               <.div(^.style :=
