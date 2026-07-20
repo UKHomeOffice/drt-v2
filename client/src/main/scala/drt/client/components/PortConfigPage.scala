@@ -126,6 +126,7 @@ object PortConfigDetails {
     ^.className := "config-block float-left",
     <.table(
       ^.className := "table table-bordered table-hover",
+      ^.aria.label := "Processing Times",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Passenger Type & Queue"),
