@@ -154,6 +154,7 @@ object PortConfigDetails {
       val sortedMap = WalkTimes.sortGateStandMap(gateWalktimes)
       <.table(
         ^.className := "table table-bordered table-hover",
+        ^.aria.label := "Gate/Stand Walktime",
         <.tbody(
           <.tr(
             <.th(^.className := "col", "Gate"),
@@ -180,6 +181,7 @@ object PortConfigDetails {
 
       <.table(
         ^.className := "table table-bordered table-hover",
+        ^.aria.label := "Gate/Stand Walktime",
         <.tbody(
           <.tr(
             <.th(^.className := "col", "Stand"),
