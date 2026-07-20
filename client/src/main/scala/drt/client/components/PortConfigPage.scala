@@ -203,6 +203,7 @@ object PortConfigDetails {
     ^.className := "config-block float-left",
     <.table(
       ^.className := "table table-bordered table-hover",
+      ^.aria.label := "Walktimes",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Gate"),
