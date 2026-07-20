@@ -262,6 +262,7 @@ object TerminalPlanningComponent {
               ),
               <.table(
                 ^.className := "forecast",
+                ^.aria.label := "Daily staff breakdown",
                 <.thead(
                   ^.className := "sticky-top",
                   <.tr(
