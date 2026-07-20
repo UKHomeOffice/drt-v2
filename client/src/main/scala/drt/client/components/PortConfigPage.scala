@@ -220,6 +220,7 @@ object PortConfigDetails {
     ^.className := "config-block float-left",
     <.table(
       ^.className := "table table-bordered table-hover",
+       ^.aria.label := "Passenger Queue Allocation",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Passenger Type"),
