@@ -60,6 +60,7 @@ object PcpPaxSummariesComponent {
           props.crunchMinutesPot.render(cms =>
             <.div(
               ^.className := "pcp-pax-summaries",
+              ^.aria.label := "Estimated pax over timeframes",
               boxes.zipWithIndex.map {
                 case (label, box) =>
                   val start = now.addMinutes(box * 5)
