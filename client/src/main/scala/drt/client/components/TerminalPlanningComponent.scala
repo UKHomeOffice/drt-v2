@@ -170,6 +170,7 @@ object TerminalPlanningComponent {
               ),
               <.table(
                 ^.className := "headlines",
+                ^.aria.label := "Daily pax breakdown",
                 <.thead(
                   <.tr(
                     <.th(^.className := "queue-heading"),
