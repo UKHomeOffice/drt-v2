@@ -9,6 +9,7 @@ import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.services.{ SPACircuit, StaffMovementMinute, ViewMode }
+import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
@@ -334,6 +335,8 @@ object TerminalDesksAndQueues {
           dayCrunchMinutes <- props.dayCrunchSummaries
           slaConfigs <- props.slaConfigs
         } yield {
+          val portName = getAirportByCode(props.airportConfig.portCode.toString()).getOrElse(props.airportConfig.portCode.toString())
+          val desksAndQueuesTableLabel = s"Desks and queues at $portName, ${props.terminal.toString}"
           val slas =
             slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
           val interval = if (state.timeInterval == Hourly) 60 else 15
@@ -389,7 +392,8 @@ object TerminalDesksAndQueues {
               }.toTagMod
             } else {
               <.table(
-                ^.aria.labelledBy := "desk-queues-description",
+                ^.aria.label := desksAndQueuesTableLabel,
+                ^.aria.describedBy := "desk-queues-description",
                 ^.className := s"user-desk-recs table-striped",
                 <.thead(
                   ^.className := "sticky-top",

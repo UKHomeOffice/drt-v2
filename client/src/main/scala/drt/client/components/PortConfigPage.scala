@@ -126,6 +126,7 @@ object PortConfigDetails {
     ^.className := "config-block float-left",
     <.table(
       ^.className := "table table-bordered table-hover",
+      ^.aria.label := "Processing Times",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Passenger Type & Queue"),
@@ -153,6 +154,7 @@ object PortConfigDetails {
       val sortedMap = WalkTimes.sortGateStandMap(gateWalktimes)
       <.table(
         ^.className := "table table-bordered table-hover",
+        ^.aria.label := "Gate/Stand Walktime",
         <.tbody(
           <.tr(
             <.th(^.className := "col", "Gate"),
@@ -179,6 +181,7 @@ object PortConfigDetails {
 
       <.table(
         ^.className := "table table-bordered table-hover",
+        ^.aria.label := "Gate/Stand Walktime",
         <.tbody(
           <.tr(
             <.th(^.className := "col", "Stand"),
@@ -202,6 +205,7 @@ object PortConfigDetails {
     ^.className := "config-block float-left",
     <.table(
       ^.className := "table table-bordered table-hover",
+      ^.aria.label := "Walktimes",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Gate"),
@@ -219,6 +223,7 @@ object PortConfigDetails {
     ^.className := "config-block float-left",
     <.table(
       ^.className := "table table-bordered table-hover",
+       ^.aria.label := "Passenger Queue Allocation",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Passenger Type"),

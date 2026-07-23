@@ -6,8 +6,8 @@ import drt.client.SPAMain.TerminalPageTabLoc
 import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.client.services.JSDateConversions.SDate
 import drt.shared._
 import drt.shared.api.WalkTimes
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
@@ -31,6 +31,7 @@ import scala.collection.immutable.HashSet
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.util.Try
+import drt.client.util.DateUtil
 
 object FlightTable {
   private val egateAgeEligibilityDateChange = "2026-07-08"
@@ -99,6 +100,7 @@ object FlightTable {
           )
         )
       }
+
 
       val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
         val sfp = data.asInstanceOf[SearchFilterPayload]
@@ -208,8 +210,8 @@ object FlightTable {
             )
           } else EmptyVdom
         ),
-        <.div {
-
+        <.div (
+          ^.aria.label := s"Arrivals, ${DateUtil.displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}",
           FlightTableContent(
             FlightTableContent.Props(
               flights = props.flights,
@@ -234,7 +236,7 @@ object FlightTable {
               codeShares = props.codeShares
             )
           )
-        },
+        ),
         excludedPaxNote
       )
     }

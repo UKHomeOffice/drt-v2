@@ -191,6 +191,7 @@ object TerminalStaffing {
         staffWithShiftsAndMovements: (Terminal, SDateLike, MillisSinceEpoch => SDateLike) => Int
     ): VdomTagOf[Table] =
       <.table(
+        ^.aria.label := "Staff over the day",
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
           daysWorthOf15Minutes.grouped(16).flatMap {
