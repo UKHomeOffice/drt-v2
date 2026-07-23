@@ -15,6 +15,11 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
+      - export NPM_AUTH_USERNAME="$ARTIFACTORY_USERNAME"
+      - export NPM_AUTH_TOKEN="$(printf "%s" "$ARTIFACTORY_PASSWORD" | base64 | tr -d '\n')"
+      - npm --prefix client config get registry
+      - npm --prefix client config list
+      - npm --prefix client ping --registry "https://artifactory.digital.homeoffice.gov.uk/artifactory/api/npm/npm-registry-remote/"
       - npm --prefix client ci
       - sbt --error client/test
     environment:
@@ -65,6 +70,8 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
     commands:
       - /root/entrypoint.sh
+      - export NPM_AUTH_USERNAME="$ARTIFACTORY_USERNAME"
+      - export NPM_AUTH_TOKEN="$(printf "%s" "$ARTIFACTORY_PASSWORD" | base64 | tr -d '\n')"
       - npm --prefix client ci
       - sbt "client/fullLinkJS"
       - npm --prefix client run build
