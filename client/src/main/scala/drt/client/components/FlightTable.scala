@@ -211,7 +211,6 @@ object FlightTable {
           } else EmptyVdom
         ),
         <.div (
-          ^.aria.label := s"Arrivals, ${DateUtil.displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}",
           FlightTableContent(
             FlightTableContent.Props(
               flights = props.flights,
