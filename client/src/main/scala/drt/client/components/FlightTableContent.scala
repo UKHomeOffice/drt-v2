@@ -146,6 +146,7 @@ object FlightTableContent {
               <.div(
                 <.table(
                   ^.className := "arrivals-table table-striped",
+                  ^.aria.label := s"Arrivals, ${DateUtil.displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}",
                   tableHead(
                     props,
                     props.queueOrder,
