@@ -16,9 +16,9 @@ object BackendDependencies {
     "com.github.jwt-scala"    %% "jwt-core"                  % "11.0.4",
     "com.hierynomus"           % "sshj"                      % "0.40.0",
     "com.vmunier"             %% "scalajs-scripts"           % "1.3.0",
-    "com.typesafe"             % "config"                    % "1.4.8",
-    "joda-time"                % "joda-time"                 % "2.14.2",
-    "uk.gov.service.notify"    % "notifications-java-client" % "6.0.0-RELEASE",
+    "com.typesafe"             % "config"                    % "1.4.9",
+    "joda-time"                % "joda-time"                 % "2.14.3",
+    "uk.gov.service.notify"    % "notifications-java-client" % "6.0.1-RELEASE",
     "software.amazon.awssdk"   % "s3"                        % "2.45.1",
     "org.playframework.twirl" %% "twirl-api"                 % "2.0.9"
   )
@@ -56,7 +56,7 @@ object BackendDependencies {
   )
 
   private val loggingDependencies: Seq[ModuleID] = Seq(
-    "ch.qos.logback"         % "logback-classic"      % "1.5.34",
+    "ch.qos.logback"         % "logback-classic"      % "1.5.38",
     "ch.qos.logback.contrib" % "logback-json-classic" % logbackContribVersion,
     "ch.qos.logback.contrib" % "logback-jackson"      % logbackContribVersion,
     "org.codehaus.janino"    % "janino"               % "3.1.12"
@@ -66,7 +66,7 @@ object BackendDependencies {
     "org.apache.commons" % "commons-csv"          % "1.14.1",
     "org.apache.poi"     % "poi"                  % poiVersion,
     "org.apache.poi"     % "poi-ooxml"            % poiVersion,
-    "org.postgresql"     % "postgresql"           % "42.7.11",
+    "org.postgresql"     % "postgresql"           % "42.7.13",
     "org.renjin"         % "renjin-script-engine" % "0.9.2725"
   )
 

@@ -415,7 +415,7 @@ object SPAMain {
         proxy(ac =>
           AccessibilityStatementComponent(
             IAccessibilityStatementProps(
-              ac().map(_.contactEmail.toString).getOrElse(""),
+              ac().map(_.contactEmail.getOrElse("")).getOrElse(""),
               () => sendReportProblemGaEvent(ac().map(_.portCode.iata).getOrElse("")),
               page.section.getOrElse("")
             )
