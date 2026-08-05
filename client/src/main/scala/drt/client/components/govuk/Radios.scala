@@ -3,7 +3,7 @@ package drt.client.components.govuk
 import japgolly.scalajs.react.facade.React
 import japgolly.scalajs.react.vdom.VdomNode
 import japgolly.scalajs.react.vdom.html_<^.VdomElement
-import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.{ Children, JsFnComponent }
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
@@ -32,21 +32,21 @@ trait RadiosProps extends js.Object {
 
 object RadiosProps {
   def apply(
-             name: String,
-             idPrefix: js.UndefOr[String] = js.undefined,
-             options: js.Array[js.Any],
-             label: js.UndefOr[React.Node] = js.undefined,
-             isPageHeading: js.UndefOr[Boolean] = js.undefined,
-             legendSize: js.UndefOr[String] = js.undefined,
-             hint: js.UndefOr[String] = js.undefined,
-             error: js.UndefOr[String] = js.undefined,
-             value: js.UndefOr[String] = js.undefined,
-             defaultValue: js.UndefOr[String] = js.undefined,
-             onChange: js.UndefOr[js.Function1[String, Unit]] = js.undefined,
-             inline: js.UndefOr[Boolean] = js.undefined,
-             small: js.UndefOr[Boolean] = js.undefined,
-             disabled: js.UndefOr[Boolean] = js.undefined
-           ): RadiosProps = {
+      name: String,
+      idPrefix: js.UndefOr[String] = js.undefined,
+      options: js.Array[js.Any],
+      label: js.UndefOr[React.Node] = js.undefined,
+      isPageHeading: js.UndefOr[Boolean] = js.undefined,
+      legendSize: js.UndefOr[String] = js.undefined,
+      hint: js.UndefOr[String] = js.undefined,
+      error: js.UndefOr[String] = js.undefined,
+      value: js.UndefOr[String] = js.undefined,
+      defaultValue: js.UndefOr[String] = js.undefined,
+      onChange: js.UndefOr[js.Function1[String, Unit]] = js.undefined,
+      inline: js.UndefOr[Boolean] = js.undefined,
+      small: js.UndefOr[Boolean] = js.undefined,
+      disabled: js.UndefOr[Boolean] = js.undefined
+  ): RadiosProps = {
     val p = (new js.Object).asInstanceOf[RadiosProps]
     p.name = name
     p.idPrefix = idPrefix
@@ -67,12 +67,12 @@ object RadiosProps {
 }
 
 case class RadioOption(
-                        value: String,
-                        label: VdomNode,
-                        hint: Option[String] = None,
-                        conditional: Option[VdomNode] = None,
-                        disabled: Boolean = false
-                      ) {
+    value: String,
+    label: VdomNode,
+    hint: Option[String] = None,
+    conditional: Option[VdomNode] = None,
+    disabled: Boolean = false
+) {
   def toJs: js.Object = {
     val dict = js.Dictionary[js.Any](
       "value" -> value,

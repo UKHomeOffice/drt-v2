@@ -524,11 +524,61 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         ManifestDateOfArrival(arrivalDate),
         ManifestTimeOfArrival("20:00"),
         List(
-          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),
-          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(25)), None, InTransit(false), None, Option(Nationality("USA")), None),
-          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(8)), None, InTransit(false), None, Option(Nationality("FRA")), None),
-          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(17)), None, InTransit(false), None, Option(Nationality("FRA")), None),
-          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(30)), None, InTransit(false), None, Option(Nationality("POL")), None)
+          PassengerInfoJson(
+            None,
+            Nationality("XXX"),
+            EeaFlag("Y"),
+            Option(PaxAge(50)),
+            None,
+            InTransit(false),
+            None,
+            Option(Nationality("GBR")),
+            None
+          ),
+          PassengerInfoJson(
+            None,
+            Nationality("XXX"),
+            EeaFlag("Y"),
+            Option(PaxAge(25)),
+            None,
+            InTransit(false),
+            None,
+            Option(Nationality("USA")),
+            None
+          ),
+          PassengerInfoJson(
+            None,
+            Nationality("XXX"),
+            EeaFlag("Y"),
+            Option(PaxAge(8)),
+            None,
+            InTransit(false),
+            None,
+            Option(Nationality("FRA")),
+            None
+          ),
+          PassengerInfoJson(
+            None,
+            Nationality("XXX"),
+            EeaFlag("Y"),
+            Option(PaxAge(17)),
+            None,
+            InTransit(false),
+            None,
+            Option(Nationality("FRA")),
+            None
+          ),
+          PassengerInfoJson(
+            None,
+            Nationality("XXX"),
+            EeaFlag("Y"),
+            Option(PaxAge(30)),
+            None,
+            InTransit(false),
+            None,
+            Option(Nationality("POL")),
+            None
+          )
         )
       )
     ))

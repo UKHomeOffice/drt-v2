@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageTabLoc
-import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
+import drt.client.actions.Actions.{ RemoveArrivalSources, UpdateFlightHighlight }
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
@@ -12,18 +12,18 @@ import drt.shared._
 import drt.shared.api.WalkTimes
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
 import japgolly.scalajs.react.vdom.html_<^
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, _}
+import japgolly.scalajs.react.vdom.html_<^.{ <, ^, _ }
+import japgolly.scalajs.react.{ Callback, CtorType, _ }
 import org.scalajs.dom.html.Div
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, UniqueArrival }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
-import uk.gov.homeoffice.drt.models.{AgeRange, FlightManifestSummary, ManifestKey, UserPreferences}
+import uk.gov.homeoffice.drt.models.{ AgeRange, FlightManifestSummary, ManifestKey, UserPreferences }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource, PortCode }
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.LocalDate
 
@@ -65,7 +65,8 @@ object FlightTable {
   case class State(showHighlightedRows: Boolean)
 
   private[components] def ageGroupsForViewDate(viewDate: LocalDate): js.Array[String] = {
-    val beforeEligibilityChange = SDate(viewDate).millisSinceEpoch < SDate(egateAgeEligibilityDateChange).millisSinceEpoch
+    val beforeEligibilityChange = SDate(viewDate).millisSinceEpoch <
+      SDate(egateAgeEligibilityDateChange).millisSinceEpoch
 
     js.Array(
       (if (beforeEligibilityChange) AgeRange(0, 9) else AgeRange(0, 7)).title,
@@ -100,7 +101,6 @@ object FlightTable {
           )
         )
       }
-
 
       val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
         val sfp = data.asInstanceOf[SearchFilterPayload]
@@ -210,7 +210,7 @@ object FlightTable {
             )
           } else EmptyVdom
         ),
-        <.div (
+        <.div(
           FlightTableContent(
             FlightTableContent.Props(
               flights = props.flights,

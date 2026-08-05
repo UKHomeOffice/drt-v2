@@ -32,4 +32,3 @@ object FlightTableAgeGroupsTest extends TestSuite {
     }
   }
 }
-

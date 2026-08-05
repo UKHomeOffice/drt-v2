@@ -315,7 +315,8 @@ object TerminalDesksAndQueues {
           dayCrunchMinutes <- props.dayCrunchSummaries
           slaConfigs <- props.slaConfigs
         } yield {
-          val portName = getAirportByCode(props.airportConfig.portCode.toString()).getOrElse(props.airportConfig.portCode.toString())
+          val portName =
+            getAirportByCode(props.airportConfig.portCode.toString()).getOrElse(props.airportConfig.portCode.toString())
           val desksAndQueuesTableLabel = s"Desks and queues at $portName, ${props.terminal.toString}"
           val slas =
             slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
