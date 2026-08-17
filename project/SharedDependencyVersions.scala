@@ -1,6 +1,6 @@
 object SharedDependencyVersions {
   object drt {
-    val lib = "v1462"
+    val lib = "v1465"
     val cirium = "v425"
     val birminghamSchema = "50"
     val bluebus = "v149"
