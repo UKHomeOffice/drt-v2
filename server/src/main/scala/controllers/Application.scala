@@ -122,23 +122,6 @@ class Application @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterface)
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
-  private val backendPrefixes = Set(
-    "api",
-    "assets",
-    "config",
-    "data",
-    "health-check",
-    "alerts",
-    "export"
-  )
-
-  def clientRouteFallback(path: String): Action[AnyContent] = Action { implicit request =>
-    val normalisedPath = path.stripPrefix("/").stripSuffix("/")
-    val prefix = normalisedPath.takeWhile(_ != '/')
-
-    if (backendPrefixes.contains(prefix)) NotFound
-    else Redirect("/#notFound")
-  }
 
   def userPreferences: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>

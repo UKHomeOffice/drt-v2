@@ -4,9 +4,30 @@ import diode.Action
 import diode.data.Pot
 import diode.react.ReactConnectProxy
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Recommended, TableView}
+import drt.client.components.TerminalDesksAndQueues.{
+  ChartsView,
+  Deployments,
+  DeskType,
+  DisplayType,
+  Recommended,
+  TableView
+}
 import drt.client.components.styles._
-import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, FocusTracker, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, NotFoundPage, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
+import drt.client.components.{
+  AccessibilityStatementComponent,
+  FeedsStatusPage,
+  FocusTracker,
+  ForecastUploadComponent,
+  GlobalStyles,
+  IAccessibilityStatementProps,
+  Layout,
+  NotFoundPage,
+  PortConfigPage,
+  PortDashboardPage,
+  TerminalComponent,
+  TrainingHubComponent,
+  UserDashboardPage
+}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -29,6 +50,12 @@ import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 import scala.scalajs.js.annotation.{ JSExport, JSExportTopLevel }
 import scala.util.Try
 
+object BrowserTitle {
+  def forNotFound(isNotFound: Boolean): String =
+    if (isNotFound) "Page not found - Dynamic Response Tool - Border Force"
+    else "Dynamic Response Tool - Border Force"
+}
+
 object SPAMain {
   sealed trait Loc {
     val url: String
@@ -50,7 +77,7 @@ object SPAMain {
     }
 
     def title(pageName: String, maybeTerminal: Option[Terminal]) =
-      s"$pageName at ${portConfig.portCode.iata} (${portConfig.portName})${terminalPart(maybeTerminal)} - DRT"
+      s"$pageName at ${portConfig.portCode.iata} (${portConfig.portName})${terminalPart(maybeTerminal)} - Dynamic Response Tool - Border Force"
 
     def title(maybeTerminal: Option[Terminal]): String
   }
@@ -357,9 +384,9 @@ object SPAMain {
       rule.notFound(redirectToPage(NotFoundLoc)(SetRouteVia.HistoryReplace))
     }
     .renderWith(Layout(_, _))
-    .setTitle(_.title(maybeTerminal))
     .setPostRender { (maybePrevLoc, currentLoc) =>
-      val title = currentLoc.title(maybeTerminal)
+      val title = BrowserTitle.forNotFound(currentLoc == NotFoundLoc)
+      dom.document.title = title
       log.info(s"Sending page view: $title (${currentLoc.href})")
       Callback(GoogleEventTracker.sendPageView(title, currentLoc.href)) >>
         Callback(
@@ -374,15 +401,6 @@ object SPAMain {
           }
         ) >> Callback(FocusTracker.restore())
     }
-
-  private def maybeTerminal: Option[Terminal] = {
-    val terminalRegex = """.+terminal/([A-Z0-9]+)/.+""".r
-    val url = window.location.href
-    url match {
-      case terminalRegex(t) => Some(Terminal(t))
-      case _                => None
-    }
-  }
 
   private def sendReportProblemGaEvent(portCode: String) = {
     Callback(GoogleEventTracker.sendEvent(portCode, "Accessibility", "Email us to report a problem"))

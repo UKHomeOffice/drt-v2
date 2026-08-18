@@ -42,6 +42,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   )
 
   val airportConfig: AirportConfig = defaultAirportConfig.copy(useTimePredictions = true)
+  private val probeTimeout = 5.seconds
 
   val defaultWalkTime = 300000L
   val pcpCalc: Arrival => MilliDate = pcpFrom(airportConfig.firstPaxOffMillis, _ => defaultWalkTime)
@@ -293,13 +294,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival)))
 
-        crunch.portStateTestProbe.fishForMessage(1.second) {
+        crunch.portStateTestProbe.fishForMessage(probeTimeout) {
           case PortState(flights, _, _) => flights.nonEmpty
         }
 
         offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(List(ciriumArrival)))
 
-        crunch.portStateTestProbe.fishForMessage(1.second) {
+        crunch.portStateTestProbe.fishForMessage(probeTimeout) {
           case PortState(flights, _, _) =>
             flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
         }
@@ -317,13 +318,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival)))
 
-    crunch.portStateTestProbe.fishForMessage(1.second) {
+    crunch.portStateTestProbe.fishForMessage(probeTimeout) {
       case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
     }
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclArrival.copy(terminal = T2))))
 
-    crunch.portStateTestProbe.fishForMessage(1.second) {
+    crunch.portStateTestProbe.fishForMessage(probeTimeout) {
       case PortState(flights, _, _) =>
         val terminals = flights.values.map(a => a.apiFlight.Terminal)
         terminals == Iterable(T2)
@@ -353,14 +354,14 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(aclFlight)))
 
-      crunch.portStateTestProbe.fishForMessage(1.second) {
+      crunch.portStateTestProbe.fishForMessage(probeTimeout) {
         case PortState(flights, _, _) =>
           flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(AclFeedSource)) == Option(80))
       }
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(liveFlight)))
 
-      crunch.portStateTestProbe.fishForMessage(1.second) {
+      crunch.portStateTestProbe.fishForMessage(probeTimeout) {
         case PortState(flights, _, _) =>
           flights.values.exists(a =>
             a.apiFlight.bestPcpPaxEstimate(List(LiveFeedSource)) == Option(95) && a.apiFlight.MaxPax == Option(100)

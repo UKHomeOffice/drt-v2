@@ -180,5 +180,3 @@ GET           /is-new-feature-available-since-last-login                        
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
 GET           /viewed-feature-guides                                                  controllers.Application.viewedFeatureGuideIds
-
-GET           /*path                                                                  controllers.Application.clientRouteFallback(path: String)
