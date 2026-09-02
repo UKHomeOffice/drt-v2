@@ -24,6 +24,12 @@ class AzinqEdiFeedSpec extends Specification {
 
       arrivals === List(arrival)
     }
+
+    "It should trim the flight status before mapping it to an Arrival" >> {
+      val arrivals = json("T1", "A", "\" A \"").parseJson.convertTo[List[EdiArrival]].map(_.toArrival)
+
+      arrivals === List(arrival)
+    }
   }
 
   "Given a mock http response containing an edi flight json string" >> {
@@ -85,6 +91,54 @@ class AzinqEdiFeedSpec extends Specification {
       Await.result(feed(), 1.second) === List()
     }
 
+    "The AzinqFeed should ignore the arrival when the flight status is null" >> {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val mat: Materializer = Materializer(system)
+
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A", "null"))))
+      )
+
+      Await.result(feed(), 1.second) === List()
+    }
+
+    "The AzinqFeed should ignore the arrival when the flight status is blank" >> {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val mat: Materializer = Materializer(system)
+
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A", "\"   \""))))
+      )
+
+      Await.result(feed(), 1.second) === List()
+    }
+
+    "The AzinqFeed should retain valid arrivals when another arrival has no flight status" >> {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val mat: Materializer = Materializer(system)
+
+      val nullStatusFlight = json("T1", "A", "null").trim.stripPrefix("[").stripSuffix("]")
+      val validFlight = json("T1", "A").trim.stripPrefix("[").stripSuffix("]")
+      val responseJson = s"[$nullStatusFlight,$validFlight]"
+      val feed = AzinqFeed(
+        "fake-uri",
+        "",
+        "",
+        "",
+        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, responseJson)))
+      )
+
+      Await.result(feed(), 1.second) === List(arrival)
+    }
+
   }
 
   private def arrival: LiveArrival = LiveArrival(
@@ -110,7 +164,7 @@ class AzinqEdiFeedSpec extends Specification {
     baggageReclaim = Some("")
   )
 
-  def json(terminal: String, departureArrivalType: String): String =
+  def json(terminal: String, departureArrivalType: String, flightStatus: String = "\"A\""): String =
     s"""[
        |  {
        |    "AIBT": "2023-09-14T07:06:00+01:00",
@@ -137,7 +191,7 @@ class AzinqEdiFeedSpec extends Specification {
        |    "FirstBagDateTime": null,
        |    "FlightIsCancelled": 0,
        |    "FlightNumber": "6566",
-       |    "FlightStatus": "A",
+       |    "FlightStatus": $flightStatus,
        |    "GateActionCode": "",
        |    "GateChangeIndicator": null,
        |    "GateCode": "",
