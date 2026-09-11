@@ -12,4 +12,3 @@ class SPAMainTitleSpec extends AnyFunSuite with Matchers {
     BrowserTitle.forNotFound(isNotFound = true) shouldBe "Page not found - Dynamic Response Tool - Border Force"
   }
 }
-
