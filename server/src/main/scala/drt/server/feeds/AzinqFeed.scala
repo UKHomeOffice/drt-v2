@@ -9,6 +9,7 @@ import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.slf4j.{ Logger, LoggerFactory }
+import services.metrics.Metrics
 import spray.json.{ DefaultJsonProtocol, JsArray, RootJsonFormat }
 import uk.gov.homeoffice.drt.arrivals.{ FeedArrival, FlightCode, LiveArrival, VoyageNumber }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -24,12 +25,12 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
       fetchArrivals: () => Future[Seq[FeedArrival]]
   )(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef[FeedTick]] =
     source.mapAsync(1)(_ => {
-      log.info(s"Requesting live feed.")
+      log.info(s"[AzinqFeed][source] Requesting live feed.")
       fetchArrivals()
         .map(arrivals => ArrivalsFeedSuccess(arrivals))
         .recover {
           case t =>
-            log.error("Failed to fetch arrivals", t)
+            log.error("[AzinqFeed][source] Failed to fetch arrivals", t)
             ArrivalsFeedFailure("Failed to fetch arrivals")
         }
     })
@@ -57,10 +58,17 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
           jsonArray.elements.flatMap { jsValue =>
             try {
               val arrival = jsValue.convertTo[A]
-              if (arrival.isValid) Some(arrival.toArrival) else None
+              if (arrival.isValid) Some(arrival.toArrival)
+              else {
+                arrival.invalidReason.foreach { reason =>
+                  Metrics.counter(s"feeds.azinq.arrivals.skipped.$reason", 1)
+                  log.warn(s"[AzinqFeed][apply] Skipping Azinq arrival: reason=$reason, flight=${arrival.AirlineIATA}${arrival.FlightNumber}, scheduled=${arrival.ScheduledDateTime}")
+                }
+                None
+              }
             } catch {
               case ex: Exception =>
-                log.warn(s"Failed to parse JSON object: ${jsValue.prettyPrint}, error: ${ex.getMessage}")
+                log.warn(s"[AzinqFeed][apply] Failed to parse JSON object: ${jsValue.prettyPrint}, error: ${ex.getMessage}")
                 None
             }
           }.toList
@@ -119,4 +127,5 @@ trait AzinqArrival {
   }
 
   def isValid: Boolean
+  def invalidReason: Option[String] = None
 }
