@@ -208,23 +208,26 @@ steps:
 
   # 4. Static analysis chain
 
-  - name: Scapegoat
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
-    commands:
-      - /root/entrypoint.sh
-      - sbt scapegoat | true
-    environment:
-      NVD_BASE_URL: http://nvdmirror:8008
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
-      ENV_LOG_LEVEL: ERROR
-    when:
-      event:
-        - push
-    depends_on:
-      - Code coverage report
+  # Temporarily disabled: Drone intermittently fails while retrieving this step's
+  # Kubernetes container logs. Restore the step and Slack dependency once resolved.
+  # - name: Scapegoat
+  #   pull: if-not-exists
+  #   image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20.19
+  #   commands:
+  #     - /root/entrypoint.sh
+  #     - sbt --error scapegoat > scapegoat.log 2>&1 || true
+  #     - tail -n 200 scapegoat.log || true
+  #   environment:
+  #     NVD_BASE_URL: http://nvdmirror:8008
+  #     ARTIFACTORY_PASSWORD:
+  #       from_secret: ARTIFACTORY_PASSWORD
+  #     ARTIFACTORY_USERNAME: drt_ci
+  #     ENV_LOG_LEVEL: ERROR
+  #   when:
+  #     event:
+  #       - push
+  #   depends_on:
+  #     - Code coverage report
 
   - name: pull-image-for-scan
     pull: Always
@@ -305,10 +308,8 @@ steps:
       event:
         - push
     depends_on:
-      - Client-side unit tests
-      - Server-side unit tests
-      - Code coverage report
       - End to end test
+      - Sonar scanner
 
 services:
   - name: docker
