@@ -66,12 +66,10 @@ object FeedsStatusPage {
           user <- props.loggedInUserPot
           airportConfig <- props.airportConfigPot
         } yield {
-          val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
-
           val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++
             allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
 
-          val isCiriumAsPortLive = airportConfig.noLivePortFeed && airportConfig.aclDisabled
+          val hasOperatorLiveFeed = !airportConfig.noLivePortFeed
 
           allFeedStatusesSeq.map(feed => {
             val ragStatus = FeedStatuses.ragStatus(
@@ -88,24 +86,19 @@ object FeedsStatusPage {
                 <.h3(<.div(^.className := "flex-horizontally", feed.feedSource.displayName, apiDataTooltip))
               else if (manualCheckAllowed)
                 <.h3(
-                  feed.feedSource.displayName,
+                  FeedSourceDisplay.displayName(feed.feedSource, hasOperatorLiveFeed),
                   " ",
                   MuiButton(variant = "contained", size = "small", color = Color.secondary)(
                     MuiIcons(RefreshOutlined)(),
                     ^.onClick --> checkFeed(feed.feedSource)
                   )
                 )
-              else if (isCiriumAsPortLive)
-                <.h3("Live arrival")
               else
-                <.h3(feed.feedSource.displayName),
-              if (isCiriumAsPortLive)
-                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isCiriumAsPortLive)))
-              else
-                <.div(
-                  ^.className := s"feed-status-description",
-                  <.p(feed.feedSource.description(isLiveFeedAvailable))
-                ), {
+                <.h3(FeedSourceDisplay.displayName(feed.feedSource, hasOperatorLiveFeed)),
+              <.div(
+                ^.className := s"feed-status-description",
+                <.p(FeedSourceDisplay.description(feed.feedSource, hasOperatorLiveFeed))
+              ), {
                 val times = Seq(
                   (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
                   (("Checked", "When we last checked for new data"), feed.feedStatuses.lastSuccessAt),
