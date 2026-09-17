@@ -4,6 +4,15 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.SPAMain.{ Loc, PortDashboardLoc }
+import drt.client.components.govuk.{
+  CheckboxOption,
+  Checkboxes,
+  CheckboxesLegendSize,
+  CheckboxesProps,
+  Select,
+  SelectOption,
+  SelectProps
+}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -14,16 +23,18 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, ScalaComponent }
+import japgolly.scalajs.react.{ CtorType, ScalaComponent }
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Queues.QueueDesk
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal.numberString
-import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource, Terminals }
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource }
 import uk.gov.homeoffice.drt.service.QueueConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration.DurationInt
+import scala.scalajs.js
+import scala.scalajs.js.JSConverters.JSRichIterableOnce
 import scala.util.Try
 
 object PortDashboardPage {
@@ -116,53 +127,39 @@ object PortDashboardPage {
 
               val queuesForDateAndTerminal = QueueConfig.queuesForDateAndTerminal(portConfig.queuesByTerminal)
 
-              def switchDashboardPeriod(event: ReactEventFromInput) = {
-                val period = event.target.value.toInt
+              def switchDashboardPeriod(value: String): Unit = {
+                val period = value.toInt
                 GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)
-                p.router.set(p.dashboardPage.copy(period = Option(period)))
+                p.router.set(p.dashboardPage.copy(period = Option(period))).runNow()
               }
 
-              def handleTimeRangeChange(event: ReactEventFromInput): Callback = {
-                val newRange = event.target.value.toInt
+              def handleTimeRangeChange(value: String): Unit = {
+                val newRange = value.toInt
                 GoogleEventTracker.sendEvent("dashboard", "Time Range", newRange.toString)
-                Callback(
-                  SPACircuit.dispatch(
-                    UpdateUserPreferences(
-                      userPreferences.copy(portDashboardIntervalMinutes =
-                        userPreferences.portDashboardIntervalMinutes + (portName -> newRange)
-                      )
+                SPACircuit.dispatch(
+                  UpdateUserPreferences(
+                    userPreferences.copy(portDashboardIntervalMinutes =
+                      userPreferences.portDashboardIntervalMinutes + (portName -> newRange)
                     )
                   )
-                ).runNow()
-                p.router.set(p.dashboardPage)
+                )
+                p.router.set(p.dashboardPage).runNow()
               }
 
-              def handleTerminalChange(event: ReactEventFromInput): Callback = {
-                val terminal = Terminals.Terminal(event.target.value)
-                val isChecked = event.target.checked
-
-                val preferenceTerminals: Set[String] = Try(
-                  userPreferences.portDashboardTerminals.getOrElse(portName, Set.empty[String])
-                ).getOrElse(Set.empty[String])
-
-                val updatedQueryParams: Set[String] = if (userHasTerminalPreference.isEmpty)
-                  selectedTerminals.filterNot(_ == terminal.toString).toSet
-                else {
-                  if (isChecked)
-                    preferenceTerminals + terminal.toString
-                  else
-                    preferenceTerminals.filterNot(_ == terminal.toString)
-                }
+              def handleTerminalChange(values: js.Array[String]): Unit = {
+                val currentTerminalValues = terminals.map(_.toString).toSet
+                val updatedQueryParams =
+                  (userHasTerminalPreference.getOrElse(Set.empty) -- currentTerminalValues) ++ values.toSet
 
                 GoogleEventTracker.sendEvent("dashboard", "Terminals", updatedQueryParams.mkString(","))
-                Callback(SPACircuit.dispatch(
+                SPACircuit.dispatch(
                   UpdateUserPreferences(
                     userPreferences.copy(portDashboardTerminals =
                       userPreferences.portDashboardTerminals + (portName -> updatedQueryParams)
                     )
                   )
-                )).runNow()
-                p.router.set(p.dashboardPage)
+                )
+                p.router.set(p.dashboardPage).runNow()
               }
 
               val displayPeriodDisplay = selectedPeriodLengthMinutes % 60 match {
@@ -177,48 +174,65 @@ object PortDashboardPage {
                   <.div(
                     ^.className := "port-dashboard-title",
                     <.div(
-                      <.label(^.htmlFor := "period-select", <.strong("Time period:")),
                       <.div(
                         ^.className := "port-dashboard-select",
-                        <.select(
-                          ^.className := "form-control dynamic-width",
-                          ^.value := selectedPeriodLengthMinutes,
-                          ^.onChange ==> handleTimeRangeChange
-                        )(
-                          rangeOptions.map { case (range, display) =>
-                            <.option(^.value := range, display)
-                          }.toTagMod
+                        <.div(
+                          ^.className := "port-dashboard-select-primary",
+                          Select(
+                            SelectProps.withVisibleLabel(
+                              name = "time-range-select",
+                              id = "time-range-select",
+                              options = rangeOptions.map { case (range, display) =>
+                                SelectOption(range.toString, display)
+                              }.toJSArray,
+                              label = "Time period:",
+                              labelClassName = "govuk-label--m",
+                              value = selectedPeriodLengthMinutes.toString,
+                              onChange = ((value: String) => handleTimeRangeChange(value)): js.Function1[String, Unit],
+                              className = "dynamic-width"
+                            )
+                          )
                         ),
-                        <.select(
-                          ^.className := "form-control dynamic-width",
-                          ^.value := selectedPeriod.toString,
-                          ^.onChange ==> switchDashboardPeriod
-                        )(
-                          periods.map { case (k, v) =>
-                            <.option(^.value := k, v.displayPeriodString)
-                          }.toTagMod
+                        <.div(
+                          ^.className := "port-dashboard-select-secondary",
+                          Select(
+                            SelectProps.withAriaLabel(
+                              name = "period-select",
+                              id = "period-select",
+                              options = periods.toSeq.sortBy(_._1).map { case (period, displayPeriod) =>
+                                SelectOption(period.toString, displayPeriod.displayPeriodString)
+                              }.toJSArray,
+                              ariaLabel = "Choose upcoming arrivals period",
+                              value = selectedPeriod.toString,
+                              onChange = ((value: String) => switchDashboardPeriod(value)): js.Function1[String, Unit],
+                              className = "dynamic-width"
+                            )
+                          )
                         )
                       )
                     ),
                     if (terminals.size > 1) {
                       <.span(^.className := "separator")
                       <.div(
-                        <.label(^.htmlFor := "time-range-select", <.strong("Terminals:")),
-                        <.div(
-                          ^.className := "port-dashboard-terminal",
-                          terminals.map { terminal =>
-                            <.label(
-                              ^.className := "terminal-checkbox-label",
-                              <.input(
-                                ^.`type` := "checkbox",
-                                ^.name := "terminal",
-                                ^.value := terminal.toString,
-                                ^.checked := selectedTerminals.contains(s"${terminal.toString}"),
-                                ^.onChange ==> handleTerminalChange
-                              ),
-                              s"Terminal ${numberString(terminal)}"
-                            )
-                          }.toTagMod
+                        ^.className := "port-dashboard-terminal",
+                        Checkboxes(
+                          CheckboxesProps(
+                            name = "terminals",
+                            idPrefix = "terminal",
+                            options = terminals.map { terminal =>
+                              CheckboxOption(terminal.toString, s"Terminal ${numberString(terminal)}")
+                            }.toJSArray,
+                            label = "Terminals:",
+                            legendSize = CheckboxesLegendSize.Medium,
+                            value = selectedTerminals.toJSArray,
+                            onChange =
+                              ((values: js.Array[String]) => handleTerminalChange(values)): js.Function1[
+                                js.Array[String],
+                                Unit
+                              ],
+                            inline = true,
+                            small = true
+                          )
                         )
                       )
                     } else ""

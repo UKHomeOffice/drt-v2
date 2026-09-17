@@ -5,6 +5,7 @@ import drt.client.SPAMain
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDateParameter }
 import drt.client.actions.Actions.GetForecast
 import drt.client.components.DropInDialog.StringExtended
+import drt.client.components.govuk.{ Select, SelectOption, SelectProps }
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -25,7 +26,6 @@ import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent }
-import org.scalajs.dom.html.Select
 import org.scalajs.dom.{ document, Blob, HTMLAnchorElement, URL }
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -34,6 +34,7 @@ import uk.gov.homeoffice.drt.time.{ MilliDate, SDateLike }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters.JSRichIterableOnce
 
 object TerminalPlanningComponent {
   private case class TerminalPlanningModel(
@@ -73,25 +74,12 @@ object TerminalPlanningComponent {
             val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] =
               Forecast.periodByTimeSlotAcrossDays(forecastPeriod.forecast)
 
-            def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
-              <.select(
-                ^.className := "form-control",
-                ^.value := value,
-                ^.onChange ==>
-                  ((e: ReactEventFromInput) => {
-                    GoogleEventTracker.sendEvent(
-                      props.page.terminalName,
-                      "planning-select-week",
-                      Option(SDate(e.target.value).toLocalDate.toISOString).getOrElse("none")
-                    )
-                    props.router.set(props.page.withUrlParameters(
-                      UrlDateParameter(Option(SDate(e.target.value).toLocalDate.toISOString))
-                    ))
-                  }),
-                values.zip(names).map {
-                  case (value, name) => <.option(^.value := value, name)
-                }.toTagMod
-              )
+            def handleWeekChange(value: String): Unit = {
+              val selectedDate = SDate(value).toLocalDate.toISOString
+              GoogleEventTracker.sendEvent(props.page.terminalName, "planning-select-week", selectedDate)
+              props.router
+                .set(props.page.withUrlParameters(UrlDateParameter(Option(selectedDate))))
+                .runNow()
             }
 
             val slotStartTimes = Forecast.timeSlotStartTimes(
@@ -139,20 +127,21 @@ object TerminalPlanningComponent {
                   ^.className := "staffing-controls-wrapper",
                   <.div(
                     ^.className := "staffing-controls-row hstack",
-                    MuiFormLabel(sx =
-                      SxProps(Map(
-                        "size" -> "16px",
-                        "paddingRight" -> "10px",
-                        "color" -> DrtReactTheme.palette.grey.`900`,
-                        "fontWeight" -> "bold"
-                      ))
-                    )(<.span("Week start")),
                     <.div(
                       ^.className := "staffing-controls-select",
-                      drawSelect(
-                        forecastWeeks.map(_.ddMMyyString),
-                        forecastWeeks.map(_.toISOString).toList,
-                        defaultStartDate(props.page.dateFromUrlOrNow).toISOString
+                      Select(
+                        SelectProps.withVisibleLabel(
+                          name = "week-start-select",
+                          id = "week-start-select",
+                          options = forecastWeeks.map(week =>
+                            SelectOption(week.toISOString, week.ddMMyyString)
+                          ).toJSArray,
+                          label = "Week start",
+                          labelClassName = "govuk-label--s",
+                          value = defaultStartDate(props.page.dateFromUrlOrNow).toISOString,
+                          onChange = ((value: String) => handleWeekChange(value)): js.Function1[String, Unit],
+                          className = "dynamic-width"
+                        )
                       )
                     )
                   ),

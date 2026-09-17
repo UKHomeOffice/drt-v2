@@ -54,39 +54,39 @@ html, body {
 
 .current-tab {
   min-height: 980px;
-	display: flex; 
-	flex-direction: column;
-	width: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .planning-tab {
   min-height: 2000px;
-	display: flex; 
-	flex-direction: column;
-	width: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .staffing-tab {
   min-height: 1100px;
-	display: flex; 
-	flex-direction: column;
-	width: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .dashboard-tab {
   min-height: 600px;
-	display: flex; 
-	flex-direction: column;
-	width: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .loading-overlay {
-	flex: 1;
-	height: 100%;
-	width: 100%;
-	background: #E6E9F1;
-	display: flex;
-	justify-content: center;
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  background: #E6E9F1;
+  display: flex;
+  justify-content: center;
   align-items: center;
 }
 
@@ -2622,39 +2622,67 @@ body {
 .port-dashboard-terminal {
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
-  padding: 8px 10px;
+  min-width: 0;
 }
-
 
 .port-dashboard-title {
   padding: 10px 10px;
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 15px;
 }
 
 .port-dashboard-select {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+  display: grid;
+  grid-template-areas:
+    "heading heading"
+    "primary secondary";
+  grid-template-columns: max-content max-content;
+  align-items: flex-end;
+  column-gap: 15px;
+  row-gap: 11px;
+}
+
+.port-dashboard-select-primary,
+.port-dashboard-select-primary > .govuk-form-group {
+  display: contents;
+}
+
+.port-dashboard-select-primary .govuk-label {
+  grid-area: heading;
+}
+
+.port-dashboard-select-primary .govuk-select {
+  grid-area: primary;
+}
+
+.port-dashboard-select-secondary {
+  grid-area: secondary;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .port-dashboard-select {
+    grid-template-areas:
+      "heading"
+      "primary"
+      "secondary";
+    grid-template-columns: minmax(0, max-content);
+    row-gap: 10px;
+  }
+}
+
+.port-dashboard-select-secondary > .govuk-form-group,
+.port-dashboard-terminal > .govuk-form-group,
+.port-dashboard-terminal .govuk-fieldset {
+  margin-bottom: 0;
 }
 
 .port-dashboard-selection {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
-}
-
-
-.terminal-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.terminal-checkbox-label input {
-  margin: 0px;
 }
 
 .port-config {
