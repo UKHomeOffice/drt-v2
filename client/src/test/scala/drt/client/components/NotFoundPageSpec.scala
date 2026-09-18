@@ -26,7 +26,9 @@ object NotFoundPageSpec extends TestSuite {
         assert(paragraphs.length == 3)
         assert(paragraphs(0).textContent.trim == "If you typed the web address, check it is correct.")
         assert(paragraphs(1).textContent.trim == "If you pasted the web address, check you copied the entire address.")
-        assert(paragraphs(2).textContent.contains("If the web address is correct or you selected a link or button, please try again"))
+        assert(paragraphs(
+          2
+        ).textContent.contains("If the web address is correct or you selected a link or button, please try again"))
         assert(paragraphs(2).textContent.contains("or email the DRT team at"))
         assert(paragraphs(2).textContent.contains("drtpoiseteam@homeoffice.gov.uk."))
         val emailLink = container.querySelector("a.govuk-link")
