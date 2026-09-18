@@ -3,22 +3,22 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
+import drt.client.components.govuk.{ DatePicker, DatePickerProps }
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiGrid, MuiTextField }
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiGrid }
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent }
+import japgolly.scalajs.react.{ Callback, CallbackTo, CtorType, ScalaComponent }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ ArrivalSource, ArrivalsAndSplitsView, BorderForceStaff, DesksAndQueuesView }
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -40,15 +40,15 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       loggedInUser: LoggedInUser
   ) extends UseValueEq
 
-  case class StateDate(date: LocalDate, isNotValid: Boolean = false)
+  case class StateDate(date: LocalDate)
 
   case class State(startDate: StateDate, endDate: StateDate, showDialogue: Boolean = false) extends UseValueEq {
 
-    def setStart(dateString: String, isNotValid: Boolean): State =
-      copy(startDate = StateDate(LocalDate.parse(dateString).getOrElse(startDate.date), isNotValid))
+    def setStart(dateString: String): State =
+      LocalDate.parse(dateString).fold(this)(date => copy(startDate = StateDate(date)))
 
-    def setEnd(dateString: String, isNotValid: Boolean): State =
-      copy(endDate = StateDate(LocalDate.parse(dateString).getOrElse(endDate.date), isNotValid))
+    def setEnd(dateString: String): State =
+      LocalDate.parse(dateString).fold(this)(date => copy(endDate = StateDate(date)))
 
     def startMillis: MillisSinceEpoch = SDate(startDate.date).millisSinceEpoch
 
@@ -67,32 +67,33 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         val showClass = if (state.showDialogue) "show" else "fade"
 
         def datePickerWithLabel(
-            setDate: ReactEventFromInput => CallbackTo[Unit],
+            setDate: String => CallbackTo[Unit],
+            id: String,
             label: String,
             currentDate: LocalDate
         ): html_<^.VdomElement = {
-          val key = label.replace("[^0-9a-zA-Z]+", "-")
-          MuiGrid(container = true, spacing = 2)(
-            MuiGrid(item = true, xs = 4)(
-              ^.key := s"date-picker-date-$key",
-              MuiTextField(label = label.toVdom)(
-                ^.`type` := "date",
-                ^.defaultValue := SDate(currentDate).toISODateOnly,
-                ^.onChange ==> setDate
+          val handleChange: js.Function1[String, Unit] =
+            value => Option(value).foreach(date => setDate(date).runNow())
+
+          <.div(
+            ^.key := s"date-picker-date-$id",
+            DatePicker(
+              DatePickerProps(
+                id = id,
+                name = id,
+                label = label,
+                hint = "",
+                value = SDate(currentDate).toISODateOnly,
+                required = true,
+                onChange = handleChange
               )
             )
           )
         }
 
-        val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
-          e.persist()
-          scope.modState(_.setStart(e.target.value, isNotValid = isNotValidDate(e.target.value)))
-        }
+        val setStartDate: String => CallbackTo[Unit] = date => scope.modState(_.setStart(date))
 
-        val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
-          e.persist()
-          scope.modState(_.setEnd(e.target.value, isNotValid = isNotValidDate(e.target.value)))
-        }
+        val setEndDate: String => CallbackTo[Unit] = date => scope.modState(_.setEnd(date))
 
         def showDialogue(event: Event): Callback = {
           event.preventDefault()
@@ -131,9 +132,9 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                       <.div(
                         ^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> 8),
                         <.div(
-                          ^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
-                          datePickerWithLabel(setStartDate, "From", state.startDate.date),
-                          datePickerWithLabel(setEndDate, "To", state.endDate.date)
+                          ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> 8),
+                          datePickerWithLabel(setStartDate, "multi-day-export-from", "From", state.startDate.date),
+                          datePickerWithLabel(setEndDate, "multi-day-export-to", "To", state.endDate.date)
                         ),
                         if (state.startDate.date > state.endDate.date)
                           <.div(
@@ -195,7 +196,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       title,
       <.div(
         ^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
-        exports.map(export =>
+        exports.map { export =>
+          val key = s"${export.toUrlString}-${export.maybeTerminal.fold("all")(_.toString)}"
           exportLink(
             props.selectedDate,
             props.terminal.toString,
@@ -203,8 +205,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date),
             None,
             title
-          )
-        ).toVdomArray
+          )(^.key := key)
+        }.toVdomArray
       )
     )
 
