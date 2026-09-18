@@ -152,23 +152,19 @@ object FeedSourceRow {
       paxFeedSourceOrder: List[FeedSource]
   ) extends UseValueEq
 
-  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource): String =
-    if (isCiriumAsPortLive) "Live arrival"
-    else feedSource.displayName
-
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedSourceRow")
     .render_P { props =>
       val isMobile = dom.window.innerWidth < 800
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
-      val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
+      val hasOperatorLiveFeed = !props.airportConfig.noLivePortFeed
       val paxTotal: String =
         arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse("-")
       val paxTrans: String =
         arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.transit.map(_.toString).getOrElse("-")
       val prevPort: String = arrival.PreviousPort.map(_.iata).getOrElse("n/a")
       val flightFields = List[TagMod](
-        <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
+        <.td(FeedSourceDisplay.displayName(feedSource, hasOperatorLiveFeed)),
         <.td(arrival.flightCodeString),
         <.td(arrival.Origin.toString),
         <.td(prevPort),
