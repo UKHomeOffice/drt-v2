@@ -23,6 +23,7 @@
   max-width: 92vw;
   box-sizing: border-box;
   overflow: hidden;
+  padding: 0;
 }
 
 /////////////////
@@ -2353,6 +2354,9 @@ th h2 {
 
 @flight-chart-tooltip-narrow-breakpoint: 520px;
 @flight-chart-two-row-stack-breakpoint: 720px;
+@flight-chart-small-column-width: 320px;
+// Below this width, preserve the single row by sharing the bounded tooltip width between its charts.
+@flight-chart-single-row-compress-breakpoint: 1080px;
 @flight-chart-separator-border: #f3f2f1 1px solid;
 @flight-chart-separator-padding: 15px;
 
@@ -2362,14 +2366,16 @@ th h2 {
 }
 
 .arrivals__table__flight__chart-box {
-  font-size: 16px;
+  --flight-chart-height: var(--flight-chart-default-height);
+  font-size: 14px;
   box-sizing: border-box;
 
   .arrivals__table__flight__chart-wrapper {
     display: grid;
     gap: 15px;
     grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    grid-auto-columns: @flight-chart-small-column-width;
+    align-items: end;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -2381,16 +2387,39 @@ th h2 {
     }
 
     &.arrivals__table__flight__chart-wrapper--single-row {
+      justify-content: start;
+
       .arrivals__table__flight__chart-nat-scroller + .arrivals__table__flight__chart-box__chart--pax {
         .flight-chart-separator();
+      }
+
+      // Stack all chart combinations at the same narrow-screen breakpoint.
+      @media (max-width: @flight-chart-two-row-stack-breakpoint) {
+        grid-auto-flow: row;
+        grid-template-columns: 1fr;
+      }
+
+      // Keep a single-row layout at intermediate widths.
+      @media (min-width: (@flight-chart-two-row-stack-breakpoint + 1px)) and (max-width: @flight-chart-single-row-compress-breakpoint) {
+        grid-auto-flow: initial;
+        grid-auto-columns: auto;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
 
     &.arrivals__table__flight__chart-wrapper--two-rows {
       grid-auto-flow: row;
-      // Keep the lower two charts at a stable width instead of stretching to the full tooltip width.
-      grid-template-columns: repeat(2, minmax(260px, 320px));
       justify-content: start;
+
+      &.arrivals__table__flight__chart-wrapper--two-rows--compact {
+        // Let 11-20 nationality charts determine their own compact content width.
+        grid-template-columns: var(--flight-chart-pax-width) var(--flight-chart-age-width) var(--flight-chart-compact-extra-width);
+      }
+
+      &.arrivals__table__flight__chart-wrapper--two-rows--expanded {
+        // Only large nationality distributions consume the remaining viewport width.
+        grid-template-columns: var(--flight-chart-pax-width) var(--flight-chart-age-width) minmax(0, 1fr);
+      }
 
       .arrivals__table__flight__chart-nat-scroller--enabled {
         grid-column: 1 / -1;
@@ -2398,12 +2427,17 @@ th h2 {
         display: block;
         overflow-x: auto;
         overflow-y: hidden;
-        scrollbar-gutter: stable;
         min-height: 0;
         -webkit-overflow-scrolling: touch;
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+      }
+
+      // Keep large nationality distributions fully visible on wide screens by
+      // letting Chart.js scale their bars to the available second-row width.
+      .arrivals__table__flight__chart-box__chart--nat-scaled {
+        width: 100% !important;
       }
 
       .arrivals__table__flight__chart-nat-scroller--enabled .arrivals__table__flight__chart-box__chart--nat {
@@ -2414,31 +2448,133 @@ th h2 {
       .arrivals__table__flight__chart-box__chart--pax,
       .arrivals__table__flight__chart-box__chart--age {
         width: 100%;
-        max-width: 320px;
+        max-width: @flight-chart-small-column-width;
       }
 
-      // At very narrow widths (eg high zoom / small viewports), stack pax & age charts to avoid horizontal scrolling.
-      @media (max-width: @flight-chart-two-row-stack-breakpoint) {
-        grid-template-columns: 1fr;
+      .arrivals__table__flight__chart-box__chart--pax {
+        width: var(--flight-chart-pax-width);
       }
+
+      .arrivals__table__flight__chart-box__chart--age {
+        width: var(--flight-chart-age-width);
+      }
+
     }
   }
 }
 
 .arrivals__table__flight__chart-box--single-row {
-  width: min(92vw, 850px);
-  max-width: min(92vw, 850px);
+  width: fit-content;
+  max-width: min(92vw, 990px);
+
+  @media (max-width: @flight-chart-single-row-compress-breakpoint) {
+    width: min(92vw, 990px);
+    max-width: min(92vw, 990px);
+  }
 }
 
 .arrivals__table__flight__chart-box--two-rows {
-  width: fit-content;
-  max-width: min(92vw, 850px);
+  &.arrivals__table__flight__chart-box--two-rows--compact {
+    width: fit-content;
+    max-width: 92vw;
+  }
+
+  &.arrivals__table__flight__chart-box--two-rows--expanded {
+    // Chart-only Tippy content has no padding, so this matches its full 92vw width budget.
+    width: min(92vw, var(--flight-chart-two-row-content-width));
+    max-width: 92vw;
+  }
+}
+
+// At the two-row stack breakpoint, restore full-height charts and reset desktop widths.
+// The charts flow vertically without an internal scrollbar; only nationality may scroll horizontally.
+@media (max-width: @flight-chart-two-row-stack-breakpoint) {
+  .arrivals__table__flight__chart-box--single-row {
+    width: var(--flight-chart-stacked-content-width);
+    max-width: 92vw;
+    box-sizing: border-box;
+
+    .arrivals__table__flight__chart-wrapper--single-row {
+      width: 100%;
+      max-width: 100%;
+
+      .arrivals__table__flight__chart-box__chart--pax {
+        width: var(--flight-chart-pax-width) !important;
+        max-width: 100% !important;
+      }
+
+      .arrivals__table__flight__chart-box__chart--age {
+        width: var(--flight-chart-age-width) !important;
+        max-width: 100% !important;
+      }
+
+      .arrivals__table__flight__chart-nat-scroller {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
+
+        .arrivals__table__flight__chart-box__chart--nat {
+          width: var(--flight-chart-nationality-natural-width) !important;
+          max-width: none !important;
+        }
+      }
+    }
+  }
+
+  .arrivals__table__flight__chart-box--two-rows {
+    --flight-chart-height: var(--flight-chart-full-height);
+
+    &.arrivals__table__flight__chart-box--two-rows--compact,
+    &.arrivals__table__flight__chart-box--two-rows--expanded {
+      width: var(--flight-chart-stacked-content-width);
+      max-width: 92vw;
+      box-sizing: border-box;
+    }
+
+    .arrivals__table__flight__chart-wrapper--two-rows {
+      grid-template-columns: 1fr !important;
+      width: 100%;
+      max-width: 100%;
+
+      // Preserve the predictable, content-aware top-chart widths when stacking.
+      // Only the nationality chart may use the full row and overflow its scroller.
+      .arrivals__table__flight__chart-box__chart--pax {
+        width: var(--flight-chart-pax-width) !important;
+        max-width: 100% !important;
+      }
+
+      .arrivals__table__flight__chart-box__chart--age {
+        width: var(--flight-chart-age-width) !important;
+        max-width: 100% !important;
+      }
+
+      .arrivals__table__flight__chart-nat-scroller--enabled {
+        justify-self: stretch;
+        width: 100%;
+        max-width: 100%;
+
+        .arrivals__table__flight__chart-box__chart--nat {
+          width: var(--flight-chart-nationality-natural-width) !important;
+          max-width: none !important;
+        }
+      }
+    }
+  }
 }
 
 // When the tooltip is narrow (often stacked charts), keep content slightly away from the right edge.
 @media (max-width: @flight-chart-tooltip-narrow-breakpoint) {
   .arrivals__table__flight__chart-box {
     padding-right: 15px;
+  }
+
+  .arrivals__table__flight__chart-box--single-row,
+  .arrivals__table__flight__chart-box--two-rows {
+    padding-right: 0;
   }
 
   .arrivals__table__flight__chart-wrapper {
