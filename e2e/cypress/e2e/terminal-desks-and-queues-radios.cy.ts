@@ -24,6 +24,32 @@ describe('Terminal desks and queues radios', () => {
       .contains('Desks and queues')
   }
 
+  const pressArrowRight = () => {
+    cy.then(() => Cypress.automation('remote:debugger:protocol', {
+      command: 'Input.dispatchKeyEvent',
+      params: {type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39},
+    }))
+    cy.then(() => Cypress.automation('remote:debugger:protocol', {
+      command: 'Input.dispatchKeyEvent',
+      params: {type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39},
+    }))
+  }
+
+  const tabToRadio = (selector: string, remainingTabs = 8) => {
+    cy.focused().then($previous => {
+      cy.press(Cypress.Keyboard.Keys.TAB)
+      cy.focused().then($next => {
+        // Tooltips between groups are legitimate tab stops; each step must still move forward.
+        expect($previous[0].compareDocumentPosition($next[0]) & Node.DOCUMENT_POSITION_FOLLOWING)
+          .not.to.equal(0)
+        if (!$next.is(selector)) {
+          expect(remainingTabs, 'Tab reaches the next radio group').to.be.greaterThan(1)
+          tabToRadio(selector, remainingTabs - 1)
+        }
+      })
+    })
+  }
+
   it('should render and switch the desks and queues radio controls', () => {
     openDesksAndQueues()
 
@@ -66,8 +92,57 @@ describe('Terminal desks and queues radios', () => {
     cy.get(radioSelectors.displayIntervalQuarterly).first().should('not.be.checked')
     cy.get('table.user-desk-recs tbody tr', {timeout: 10000}).should('have.length', 24)
   })
+
+  it('does not return focus or scroll to a staffing radio after clicking lower in the table', () => {
+    openDesksAndQueues()
+    cy.get(radioSelectors.displayTypeTable).first().check()
+    cy.get(radioSelectors.displayIntervalQuarterly).first().check()
+    cy.get(radioSelectors.deskTypeRecommended).first().check()
+    cy.get(radioSelectors.deskTypeDeployments).first().check()
+    cy.location('hash').should('include', 'viewType=deployments')
+
+    cy.get('table.user-desk-recs tbody tr').should('have.length', 96)
+    cy.get('table.user-desk-recs tbody tr')
+      .eq(72).find('td').first().as('lowerCell').scrollIntoView({offset: {top: -300, left: 0}})
+
+    let scrollBeforeClick = 0
+    cy.window().then(win => {
+      scrollBeforeClick = win.scrollY
+      expect(scrollBeforeClick).to.be.greaterThan(100)
+    })
+    cy.get('@lowerCell').click({scrollBehavior: false})
+
+    // Exercise the router's restore hook deterministically, without waiting for a background poll.
+    cy.window().then(win => {
+      win.location.hash = win.location.hash.replace('viewType=deployments', 'viewType=ideal')
+    })
+    cy.get(radioSelectors.deskTypeRecommended).first().should('be.checked')
+    cy.window().should(win => {
+      expect(Math.abs(win.scrollY - scrollBeforeClick)).to.be.lessThan(5)
+      expect(win.document.activeElement?.matches('input[name="deskType"]')).to.equal(false)
+    })
+  })
+
+  it('keeps keyboard focus on selected radios and tabs to the next group', function () {
+    if (!Cypress.isBrowser({family: 'chromium'})) this.skip()
+
+    openDesksAndQueues()
+    cy.get(radioSelectors.displayTypeTable).first().check()
+    cy.get(radioSelectors.displayIntervalQuarterly).first().check()
+    // Start with pointer focus, then switch to keyboard without another focusin event.
+    cy.get(radioSelectors.deskTypeRecommended).first().check()
+    cy.get(radioSelectors.deskTypeRecommended).first().focus()
+    pressArrowRight()
+    cy.location('hash').should('include', 'viewType=deployments')
+    cy.get(radioSelectors.deskTypeDeployments).first().should('be.checked').and('be.focused')
+
+    tabToRadio(radioSelectors.displayTypeTable)
+    cy.get(radioSelectors.displayTypeTable).first().should('be.focused')
+    pressArrowRight()
+    cy.location('hash').should('include', 'displayType=charts')
+    cy.get(radioSelectors.displayTypeCharts).first().should('be.checked').and('be.focused')
+
+    tabToRadio(radioSelectors.displayIntervalQuarterly)
+    cy.get(radioSelectors.displayIntervalQuarterly).first().should('be.focused')
+  })
 })
-
-
-
-
