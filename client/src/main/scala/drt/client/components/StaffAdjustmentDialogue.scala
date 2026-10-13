@@ -6,6 +6,7 @@ import drt.client.actions.Actions.{
   UpdateStaffAdjustmentDialogueState
 }
 import drt.client.components.StaffAdjustmentDialogue.roundToNearest
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -21,6 +22,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.scalajs.js
 import scala.util.{ Success, Try }
 
 case class StaffAdjustmentDialogueState(
@@ -341,16 +343,29 @@ object StaffAdjustmentDialogue {
       ^.className := "form-group-row",
       <.div(^.className := "col-sm-4"),
       <.div(
-        ^.className := "col-sm-8 btn-toolbar",
-        <.button(
-          "Save",
-          ^.className := "btn btn-primary staff-adjustment--save-cancel",
-          ^.onClick --> Callback(trySaveMovement())
-        ),
-        <.button(
-          "Cancel",
-          ^.className := "btn btn-default staff-adjustment--save-cancel",
-          ^.onClick --> Callback(killPopover())
+        ^.className := "col-sm-8",
+        <.div(
+          ^.display := "flex",
+          ^.flexWrap := "wrap",
+          ^.justifyContent := "flex-end",
+          ^.marginBottom := "0",
+          <.span(
+            ^.marginRight := "15px",
+            Button(ButtonProps(
+              children = "Save",
+              variant = "primary",
+              size = "default",
+              className = "staff-adjustment-dialogue__action",
+              onClick = ((_: ReactEvent) => trySaveMovement()): js.Function1[ReactEvent, Unit]
+            ))
+          ),
+          Button(ButtonProps(
+            children = "Cancel",
+            variant = "secondary",
+            size = "default",
+            className = "staff-adjustment-dialogue__action",
+            onClick = ((_: ReactEvent) => killPopover()): js.Function1[ReactEvent, Unit]
+          ))
         )
       )
     )

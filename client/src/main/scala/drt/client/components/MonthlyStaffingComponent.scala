@@ -6,6 +6,7 @@ import drt.client.SPAMain.{ Loc, TerminalPageTabLoc }
 import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.{ consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays }
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -76,7 +77,7 @@ object MonthlyStaffingComponent {
   class Backend(scope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
 
-      val handleShiftEditForm = (e: ReactEventFromInput) =>
+      val handleShiftEditForm = (e: ReactEvent) =>
         Callback {
           e.preventDefault()
           scope.modState(state => state.copy(showEditStaffForm = true)).runNow()
@@ -88,7 +89,7 @@ object MonthlyStaffingComponent {
           props: MonthlyStaffingComponent.Props,
           state: MonthlyStaffingComponent.State,
           scope: BackendScope[MonthlyStaffingComponent.Props, MonthlyStaffingComponent.State]
-      ): ReactEventFromInput => Callback = {
+      ): ReactEvent => Callback = {
         ConfirmAndSaveForMonthlyStaffing(viewingDate, timeSlots, props, state, scope)()
       }
 
@@ -266,11 +267,14 @@ object MonthlyStaffingComponent {
                     ),
                     <.div(
                       ^.className := "terminal-staffing-content-footer",
-                      MuiButton(color = Color.secondary, variant = "contained")(
-                        <.span("Edit staff"),
-                        VdomAttr("data-cy") := "edit-staff-button",
-                        ^.onClick ==> handleShiftEditForm
-                      ),
+                      Button(ButtonProps(
+                        children = "Edit staff",
+                        variant = "secondary",
+                        size = "default",
+                        className = "staffing-action-button",
+                        dataCy = "edit-staff-button",
+                        onClick = ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
+                      )),
                       if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
                         MuiButton(color = Color.secondary, variant = "contained")(
                           <.span("Create shift pattern"),
@@ -282,10 +286,15 @@ object MonthlyStaffingComponent {
                         )
                       else
                         EmptyVdom,
-                      MuiButton(color = Color.primary, variant = "contained")(
-                        <.span("Save staff updates"),
-                        ^.onClick ==> confirmAndSaveStaffing(viewingDate, timeSlots, props, state, scope)
-                      )
+                      Button(ButtonProps(
+                        children = "Save staff updates",
+                        variant = "primary",
+                        size = "default",
+                        className = "staffing-action-button",
+                        onClick = ((event: ReactEvent) =>
+                          confirmAndSaveStaffing(viewingDate, timeSlots, props, state, scope)(event).runNow()
+                        ): js.Function1[ReactEvent, Unit]
+                      ))
                     )
                   )
                 )

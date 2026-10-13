@@ -5,6 +5,7 @@ import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRan
 import drt.client.actions.Actions.UpdateShiftAssignments
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.navigationDates
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -20,7 +21,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{ <, _ }
-import japgolly.scalajs.react.{ BackendScope, CtorType, ReactEventFromInput, Reusability, ScalaComponent }
+import japgolly.scalajs.react.{ BackendScope, CtorType, ReactEvent, ReactEventFromInput, Reusability, ScalaComponent }
 import org.scalajs.dom.html.{ Div, Select }
 import org.scalajs.dom.window.confirm
 import uk.gov.homeoffice.drt.models.UserPreferences
@@ -31,7 +32,7 @@ import scala.scalajs.js
 import scala.util.Try
 
 sealed trait ConfirmAndSave {
-  def apply(): ReactEventFromInput => Callback
+  def apply(): ReactEvent => Callback
 }
 
 case class ConfirmAndSaveForMonthlyStaffing(
@@ -41,7 +42,7 @@ case class ConfirmAndSaveForMonthlyStaffing(
     state: MonthlyStaffingComponent.State,
     scope: BackendScope[MonthlyStaffingComponent.Props, MonthlyStaffingComponent.State]
 ) extends ConfirmAndSave {
-  override def apply(): ReactEventFromInput => Callback = _ =>
+  override def apply(): ReactEvent => Callback = _ =>
     Callback {
       val initialTimeSlots: Seq[Seq[Any]] = slotsFromShiftAssignments(
         state.shiftAssignments,
@@ -91,7 +92,7 @@ case class ConfirmAndSaveForMonthlyShifts(
     state: MonthlyShifts.State,
     scope: BackendScope[MonthlyShifts.Props, MonthlyShifts.State]
 ) extends ConfirmAndSave {
-  override def apply(): ReactEventFromInput => Callback = _ =>
+  override def apply(): ReactEvent => Callback = _ =>
     Callback {
       val changedShifts: Seq[StaffAssignment] = shiftsData
         .flatMap(_.staffTableEntries.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(
@@ -168,7 +169,7 @@ object MonthlyStaffingBar {
       router: RouterCtl[Loc],
       airportConfig: AirportConfig,
       timeSlots: Seq[Seq[Any]],
-      handleShiftEditForm: ReactEventFromInput => Callback,
+      handleShiftEditForm: ReactEvent => Callback,
       confirmAndSave: ConfirmAndSave,
       isShiftsEmpty: Boolean,
       userPreferences: UserPreferences,
@@ -304,11 +305,14 @@ object MonthlyStaffingBar {
             "display" -> "flex",
             "alignItems" -> "center"
           ),
-          MuiButton(color = Color.secondary, variant = "contained")(
-            <.span("Edit staff"),
-            VdomAttr("data-cy") := "edit-staff-button",
-            ^.onClick ==> props.handleShiftEditForm
-          ),
+          Button(ButtonProps(
+            children = "Edit staff",
+            variant = "secondary",
+            size = "default",
+            className = "staffing-action-button",
+            dataCy = "edit-staff-button",
+            onClick = ((event: ReactEvent) => props.handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
+          )),
           if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
             MuiButton(color = Color.secondary, variant = "contained")(
               <.span("Create shift pattern"),
@@ -323,10 +327,13 @@ object MonthlyStaffingBar {
             )
           else
             EmptyVdom,
-          MuiButton(color = Color.primary, variant = "contained")(
-            <.span("Save staff updates"),
-            ^.onClick ==> props.confirmAndSave()
-          )
+          Button(ButtonProps(
+            children = "Save staff updates",
+            variant = "primary",
+            size = "default",
+            className = "staffing-action-button",
+            onClick = ((event: ReactEvent) => props.confirmAndSave()(event).runNow()): js.Function1[ReactEvent, Unit]
+          ))
         )
       )
     }
@@ -339,7 +346,7 @@ object MonthlyStaffingBar {
       router: RouterCtl[Loc],
       airportConfig: AirportConfig,
       timeSlots: Seq[Seq[Any]],
-      handleShiftEditForm: ReactEventFromInput => Callback,
+      handleShiftEditForm: ReactEvent => Callback,
       confirmAndSave: ConfirmAndSave,
       noExistingShifts: Boolean,
       userPreferences: UserPreferences,
