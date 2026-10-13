@@ -18,6 +18,7 @@ trait ButtonProps extends js.Object {
   var secondaryStyle: js.UndefOr[String] = js.native
   var size: js.UndefOr[String] = js.native
   var onClick: js.UndefOr[js.Function1[ReactEvent, Unit]] = js.native
+  var disabled: js.UndefOr[Boolean] = js.native
   var className: js.UndefOr[String] = js.native
 }
 
@@ -28,6 +29,7 @@ object ButtonProps {
       secondaryStyle: js.UndefOr[String] = js.undefined,
       size: js.UndefOr[String] = js.undefined,
       onClick: js.UndefOr[js.Function1[ReactEvent, Unit]] = js.undefined,
+      disabled: js.UndefOr[Boolean] = js.undefined,
       className: js.UndefOr[String] = js.undefined
   ): ButtonProps = {
     val props = (new js.Object).asInstanceOf[ButtonProps]
@@ -36,6 +38,7 @@ object ButtonProps {
     props.secondaryStyle = secondaryStyle
     props.size = size
     props.onClick = onClick
+    props.disabled = disabled
     props.className = className
     props
   }
@@ -46,3 +49,4 @@ object Button {
 
   def apply(props: ButtonProps): VdomElement = component(props)
 }
+

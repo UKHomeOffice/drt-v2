@@ -4,28 +4,29 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiGrid, MuiTypography }
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiGrid, MuiTypography }
 import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
-import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{ all, html_<^, TagOf }
+import japgolly.scalajs.react.vdom.{ html_<^, TagOf }
 import japgolly.scalajs.react.{ CtorType, _ }
 import org.scalajs.dom.html.{ Anchor, Div, Table }
 import org.scalajs.dom.raw.HTMLElement
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
+import uk.gov.homeoffice.drt.auth.Roles.FixedPointsEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{ LocalDate, MilliDate, SDateLike }
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.duration.DurationInt
+import scala.scalajs.js
 import scala.util.Success
 
 object TerminalStaffing {
@@ -142,7 +143,7 @@ object TerminalStaffing {
 
             <.div(
               <.h3("Miscellaneous Staff"),
-              if (props.loggedInUser.roles.contains(StaffEdit)) {
+              if (props.loggedInUser.roles.contains(FixedPointsEdit)) {
                 <.div(
                   <.p("One entry per line with values separated by commas, e.g.:"),
                   <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
@@ -161,17 +162,20 @@ object TerminalStaffing {
                         scope.modState(_.copy(text = newRawFixedPoints))
                       })
                   ),
-                  MuiButton(variant = MuiButton.Variant.contained, color = MuiButton.Color.primary)(
-                    all.disabled := !state.isUpdated,
-                    onClick --> {
+                  Button(ButtonProps(
+                    children = "Save changes",
+                    variant = "primary",
+                    size = "default",
+                    className = "staffing-editor__save-button",
+                    disabled = !state.isUpdated,
+                    onClick = ((_: ReactEvent) => {
                       GoogleEventTracker.sendEvent(props.terminal.toString, "Save Fixed Points", "")
                       scope.modState(
                         _.copy(originalValue = state.currentValue),
                         Callback(SPACircuit.dispatch(SaveFixedPoints(state.currentValue, props.terminal)))
-                      )
-                    },
-                    "Save changes"
-                  )
+                      ).runNow()
+                    }): js.Function1[ReactEvent, Unit]
+                  ))
                 )
               } else <.pre(state.text, ^.className := "staffing-editor")
             )
