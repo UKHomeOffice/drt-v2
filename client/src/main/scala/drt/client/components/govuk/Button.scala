@@ -5,7 +5,7 @@ import japgolly.scalajs.react.vdom.html_<^.VdomElement
 import japgolly.scalajs.react.{ Children, JsFnComponent, ReactEvent }
 
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSImport
+import scala.scalajs.js.annotation.{JSImport, JSName}
 
 @js.native
 @JSImport("@drt/drt-react", "Button")
@@ -20,6 +20,8 @@ trait ButtonProps extends js.Object {
   var onClick: js.UndefOr[js.Function1[ReactEvent, Unit]] = js.native
   var disabled: js.UndefOr[Boolean] = js.native
   var className: js.UndefOr[String] = js.native
+  @JSName("data-cy")
+  var dataCy: js.UndefOr[String] = js.native
 }
 
 object ButtonProps {
@@ -30,7 +32,8 @@ object ButtonProps {
       size: js.UndefOr[String] = js.undefined,
       onClick: js.UndefOr[js.Function1[ReactEvent, Unit]] = js.undefined,
       disabled: js.UndefOr[Boolean] = js.undefined,
-      className: js.UndefOr[String] = js.undefined
+      className: js.UndefOr[String] = js.undefined,
+      dataCy: js.UndefOr[String] = js.undefined
   ): ButtonProps = {
     val props = (new js.Object).asInstanceOf[ButtonProps]
     props.children = children
@@ -40,6 +43,7 @@ object ButtonProps {
     props.onClick = onClick
     props.disabled = disabled
     props.className = className
+    props.dataCy = dataCy
     props
   }
 }
