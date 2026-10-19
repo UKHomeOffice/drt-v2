@@ -236,7 +236,7 @@ Cypress.Commands.add('adjustStaffBy', (numStaff) => {
   }
 
   cy
-    .get('.btn-primary.staff-adjustment--save-cancel')
+    .get('#staff-adjustment-dialogue [data-cy="staff-adjustment-save"]')
     .click({force: true});
 });
 

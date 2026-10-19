@@ -356,6 +356,7 @@ object StaffAdjustmentDialogue {
               variant = "primary",
               size = "default",
               className = "staff-adjustment-dialogue__action",
+              dataCy = "staff-adjustment-save",
               onClick = ((_: ReactEvent) => trySaveMovement()): js.Function1[ReactEvent, Unit]
             ))
           ),
@@ -364,6 +365,7 @@ object StaffAdjustmentDialogue {
             variant = "secondary",
             size = "default",
             className = "staff-adjustment-dialogue__action",
+            dataCy = "staff-adjustment-cancel",
             onClick = ((_: ReactEvent) => killPopover()): js.Function1[ReactEvent, Unit]
           ))
         )
