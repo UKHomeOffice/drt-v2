@@ -3,6 +3,7 @@ package services.crunch.desklimits.flexed
 import services.WorkloadProcessorsProvider
 import services.crunch.desklimits.QueueCapacityProvider
 import services.crunch.deskrecs.DeskRecs
+import services.crunch.CalculationControl
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.{ LocalDate, SDate }
@@ -16,13 +17,17 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(
     flexedQueues: Set[Queue],
     minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
     capacityByQueue: Map[Queue, QueueCapacityProvider],
-    paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]]
+    paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]],
+    override val calculationControl: CalculationControl = CalculationControl.Unlimited
 )(implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
+  override def sharedStaffByMinute: Option[IndexedSeq[Int]] = Some(totalStaffByMinute.toIndexedSeq)
+
   override def maxDesksForMinutes(
       minuteMillis: NumericRange[Long],
       queue: Queue,
       allocatedDesks: Map[Queue, List[Int]]
   ): Future[WorkloadProcessorsProvider] = {
+    calculationControl.check()
     val eventualMaxProcessorsProvider = maxProcessors(minuteMillis, queue, allocatedDesks)
     val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
@@ -41,6 +46,7 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(
       queue: Queue,
       allocatedDesks: Map[Queue, List[Int]]
   ): Iterable[Int] = {
+    calculationControl.check()
     val processedQueues = allocatedDesks.keys.toSet
     val deployedByQueue = allocatedDesks.values.toList
     val totalDeployedByMinute = if (deployedByQueue.nonEmpty) Crunch.reduceIterables[Int](deployedByQueue)(_ + _)

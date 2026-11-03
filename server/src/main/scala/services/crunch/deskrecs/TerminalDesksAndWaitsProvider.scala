@@ -5,6 +5,7 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.slf4j.{ Logger, LoggerFactory }
 import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.crunch.{ CalculationAborted, CalculationControl }
 import services.{ OptimiserConfig, OptimizerCrunchResult, TryCrunchWholePax }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -66,7 +67,8 @@ case class TerminalDesksAndWaitsProvider(
   def desksAndWaits(
       minuteMillis: NumericRange[MillisSinceEpoch],
       passengersByQueue: Map[Queue, Iterable[Iterable[Double]]],
-      deskLimitsProvider: TerminalDeskLimitsLike
+      deskLimitsProvider: TerminalDeskLimitsLike,
+      control: CalculationControl = CalculationControl.Unlimited
   )(implicit
       ec: ExecutionContext,
       mat: Materializer
@@ -79,10 +81,12 @@ case class TerminalDesksAndWaitsProvider(
 
     queues
       .mapAsync(1) { queue =>
+        control.check()
         sla(localDate, queue).map(sla => (queue, sla))
       }
       .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]()) {
         case (queueRecsSoFar, (queue, sla)) =>
+          control.check()
           val identifier = s"$description $terminal $queue"
           log.info(s"Optimising $identifier with sla $sla minutes")
           val queuePassengers = passengersByQueue(queue)
@@ -92,6 +96,7 @@ case class TerminalDesksAndWaitsProvider(
             (minDesks, processorsProvider) <-
               deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
           } yield {
+            control.check()
             queuePassengers match {
               case noWork if noWork.isEmpty || noWork.map(_.sum).sum == 0 =>
                 log.info(
@@ -106,7 +111,8 @@ case class TerminalDesksAndWaitsProvider(
                   cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(sla, processorsProvider)) match {
                     case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
                       queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
-                    case Failure(t) =>
+                    case Failure(aborted: CalculationAborted) => throw aborted
+                    case Failure(t)                           =>
                       log.error(s"Crunch failed for $identifier", t)
                       queueRecsSoFar
                   }

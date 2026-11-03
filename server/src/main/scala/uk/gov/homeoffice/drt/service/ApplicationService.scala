@@ -115,6 +115,11 @@ case class ApplicationService(
   private val optimiserDeployments: TryCrunchWholePax =
     OptimiserWithFlexibleProcessors.crunchWholePax(useFairXmax = useFairXmaxForDeployment)
 
+  private val queueAllocationRuntime = new QueueAllocationRuntime(
+    params.queueAllocationSettings,
+    new LoggingQueueAllocationReporter()
+  )
+
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
     (date: LocalDate) => airportConfig.terminalsForDate(date).map(TerminalUpdateRequest(_, date))
 
@@ -148,7 +153,12 @@ case class ApplicationService(
       FlightFilter.forPortConfig(airportConfig),
       feedService.paxFeedSourceOrder,
       slaForDateAndQueue,
-      uniqueArrivals
+      uniqueArrivals,
+      queueAllocationRuntime.coordinator(
+        QueueAllocationKind.Recommendations,
+        airportConfig.portCode.iata,
+        cruncher = control => OptimiserWithFlexibleProcessors.crunchWholePaxControlled(useFairXmaxForDeskRecs, control)
+      )
     )
 
   private val deploymentSlas: (LocalDate, Queue) => Future[Int] =
@@ -169,7 +179,13 @@ case class ApplicationService(
       FlightFilter.forPortConfig(airportConfig),
       feedService.paxFeedSourceOrder,
       deploymentSlas,
-      uniqueArrivals
+      uniqueArrivals,
+      queueAllocationRuntime.coordinator(
+        QueueAllocationKind.Deployments,
+        airportConfig.portCode.iata,
+        cruncher =
+          control => OptimiserWithFlexibleProcessors.crunchWholePaxControlled(useFairXmaxForDeployment, control)
+      )
     )
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {

@@ -5,7 +5,7 @@ import drt.shared._
 import org.apache.pekko.stream.Materializer
 import org.slf4j.{ Logger, LoggerFactory }
 import services.TryCrunchWholePax
-import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.crunch.desklimits.{ ConfiguredTerminalDeskLimitsLike, TerminalDeskLimitsLike }
 import services.graphstages.{ DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike }
 import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, FlightsWithSplits, Splits }
 import uk.gov.homeoffice.drt.models.TQM
@@ -32,7 +32,8 @@ case class PortDesksAndWaitsProvider(
     crunchOffsetMinutes: Int,
     tryCrunch: TryCrunchWholePax,
     workloadCalculator: WorkloadCalculatorLike,
-    paxFeedSourceOrder: List[FeedSource]
+    paxFeedSourceOrder: List[FeedSource],
+    allocationCoordinator: Option[QueueAllocationCoordinator] = None
 ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -134,9 +135,26 @@ case class PortDesksAndWaitsProvider(
   )(implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
     val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
     val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-    val deskRecs = terminalDescRecs(terminal, description)
-      .workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
-      .map(_.toList)
+    val provider = terminalDescRecs(terminal, description)
+    val calculation = (allocationCoordinator, maxDesksProvider) match {
+      case (Some(coordinator), configured: ConfiguredTerminalDeskLimitsLike) =>
+        coordinator.calculate(
+          provider,
+          terminal,
+          minuteMillis,
+          terminalPassengers,
+          terminalWork,
+          configured,
+          Some(desksByTerminal.getOrElse(
+            terminal,
+            throw new IllegalArgumentException(s"Missing manual desk capacity for $terminal")
+          ))
+        )
+      case (configured, _) =>
+        configured.foreach(_.ineligible(terminal, minuteMillis))
+        provider.workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
+    }
+    val deskRecs = calculation.map(_.toList)
 
     deskRecs.map(dr => DeskRecMinutes(dr))
   }
@@ -150,6 +168,17 @@ object PortDesksAndWaitsProvider {
       paxFeedSourceOrder: List[FeedSource],
       sla: (LocalDate, Queue) => Future[Int],
       uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits]
+  ): PortDesksAndWaitsProvider =
+    apply(airportConfig, tryCrunch, flightFilter, paxFeedSourceOrder, sla, uniqueFlights, None)
+
+  def apply(
+      airportConfig: AirportConfig,
+      tryCrunch: TryCrunchWholePax,
+      flightFilter: FlightFilter,
+      paxFeedSourceOrder: List[FeedSource],
+      sla: (LocalDate, Queue) => Future[Int],
+      uniqueFlights: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits],
+      allocationCoordinator: Option[QueueAllocationCoordinator]
   ): PortDesksAndWaitsProvider = {
 
     val calculator = DynamicWorkloadCalculator(
@@ -171,7 +200,8 @@ object PortDesksAndWaitsProvider {
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
       tryCrunch = tryCrunch,
       workloadCalculator = calculator,
-      paxFeedSourceOrder = paxFeedSourceOrder
+      paxFeedSourceOrder = paxFeedSourceOrder,
+      allocationCoordinator = allocationCoordinator
     )
   }
 }

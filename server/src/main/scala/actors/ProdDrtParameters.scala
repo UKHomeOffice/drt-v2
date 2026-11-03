@@ -3,6 +3,7 @@ package actors
 import com.google.inject.Inject
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.Configuration
+import services.crunch.deskrecs.QueueAllocationSettings
 import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
 import uk.gov.homeoffice.drt.time.{ SDate, SDateLike }
 
@@ -10,6 +11,8 @@ import java.nio.file.{ Files, Paths }
 import scala.concurrent.duration._
 
 trait DrtParameters {
+  val queueAllocationSettings: QueueAllocationSettings
+
   val gateWalkTimesFilePath: Option[String]
   val standWalkTimesFilePath: Option[String]
 
@@ -89,6 +92,8 @@ object DrtParameters {
 
 case class ProdDrtParameters @Inject() (config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  override val queueAllocationSettings: QueueAllocationSettings = QueueAllocationSettings.fromConfiguration(config)
 
   override val gateWalkTimesFilePath: Option[String] =
     Option(config.get[String]("walk_times.gates-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))

@@ -2,8 +2,9 @@ package services.crunch.desklimits.flexed
 
 import org.slf4j.{ Logger, LoggerFactory }
 import services.WorkloadProcessorsProvider
-import services.crunch.desklimits.{ EmptyCapacityProvider, QueueCapacityProvider, TerminalDeskLimitsLike }
+import services.crunch.desklimits.{ ConfiguredTerminalDeskLimitsLike, EmptyCapacityProvider, QueueCapacityProvider }
 import services.crunch.deskrecs.DeskRecs
+import services.crunch.CalculationControl
 import services.graphstages.Crunch.reduceIterables
 import uk.gov.homeoffice.drt.egates.Desk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -13,7 +14,7 @@ import scala.collection.immutable
 import scala.collection.immutable.{ Map, NumericRange }
 import scala.concurrent.Future
 
-trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
+trait FlexedTerminalDeskLimitsLike extends ConfiguredTerminalDeskLimitsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val terminalDesks: Int
@@ -27,6 +28,7 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
       allocatedDesks: Map[Queue, List[Int]]
   ): Future[WorkloadProcessorsProvider] =
     if (flexedQueues.contains(queue)) {
+      calculationControl.check()
       val date = SDate(minuteMillis.min).toLocalDate
       val deployedByQueue = allocatedDesks.values.toList
       val totalDeployed = if (deployedByQueue.nonEmpty) reduceIterables[Int](deployedByQueue)(_ + _) else List()
@@ -53,7 +55,8 @@ case class FlexedTerminalDeskLimits(
     flexedQueues: Set[Queue],
     minDesksByQueue24Hrs: LocalDate => Map[Queue, IndexedSeq[Int]],
     capacityByQueue: Map[Queue, QueueCapacityProvider],
-    paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]]
+    paxForQueue: (NumericRange[Long], Queue) => Future[Seq[Int]],
+    override val calculationControl: CalculationControl = CalculationControl.Unlimited
 ) extends FlexedTerminalDeskLimitsLike {
   override def maxDesksForMinutes(
       minuteMillis: NumericRange[Long],

@@ -1,10 +1,13 @@
 package services
 
 import org.specs2.mutable.Specification
+import services.crunch.{ CalculationAborted, CalculationControl, CalculationControlTestSupport }
 import services.workload.QueuePassenger
 import uk.gov.homeoffice.drt.egates.{ Desk, EgateBank }
 
-import scala.util.Try
+import java.util.concurrent.atomic.AtomicInteger
+import scala.concurrent.duration._
+import scala.util.{ Failure, Try }
 
 class OptimiserWithFlexibleProcessorsSpec extends Specification {
   val oneDesk: Seq[Int] = Seq.fill(30)(1)
@@ -21,6 +24,154 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
   ).toList
 
   private def randomProcessingSeconds: Int = (Math.random() * 100).toInt + 40
+
+  "Controlled optimisation" should {
+    "preserve legacy setup exceptions while controlled requests return failures" in {
+      val passengers = IndexedSeq.fill(60)(List(1d))
+      val minimum = IndexedSeq.fill(60)(1)
+      val maximum = IndexedSeq.fill(60)(2)
+      val mismatched = OptimiserConfig(5, WorkloadProcessorsProvider(IndexedSeq.fill(59)(Seq(Desk))))
+      val zeroSla = OptimiserConfig(0, WorkloadProcessorsProvider(IndexedSeq.fill(60)(Seq(Desk))))
+      val legacyShape = Try(
+        OptimiserWithFlexibleProcessors.crunchWholePax(false)(passengers, minimum, maximum, mismatched)
+      )
+      val controlledShape = OptimiserWithFlexibleProcessors.crunchWholePaxControlled(
+        false,
+        CalculationControl.Unlimited
+      )(passengers, minimum, maximum, mismatched)
+      val legacySla = Try(
+        OptimiserWithFlexibleProcessors.crunchWholePax(true)(passengers, minimum, maximum, zeroSla)
+      )
+      val controlledSla = OptimiserWithFlexibleProcessors.crunchWholePaxControlled(
+        true,
+        CalculationControl.Unlimited
+      )(passengers, minimum, maximum, zeroSla)
+      (legacyShape.isFailure must beTrue) and
+        (controlledShape.isFailure must beTrue) and
+        (legacySla.isFailure must beTrue) and
+        (controlledSla.isFailure must beTrue)
+    }
+
+    Seq(false, true).foreach { fair =>
+      s"match the existing real optimiser with unlimited control and fair-Xmax=$fair" in {
+        val passengers = IndexedSeq.tabulate(120) { minute =>
+          List.fill(if (minute < 30) 4 else 2)(1d)
+        }
+        val minimum = IndexedSeq.fill(120)(1)
+        val maximum = IndexedSeq.fill(120)(3)
+        val config = OptimiserConfig(5, WorkloadProcessorsProvider(IndexedSeq.fill(120)(Seq.fill(3)(Desk))))
+        val original = OptimiserWithFlexibleProcessors.crunchWholePax(fair)(passengers, minimum, maximum, config)
+        val controlled = OptimiserWithFlexibleProcessors.crunchWholePaxControlled(fair, CalculationControl.Unlimited)(
+          passengers,
+          minimum,
+          maximum,
+          config
+        )
+        controlled.get mustEqual original.get
+      }
+
+      s"abort the optimiser's own final passenger simulation with fair-Xmax=$fair" in {
+        val passengers = IndexedSeq.fill(60)(List.fill(50)(0.02d))
+        val fixed = IndexedSeq.fill(60)(1)
+        val config = OptimiserConfig(5, WorkloadProcessorsProvider(IndexedSeq.fill(60)(Seq(Desk))))
+        val control = CalculationControlTestSupport.expiringIn("processQueue", 8L)
+        val result = OptimiserWithFlexibleProcessors.crunchWholePaxControlled(fair, control)(
+          passengers,
+          fixed,
+          fixed,
+          config
+        )
+        result mustEqual Failure(CalculationAborted("expired"))
+      }
+    }
+
+    "return a typed failure when input conversion exhausts the budget" in {
+      val control = CalculationControlTestSupport.expiringIn("crunchWholePaxControlled", 3L)
+      val result = OptimiserWithFlexibleProcessors.crunchWholePaxControlled(useFairXmax = false, control = control)(
+        IndexedSeq.fill(30)(List.fill(100)(1d)),
+        IndexedSeq.fill(30)(1),
+        IndexedSeq.fill(30)(1),
+        OptimiserConfig(5, WorkloadProcessorsProvider(IndexedSeq.fill(30)(Seq(Desk))))
+      )
+      result mustEqual Failure(CalculationAborted("expired"))
+    }
+
+    "reach cancellation inside fair-Xmax's actual leftward trial calculation" in {
+      val work = IndexedSeq.tabulate(60)(minute => if (minute < 5) 40d else 0d)
+      val control = CalculationControlTestSupport.expiringIn("leftwardDesks", 25L)
+      val result = Try(OptimiserWithFlexibleProcessors.rollingFairXmax(
+        work,
+        IndexedSeq.fill(60)(0),
+        5,
+        4,
+        60,
+        120,
+        WorkloadProcessorsProvider(IndexedSeq.fill(60)(Seq.fill(10)(Desk))),
+        control
+      ))
+      result mustEqual Failure(CalculationAborted("expired"))
+    }
+
+    "propagate cancellation from search through tryOptimiseWin" in {
+      val result = OptimiserWithFlexibleProcessors.tryOptimiseWin(
+        IndexedSeq.fill(30)(2d),
+        IndexedSeq.fill(30)(0),
+        IndexedSeq.fill(30)(3),
+        5,
+        50,
+        0.05,
+        3,
+        10,
+        WorkloadProcessorsProvider(IndexedSeq.fill(30)(Seq.fill(3)(Desk))),
+        CalculationControlTestSupport.expiringIn("branchBound", 30L)
+      )
+      result mustEqual Failure(CalculationAborted("expired"))
+    }
+
+    Seq(false, true).foreach { binary =>
+      s"stop the actual candidate loop after cost cancellation with binary search=$binary" in {
+        val control = CalculationControl.budget(1.minute)
+        val evaluations = new AtomicInteger(0)
+        val trialCost: IndexedSeq[Int] => Cost = _ => {
+          if (evaluations.incrementAndGet() == 2) control.cancel("cancelled")
+          Cost(0d, 0d, 0d, 0, 0d)
+        }
+        val result = Try {
+          if (binary)
+            OptimiserWithFlexibleProcessors.branchBoundBinarySearch(
+              IndexedSeq(1),
+              trialCost,
+              IndexedSeq(0),
+              IndexedSeq(3),
+              30,
+              control
+            )
+          else
+            OptimiserWithFlexibleProcessors.branchBound(
+              IndexedSeq(1),
+              trialCost,
+              IndexedSeq(0),
+              IndexedSeq(3),
+              30,
+              control
+            )
+        }
+        result mustEqual Failure(CalculationAborted("cancelled"))
+      }
+    }
+
+    "abort the legacy simulator between minutes" in {
+      val result = OptimiserWithFlexibleProcessors.legacyTryProcessWork(
+        IndexedSeq.fill(100)(0d),
+        IndexedSeq.fill(100)(1),
+        5,
+        IndexedSeq(0d),
+        WorkloadProcessorsProvider(IndexedSeq.fill(100)(Seq(Desk))),
+        CalculationControlTestSupport.expiringIn("legacyTryProcessWork", 8L)
+      )
+      result mustEqual Failure(CalculationAborted("expired"))
+    }
+  }
 
   "crunchWholePax" should {
     "return a result even when there are no available desks" in {

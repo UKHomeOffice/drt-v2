@@ -7,6 +7,7 @@ import drt.shared.{ DropIn, ShiftAssignments, StaffAssignmentLike }
 import manifests.ManifestLookupLike
 import manifests.passengers.{ BestAvailableManifest, ManifestPaxCount }
 import org.apache.pekko.stream.scaladsl.Source
+import services.crunch.deskrecs.QueueAllocationSettings
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{ IABFeatureDao, IUserFeedbackDao }
@@ -137,6 +138,8 @@ case class MockDropInTable() extends DropInTableLike {
 }
 
 case class MockDrtParameters @Inject() () extends DrtParameters {
+  override val queueAllocationSettings: QueueAllocationSettings = QueueAllocationSettings.legacy
+
   override val gateWalkTimesFilePath: Option[String] = None
   override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3

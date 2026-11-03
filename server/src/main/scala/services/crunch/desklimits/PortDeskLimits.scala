@@ -102,7 +102,7 @@ object PortDeskLimits {
       egatesProvider: () => Future[EgateBanksUpdates]
   )(implicit ec: ExecutionContext): Map[Queues.Queue, QueueCapacityProvider] =
     maxDesks.map {
-      case (EGate, _)           => (EGate, EgatesCapacityProvider(egatesProvider))
+      case (EGate, max)         => (EGate, EgatesCapacityProvider(egatesProvider, Some(max)))
       case (nonEgateQueue, max) => (nonEgateQueue, DeskCapacityProvider(max))
     }
 }

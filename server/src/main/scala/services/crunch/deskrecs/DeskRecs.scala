@@ -4,6 +4,7 @@ import drt.shared.CrunchApi
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
 import org.slf4j.{ Logger, LoggerFactory }
+import services.crunch.CalculationControl
 import uk.gov.homeoffice.drt.models.TQM
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -29,18 +30,32 @@ object DeskRecs {
     .view.filterKeys(queues.contains)
     .mapValues(mds => desksForMillis(minuteMillis, mds)).toMap
 
-  def desksForMillis(millisRange: NumericRange[Long], desks24Hrs: IndexedSeq[Int]): IndexedSeq[Int] = millisRange
-    .map(m => DeskRecs.desksForHourOfDayInUKLocalTime(m, desks24Hrs))
+  def desksForMillis(
+      millisRange: NumericRange[Long],
+      desks24Hrs: IndexedSeq[Int],
+      control: CalculationControl = CalculationControl.Unlimited
+  ): IndexedSeq[Int] = millisRange.map { minute =>
+    control.check()
+    DeskRecs.desksForHourOfDayInUKLocalTime(minute, desks24Hrs)
+  }
 
-  def minDesksForWorkload(minDesks: Seq[Int], pax: Seq[Int]): Seq[Int] =
+  def minDesksForWorkload(
+      minDesks: Seq[Int],
+      pax: Seq[Int],
+      control: CalculationControl = CalculationControl.Unlimited
+  ): Seq[Int] =
     minDesks
       .zip(pax)
       .map {
-        case (minDesks, p) if p > 0 => Math.max(minDesks, 1)
-        case (minDesks, _)          => minDesks
+        case (minDesks, p) =>
+          control.check()
+          if (p > 0) Math.max(minDesks, 1) else minDesks
       }
       .grouped(15)
-      .flatMap(groupedMinDesks => Seq.fill(15)(groupedMinDesks.max))
+      .flatMap { groupedMinDesks =>
+        control.check()
+        Seq.fill(15)(groupedMinDesks.max)
+      }
       .toSeq
 
   def paxForQueue(paxProvider: (
