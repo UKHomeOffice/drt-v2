@@ -82,35 +82,48 @@ object TerminalComponent {
     (startOfView, endOfView)
   }
 
+  private val modelRCP = SPACircuit.connect(model =>
+    TerminalModel(
+      userPreferencesPot = model.userPreferences,
+      dayOfShiftAssignmentsPot = model.dayOfShiftAssignments,
+      fixedPointsPot = model.fixedPoints,
+      staffMovementsPot = model.staffMovements,
+      removedStaffMovements = model.removedStaffMovements,
+      airportConfigPot = model.airportConfig,
+      loadingState = model.loadingState,
+      showActuals = model.showActualIfAvailable,
+      loggedInUserPot = model.loggedInUserPot,
+      viewMode = model.viewMode,
+      featureFlagsPot = model.featureFlags,
+      redListPortsPot = model.redListPorts,
+      redListUpdatesPot = model.redListUpdates,
+      timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
+      walkTimesPot = model.gateStandWalkTime,
+      paxFeedSourceOrder = model.paxFeedSourceOrder,
+      shiftsPot = model.shifts,
+      addedStaffMovementMinutes = model.addedStaffMovementMinutes,
+      allShiftAssignments = model.allShiftAssignments,
+      codeShareExceptions = model.codeShareExceptions
+    )
+  )
+
+  private val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
+  private val operationalDataRCP = SPACircuit.connect(m =>
+    (
+      m.minuteTicker,
+      m.portStatePot,
+      m.airportInfos,
+      m.slaConfigs,
+      m.flightManifestSummaries,
+      m.arrivalSources,
+      m.simulationResult,
+      m.flightHighlight,
+      m.allocationPreview
+    )
+  )
+
   class Backend {
     def render(props: Props): VdomElement = {
-
-      val modelRCP = SPACircuit.connect(model =>
-        TerminalModel(
-          userPreferencesPot = model.userPreferences,
-          dayOfShiftAssignmentsPot = model.dayOfShiftAssignments,
-          fixedPointsPot = model.fixedPoints,
-          staffMovementsPot = model.staffMovements,
-          removedStaffMovements = model.removedStaffMovements,
-          airportConfigPot = model.airportConfig,
-          loadingState = model.loadingState,
-          showActuals = model.showActualIfAvailable,
-          loggedInUserPot = model.loggedInUserPot,
-          viewMode = model.viewMode,
-          featureFlagsPot = model.featureFlags,
-          redListPortsPot = model.redListPorts,
-          redListUpdatesPot = model.redListUpdates,
-          timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
-          walkTimesPot = model.gateStandWalkTime,
-          paxFeedSourceOrder = model.paxFeedSourceOrder,
-          shiftsPot = model.shifts,
-          addedStaffMovementMinutes = model.addedStaffMovementMinutes,
-          allShiftAssignments = model.allShiftAssignments,
-          codeShareExceptions = model.codeShareExceptions
-        )
-      )
-
-      val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
       <.div(
         ^.className := s"${props.terminalPageTab.mode.asString}-tab",
         dialogueStateRCP(dialogueStateMP =>
@@ -145,21 +158,8 @@ object TerminalComponent {
                 ),
                 <.div(
                   ^.className := "tab-content", {
-                    val rcp = SPACircuit.connect(m =>
-                      (
-                        m.minuteTicker,
-                        m.portStatePot,
-                        m.airportInfos,
-                        m.slaConfigs,
-                        m.flightManifestSummaries,
-                        m.arrivalSources,
-                        m.simulationResult,
-                        m.flightHighlight
-                      )
-                    )
-
-                    rcp { mp =>
-                      val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
+                    operationalDataRCP { mp =>
+                      val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl, preview) = mp()
                       val terminal = props.terminalPageTab.terminal
                       val queuesPot = terminalModel.airportConfigPot.map { ac =>
                         QueueConfig.queuesForDateRangeAndTerminal(ac.queuesByTerminal)(
@@ -247,7 +247,13 @@ object TerminalComponent {
                                   loadingState = terminalModel.loadingState
                                 )
                               ),
-                              PcpPaxSummariesComponent(terminalModel.viewMode, mt, ps.map(_.crunchMinutes.values.toSeq))
+                              if (!preview.active)
+                                PcpPaxSummariesComponent(
+                                  terminalModel.viewMode,
+                                  mt,
+                                  ps.map(_.crunchMinutes.values.toSeq)
+                                )
+                              else EmptyVdom
                             ),
                             TerminalContentComponent(TerminalContentComponent.Props(
                               dayOfShiftAssignmentsPot = terminalModel.dayOfShiftAssignmentsPot,

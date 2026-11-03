@@ -22,15 +22,28 @@ if (!setupWithModern()) {
 global.HTMLElement = global.window.HTMLElement;
 global.Element = global.window.Element;
 global.Node = global.window.Node;
+global.Text = global.window.Text;
+global.HTMLInputElement = global.window.HTMLInputElement;
 global.getComputedStyle = global.window.getComputedStyle;
 global.MutationObserver = global.window.MutationObserver;
 
 try {
+  const ResizeObserverPolyfill = require("resize-observer-polyfill");
   global.ResizeObserver =
-    global.ResizeObserver || require("resize-observer-polyfill").default;
+    global.ResizeObserver || ResizeObserverPolyfill.default || ResizeObserverPolyfill;
 } catch (_) {}
 
 if (!global.requestAnimationFrame) global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 if (!global.cancelAnimationFrame) global.cancelAnimationFrame = (id) => clearTimeout(id);
+global.window.requestAnimationFrame = global.requestAnimationFrame;
+global.window.cancelAnimationFrame = global.cancelAnimationFrame;
+
+// jsdom has no canvas; give Chart.js a no-op 2D context so mounted charts render.
+global.window.HTMLCanvasElement.prototype.getContext = function () {
+  const noop = () => {};
+  return new Proxy({ canvas: this, measureText: () => ({ width: 0 }), getLineDash: () => [] }, {
+    get: (target, property) => (property in target ? target[property] : noop),
+  });
+};
 
 console.log("[dom-setup] document ready:", !!global.document);

@@ -7,7 +7,8 @@ case class FeatureFlags(
     displayWaitTimesToggle: Boolean,
     displayRedListInfo: Boolean,
     enableShiftPlanningChange: Boolean,
-    enableStaffingPageWarnings: Boolean
+    enableStaffingPageWarnings: Boolean,
+    enableQueueAllocationPreview: Boolean = false
 )
 
 object FeatureFlags {

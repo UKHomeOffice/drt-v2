@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
     "/contact-details",
     "/ooh-status",
     "/feature-flags",
+    "/queue-allocation",
     "/airport-info",
     "/walk-times",
     "/alerts",

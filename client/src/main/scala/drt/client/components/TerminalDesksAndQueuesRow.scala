@@ -58,7 +58,8 @@ object TerminalDesksAndQueuesRow {
       loggedInUser: LoggedInUser,
       slotMinutes: Int,
       showWaitColumn: Boolean,
-      queues: Seq[Queue]
+      queues: Seq[Queue],
+      preview: Option[TerminalDesksAndQueues.FrozenPreview] = None
   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] =
@@ -75,7 +76,9 @@ object TerminalDesksAndQueuesRow {
               ^.className := s"${queueColour(queue)}",
               Tippy.interactive(
                 "deploy-desk",
-                <.span(s"Suggested deployments with available staff: ${cm.deployedDesks.getOrElse("-")}"),
+                <.span(
+                  s"Suggested deployments with available staff: ${companion(props, recommended = false, cm.deployedDesks)}"
+                ),
                 s"${cm.deskRec}"
               )
             )
@@ -84,16 +87,22 @@ object TerminalDesksAndQueuesRow {
               ^.className := s"${queueColour(queue)}",
               Tippy.interactive(
                 "deploy-recs-desk",
-                <.span(s"Recommended for this time slot / queue: ${cm.deskRec}"),
+                <.span(
+                  s"Recommended for this time slot / queue: ${companion(props, recommended = true, Some(cm.deskRec))}"
+                ),
                 s"${cm.deployedDesks.getOrElse("-")}"
               )
             )
 
             def withSlaClass(waitTimeMinutes: Int): (String => VdomNode) => TagMod = {
               classToTagMod =>
-                props.slaConfigs.render { slaConfigs =>
-                  val slas = slaConfigs.configForDate(props.viewMode.millis).getOrElse(props.airportConfig.slaByQueue)
-                  classToTagMod(slaRagStatus(waitTimeMinutes, slas(queue)))
+                props.preview match {
+                  case Some(preview) => classToTagMod(slaRagStatus(waitTimeMinutes, preview.slas(queue)))
+                  case None          => props.slaConfigs.render { slaConfigs =>
+                      val slas =
+                        slaConfigs.configForDate(props.viewMode.millis).getOrElse(props.airportConfig.slaByQueue)
+                      classToTagMod(slaRagStatus(waitTimeMinutes, slas(queue)))
+                    }
                 }
             }
 
@@ -108,7 +117,9 @@ object TerminalDesksAndQueuesRow {
                         ^.className := s"${queueColour(queue)} $ragClass",
                         Tippy.interactive(
                           "deployed-wait",
-                          <.span(s"Recommended for this time slot / queue: ${cm.waitTime}"),
+                          <.span(
+                            s"Recommended for this time slot / queue: ${companion(props, recommended = true, Some(cm.waitTime))}"
+                          ),
                           s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"
                         )
                       )
@@ -126,7 +137,11 @@ object TerminalDesksAndQueuesRow {
                         ^.className := s"${queueColour(queue)} $ragClass",
                         Tippy.interactive(
                           "ideal-wait-time",
-                          <.span(s"Suggested deployments with available staff: ${cm.waitTime}"),
+                          <.span(
+                            s"Suggested deployments with available staff: ${if (props.preview.nonEmpty)
+                                companion(props, recommended = false, cm.deployedWait)
+                              else cm.waitTime.toString}"
+                          ),
                           s"${Math.round(cm.waitTime)}"
                         )
                       )
@@ -150,9 +165,11 @@ object TerminalDesksAndQueuesRow {
         val available = props.staffMinute.available
         val totalRequired = props.staffRec
         val totalDeployed = props.staffDep.getOrElse(0)
-        val ragClass = ragStatus(totalRequired, available)
+        val deployedLabel: String =
+          if (props.preview.nonEmpty) companion(props, recommended = false, props.staffDep) else totalDeployed.toString
+        val ragClass = if (props.preview.exists(!_.recommendedCalculated)) "" else ragStatus(totalRequired, available)
 
-        def allowAdjustments: Boolean = props.loggedInUser.hasRole(StaffMovementsEdit) &&
+        def allowAdjustments: Boolean = props.preview.isEmpty && props.loggedInUser.hasRole(StaffMovementsEdit) &&
           SDate(props.viewMode.localDate).millisSinceEpoch >= SDate.midnightThisMorning().millisSinceEpoch
 
         val minus: TagMod = adjustmentLink(props, "-")
@@ -161,8 +178,14 @@ object TerminalDesksAndQueuesRow {
         val pcpTds: Seq[VdomTagOf[TableCell]] = List(
           <.td(^.className := s"total-deployed", fixedPoints),
           <.td(^.className := s"total-deployed", movements),
-          <.td(^.className := s"total-deployed $ragClass", totalRequired),
-          <.td(^.className := s"total-deployed", totalDeployed),
+          <.td(
+            ^.className := s"total-deployed $ragClass",
+            companion(props, recommended = true, Some(totalRequired))
+          ),
+          <.td(
+            ^.className := s"total-deployed",
+            deployedLabel
+          ),
           if (allowAdjustments)
             <.td(
               ^.className := s"total-deployed staff-adjustments",
@@ -186,6 +209,11 @@ object TerminalDesksAndQueuesRow {
     case pc if pc >= 0.7 => "amber"
     case _               => ""
   }
+
+  def companion(props: Props, recommended: Boolean, value: Option[Int]): String =
+    if (props.preview.forall(p => if (recommended) p.recommendedCalculated else p.availableCalculated))
+      value.map(_.toString).getOrElse("-")
+    else "-"
 
   def adjustmentLink(props: Props, action: String): TagOf[html.Div] = {
     val popupState = adjustmentState(props, action)

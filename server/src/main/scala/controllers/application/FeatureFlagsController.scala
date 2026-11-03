@@ -19,7 +19,8 @@ class FeatureFlagsController @Inject() (cc: ControllerComponents, ctrl: DrtSyste
       displayWaitTimesToggle = ctrl.params.enableToggleDisplayWaitTimes,
       displayRedListInfo = ctrl.params.displayRedListInfo,
       enableShiftPlanningChange = ctrl.params.enableShiftPlanningChange,
-      enableStaffingPageWarnings = ctrl.params.enableStaffingPageWarnings || user.hasRole(StaffWarnings)
+      enableStaffingPageWarnings = ctrl.params.enableStaffingPageWarnings || user.hasRole(StaffWarnings),
+      enableQueueAllocationPreview = AllocationPreviewAccess.allowed(ctrl, user)
     )
 
     Ok(write(frontendFeatures))

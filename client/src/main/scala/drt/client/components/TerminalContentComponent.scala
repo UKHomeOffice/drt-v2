@@ -39,6 +39,8 @@ import scala.collection.immutable.{ HashSet, SortedMap }
 import scala.scalajs.js.JSConverters.JSRichOption
 
 object TerminalContentComponent {
+  private case class ExportModel(previewActive: Boolean) extends UseValueEq
+  private val previewExport = SPACircuit.connect(m => ExportModel(m.allocationPreview.active))
   case class Props(
       dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
       potFixedPoints: Pot[FixedPointAssignments],
@@ -132,16 +134,17 @@ object TerminalContentComponent {
 
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal
+      val activeTab = props.terminalPageTab.subMode
       val queueOrder: Seq[Queue] = props.airportConfig.queueTypeSplitOrder(terminal)
 
-      val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
-      val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
-      val staffingActive = if (state.activeTab == "staffing") "active" else ""
-      val simulationsActive = if (state.activeTab == "simulations") "active" else ""
+      val desksAndQueuesActive = if (activeTab == "desksAndQueues") "active" else ""
+      val arrivalsActive = if (activeTab == "arrivals") "active" else ""
+      val staffingActive = if (activeTab == "staffing") "active" else ""
+      val simulationsActive = if (activeTab == "simulations") "active" else ""
 
-      val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
-      val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
-      val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
+      val desksAndQueuesPanelActive = if (activeTab == "desksAndQueues") "active" else "fade"
+      val arrivalsPanelActive = if (activeTab == "arrivals") "active" else "fade"
+      val staffingPanelActive = if (activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
       val terminals = props.airportConfig.terminalsForDate(SDate.now().toLocalDate)
@@ -206,67 +209,73 @@ object TerminalContentComponent {
                 props.loggedInUser
               )
             ),
-            <.div(
-              ^.className := "exports",
-              arrivalsExportForPort(
-                props.terminalPageTab.terminal,
-                props.terminalPageTab.dateFromUrlOrNow,
-                props.loggedInUser,
-                props.viewMode
-              ),
-              MuiButton(color = Color.secondary, variant = "contained")(
-                "Advanced Downloads",
-                ^.onClick ==> handleMenuOpen
-              ),
-              <.div(
-                ^.className := "advanced-downloads-menu",
-                MuiMenu(
-                  disablePortal = true,
-                  anchorEl = state.anchorEl.orUndefined,
-                  open = state.anchorEl.isDefined,
-                  onClose = (_: ReactEvent, _: String) =>
-                    Callback {
-                      $.modState(state => state.copy(anchorEl = None)).runNow()
-                    }
-                )(
-                  MuiMenuItem()(
-                    recommendationExportForPort(
-                      props.terminalPageTab.terminal,
-                      props.terminalPageTab.dateFromUrlOrNow,
-                      props.loggedInUser,
-                      props.viewMode
-                    )
-                  ),
-                  MuiMenuItem()(
-                    deploymentsExportForPort(
-                      props.terminalPageTab.terminal,
-                      props.terminalPageTab.dateFromUrlOrNow,
-                      props.loggedInUser,
-                      props.viewMode
-                    )
-                  ),
-                  MuiMenuItem()(
-                    displayForRole(
-                      node = exportLink(
-                        exportDay = props.terminalPageTab.dateFromUrlOrNow,
-                        terminalName = terminalName,
-                        exportType = ExportStaffMovements(props.terminalPageTab.terminal),
-                        exportUrl =
-                          SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
-                        title = "staff-movements"
-                      ),
-                      role = StaffMovementsExport,
-                      loggedInUser = props.loggedInUser
-                    )
-                  ),
-                  MuiMenuItem()(
-                    MultiDayExportComponent(
-                      portCode = props.airportConfig.portCode,
-                      terminal = terminal,
-                      terminals = terminals,
-                      viewMode = props.viewMode,
-                      selectedDate = props.terminalPageTab.dateFromUrlOrNow,
-                      loggedInUser = props.loggedInUser
+            previewExport(preview =>
+              if (preview().previewActive) <.div(
+                ^.className := "exports",
+                "Downloads are unavailable in Neutral. Select Legacy to export saved operational results."
+              )
+              else <.div(
+                ^.className := "exports",
+                arrivalsExportForPort(
+                  props.terminalPageTab.terminal,
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  props.loggedInUser,
+                  props.viewMode
+                ),
+                MuiButton(color = Color.secondary, variant = "contained")(
+                  "Advanced Downloads",
+                  ^.onClick ==> handleMenuOpen
+                ),
+                <.div(
+                  ^.className := "advanced-downloads-menu",
+                  MuiMenu(
+                    disablePortal = true,
+                    anchorEl = state.anchorEl.orUndefined,
+                    open = state.anchorEl.isDefined,
+                    onClose = (_: ReactEvent, _: String) =>
+                      Callback {
+                        $.modState(state => state.copy(anchorEl = None)).runNow()
+                      }
+                  )(
+                    MuiMenuItem()(
+                      recommendationExportForPort(
+                        props.terminalPageTab.terminal,
+                        props.terminalPageTab.dateFromUrlOrNow,
+                        props.loggedInUser,
+                        props.viewMode
+                      )
+                    ),
+                    MuiMenuItem()(
+                      deploymentsExportForPort(
+                        props.terminalPageTab.terminal,
+                        props.terminalPageTab.dateFromUrlOrNow,
+                        props.loggedInUser,
+                        props.viewMode
+                      )
+                    ),
+                    MuiMenuItem()(
+                      displayForRole(
+                        node = exportLink(
+                          exportDay = props.terminalPageTab.dateFromUrlOrNow,
+                          terminalName = terminalName,
+                          exportType = ExportStaffMovements(props.terminalPageTab.terminal),
+                          exportUrl =
+                            SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
+                          title = "staff-movements"
+                        ),
+                        role = StaffMovementsExport,
+                        loggedInUser = props.loggedInUser
+                      )
+                    ),
+                    MuiMenuItem()(
+                      MultiDayExportComponent(
+                        portCode = props.airportConfig.portCode,
+                        terminal = terminal,
+                        terminals = terminals,
+                        viewMode = props.viewMode,
+                        selectedDate = props.terminalPageTab.dateFromUrlOrNow,
+                        loggedInUser = props.loggedInUser
+                      )
                     )
                   )
                 )
@@ -278,9 +287,9 @@ object TerminalContentComponent {
             <.div(
               ^.id := "desksAndQueues",
               ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
-              if (state.activeTab == "desksAndQueues") {
+              if (activeTab == "desksAndQueues") {
                 props.featureFlags.render { features =>
-                  TerminalDesksAndQueues(
+                  AllocationPreviewComponent(
                     TerminalDesksAndQueues.Props(
                       router = props.router,
                       viewStart = props.viewStart,
@@ -308,7 +317,7 @@ object TerminalContentComponent {
             <.div(
               ^.id := "arrivals",
               ^.className := s"tab-pane in $arrivalsPanelActive", {
-                if (state.activeTab == "arrivals") {
+                if (activeTab == "arrivals") {
                   val maybeArrivalsComp = for {
                     features <- props.featureFlags
                     redListUpdates <- props.redListUpdates
@@ -351,7 +360,7 @@ object TerminalContentComponent {
               <.div(
                 ^.id := "simulations",
                 ^.className := s"tab-pane in $simulationsActive", {
-                  if (state.activeTab == "simulations") {
+                  if (activeTab == "simulations") {
                     props.slaConfigs.render(slaConfigs =>
                       ScenarioSimulationComponent(
                         ScenarioSimulationComponent.Props(
@@ -372,7 +381,7 @@ object TerminalContentComponent {
             <.div(
               ^.id := "available-staff",
               ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
-              if (state.activeTab == "staffing") {
+              if (activeTab == "staffing") {
                 TerminalStaffing(TerminalStaffing.Props(
                   terminal = terminal,
                   dayOfShiftAssignmentsPot = props.dayOfShiftAssignmentsPot,

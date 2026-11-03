@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.components.TerminalDesksAndQueues.{ Deployments, Recommended }
-import japgolly.scalajs.react.test.ReactTestUtils
+import japgolly.scalajs.react.test.{ ReactTestUtils, Simulate }
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.models.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
@@ -41,26 +41,6 @@ object QueueChartComponentTest extends TestSuite {
   // these tests will generate warning: ReactDOM.render is no longer supported in React 18
   // it is expected in tests and will be resolved when we update scalajs-react to a newer version
   def tests = Tests {
-    test("should mount and render main static elements") {
-      val container = dom.document.createElement("div")
-      dom.document.body.appendChild(container)
-      QueueChartComponent(baseProps).renderIntoDOM(container)
-
-      val titles = container.querySelectorAll("h3")
-      assert(titles.length >= 2)
-
-      val controls = container.querySelectorAll(".chart-controls")
-      assert(controls.length > 0)
-
-      val legendContainers = container.querySelectorAll(".chart-legend-box")
-      assert(legendContainers.length > 0)
-
-      val chartContainers = container.querySelectorAll(".chart-container")
-      assert(chartContainers.length > 0)
-
-      dom.document.body.removeChild(container)
-    }
-
     test("should initialise with default visible metrics in state") {
       val deskTypes = List(Recommended, Deployments)
       deskTypes.foreach { deskType =>
@@ -68,14 +48,14 @@ object QueueChartComponentTest extends TestSuite {
           val state = component.state
           assert(state.visibleMetrics.contains("Pax in queue"))
           assert(state.visibleMetrics.contains("Incoming pax"))
-          assert(state.visibleMetrics.contains(if (deskType == Recommended) "Recommended Staff" else "Staff available"))
+          assert(state.visibleMetrics.contains(QueueChartComponent.staffMetricId))
           assert(state.visibleMetrics.contains("Wait times"))
           assert(state.visibleMetrics.contains("SLA wait times"))
         }
       }
     }
 
-    test("should render correct chart and key titles from props") {
+    test("should mount main static elements with chart and key titles from props") {
       val props = baseProps.copy(title = Some("Custom Chart Title"))
       val container = dom.document.createElement("div")
       dom.document.body.appendChild(container)
@@ -83,12 +63,29 @@ object QueueChartComponentTest extends TestSuite {
 
       val h3s = container.querySelectorAll("h3")
       assert(h3s.length >= 2)
-      val chartTitle = h3s(0).textContent
-      val keyTitle = h3s(1).textContent
-      assert(chartTitle == "Custom Chart Title chart view")
-      assert(keyTitle == "Custom Chart Title key for chart")
+      assert(h3s(0).textContent == "Custom Chart Title chart view")
+      assert(h3s(1).textContent == "Custom Chart Title key for chart")
+      assert(container.querySelectorAll(".chart-controls").length > 0)
+      assert(container.querySelectorAll(".chart-legend-box").length > 0)
+      assert(container.querySelectorAll(".chart-container").length > 0)
 
       dom.document.body.removeChild(container)
+    }
+
+    test("mounted staff visibility retains one internal identity across kind-specific labels and explicit hiding") {
+      ReactTestUtils.withRenderedIntoDocument(QueueChartComponent(baseProps)) { (mounted, container) =>
+        val original = mounted.state.visibleMetrics
+        ReactTestUtils.act(QueueChartComponent(baseProps.copy(deskType = Deployments)).renderIntoDOM(container))
+        assert(mounted.state.visibleMetrics == original)
+        val checkbox = container.querySelector("input[data-chart-metric='staff']").asInstanceOf[dom.html.Input]
+        assert(checkbox.checked, mounted.state.visibleMetrics.contains(QueueChartComponent.staffMetricId))
+        checkbox.checked = false
+        ReactTestUtils.act(Simulate.change(checkbox))
+        ReactTestUtils.act(QueueChartComponent(baseProps).renderIntoDOM(container))
+        assert(!container.querySelector("input[data-chart-metric='staff']").asInstanceOf[dom.html.Input].checked)
+        assert(!mounted.state.visibleMetrics.contains(QueueChartComponent.staffMetricId))
+        assert(mounted.state.visibleMetrics == original - QueueChartComponent.staffMetricId)
+      }
     }
 
     test("should render correct legend labels for Recommended and Deployments deskTypes") {

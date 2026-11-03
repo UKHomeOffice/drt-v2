@@ -14,6 +14,7 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 
 object QueueChartComponent {
+  val staffMetricId: String = "staff"
 
   case class Props(
       queue: Queue,
@@ -21,35 +22,40 @@ object QueueChartComponent {
       sla: Int,
       interval: Int,
       deskType: DeskType,
-      title: Option[String] = None
+      title: Option[String] = None,
+      frozenPreview: Boolean = false
   )
 
   case class State(visibleMetrics: Set[String])
 
   object State {
-    def default(deskType: DeskType): State = {
-      val staffLabel =
-        if (deskType == Recommended) "Recommended Staff"
-        else "Staff available"
-
+    def default: State = {
       State(Set(
         "Pax in queue",
         "Incoming pax",
-        staffLabel,
+        staffMetricId,
         "Wait times",
         "SLA wait times"
       ))
     }
   }
 
-  private case class MetricDetails(label: String, dataset: ChartJsDataSet, colour: RGBA, backgroundColour: Option[RGBA])
+  private case class MetricDetails(
+      label: String,
+      dataset: ChartJsDataSet,
+      colour: RGBA,
+      backgroundColour: Option[RGBA],
+      id: String
+  )
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("InteractiveQueueChart")
-    .initialStateFromProps(p => State.default(p.deskType))
+    .initialState(State.default)
     .renderPS { (scope, props, state) =>
       val minutesInADay = 1440
       val intervalRange = minutesInADay / props.interval
-      val labels: Seq[String] = (0 until intervalRange).map(m =>
+      val labels: Seq[String] = if (props.frozenPreview)
+        props.queueSummaries.map { case (minute, _) => SDate(minute).toHoursAndMinutes }
+      else (0 until intervalRange).map(m =>
         SDate.midnightThisMorning().addMinutes(m * props.interval).toHoursAndMinutes
       )
 
@@ -113,33 +119,39 @@ object QueueChartComponent {
 
       val slaDataSet = ChartJsDataSet.line(
         label = "SLA wait times",
-        data = Seq.fill(96)(props.sla.toDouble),
+        data = Seq.fill(if (props.frozenPreview) props.queueSummaries.size else 96)(props.sla.toDouble),
         colour = RGBA.green3,
         pointRadius = Option(0),
         yAxisID = Option("y3")
       )
 
       val metrics = List(
-        MetricDetails("Pax in queue", paxInQueueSet, RGBA.blue1, Some(RGBA.blue1.copy(alpha = 0.2))),
-        MetricDetails("Incoming pax", incomingPax, RGBA.blue2.copy(alpha = 0.4), Some(RGBA.blue2.copy(alpha = 0.0))),
-        MetricDetails(staffLabel, desks, RGBA(200, 200, 200), Some(RGBA(200, 200, 200, 0.2))),
-        MetricDetails("Wait times", waits, RGBA.red1, Some(RGBA.red1.copy(alpha = 0.2))),
-        MetricDetails("SLA wait times", slaDataSet, RGBA.green3, None)
+        MetricDetails("Pax in queue", paxInQueueSet, RGBA.blue1, Some(RGBA.blue1.copy(alpha = 0.2)), "Pax in queue"),
+        MetricDetails(
+          "Incoming pax",
+          incomingPax,
+          RGBA.blue2.copy(alpha = 0.4),
+          Some(RGBA.blue2.copy(alpha = 0.0)),
+          "Incoming pax"
+        ),
+        MetricDetails(staffLabel, desks, RGBA(200, 200, 200), Some(RGBA(200, 200, 200, 0.2)), staffMetricId),
+        MetricDetails("Wait times", waits, RGBA.red1, Some(RGBA.red1.copy(alpha = 0.2)), "Wait times"),
+        MetricDetails("SLA wait times", slaDataSet, RGBA.green3, None, "SLA wait times")
       )
 
       val processedDatasets: List[js.Object] = metrics.map { m =>
-        val isHidden = !state.visibleMetrics.contains(m.label)
+        val isHidden = !state.visibleMetrics.contains(m.id)
 
         val dsJs = m.dataset.toJs
         dsJs.asInstanceOf[js.Dynamic].updateDynamic("hidden")(isHidden)
         dsJs
       }
 
-      def toggleMetric(label: String)(e: ReactEventFromInput): Callback = {
+      def toggleMetric(id: String)(e: ReactEventFromInput): Callback = {
         val isChecked = e.target.checked
         scope.modState(s => {
-          if (isChecked) s.copy(visibleMetrics = s.visibleMetrics + label)
-          else s.copy(visibleMetrics = s.visibleMetrics - label)
+          if (isChecked) s.copy(visibleMetrics = s.visibleMetrics + id)
+          else s.copy(visibleMetrics = s.visibleMetrics - id)
         })
       }
 
@@ -200,8 +212,9 @@ object QueueChartComponent {
             <.label(
               ^.style := js.Dynamic.literal(marginRight = "15px", cursor = "pointer"),
               <.input.checkbox(
-                ^.checked := state.visibleMetrics.contains(m.label),
-                ^.onChange ==> toggleMetric(m.label),
+                VdomAttr("data-chart-metric") := m.id,
+                ^.checked := state.visibleMetrics.contains(m.id),
+                ^.onChange ==> toggleMetric(m.id),
                 ^.style := js.Dynamic.literal(marginRight = "5px")
               ),
               s" ${m.label}"

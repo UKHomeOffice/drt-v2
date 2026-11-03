@@ -25,7 +25,7 @@ import providers.{ FlightsProvider, ManifestsProvider, MinutesProvider }
 import queueus._
 import services.PcpArrival.pcpFrom
 import services.arrivals.{ RunnableHistoricPax, RunnableHistoricSplits, RunnableLiveSplits, RunnableMergedArrivals }
-import services.crunch.desklimits.{ PortDeskLimits, TerminalDeskLimitsLike }
+import services.crunch.desklimits.{ ConfiguredTerminalDeskLimitsLike, PortDeskLimits, TerminalDeskLimitsLike }
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{ CrunchProps, CrunchSystem }
@@ -39,6 +39,7 @@ import services.{ OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax 
 import slickdb.AkkaDbTables
 import slickdb.dao.ArrivalStatsDao
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{ TerminalCarrier, TerminalOrigin }
+import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.actor.commands.Commands.{ AddUpdatesSubscriber, GetState }
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.serialisation.{ ConfigDeserialiser, ConfigSerialiser, EmptyConfig }
@@ -304,10 +305,44 @@ case class ApplicationService(
 
   val paxForQueue: Terminal => (NumericRange[Long], Queue) => Future[Seq[Int]] = DeskRecs.paxForQueue(paxProvider)
 
-  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
-    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider, paxForQueue)
-  else
-    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider, paxForQueue)
+  /** The single place that chooses fixed or flexed recommendation limits; the preview reuses it with frozen counts. */
+  private val recommendationLimits: (
+      Terminal => Future[EgateBanksUpdates],
+      Terminal => (NumericRange[Long], Queue) => Future[Seq[Int]]
+  ) => Map[Terminal, ConfiguredTerminalDeskLimitsLike] = (egates, counts) =>
+    if (config.get[Boolean]("crunch.flex-desks")) PortDeskLimits.flexed(airportConfig, egates, counts)
+    else PortDeskLimits.fixed(airportConfig, egates, counts)
+
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] =
+    recommendationLimits(terminalEgatesProvider, paxForQueue)
+
+  val allocationPreviewService: Option[AllocationPreviewService] =
+    Option.when(
+      AppEnvironment(config.getOptional[String]("env").getOrElse("other")) == AppEnvironment.PreProdEnv &&
+        config.getOptional[Boolean]("feature-flags.enable-queue-allocation-preview").getOrElse(false)
+    ) {
+      val staffProvider: (SDateLike, SDateLike, Terminal) => Future[Vector[StaffMinute]] =
+        (start, end, terminal) =>
+          minuteLookups.staffMinutesRouterActor
+            .ask(PartitionedPortStateActor.GetStateForTerminalDateRange(
+              start.millisSinceEpoch,
+              end.millisSinceEpoch,
+              terminal
+            ))
+            .mapTo[CrunchApi.MinutesContainer[StaffMinute, drt.shared.TM]]
+            .map(_.minutes.iterator.map(_.toMinute).toVector)
+      AllocationPreviewService.production(
+        airportConfig,
+        config,
+        paxProvider,
+        staffProvider,
+        terminalEgatesProvider,
+        recommendationLimits,
+        slaForDateAndQueue,
+        deploymentSlas,
+        useFairXmaxForDeployment
+      )
+    }
 
   val startUpdateGraphs: (
       PersistentStateActors,

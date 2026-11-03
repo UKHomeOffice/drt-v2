@@ -19,6 +19,7 @@ GET           /contact-details                                                  
 
 GET           /ooh-status                                                             controllers.application.ContactDetailsController.getOOHStatus
 GET           /feature-flags                                                          controllers.application.FeatureFlagsController.getFeatureFlags
+POST          /queue-allocation/neutral                                               controllers.application.QueueAllocationPreviewController.calculate
 
 GET           /airport-info                                                           controllers.application.AirportInfoController.getAirportInfo
 GET           /walk-times                                                             controllers.application.WalkTimeController.getWalkTimes

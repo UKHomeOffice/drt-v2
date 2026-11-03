@@ -1118,6 +1118,49 @@ rect.bordered {
   border: 1px solid
 }
 
+.allocation-mode-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.allocation-mode-controls .allocation-mode-retry {
+  margin: 0;
+}
+
+.allocation-measurements {
+  margin: 24px 0;
+}
+
+.allocation-measurements-grid {
+  display: grid;
+  grid-template-columns: ~"repeat(auto-fit, minmax(min(100%, 280px), 1fr))";
+  gap: 16px;
+}
+
+.allocation-measurements-card {
+  border: 1px solid #b1b4b6;
+  padding: 16px;
+  min-width: 0;
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 6px;
+    border-bottom: 1px solid #b1b4b6;
+    text-align: right;
+
+    &:first-child {
+      text-align: left;
+    }
+  }
+}
+
 .view-controls {
   display: flex;
   gap: 10px;

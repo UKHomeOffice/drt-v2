@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.Pot
+import diode.data.{ Pot, Ready }
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType }
 import drt.client.actions.Actions.{ RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation }
 import drt.client.components.ToolTips._
@@ -9,7 +9,7 @@ import drt.client.components.govuk.{ RadioOption, Radios, RadiosProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.handlers.UpdateUserPreferences
-import drt.client.services.{ SPACircuit, StaffMovementMinute, ViewMode }
+import drt.client.services.{ AllocationPreviewData, SPACircuit, StaffMovementMinute, ViewMode }
 import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
@@ -43,6 +43,13 @@ object TerminalDesksAndQueues {
 
   def queueActualsColour(queue: Queue): String = s"${queueColour(queue)} actuals"
 
+  case class FrozenPreview(
+      queues: Seq[Queue],
+      slas: Map[Queue, Int],
+      recommendedCalculated: Boolean = true,
+      availableCalculated: Boolean = true
+  )
+
   case class Props(
       router: RouterCtl[Loc],
       viewStart: SDateLike,
@@ -61,7 +68,20 @@ object TerminalDesksAndQueues {
       windowStaffSummaries: Pot[Map[Long, StaffMinute]],
       addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
       terminal: Terminal,
-      userPreferences: UserPreferences
+      userPreferences: UserPreferences,
+      previewOverrides: Option[PreviewOverrides] = None
+  ) extends UseValueEq {
+    def preview: Option[FrozenPreview] = previewOverrides.map(_.preview)
+  }
+
+  case class PreviewOverrides(
+      preview: FrozenPreview,
+      onKind: DeskType => Callback,
+      onInterval: TimeInterval => Callback,
+      onDisplay: DisplayType => Callback,
+      deskType: DeskType,
+      displayType: DisplayType,
+      slots: Seq[Long]
   ) extends UseValueEq
 
   sealed trait DeskType {
@@ -102,15 +122,17 @@ object TerminalDesksAndQueues {
 
   case class State(
       showActuals: Boolean,
-      deskType: DeskType,
-      displayType: DisplayType,
-      timeInterval: TimeInterval,
       showWaitColumn: Boolean
   ) extends UseValueEq
 
   class Backend {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
+      val deskType = props.previewOverrides.map(_.deskType).getOrElse(props.terminalPageTab.deskType)
+      val displayType = props.previewOverrides.map(_.displayType).getOrElse(props.terminalPageTab.displayAs)
+      val timeInterval = if (props.userPreferences.desksAndQueuesIntervalMinutes == 60) Hourly else Quarterly
+      val showActuals = props.preview.isEmpty && props.airportConfig.hasActualDeskStats && props.showActuals
+      val showWaitColumn = !props.featureFlags.displayWaitTimesToggle
 
       def deskUnitLabel(queue: Queue): String = {
         queue match {
@@ -123,11 +145,13 @@ object TerminalDesksAndQueues {
 
       val startDate = props.viewStart.toLocalDate
       val endDate = props.viewStart.addHours(props.hoursToView).toLocalDate
-      val queues = QueueConfig.queuesForDateRangeAndTerminal(props.airportConfig.queuesByTerminal)(
+      val queues = props.preview.map(
+        _.queues
+      ).getOrElse(QueueConfig.queuesForDateRangeAndTerminal(props.airportConfig.queuesByTerminal)(
         startDate,
         endDate,
         props.terminal
-      )
+      ))
 
       def stacked(label: String, tooltip: VdomNode): VdomTagOf[Div] =
         <.div(
@@ -139,7 +163,7 @@ object TerminalDesksAndQueues {
       def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
-        val headings = state.deskType match {
+        val headings = deskType match {
           case Deployments =>
             val h = List(<.th(
               stacked(s"${deskUnitLabel(queueName)}", depBanksOrDesksTip(queueName)),
@@ -157,7 +181,7 @@ object TerminalDesksAndQueues {
               h
         }
 
-        if (props.airportConfig.hasActualDeskStats && state.showActuals)
+        if (showActuals)
           headings ++ List(
             <.th(
               Tippy.describe("actual-desks-used", <.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"),
@@ -181,8 +205,8 @@ object TerminalDesksAndQueues {
           queueSubHeadings,
           <.th(^.className := "total-deployed", stacked("Misc", miscTooltip)),
           <.th(^.className := "total-deployed", stacked("Moves", movesTooltip)),
-          <.th(^.className := "total-deployed", stacked("Required", pcpStaffRecommended(state.deskType))),
-          <.th(^.className := "total-deployed", stacked("Deployed", pcpStaffDeployed(state.deskType))),
+          <.th(^.className := "total-deployed", stacked("Required", pcpStaffRecommended(deskType))),
+          <.th(^.className := "total-deployed", stacked("Deployed", pcpStaffDeployed(deskType))),
           <.th(^.className := "total-deployed", stacked("Available", availTooltip), ^.colSpan := 2)
         )
       }
@@ -191,7 +215,7 @@ object TerminalDesksAndQueues {
         <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
 
       val queueHeadings: List[TagMod] = queues.map(queue => {
-        val colsToSpan = (state.showWaitColumn, state.showActuals) match {
+        val colsToSpan = (showWaitColumn, showActuals) match {
           case (true, true)   => 5
           case (false, true)  => 4
           case (false, false) => 2
@@ -205,14 +229,16 @@ object TerminalDesksAndQueues {
       )
 
       def toggleDeskType(newDeskType: DeskType): Callback = {
-        GoogleEventTracker.sendEvent(s"$terminal", "Select desk type", newDeskType.toString)
-        props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlViewType(Option(newDeskType)))
-        )
+        props.previewOverrides.map(_.onKind(newDeskType)).getOrElse {
+          GoogleEventTracker.sendEvent(s"$terminal", "Select desk type", newDeskType.toString)
+          props.router.set(
+            props.terminalPageTab.withUrlParameters(UrlViewType(Option(newDeskType)))
+          )
+        }
       }
 
       def handleTimeInterval(timeInterval: TimeInterval): Callback =
-        Callback {
+        props.previewOverrides.map(_.onInterval(timeInterval)).getOrElse(Callback {
           GoogleEventTracker.sendEvent(
             s"$terminal",
             s"Select ${timeInterval.queryParamsValue} interval",
@@ -221,13 +247,15 @@ object TerminalDesksAndQueues {
           SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(desksAndQueuesIntervalMinutes =
             if (timeInterval == Hourly) 60 else 15
           )))
-        }
+        })
 
       def toggleDisplayType(newDisplayType: DisplayType): Callback = {
-        GoogleEventTracker.sendEvent(s"$terminal", "Select display type", newDisplayType.toString)
-        props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
-        )
+        props.previewOverrides.map(_.onDisplay(newDisplayType)).getOrElse {
+          GoogleEventTracker.sendEvent(s"$terminal", "Select display type", newDisplayType.toString)
+          props.router.set(
+            props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
+          )
+        }
       }
 
       def requestDeskRecsRecalculation(): Callback = Callback {
@@ -243,7 +271,7 @@ object TerminalDesksAndQueues {
           name = "deskType",
           small = true,
           inline = true,
-          value = if (state.deskType == Recommended) "recommended" else "deployments",
+          value = if (deskType == Recommended) "recommended" else "deployments",
           onChange = ((value: String) => {
             val newDeskType = if (value == "recommended") Recommended else Deployments
             toggleDeskType(newDeskType).runNow()
@@ -258,7 +286,7 @@ object TerminalDesksAndQueues {
           name = "displayType",
           small = true,
           inline = true,
-          value = if (state.displayType == TableView) "table" else "charts",
+          value = if (displayType == TableView) "table" else "charts",
           onChange = ((value: String) => {
             val newDisplayType = if (value == "table") TableView else ChartsView
             toggleDisplayType(newDisplayType).runNow()
@@ -273,7 +301,7 @@ object TerminalDesksAndQueues {
           name = "displayInterval",
           small = true,
           inline = true,
-          value = if (state.timeInterval == Quarterly) "quarterly" else "hourly",
+          value = if (timeInterval == Quarterly) "quarterly" else "hourly",
           onChange = ((value: String) => {
             val timeInterval = if (value == "quarterly") Quarterly else Hourly
             handleTimeInterval(timeInterval).runNow()
@@ -306,115 +334,140 @@ object TerminalDesksAndQueues {
         )
       }
 
-      <.div {
-        val renderPot = for {
-          windowCrunchMinutes <- props.windowCrunchSummaries
-          windowStaffRecs <- props.windowStaffRecs
-          windowStaffDeps <- props.windowStaffDeps
-          windowStaffMinutes <- props.windowStaffSummaries
-          dayCrunchMinutes <- props.dayCrunchSummaries
-          slaConfigs <- props.slaConfigs
-        } yield {
-          val portName =
-            getAirportByCode(props.airportConfig.portCode.toString()).getOrElse(props.airportConfig.portCode.toString())
-          val desksAndQueuesTableLabel = s"Desks and queues at $portName, ${props.terminal.toString}"
-          val slas =
-            slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
-          val interval = if (state.timeInterval == Hourly) 60 else 15
-          val viewMinutes = props.viewStart.millisSinceEpoch until
-            (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by interval * 60000
+      <.div(
+        if (props.preview.nonEmpty) viewTypeControls(props.featureFlags.displayWaitTimesToggle) else EmptyVdom, {
+          val renderPot = for {
+            windowCrunchMinutes <- props.windowCrunchSummaries
+            windowStaffRecs <- props.windowStaffRecs
+            windowStaffDeps <- props.windowStaffDeps
+            windowStaffMinutes <- props.windowStaffSummaries
+            dayCrunchMinutes <- props.dayCrunchSummaries
+            slas <- props.preview.map(p => Ready(p.slas): Pot[Map[Queue, Int]]).getOrElse(props.slaConfigs.map(s =>
+              s.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
+            ))
+          } yield {
+            val portName =
+              getAirportByCode(
+                props.airportConfig.portCode.toString()
+              ).getOrElse(props.airportConfig.portCode.toString())
+            val desksAndQueuesTableLabel = s"Desks and queues at $portName, ${props.terminal.toString}"
+            val interval = if (timeInterval == Hourly) 60 else 15
+            val viewMinutes = tableMinutes(props, interval)
 
-          val maxPaxInQueues: Map[Queue, Int] = windowCrunchMinutes
-            .toList
-            .flatMap {
-              case (_, queuesAndMinutes) =>
-                queuesAndMinutes.map {
-                  case (queue, cm) => (queue, cm.maybePaxInQueue.getOrElse(0))
-                }
-            }
-            .groupBy(_._1)
-            .map {
-              case (queue, queueMinutes) => (queue, queueMinutes)
-            }
-            .view.mapValues(_.map(_._2).max).toMap
+            val maxPaxInQueues: Map[Queue, Int] = windowCrunchMinutes
+              .toList
+              .flatMap {
+                case (_, queuesAndMinutes) =>
+                  queuesAndMinutes.map {
+                    case (queue, cm) => (
+                        queue,
+                        if (props.preview.nonEmpty)
+                          AllocationPreviewData.queueSize(
+                            cm,
+                            if (deskType == Deployments) "available" else "recommended"
+                          ).getOrElse(0)
+                        else cm.maybePaxInQueue.getOrElse(0)
+                      )
+                  }
+              }
+              .groupBy(_._1)
+              .map {
+                case (queue, queueMinutes) => (queue, queueMinutes)
+              }
+              .view.mapValues(_.map(_._2).max).toMap
 
-          <.div(
-            ^.className := "desks-queues-title",
-            MuiTypography(variant = "h2")(s"Desks and queues"),
-            StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
-            <.p(
-              ^.id := "desk-queues-description",
-              "Estimated queue pressure based on incoming passengers and staff availability"
-            ),
             <.div(
-              ^.className := "desks-and-queues-top",
-              ^.aria.labelledBy := "desk-queues-description",
-              viewTypeControls(props.featureFlags.displayWaitTimesToggle),
-              if (props.loggedInUser.hasRole(SuperAdmin)) <.div(
-                ^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
-                adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
-                adminRecalcButton(requestPaxLoadsRecalculation, "Recalc Pax Loads")
-              )
-              else EmptyVdom
-            ),
-            if (state.displayType == ChartsView) {
-              queues.map { queue =>
-                val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
-                <.div(
-                  ^.aria.labelledBy := "desk-queues-description",
-                  QueueChartComponent(QueueChartComponent.Props(
-                    queue,
-                    sortedCrunchMinuteSummaries,
-                    slas(queue),
-                    interval,
-                    state.deskType
-                  ))
+              ^.className := "desks-queues-title",
+              MuiTypography(variant = "h2")(s"Desks and queues"),
+              if (props.preview.isEmpty)
+                StaffMissingWarningComponent(
+                  windowStaffMinutes,
+                  props.loggedInUser,
+                  props.router,
+                  props.terminalPageTab
                 )
-              }.toTagMod
-            } else {
-              <.table(
-                ^.aria.label := desksAndQueuesTableLabel,
-                ^.aria.describedBy := "desk-queues-description",
-                ^.className := s"user-desk-recs table-striped",
-                <.thead(
-                  ^.className := "sticky-top",
-                  <.tr(<.th(^.className := "solid-background", "") :: headings: _*),
-                  <.tr(<.th("Time", ^.className := "solid-background") ::
-                    subHeadingLevel2(queues, state.showWaitColumn): _*)
-                ),
-                <.tbody(
-                  viewMinutes.map { millis =>
-                    val rowProps = TerminalDesksAndQueuesRow.Props(
-                      minuteMillis = millis,
-                      queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
-                      staffRec = windowStaffRecs.getOrElse(millis, 0),
-                      staffDep = windowStaffDeps.getOrElse(millis, None),
-                      staffMinute = staffMinutesWithLocalUpdates(
-                        props.addedStaffMovementMinutes,
-                        windowStaffMinutes.getOrElse(millis, StaffMinute.empty)
-                      ),
-                      maxPaxInQueues = maxPaxInQueues,
-                      airportConfig = props.airportConfig,
-                      slaConfigs = props.slaConfigs,
-                      terminal = terminal,
-                      showActuals = state.showActuals,
-                      viewType = state.deskType,
-                      hasActualDeskStats = props.airportConfig.hasActualDeskStats,
-                      viewMode = props.viewMode,
-                      loggedInUser = props.loggedInUser,
-                      slotMinutes = slotMinutes,
-                      showWaitColumn = state.showWaitColumn,
-                      queues = queues
-                    )
-                    TerminalDesksAndQueuesRow(rowProps)
-                  }.toTagMod
+              else EmptyVdom,
+              <.p(
+                ^.id := "desk-queues-description",
+                "Estimated queue pressure based on incoming passengers and staff availability"
+              ),
+              <.div(
+                ^.className := "desks-and-queues-top",
+                ^.aria.labelledBy := "desk-queues-description",
+                if (props.preview.isEmpty) viewTypeControls(props.featureFlags.displayWaitTimesToggle) else EmptyVdom,
+                if (props.preview.isEmpty && props.loggedInUser.hasRole(SuperAdmin)) <.div(
+                  ^.style := js.Dynamic.literal("display" -> "flex", "flexDirection" -> "row"),
+                  adminRecalcButton(requestDeskRecsRecalculation, "Recalc Desk Recs"),
+                  adminRecalcButton(requestPaxLoadsRecalculation, "Recalc Pax Loads")
                 )
-              )
-            }
-          )
+                else EmptyVdom
+              ),
+              if (displayType == ChartsView) {
+                queues.map { queue =>
+                  val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
+                  <.div(
+                    ^.aria.labelledBy := "desk-queues-description",
+                    QueueChartComponent(QueueChartComponent.Props(
+                      queue,
+                      sortedCrunchMinuteSummaries,
+                      slas(queue),
+                      interval,
+                      deskType,
+                      frozenPreview = props.preview.nonEmpty
+                    ))
+                  )
+                }.toTagMod
+              } else {
+                <.table(
+                  ^.aria.label := desksAndQueuesTableLabel,
+                  ^.aria.describedBy := "desk-queues-description",
+                  ^.className := s"user-desk-recs table-striped",
+                  <.thead(
+                    ^.className := "sticky-top",
+                    <.tr(<.th(^.className := "solid-background", "") :: headings: _*),
+                    <.tr(<.th("Time", ^.className := "solid-background") ::
+                      subHeadingLevel2(queues, showWaitColumn): _*)
+                  ),
+                  <.tbody(
+                    viewMinutes.map { millis =>
+                      val rowProps = TerminalDesksAndQueuesRow.Props(
+                        minuteMillis = millis,
+                        queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
+                        staffRec = windowStaffRecs.getOrElse(millis, 0),
+                        staffDep = windowStaffDeps.getOrElse(millis, None),
+                        staffMinute = if (props.preview.nonEmpty)
+                          windowStaffMinutes.getOrElse(millis, StaffMinute.empty)
+                        else staffMinutesWithLocalUpdates(
+                          props.addedStaffMovementMinutes,
+                          windowStaffMinutes.getOrElse(millis, StaffMinute.empty)
+                        ),
+                        maxPaxInQueues = maxPaxInQueues,
+                        airportConfig = props.airportConfig,
+                        slaConfigs = props.slaConfigs,
+                        terminal = terminal,
+                        showActuals = showActuals,
+                        viewType = deskType,
+                        hasActualDeskStats = props.airportConfig.hasActualDeskStats,
+                        viewMode = props.viewMode,
+                        loggedInUser = props.loggedInUser,
+                        slotMinutes = slotMinutes,
+                        showWaitColumn = showWaitColumn,
+                        queues = queues,
+                        preview = props.preview.map(_.copy(
+                          recommendedCalculated = windowStaffRecs.contains(millis),
+                          availableCalculated = windowStaffDeps.contains(millis)
+                        ))
+                      )
+                      TerminalDesksAndQueuesRow(rowProps)
+                    }.toTagMod
+                  )
+                )
+              }
+            )
+          }
+          renderPot.getOrElse(<.div())
         }
-        renderPot.getOrElse(<.div())
-      }
+      )
     }
   }
 
@@ -426,6 +479,12 @@ object TerminalDesksAndQueues {
       .getOrElse(TM(staffMinute), Seq.empty[StaffMovementMinute])
       .filter(_.createdAt > staffMinute.lastUpdated.getOrElse(0L))
       .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
+
+  def tableMinutes(props: Props, interval: Int): Seq[Long] = {
+    val start = props.viewStart.millisSinceEpoch
+    val periodMillis = interval * 60000L
+    props.previewOverrides.map(_.slots).getOrElse(start until (start + props.hoursToView * 60 * 60000L) by periodMillis)
+  }
 
   private def adminRecalcButton(requestRecalc: () => Callback, label: String): VdomTagOf[Div] = {
     <.div(
@@ -445,12 +504,6 @@ object TerminalDesksAndQueues {
     .initialStateFromProps { p =>
       State(
         showActuals = p.airportConfig.hasActualDeskStats && p.showActuals,
-        deskType = p.terminalPageTab.deskType,
-        displayType = p.terminalPageTab.displayAs,
-        timeInterval = p.userPreferences.desksAndQueuesIntervalMinutes match {
-          case 60 => Hourly
-          case _  => Quarterly
-        },
         showWaitColumn = !p.featureFlags.displayWaitTimesToggle
       )
     }

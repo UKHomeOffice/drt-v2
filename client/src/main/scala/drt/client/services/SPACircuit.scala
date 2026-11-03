@@ -227,7 +227,8 @@ case class RootModel(
     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
     addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map.empty,
     removedStaffMovements: Set[String] = Set.empty,
-    codeShareExceptions: Set[FlightCode] = Set.empty
+    codeShareExceptions: Set[FlightCode] = Set.empty,
+    allocationPreview: AllocationPreviewState = AllocationPreviewState()
 )
 
 object PollDelay {
@@ -246,6 +247,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override val actionHandler: HandlerFunction = {
     val composedHandlers: HandlerFunction = composeHandlers(
+      new AllocationPreviewHandler(zoomRW(identity)((_, v) => v)),
       new InitialPortStateHandler(
         currentViewMode,
         zoomRW(m =>
