@@ -1,11 +1,10 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.SPAMain
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDateParameter }
 import drt.client.actions.Actions.GetForecast
 import drt.client.components.DropInDialog.StringExtended
-import drt.client.components.govuk.{ Select, SelectOption, SelectProps }
+import drt.client.components.govuk.{ Button, ButtonProps, Select, SelectOption, SelectProps }
 import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -13,19 +12,13 @@ import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.services.{ DrtApi, SPACircuit }
 import drt.shared.CrunchApi.{ ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch }
 import drt.shared.Forecast
-import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
-import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.VdomElement
-import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent }
+import japgolly.scalajs.react.{ Callback, CtorType, ReactEvent, ReactEventFromInput, Reusability, ScalaComponent }
 import org.scalajs.dom.{ document, Blob, HTMLAnchorElement, URL }
 import uk.gov.homeoffice.drt.models.UserPreferences
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -99,24 +92,21 @@ object TerminalPlanningComponent {
             val staffRecommendationsExportUrl =
               s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
 
-            def createDownload(updateState: (State, Boolean) => State): String => Event => CallbackTo[Unit] = url => {
-              event =>
-                event.preventDefault()
-                scope.modState(s => updateState(s, true)) >>
-                  Callback {
-                    val direct = scope.withEffectsImpure
-                    DrtApi.get(url)
-                      .map { r =>
-                        GoogleEventTracker.sendEvent(props.page.terminalName, "planning-export", url)
-                        val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
-                        downloadContent(r.responseText, fileName)
-                        direct.modState(s => updateState(s, false))
-                      }
-                      .recover {
-                        case _ => direct.modState(s => updateState(s, false))
-                      }
-                  }
-            }
+            def createDownload(updateState: (State, Boolean) => State): String => Callback = url =>
+              scope.modState(s => updateState(s, true)) >>
+                Callback {
+                  val direct = scope.withEffectsImpure
+                  DrtApi.get(url)
+                    .map { r =>
+                      GoogleEventTracker.sendEvent(props.page.terminalName, "planning-export", url)
+                      val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
+                      downloadContent(r.responseText, fileName)
+                      direct.modState(s => updateState(s, false))
+                    }
+                    .recover {
+                      case _ => direct.modState(s => updateState(s, false))
+                    }
+                }
 
             <.div(
               MuiTypography(variant = "h2")(s"Planning"),
@@ -149,10 +139,9 @@ object TerminalPlanningComponent {
                   <.div(
                     ^.className := "staffing-controls-row",
                     buttonWithProgress(
-                      headlineFiguresExportUrl,
-                      buttonContent(state.downloadingHeadlines, "Export Headlines"),
-                      createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b)),
-                      state.downloadingHeadlines
+                      "Export Headlines",
+                      state.downloadingHeadlines,
+                      createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b))(headlineFiguresExportUrl)
                     )
                   )
                 )
@@ -242,10 +231,9 @@ object TerminalPlanningComponent {
                 <.div(
                   ^.className := "staffing-controls-row",
                   buttonWithProgress(
-                    staffRecommendationsExportUrl,
-                    buttonContent(state.downloadingStaff, "Export Staff Requirements"),
-                    createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b)),
-                    state.downloadingStaff
+                    "Export Staff Requirements",
+                    state.downloadingStaff,
+                    createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b))(staffRecommendationsExportUrl)
                   )
                 )
               ),
@@ -305,25 +293,18 @@ object TerminalPlanningComponent {
     }
     .build
 
-  private def buttonContent(isPreparing: Boolean, labelText: String): Seq[VdomNode] =
-    if (isPreparing)
-      Seq(MuiCircularProgress(size = "28px")(), "Preparing... please wait")
-    else
-      Seq(labelText)
-
-  private def buttonWithProgress(
-      url: String,
-      label: Seq[TagMod],
-      createDownload: String => Event => CallbackTo[Unit],
-      disabled: Boolean
-  ): WithPropsAndTagsMods =
-    MuiButton(color = Color.secondary, variant = "contained")(
-      ^.disabled := disabled,
-      <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "15px"), label.toTagMod),
-      ^.href := SPAMain.absoluteUrl(url),
-      ^.target := "_blank",
-      ^.onClick ==> createDownload(url)
-    )
+  private[components] def buttonWithProgress(label: String, isPreparing: Boolean, onDownload: Callback): VdomElement =
+    Button(ButtonProps(
+      children = <.span(
+        ^.style := js.Dictionary("display" -> "inline-flex", "alignItems" -> "center", "gap" -> "15px"),
+        if (isPreparing) MuiCircularProgress(size = "28px")() else EmptyVdom,
+        if (isPreparing) "Preparing... please wait" else label
+      ).rawNode,
+      variant = "secondary",
+      secondaryStyle = "home-office",
+      disabled = isPreparing,
+      onClick = ((_: ReactEvent) => onDownload.runNow()): js.Function1[ReactEvent, Unit]
+    ))
 
   def defaultStartDate(date: SDateLike): SDateLike = getLastSunday(date)
 

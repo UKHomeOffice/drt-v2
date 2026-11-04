@@ -109,6 +109,17 @@ describe('Monthly Staffing', () => {
               const baseUrl = '#terminal/T1/shifts/viewShifts/';
               cy.visit(baseUrl)
                 .get(cellToTest, { timeout: 2000 }).should('exist').contains("1")
+                .get('.staffing-controls-navigation').should($navigation => {
+                  const buttons = $navigation.find('button')
+                  expect(buttons).to.have.length(2)
+                  const view = $navigation[0].ownerDocument.defaultView
+                  buttons.each((_, button) => {
+                    expect(button.classList.contains('drt-govuk-button--secondary-home-office')).to.be.true
+                    expect(view.getComputedStyle(button).marginBottom).to.equal('0px')
+                    expect(button.getBoundingClientRect().height).to.be.closeTo(40, 1)
+                  })
+                  expect(buttons[0].getBoundingClientRect().top).to.be.closeTo(buttons[1].getBoundingClientRect().top, 1)
+                })
                 .visit(baseUrl + '?date=' + nextMonthDateString())
                 .get(cellToTest, { timeout: 2000 }).should('exist').contains("2")
                 .visit(baseUrl + '?date=' + thisMonthDateString())

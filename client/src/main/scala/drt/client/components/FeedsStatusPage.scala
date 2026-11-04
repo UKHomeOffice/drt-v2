@@ -8,25 +8,25 @@ import drt.client.actions.Actions.{
   RequestRecalculateSplits
 }
 import drt.client.components.ToolTips._
-import drt.client.components.styles.DrtReactTheme
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
 import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.MillisSinceEpoch
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CtorType, ScalaComponent }
+import japgolly.scalajs.react.{ Callback, CtorType, ReactEvent, ScalaComponent }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ PortFeedUpload, SuperAdmin }
 import uk.gov.homeoffice.drt.feeds.{ FeedStatusFailure, FeedStatusSuccess, FeedStatuses }
 import uk.gov.homeoffice.drt.ports._
+
+import scala.scalajs.js
 
 object FeedsStatusPage {
 
@@ -88,10 +88,7 @@ object FeedsStatusPage {
                 <.h3(
                   FeedSourceDisplay.displayName(feed.feedSource, hasOperatorLiveFeed),
                   " ",
-                  MuiButton(variant = "contained", size = "small", color = Color.secondary)(
-                    MuiIcons(RefreshOutlined)(),
-                    ^.onClick --> checkFeed(feed.feedSource)
-                  )
+                  refreshFeedButton(feed.feedSource, checkFeed(feed.feedSource))
                 )
               else
                 <.h3(FeedSourceDisplay.displayName(feed.feedSource, hasOperatorLiveFeed)),
@@ -144,19 +141,11 @@ object FeedsStatusPage {
             <.h2("Crunch"),
             <.div(
               ^.className := "crunch-actions-container",
-              ThemeProvider(DrtReactTheme)(
-                MuiButton(variant = "contained", color = Color.secondary)(
-                  <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
-                ),
-                MuiButton(variant = "contained", color = Color.secondary)(
-                  <.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())
-                ),
-                MuiButton(variant = "contained", color = Color.secondary)(
-                  <.div("Lookup missing historic splits", ^.onClick --> requestMissingHistoricSplitsLookup())
-                ),
-                MuiButton(variant = "contained", color = Color.secondary)(
-                  <.div("Lookup missing forecast pax nos", ^.onClick --> requestMissingPaxNos())
-                )
+              crunchActions(
+                requestSplitsRefresh(),
+                requestRecalculateArrivals(),
+                requestMissingHistoricSplitsLookup(),
+                requestMissingPaxNos()
               )
             )
           )
@@ -177,6 +166,37 @@ object FeedsStatusPage {
       }
     }
     .build
+
+  private[components] def crunchActions(
+      refreshSplits: Callback,
+      recalculateArrivals: Callback,
+      lookupHistoricSplits: Callback,
+      lookupForecastPax: Callback
+  ): TagMod = {
+    Seq(
+      "Refresh splits" -> refreshSplits,
+      "Recalculate arrivals" -> recalculateArrivals,
+      "Lookup missing historic splits" -> lookupHistoricSplits,
+      "Lookup missing forecast pax nos" -> lookupForecastPax
+    ).map { case (label, action) =>
+      Button(ButtonProps(
+        children = label,
+        variant = "secondary",
+        secondaryStyle = "home-office",
+        onClick = ((_: ReactEvent) => action.runNow()): js.Function1[ReactEvent, Unit]
+      ))
+    }.toTagMod
+  }
+
+  private[components] def refreshFeedButton(feedSource: FeedSource, onRefresh: Callback): VdomElement =
+    Button(ButtonProps(
+      children = <.span(MuiIcons(RefreshOutlined)()).rawNode,
+      variant = "secondary",
+      secondaryStyle = "home-office",
+      size = "small",
+      ariaLabel = s"Check ${feedSource.displayName} feed",
+      onClick = ((_: ReactEvent) => onRefresh.runNow()): js.Function1[ReactEvent, Unit]
+    ))
 
   private def displayTime(date: MillisSinceEpoch): String = {
     val dateToDisplay = SDate(date)

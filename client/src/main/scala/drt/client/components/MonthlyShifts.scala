@@ -16,7 +16,6 @@ import drt.client.services.handlers.{ GetShifts, UpdateUserPreferences }
 import drt.client.util.DateRange
 import drt.shared.CrunchApi.{ ForecastPeriod, ForecastPeriodWithHeadlines, MillisSinceEpoch }
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.callback.Callback
@@ -320,9 +319,9 @@ object MonthlyShifts {
                                 onClick = ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
                               )),
                               if (shifts.isEmpty)
-                                MuiButton(color = Color.secondary, variant = "contained")(
-                                  <.span("Create shift pattern"),
-                                  ^.onClick --> props.router.set(TerminalPageTabLoc(
+                                MonthlyStaffingBar.shiftActionButton(
+                                  "Create shift pattern",
+                                  props.router.set(TerminalPageTabLoc(
                                     props.terminalPageTab.terminalName,
                                     "shifts",
                                     "createShifts"

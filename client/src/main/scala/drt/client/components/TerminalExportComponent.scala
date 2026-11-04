@@ -3,24 +3,21 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiGrid }
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
-import io.kinoplan.scalajs.react.material.ui.icons._
+import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.Attr
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CtorType, ScalaComponent }
+import japgolly.scalajs.react.{ CtorType, ReactEvent, ScalaComponent }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
+import scala.scalajs.js
 
 object TerminalExportComponent extends WithScalaCssImplicits {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -43,11 +40,6 @@ object TerminalExportComponent extends WithScalaCssImplicits {
         val showClass = if (state.showDialogue) "show" else "fade"
         val exportNameLC = props.exportName.toLowerCase
 
-        def showDialogue(event: Event): Callback = {
-          event.preventDefault()
-          scope.modState(_.copy(showDialogue = true))
-        }
-
         val title = if (props.terminals.size > 1) s"Export $exportNameLC for ${props.terminal} or all terminals"
         else s"${props.exportName} for ${props.terminal.toString}"
         val exports = exportNameLC match {
@@ -65,13 +57,13 @@ object TerminalExportComponent extends WithScalaCssImplicits {
 
         <.div(
           ^.className := "export-button-wrapper",
-          MuiButton(color = Color.secondary, variant = "contained", sx = SxProps(Map("fontWeight" -> "normal")))(
-            s"Export ${props.exportName} (.csv)",
-            ^.href := "#",
-            VdomAttr("data-toggle") := "modal",
-            VdomAttr("data-target") := "#terminals-export",
-            ^.onClick ==> showDialogue
-          ),
+          Button(ButtonProps(
+            children = s"Export ${props.exportName} (.csv)",
+            variant = "secondary",
+            dataToggle = "modal",
+            dataTarget = "#terminals-export",
+            onClick = ((_: ReactEvent) => scope.modState(_.copy(showDialogue = true)).runNow()): js.Function1[ReactEvent, Unit]
+          )),
           <.div(
             ^.className := s"terminals-export modal " + showClass,
             ^.id := s"#terminals-export",
@@ -109,7 +101,7 @@ object TerminalExportComponent extends WithScalaCssImplicits {
       })
       .build
 
-  private def exportLinks(
+  private[components] def exportLinks(
       exportName: String,
       exports: List[ExportType],
       date: SDateLike,
@@ -119,8 +111,9 @@ object TerminalExportComponent extends WithScalaCssImplicits {
     MuiGrid(container = true)(
       MuiGrid(container = true, spacing = 2)(
         exports.map(export =>
-          MuiGrid(item = true, xs = 4)(
+          MuiGrid(item = true)(
             Attr("key") := export.hashCode().toString,
+            ^.className := "terminal-export-option",
             exportLink(date, terminal.toString, export, SPAMain.exportUrl(export, viewMode), None, exportName)
           )
         ).toVdomArray

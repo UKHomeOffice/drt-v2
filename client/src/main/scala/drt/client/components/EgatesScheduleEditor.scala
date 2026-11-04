@@ -3,18 +3,18 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.actions.Actions.{ DeleteEgateBanksUpdate, SaveEgateBanksUpdate }
 import drt.client.components.ConfirmDialog.ConfirmParams
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.components.styles.DrtReactTheme
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ Add, Delete, Edit }
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ CallbackTo, ReactEventFromInput, ScalaComponent }
+import japgolly.scalajs.react.{ CallbackTo, ReactEvent, ReactEventFromInput, ScalaComponent }
 import uk.gov.homeoffice.drt.egates.{ EgateBank, EgateBanksUpdate, EgateBanksUpdates, SetEgateBanksUpdate }
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -49,30 +49,24 @@ object EgatesScheduleEditor {
             currentState.copy(editing = updatedEditing)
           }
         }
-        val addBank: () => ReactEventFromInput => CallbackTo[Unit] = () =>
-          e => {
-            e.persist()
-            scope.modState { currentState =>
-              val maybeUpdatedEditing = currentState.editing.map { editing =>
-                editing.copy(update =
-                  editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(maxGatesPerBank)(true)))
-                )
-              }
-              currentState.copy(editing = maybeUpdatedEditing)
+        val addBank: CallbackTo[Unit] =
+          scope.modState { currentState =>
+            val maybeUpdatedEditing = currentState.editing.map { editing =>
+              editing.copy(update =
+                editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(maxGatesPerBank)(true)))
+              )
             }
+            currentState.copy(editing = maybeUpdatedEditing)
           }
-        val removeBank: (Int) => ReactEventFromInput => CallbackTo[Unit] = bankIdx =>
-          e => {
-            e.persist()
-            scope.modState { currentState =>
-              val maybeUpdatedEditing = currentState.editing.map { editing =>
-                val updatedBanks = editing.update.banks.zipWithIndex.collect {
-                  case (bank, idx) if idx != bankIdx => bank
-                }
-                editing.copy(update = editing.update.copy(banks = updatedBanks))
+        val removeBank: Int => CallbackTo[Unit] = bankIdx =>
+          scope.modState { currentState =>
+            val maybeUpdatedEditing = currentState.editing.map { editing =>
+              val updatedBanks = editing.update.banks.zipWithIndex.collect {
+                case (bank, idx) if idx != bankIdx => bank
               }
-              currentState.copy(editing = maybeUpdatedEditing)
+              editing.copy(update = editing.update.copy(banks = updatedBanks))
             }
+            currentState.copy(editing = maybeUpdatedEditing)
           }
         val setGate: (Int, Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIdx, gateIsOn) =>
           e => {
@@ -164,11 +158,13 @@ object EgatesScheduleEditor {
                         ^.defaultValue := SDate(editing.update.effectiveFrom).toLocalDateTimeString,
                         ^.onChange ==> setDate
                       ),
-                      MuiButton(
-                        color = Color.secondary,
-                        variant = "contained",
-                        size = "small"
-                      )(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank()),
+                      Button(ButtonProps(
+                        children = <.span(MuiIcons(Add)(fontSize = "small"), "Add bank").rawNode,
+                        variant = "secondary",
+                        secondaryStyle = "home-office",
+                        size = "small",
+                        onClick = ((_: ReactEvent) => addBank.runNow()): js.Function1[ReactEvent, Unit]
+                      )),
                       editing.update.banks.zipWithIndex.map { case (egateBank, bankIdx) =>
                         MuiGrid(item = true, container = true, spacing = 1)(
                           <.div(
@@ -179,10 +175,15 @@ object EgatesScheduleEditor {
                               "alignItems" -> "center"
                             ),
                             s"Bank ${bankIdx + 1}",
-                            MuiButton(color = Color.secondary, variant = "contained", size = "small")(
-                              MuiIcons(Delete)(fontSize = "small"),
-                              ^.onClick ==> removeBank(bankIdx)
-                            )
+                            Button(ButtonProps(
+                              children = <.span(MuiIcons(Delete)(fontSize = "small")).rawNode,
+                              variant = "secondary",
+                              secondaryStyle = "home-office",
+                              size = "small",
+                              className = "config-bank-remove",
+                              ariaLabel = s"Remove bank ${bankIdx + 1}",
+                              onClick = ((_: ReactEvent) => removeBank(bankIdx).runNow()): js.Function1[ReactEvent, Unit]
+                            ))
                           ),
                           MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
                             MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
@@ -219,8 +220,18 @@ object EgatesScheduleEditor {
                     )
                   ),
                   MuiDialogActions()(
-                    MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> cancelEdit),
-                    MuiButton(color = Color.primary, variant = "outlined")("Save", ^.onClick --> saveEdit)
+                    ^.className := "config-dialog-actions",
+                    Button(ButtonProps(
+                      children = "Save",
+                      variant = "primary",
+                      onClick = ((_: ReactEvent) => saveEdit.runNow()): js.Function1[ReactEvent, Unit]
+                    )),
+                    Button(ButtonProps(
+                      children = "Cancel",
+                      variant = "secondary",
+                      secondaryStyle = "home-office",
+                      onClick = ((_: ReactEvent) => cancelEdit.runNow()): js.Function1[ReactEvent, Unit]
+                    ))
                   )
                 )
               case None => EmptyVdom
@@ -230,12 +241,16 @@ object EgatesScheduleEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Effective from")),
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Open gates per bank")),
                 MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
-                  MuiButton(color = Color.secondary, variant = "contained")(
-                    "Add e-Gates change",
-                    ^.onClick --> scope.modState(_.copy(editing =
+                  ^.className := "config-add-change-cell",
+                  Button(ButtonProps(
+                    children = "Add e-Gates change",
+                    variant = "secondary",
+                    secondaryStyle = "home-office",
+                    className = "config-add-change",
+                    onClick = ((_: ReactEvent) => scope.modState(_.copy(editing =
                       Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today))
-                    ))
-                  )
+                    )).runNow()): js.Function1[ReactEvent, Unit]
+                  ))
                 )
               ),
               s.updates.toList.sortBy(_.effectiveFrom).reverseIterator.map { updates =>
@@ -257,15 +272,25 @@ object EgatesScheduleEditor {
                   ),
                   MuiGrid(item = true, xs = 4)(
                     <.div(
-                      ^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
-                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
-                        MuiIcons(Edit)(fontSize = "small"),
-                        ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))
-                      ),
-                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
-                        MuiIcons(Delete)(fontSize = "small"),
-                        ^.onClick --> deleteUpdates(updates.effectiveFrom)
-                      )
+                      ^.className := "config-row-actions",
+                      Button(ButtonProps(
+                        children = <.span(MuiIcons(Edit)(fontSize = "small")).rawNode,
+                        variant = "secondary",
+                        secondaryStyle = "home-office",
+                        size = "small",
+                        ariaLabel = s"Edit $terminal e-Gates change effective ${date.prettyDateTime}",
+                        onClick = ((_: ReactEvent) =>
+                          scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))
+                            .runNow()): js.Function1[ReactEvent, Unit]
+                      )),
+                      Button(ButtonProps(
+                        children = <.span(MuiIcons(Delete)(fontSize = "small")).rawNode,
+                        variant = "secondary",
+                        secondaryStyle = "home-office",
+                        size = "small",
+                        ariaLabel = s"Delete $terminal e-Gates change effective ${date.prettyDateTime}",
+                        onClick = ((_: ReactEvent) => deleteUpdates(updates.effectiveFrom).runNow()): js.Function1[ReactEvent, Unit]
+                      ))
                     )
                   )
                 )

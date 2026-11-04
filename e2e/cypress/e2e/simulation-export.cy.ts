@@ -56,6 +56,19 @@ describe('Simulation export', () => {
         .get(paxRagGreenSelector)
         .get('#simulationDayTab')
         .click({force: true})
+        .get('.simulation-actions').should($actions => {
+            const update = $actions.find('button').get(0)
+            const exportLink = $actions.find('#export-simulation').get(0)
+            const view = $actions[0].ownerDocument.defaultView
+            expect(update).to.exist
+            expect(exportLink).to.exist
+            expect(update.classList.contains('drt-govuk-button--secondary-home-office')).to.be.true
+            expect(exportLink.classList.contains('drt-govuk-button--secondary-home-office')).to.be.true
+            expect(update.getBoundingClientRect().height).to.be.closeTo(exportLink.getBoundingClientRect().height, 1)
+            expect(view.getComputedStyle(update).fontSize).to.equal('19px')
+            expect(view.getComputedStyle(exportLink).fontSize).to.equal('19px')
+            expect(view.getComputedStyle(exportLink).marginBottom).to.equal('0px')
+        })
         .get("#adjust_processing_times")
         .click({force: true})
         .get("#EeaMachineReadable_EeaDesk")
@@ -118,5 +131,3 @@ describe('Simulation export', () => {
         })
     });
 });
-
-

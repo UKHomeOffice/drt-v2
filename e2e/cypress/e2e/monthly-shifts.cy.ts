@@ -109,6 +109,10 @@ describe('Monthly Shifts Staffing', () => {
             const baseUrl = '#terminal/T1/shifts/15/';
             cy.visit(baseUrl)
               .clickCreateShiftPattern()
+              .get('[data-cy="shift-continue-button"]').should('have.class', 'govuk-button')
+              .and('have.css', 'font-size', '19px')
+              .get('body').contains('button', 'Add a shift').should('have.class', 'govuk-button--secondary')
+              .and('have.css', 'font-size', '19px')
               .get('[data-cy="shift-name-input"]').type('Shift 1')
               .get('[data-cy="start-time-select"]').click()
               .get('[data-cy="select-start-time-option-00-00"]').click()

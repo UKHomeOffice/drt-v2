@@ -5,7 +5,7 @@ import diode.data.Pot
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType }
 import drt.client.actions.Actions.{ RequestDateDeskRecsRecalculation, RequestDatePaxLoadsRecalculation }
 import drt.client.components.ToolTips._
-import drt.client.components.govuk.{ RadioOption, Radios, RadiosProps }
+import drt.client.components.govuk.{ Button, ButtonProps, RadioOption, Radios, RadiosProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.handlers.UpdateUserPreferences
@@ -13,12 +13,11 @@ import drt.client.services.{ SPACircuit, StaffMovementMinute, ViewMode }
 import drt.client.util.AirportName.getAirportByCode
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiTypography }
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CtorType, ReactEventFromInput, ScalaComponent }
+import japgolly.scalajs.react.{ Callback, CtorType, ReactEvent, ReactEventFromInput, ScalaComponent }
 import org.scalajs.dom.html.{ Div, TableCell }
 import org.scalajs.dom.{ DOMList, Node }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -427,17 +426,15 @@ object TerminalDesksAndQueues {
       .filter(_.createdAt > staffMinute.lastUpdated.getOrElse(0L))
       .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
 
-  private def adminRecalcButton(requestRecalc: () => Callback, label: String): VdomTagOf[Div] = {
+  private[components] def adminRecalcButton(requestRecalc: () => Callback, label: String): VdomTagOf[Div] = {
     <.div(
       ^.className := "re-crunch",
-      MuiButton(
-        variant = "contained",
-        size = "medium",
-        color = Color.secondary
-      )(
-        ^.onClick --> requestRecalc(),
-        label
-      )
+      Button(ButtonProps(
+        children = label,
+        variant = "secondary",
+        secondaryStyle = "home-office",
+        onClick = ((_: ReactEvent) => requestRecalc().runNow()): js.Function1[ReactEvent, Unit]
+      ))
     )
   }
 

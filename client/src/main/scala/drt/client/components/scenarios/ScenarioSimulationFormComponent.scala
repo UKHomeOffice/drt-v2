@@ -3,13 +3,13 @@ package drt.client.components.scenarios
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.actions.Actions.GetSimulation
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.services.SPACircuit
-import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.{ MuiIcons, MuiIconsModule }
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.all.{ `type`, id, onChange, onClick, value }
+import japgolly.scalajs.react.vdom.all.{ `type`, id, onChange, value }
 import japgolly.scalajs.react.vdom.html_<^.{ <, _ }
 import japgolly.scalajs.react.{ CtorType, _ }
 import org.scalajs.dom.html.Div
@@ -228,8 +228,8 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
           def eGatesOpen: VdomElement =
             MuiFormGroup()(
-              MuiButton()("Select All", onClick --> openEgatesAllDay),
-              MuiButton()("De-select All", onClick --> closeEgatesAllDay),
+              eGateSelectionButton("Select All", openEgatesAllDay),
+              eGateSelectionButton("De-select All", closeEgatesAllDay),
               (0 to 23)
                 .map(hour =>
                   <.div(
@@ -311,35 +311,41 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             else <.div(),
             MuiDivider(variant = MuiDivider.Variant.middle)(),
             <.div(
-              ^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
+              ^.className := "simulation-actions",
               submitButton(showCharts, state.simulationFormFields),
-              MuiButton(
-                variant = MuiButton.Variant.contained,
-                color = MuiButton.Color.secondary
-              )(
-                ^.className := "button",
-                ^.target := "_blank",
-                ^.id := "export-simulation",
-                ^.href :=
-                  SPAMain.absoluteUrl(s"export/desk-rec-simulation?${state.simulationFormFields.toQueryStringParams}"),
-                "Export"
+              simulationExportButton(
+                SPAMain.absoluteUrl(s"export/desk-rec-simulation?${state.simulationFormFields.toQueryStringParams}")
               )
             )
           )
       }
       .build
 
-  private def submitButton(showCharts: Callback, form: SimulationFormFields): WithPropsAndTagsMods = {
-    val (colour, callback) = if (form.isValid)
-      (MuiButton.Color.secondary, showCharts)
-    else
-      (MuiButton.Color.secondary, Callback.empty)
+  private[components] def simulationExportButton(url: String): VdomElement =
+    Button(ButtonProps(
+      children = "Export",
+      variant = "secondary",
+      className = "button",
+      target = "_blank",
+      id = "export-simulation",
+      href = url
+    ))
 
-    MuiButton(
-      variant = MuiButton.Variant.contained,
-      color = colour
-    )(onClick --> callback, "Update")
-  }
+  private[components] def eGateSelectionButton(label: String, onSelect: Callback): VdomElement =
+    Button(ButtonProps(
+      children = label,
+      variant = "secondary",
+      secondaryStyle = "home-office",
+      onClick = ((_: ReactEvent) => onSelect.runNow()): js.Function1[ReactEvent, Unit]
+    ))
+
+  private[components] def submitButton(showCharts: Callback, form: SimulationFormFields): VdomElement =
+    Button(ButtonProps(
+      children = "Update",
+      variant = "secondary",
+      secondaryStyle = "home-office",
+      onClick = ((_: ReactEvent) => if (form.isValid) showCharts.runNow()): js.Function1[ReactEvent, Unit]
+    ))
 
   def apply(date: LocalDate, terminal: Terminal, airportConfg: AirportConfig, slaConfigs: SlaConfigs): VdomElement =
     component(Props(date, terminal, airportConfg, slaConfigs))
