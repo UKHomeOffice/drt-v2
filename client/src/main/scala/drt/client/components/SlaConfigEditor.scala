@@ -3,18 +3,18 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.actions.Actions.{ RemoveSlasUpdate, SaveSlasUpdate }
 import drt.client.components.ConfirmDialog.ConfirmParams
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.components.styles.DrtReactTheme
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ Add, Delete, Edit }
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ CallbackTo, ReactEventFromInput, ScalaComponent }
+import japgolly.scalajs.react.{ CallbackTo, ReactEvent, ReactEventFromInput, ScalaComponent }
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.config.slas.{ SlaConfigs, SlasUpdate }
@@ -131,11 +131,19 @@ object SlaConfigEditor {
                     )
                   ),
                   MuiDialogActions()(
-                    MuiButton(color = Color.primary, variant = "outlined")("Cancel", ^.onClick --> cancelEdit),
-                    MuiButton(
-                      color = Color.primary,
-                      variant = "outlined"
-                    )("Save", ^.onClick --> saveEdit, ^.disabled := s.errors.nonEmpty)
+                    ^.className := "config-dialog-actions",
+                    Button(ButtonProps(
+                      children = "Save",
+                      variant = "primary",
+                      disabled = s.errors.nonEmpty,
+                      onClick = ((_: ReactEvent) => saveEdit.runNow()): js.Function1[ReactEvent, Unit]
+                    )),
+                    Button(ButtonProps(
+                      children = "Cancel",
+                      variant = "secondary",
+                      secondaryStyle = "home-office",
+                      onClick = ((_: ReactEvent) => cancelEdit.runNow()): js.Function1[ReactEvent, Unit]
+                    ))
                   )
                 )
               case None => EmptyVdom
@@ -145,12 +153,16 @@ object SlaConfigEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("Effective from")),
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("SLAs (minutes)")),
                 MuiGrid(item = true, xs = 4)(
-                  MuiButton(color = Color.secondary, variant = "contained")(
-                    MuiIcons(Add)(fontSize = "small"),
-                    "Add SLA change",
-                    ^.onClick -->
+                  ^.className := "config-add-change-cell",
+                  Button(ButtonProps(
+                    children = <.span(MuiIcons(Add)(fontSize = "small"), "Add SLA change").rawNode,
+                    variant = "secondary",
+                    secondaryStyle = "home-office",
+                    className = "config-add-change",
+                    onClick = ((_: ReactEvent) =>
                       scope.modState(_.copy(editing = Option(Editing(SlasUpdate(today, newUpdatesTemplate, None)))))
-                  )
+                        .runNow()): js.Function1[ReactEvent, Unit]
+                  ))
                 )
               ),
               s.configs.configs.toList.reverseIterator.map { case (effectiveFrom, config) =>
@@ -167,17 +179,25 @@ object SlaConfigEditor {
                   ),
                   MuiGrid(item = true, xs = 4)(
                     <.div(
-                      ^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
-                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
-                        MuiIcons(Edit)(fontSize = "small"),
-                        ^.onClick --> scope.modState(_.copy(editing =
+                      ^.className := "config-row-actions",
+                      Button(ButtonProps(
+                        children = <.span(MuiIcons(Edit)(fontSize = "small")).rawNode,
+                        variant = "secondary",
+                        secondaryStyle = "home-office",
+                        size = "small",
+                        ariaLabel = s"Edit SLA change effective ${date.prettyDateTime}",
+                        onClick = ((_: ReactEvent) => scope.modState(_.copy(editing =
                           Option(Editing(SlasUpdate(effectiveFrom, config, Option(effectiveFrom))))
-                        ))
-                      ),
-                      MuiButton(color = Color.secondary, variant = "contained", size = "small")(
-                        MuiIcons(Delete)(fontSize = "small"),
-                        ^.onClick --> deleteUpdates(effectiveFrom)
-                      )
+                        )).runNow()): js.Function1[ReactEvent, Unit]
+                      )),
+                      Button(ButtonProps(
+                        children = <.span(MuiIcons(Delete)(fontSize = "small")).rawNode,
+                        variant = "secondary",
+                        secondaryStyle = "home-office",
+                        size = "small",
+                        ariaLabel = s"Delete SLA change effective ${date.prettyDateTime}",
+                        onClick = ((_: ReactEvent) => deleteUpdates(effectiveFrom).runNow()): js.Function1[ReactEvent, Unit]
+                      ))
                     )
                   )
                 )

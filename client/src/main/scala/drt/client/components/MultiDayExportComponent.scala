@@ -3,22 +3,17 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
-import drt.client.components.govuk.{ DatePicker, DatePickerProps }
+import drt.client.components.govuk.{ Button, ButtonProps, DatePicker, DatePickerProps }
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiGrid }
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
+import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ Callback, CallbackTo, CtorType, ScalaComponent }
+import japgolly.scalajs.react.{ Callback, CallbackTo, CtorType, ReactEvent, ScalaComponent }
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ ArrivalSource, ArrivalsAndSplitsView, BorderForceStaff, DesksAndQueuesView }
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -95,21 +90,16 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
         val setEndDate: String => CallbackTo[Unit] = date => scope.modState(_.setEnd(date))
 
-        def showDialogue(event: Event): Callback = {
-          event.preventDefault()
-          scope.modState(_.copy(showDialogue = true))
-        }
-
         if (props.loggedInUser.hasRole(BorderForceStaff))
           <.div(
             ^.className := "export-button-wrapper",
-            MuiButton(color = Color.secondary, variant = "contained", sx = SxProps(Map("fontWeight" -> "normal")))(
-              "Multi Day Export",
-              VdomAttr("data-toggle") := "modal",
-              VdomAttr("data-target") := "#multi-day-export",
-              ^.href := "#",
-              ^.onClick ==> showDialogue
-            ),
+            Button(ButtonProps(
+              children = "Multi Day Export",
+              variant = "secondary",
+              dataToggle = "modal",
+              dataTarget = "#multi-day-export",
+              onClick = ((_: ReactEvent) => scope.modState(_.copy(showDialogue = true)).runNow()): js.Function1[ReactEvent, Unit]
+            )),
             <.div(
               ^.className := "multi-day-export modal " + showClass,
               ^.id := "#multi-day-export",

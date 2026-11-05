@@ -11,11 +11,11 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.shared.StaffAssignment
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiFormControl, MuiSwitch, MuiTypography }
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiFormControl, MuiSwitch, MuiTypography }
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ ChevronLeft, ChevronRight, Groups }
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ ChevronLeft, ChevronRight }
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -124,38 +124,51 @@ case class ConfirmAndSaveForMonthlyShifts(
 }
 
 object MonthlyStaffingBar {
+  def shiftActionButton(label: String, action: Callback): VdomElement =
+    Button(ButtonProps(
+      children = label,
+      variant = "secondary",
+      secondaryStyle = "home-office",
+      size = "default",
+      className = "staffing-action-button",
+      onClick = ((_: ReactEvent) => action.runNow()): js.Function1[ReactEvent, Unit]
+    ))
+
   def whatDayChanged(changedAssignments: Seq[StaffTableEntry]): String = {
     changedAssignments.map(_.startTime.day).sortBy(_.toInt).distinct.mkString(", ")
   }
 
-  private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
+  private[components] def navigationArrows(
+      previousDate: SDateLike,
+      nextDate: SDateLike,
+      navigate: SDateLike => Callback
+  ): VdomTagOf[Div] = {
     <.div(
-      MuiButton(
-        color = Color.secondary,
-        variant = "contained",
-        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white"))
-      )(
-        MuiIcons(ChevronLeft)(fontSize = "small"),
-        ^.onClick --> props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly)))
-        )
-      ),
-      MuiButton(
-        color = Color.secondary,
-        variant = "contained",
-        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white"))
-      )(
-        MuiIcons(ChevronRight)(fontSize = "small"),
-        ^.onClick -->
-          props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly))))
-      )
+      Button(ButtonProps(
+        children = <.span(MuiIcons(ChevronLeft)(fontSize = "small")).rawNode,
+        variant = "secondary",
+        secondaryStyle = "home-office",
+        ariaLabel = "Previous period",
+        onClick = ((_: ReactEvent) => navigate(previousDate).runNow()): js.Function1[ReactEvent, Unit]
+      )),
+      Button(ButtonProps(
+        children = <.span(MuiIcons(ChevronRight)(fontSize = "small")).rawNode,
+        variant = "secondary",
+        secondaryStyle = "home-office",
+        ariaLabel = "Next period",
+        onClick = ((_: ReactEvent) => navigate(nextDate).runNow()): js.Function1[ReactEvent, Unit]
+      ))
     )
   }
 
   def handleNavigation(props: Props, viewingDate: SDateLike): VdomTagOf[Div] = {
     val (previousDate, nextDate) =
       navigationDates(viewingDate, props.terminalPageTab.dayRangeType.getOrElse("monthly"), () => SDate.now())
-    navigationArrows(props, previousDate, nextDate)
+    navigationArrows(
+      previousDate,
+      nextDate,
+      date => props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(date.toISODateOnly))))
+    )
   }
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
@@ -314,16 +327,14 @@ object MonthlyStaffingBar {
             onClick = ((event: ReactEvent) => props.handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
           )),
           if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
-            MuiButton(color = Color.secondary, variant = "contained")(
-              <.span("Create shift pattern"),
-              ^.onClick -->
-                props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts"))
+            shiftActionButton(
+              "Create shift pattern",
+              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts"))
             )
           else if (props.isShiftFeatureEnabled && !props.isShiftsEmpty)
-            MuiButton(color = Color.secondary, variant = "contained")(
-              <.span("Add shift"),
-              ^.onClick -->
-                props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "addShift"))
+            shiftActionButton(
+              "Add shift",
+              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "addShift"))
             )
           else
             EmptyVdom,

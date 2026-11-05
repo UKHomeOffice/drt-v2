@@ -13,7 +13,6 @@ import drt.client.services.SPACircuit
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.util.DateRange
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{ Component, Unmounted }
@@ -276,9 +275,9 @@ object MonthlyStaffingComponent {
                         onClick = ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
                       )),
                       if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
-                        MuiButton(color = Color.secondary, variant = "contained")(
-                          <.span("Create shift pattern"),
-                          ^.onClick --> props.router.set(TerminalPageTabLoc(
+                        MonthlyStaffingBar.shiftActionButton(
+                          "Create shift pattern",
+                          props.router.set(TerminalPageTabLoc(
                             props.terminalPageTab.terminalName,
                             "shifts",
                             "createShifts"

@@ -7,6 +7,7 @@ import drt.client.SPAMain
 import drt.client.SPAMain.{ Loc, TerminalPageTabLoc }
 import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips.staffMovementsTabTooltip
+import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -15,9 +16,7 @@ import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{ MuiButton, MuiMenu, MuiMenuItem }
+import io.kinoplan.scalajs.react.material.ui.core.{ MuiMenu, MuiMenuItem }
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{ <, ^, VdomAttr, VdomElement, _ }
@@ -26,7 +25,7 @@ import japgolly.scalajs.react.{ BackendScope, Callback, CtorType, ReactEvent, Re
 import org.scalajs.dom.HTMLElement
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.{ ApiFlightWithSplits, UniqueArrival }
-import uk.gov.homeoffice.drt.auth.Roles.{ ArrivalSimulationUpload, Role, StaffMovementsExport }
+import uk.gov.homeoffice.drt.auth.Roles.{ ArrivalSimulationUpload, BorderForceStaff, Role, StaffMovementsExport }
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.models.{ CrunchMinute, FlightManifestSummary, ManifestKey, UserPreferences }
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -36,6 +35,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{ LocalDate, SDateLike }
 
 import scala.collection.immutable.{ HashSet, SortedMap }
+import scala.scalajs.js
 import scala.scalajs.js.JSConverters.JSRichOption
 
 object TerminalContentComponent {
@@ -125,7 +125,7 @@ object TerminalContentComponent {
     }
 
   class Backend($ : BackendScope[Props, State]) {
-    private def handleMenuOpen(event: ReactEventFromHtml): Callback = {
+    private def handleMenuOpen(event: ReactEvent): Callback = {
       val target = event.currentTarget.asInstanceOf[HTMLElement]
       $.modState(_.copy(anchorEl = Some(target)))
     }
@@ -214,10 +214,11 @@ object TerminalContentComponent {
                 props.loggedInUser,
                 props.viewMode
               ),
-              MuiButton(color = Color.secondary, variant = "contained")(
-                "Advanced Downloads",
-                ^.onClick ==> handleMenuOpen
-              ),
+              Button(ButtonProps(
+                children = "Advanced Downloads",
+                variant = "secondary",
+                onClick = ((event: ReactEvent) => handleMenuOpen(event).runNow()): js.Function1[ReactEvent, Unit]
+              )),
               <.div(
                 ^.className := "advanced-downloads-menu",
                 MuiMenu(
@@ -245,29 +246,33 @@ object TerminalContentComponent {
                       props.viewMode
                     )
                   ),
-                  MuiMenuItem()(
-                    displayForRole(
-                      node = exportLink(
+                  displayForRole(
+                    node = MuiMenuItem()(
+                      exportLink(
                         exportDay = props.terminalPageTab.dateFromUrlOrNow,
                         terminalName = terminalName,
                         exportType = ExportStaffMovements(props.terminalPageTab.terminal),
                         exportUrl =
                           SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
                         title = "staff-movements"
-                      ),
-                      role = StaffMovementsExport,
-                      loggedInUser = props.loggedInUser
-                    )
+                      )
+                    ),
+                    role = StaffMovementsExport,
+                    loggedInUser = props.loggedInUser
                   ),
-                  MuiMenuItem()(
-                    MultiDayExportComponent(
-                      portCode = props.airportConfig.portCode,
-                      terminal = terminal,
-                      terminals = terminals,
-                      viewMode = props.viewMode,
-                      selectedDate = props.terminalPageTab.dateFromUrlOrNow,
-                      loggedInUser = props.loggedInUser
-                    )
+                  displayForRole(
+                    node = MuiMenuItem()(
+                      MultiDayExportComponent(
+                        portCode = props.airportConfig.portCode,
+                        terminal = terminal,
+                        terminals = terminals,
+                        viewMode = props.viewMode,
+                        selectedDate = props.terminalPageTab.dateFromUrlOrNow,
+                        loggedInUser = props.loggedInUser
+                      )
+                    ),
+                    role = BorderForceStaff,
+                    loggedInUser = props.loggedInUser
                   )
                 )
               )
@@ -400,24 +405,21 @@ object TerminalContentComponent {
       title: String
   ): VdomTagOf[Div] = {
     <.div(
-      MuiButton(
-        color = Color.secondary,
-        variant = "contained",
-        size = "medium",
-        sx = SxProps(Map("fontWeight" -> "normal"))
-      )(
-        s" ${exportType.linkLabel}",
-        ^.href := exportUrl,
-        ^.target := "_blank",
-        ^.id := s"export-day-${exportType.toUrlString}",
-        ^.onClick --> {
-          Callback(GoogleEventTracker.sendEvent(
-            terminalName,
-            s"Export ${exportType.linkLabel}",
-            exportDay.toISODateOnly
-          ))
+      // The shared Button does not forward onClick to its anchor branch.
+      ^.onClick ==> ((event: ReactEventFromHtml) => Callback {
+        event.target match {
+          case element: org.scalajs.dom.Element if element.closest("a") != null =>
+            GoogleEventTracker.sendEvent(terminalName, s"Export ${exportType.linkLabel}", exportDay.toISODateOnly)
+          case _ => ()
         }
-      )
+      }),
+      Button(ButtonProps(
+        children = s" ${exportType.linkLabel}",
+        variant = "secondary",
+        href = exportUrl,
+        target = "_blank",
+        id = s"export-day-${exportType.toUrlString}"
+      ))
     )
   }
 

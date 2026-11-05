@@ -20,8 +20,16 @@ trait ButtonProps extends js.Object {
   var onClick: js.UndefOr[js.Function1[ReactEvent, Unit]] = js.native
   var disabled: js.UndefOr[Boolean] = js.native
   var className: js.UndefOr[String] = js.native
+  var href: js.UndefOr[String] = js.native
+  var target: js.UndefOr[String] = js.native
+  var id: js.UndefOr[String] = js.native
+  var ariaLabel: js.UndefOr[String] = js.native
   @JSName("data-cy")
   var dataCy: js.UndefOr[String] = js.native
+  @JSName("data-toggle")
+  var dataToggle: js.UndefOr[String] = js.native
+  @JSName("data-target")
+  var dataTarget: js.UndefOr[String] = js.native
 }
 
 object ButtonProps {
@@ -33,7 +41,13 @@ object ButtonProps {
       onClick: js.UndefOr[js.Function1[ReactEvent, Unit]] = js.undefined,
       disabled: js.UndefOr[Boolean] = js.undefined,
       className: js.UndefOr[String] = js.undefined,
-      dataCy: js.UndefOr[String] = js.undefined
+      dataCy: js.UndefOr[String] = js.undefined,
+      href: js.UndefOr[String] = js.undefined,
+      target: js.UndefOr[String] = js.undefined,
+      id: js.UndefOr[String] = js.undefined,
+      ariaLabel: js.UndefOr[String] = js.undefined,
+      dataToggle: js.UndefOr[String] = js.undefined,
+      dataTarget: js.UndefOr[String] = js.undefined
   ): ButtonProps = {
     val props = (new js.Object).asInstanceOf[ButtonProps]
     props.children = children
@@ -44,6 +58,12 @@ object ButtonProps {
     props.disabled = disabled
     props.className = className
     props.dataCy = dataCy
+    props.href = href
+    props.target = target
+    props.id = id
+    props.ariaLabel = ariaLabel
+    props.dataToggle = dataToggle
+    props.dataTarget = dataTarget
     props
   }
 }
@@ -53,4 +73,3 @@ object Button {
 
   def apply(props: ButtonProps): VdomElement = component(props)
 }
-

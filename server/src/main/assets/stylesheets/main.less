@@ -99,6 +99,34 @@ label {
   font-weight: normal;
 }
 
+// Bootstrap's 10px root size makes the shared button's rem-based font too small.
+@media screen {
+  .govuk-button:not(.govuk-button--start) {
+    font-size: 19px;
+  }
+
+  .govuk-button.govuk-button--start {
+    font-size: 21px;
+  }
+}
+
+@media screen and (min-width: 40.0625em) {
+  .govuk-button.govuk-button--start {
+    font-size: 24px;
+  }
+}
+
+.simulation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.simulation-actions > .govuk-button {
+  margin-bottom: 0;
+}
+
 .badge-text {
   margin-left: 12px;
 }
@@ -349,6 +377,8 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   display: inline-block;
 }
 
+
+
 .queues-and-arrivals {
   margin-top: 15px;
 }
@@ -387,6 +417,11 @@ a:hover {
 
 .terminals-export .modal-content a, .multi-day-export .modal-content a {
   width: 100%;
+}
+
+.terminals-export .terminal-export-option {
+  flex: 0 1 220px;
+  max-width: 100%;
 }
 
 .date .form-group.row .date-field {
@@ -830,6 +865,14 @@ table.headlines tr:nth-child(odd) {
 
 .export-button-wrapper {
   display: inline-flex;
+}
+
+.advanced-downloads-menu .MuiMenuItem-root {
+  margin-bottom: 0;
+}
+
+.advanced-downloads-menu .MuiMenuItem-root > div > .govuk-button {
+  margin-bottom: 0;
 }
 
 .table-xcondensed {
@@ -1462,6 +1505,7 @@ p {
 
 .terminal-staffing-content-footer {
   display: flex;
+  align-items: center;
   gap: 15px;
   border-radius: 5px;
   padding-top: 15px;
@@ -1706,6 +1750,16 @@ p {
   justify-content: flex-end;
   gap: 15px;
   margin-left: 10px;
+}
+
+.staffing-controls-navigation > div {
+  display: flex;
+}
+
+.staffing-controls-navigation .govuk-button {
+  margin-bottom: 0;
+  min-width: 40px;
+  min-height: 40px;
 }
 
 .staffing-bar {
@@ -3372,6 +3426,41 @@ div.access-restricted {
   @media (max-width: 800px) {
     width: 100%;
   }
+}
+
+.terminal-config .config-add-change {
+  width: auto;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .terminal-config .config-add-change-cell {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+.config-row-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.config-row-actions > .govuk-button,
+.config-dialog-actions > .govuk-button,
+.govuk-button.config-bank-remove {
+  margin-bottom: 0;
+}
+
+.config-dialog-actions > .govuk-button {
+  font-size: 19px;
+}
+
+.config-dialog-actions > .MuiButton-root {
+  font-size: 19px;
+  line-height: 1;
+  min-height: 38px;
 }
 
 .arrivals__table__flight_transfer-pax {
