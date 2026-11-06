@@ -249,7 +249,7 @@ case class ManifestLookup(tables: AggregatedDbTables)(implicit mat: Materializer
           """.as[(String, String, String, Timestamp)]
   }
 
-  private def paxForArrivalsQuery(flightKeys: Vector[(String, String, String, Timestamp)])
+  private[manifests] def paxForArrivalsQuery(flightKeys: Vector[(String, String, String, Timestamp)])
       : Future[Seq[ManifestPassengerProfile]] = {
     val q = tables.voyageManifestPassengerInfo
       .filter { vm =>
@@ -282,7 +282,7 @@ case class ManifestLookup(tables: AggregatedDbTables)(implicit mat: Materializer
           case (nat, doc, age, transitFlag, endCountry, inTransit, identifier) =>
             val transit = (transitFlag, endCountry, inTransit) match {
               case (t, _, _) if t == "Y"   => true
-              case (_, c, _) if c != "GBR" => true
+              case (_, c, _) if Option(c).exists(country => country.trim.nonEmpty && country != "GBR") => true
               case (_, _, t) if t          => true
               case _                       => false
             }

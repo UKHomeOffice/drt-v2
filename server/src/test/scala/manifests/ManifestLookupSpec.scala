@@ -74,6 +74,37 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
   }
 
   "ManifestLookup" should {
+    "classify historic passengers without treating blank disembarkation countries as transit" in {
+      import AggregateDbH2.profile.api._
+
+      val existing = Await.result(AggregateDbH2.run(AggregateDbH2.voyageManifestPassengerInfo.result), 1.second).head
+      val passengers = Seq(
+        existing.copy(passenger_identifier = "blank", disembarkation_port_country_code = ""),
+        existing.copy(passenger_identifier = "whitespace", disembarkation_port_country_code = "  "),
+        existing.copy(passenger_identifier = "uk", disembarkation_port_country_code = "GBR"),
+        existing.copy(passenger_identifier = "abroad", disembarkation_port_country_code = "FRA"),
+        existing.copy(passenger_identifier = "flag", disembarkation_port_country_code = "", in_transit_flag = "Y"),
+        existing.copy(passenger_identifier = "stored", disembarkation_port_country_code = "", in_transit = true)
+      )
+      Await.result(AggregateDbH2.run(AggregateDbH2.voyageManifestPassengerInfo ++= passengers), 1.second)
+
+      val scheduled = new Timestamp(SDate("2024-05-15T12:00Z").millisSinceEpoch)
+      val profiles = Await.result(
+        ManifestLookup(AggregateDbH2).paxForArrivalsQuery(Vector(("LHR", "JFK", "1", scheduled))),
+        1.second
+      )
+
+      profiles.flatMap(p => p.passengerIdentifier.map(_ -> p.inTransit)).toMap === Map(
+        "1" -> false,
+        "blank" -> false,
+        "whitespace" -> false,
+        "uk" -> false,
+        "abroad" -> true,
+        "flag" -> true,
+        "stored" -> true
+      )
+    }
+
     "lookup a manifest" in {
       skipped("Postgres queries incompatible with H2")
 

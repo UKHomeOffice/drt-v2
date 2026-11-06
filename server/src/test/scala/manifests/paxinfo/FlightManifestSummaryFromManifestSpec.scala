@@ -1,5 +1,6 @@
 package manifests.paxinfo
 
+import actors.serializers.ManifestMessageConversion
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
@@ -13,6 +14,24 @@ import scala.collection.SortedMap
 class FlightManifestSummaryFromManifestSpec extends Specification {
 
   private val dateAfterEgateAgeEligibilityChange = "2026-07-09"
+
+  "When a persisted manifest contains blank disembarkation ports" >> {
+    "the recovered summary should classify passengers by nationality unless they are explicitly in transit" >> {
+      val manifest = manifestForPassengers(
+        List(
+          passengerBuilder(id = Some("1"), disembarkationPortCode = ""),
+          passengerBuilder(id = Some("2"), disembarkationPortCode = "", inTransit = "Y"),
+          passengerBuilder(id = Some("3"), disembarkationPortCode = "JFK")
+        ),
+        dateAfterEgateAgeEligibilityChange
+      )
+      val persisted = ManifestMessageConversion.voyageManifestToMessage(manifest)
+      val recovered = ManifestMessageConversion.voyageManifestFromMessage(persisted)
+
+      PassengerInfo.manifestToFlightManifestSummary(recovered).map(_.paxTypes) ===
+        Some(Map(PaxTypes.GBRNational -> 1, PaxTypes.Transit -> 2))
+    }
+  }
 
   "When extracting passenger info " >> {
     "Given a manifest with multiple GB passengers aged 7, 9, 20 and 30 " >> {

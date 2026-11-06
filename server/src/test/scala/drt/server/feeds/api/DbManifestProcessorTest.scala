@@ -11,8 +11,8 @@ import slick.jdbc.SetParameter.SetUnit
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.AggregateDbH2
 import uk.gov.homeoffice.drt.db.dao.ApiManifestProvider
-import uk.gov.homeoffice.drt.models.UniqueArrivalKey
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.models.{ PassengerInfo, UniqueArrivalKey }
+import uk.gov.homeoffice.drt.ports.{ PaxTypes, PortCode }
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
@@ -58,6 +58,23 @@ class DbManifestProcessorTest
       processAndCheckIapiManifestPax(key, Set(paxId))
 
       success
+    }
+
+    "classify passengers with blank disembarkation ports by nationality" in {
+      import AggregateDbH2.profile.api._
+
+      val probe = TestProbe("manifestProbe")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      Await.result(
+        AggregateDbH2.run(AggregateDbH2.voyageManifestPassengerInfo.map(_.disembarkation_port_code).update("")),
+        1.second
+      )
+
+      Await.result(processor(probe).process(Seq(key), SDate.now().millisSinceEpoch), 1.second)
+      val response = probe.expectMsgType[ManifestsFeedSuccess](1.second)
+      val summary = response.manifests.manifests.headOption.flatMap(PassengerInfo.manifestToFlightManifestSummary)
+
+      summary.map(_.paxTypes) === Some(Map(PaxTypes.GBRNational -> 1))
     }
 
     "Find matching passengers and enqueue a successful manifest response, using only unique passenger identifiers for iAPI" in {
