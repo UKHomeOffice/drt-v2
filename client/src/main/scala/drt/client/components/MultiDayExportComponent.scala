@@ -152,12 +152,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                             List(ExportDeploymentsSingleTerminal(props.terminal), ExportDeploymentsCombinedTerminals)
                           else List(ExportDeployments(props.terminal))
                           exportLinksGroup(props, state, exports, "Available staff deployments")
-                        } else EmptyVdom,
-                        if (
-                          props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate)
-                        )
-                          exportLinksGroup(props, state, List(ExportLiveArrivalsFeed(props.terminal)), "Feeds")
-                        else EmptyVdom
+                        } else EmptyVdom
                       )
                     ),
                     <.div(
