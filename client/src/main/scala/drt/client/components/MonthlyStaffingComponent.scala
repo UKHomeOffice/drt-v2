@@ -272,7 +272,8 @@ object MonthlyStaffingComponent {
                         size = "default",
                         className = "staffing-action-button",
                         dataCy = "edit-staff-button",
-                        onClick = ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
+                        onClick =
+                          ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
                       )),
                       if (props.isShiftFeatureEnabled && props.isShiftsEmpty)
                         MonthlyStaffingBar.shiftActionButton(
@@ -291,8 +292,13 @@ object MonthlyStaffingComponent {
                         size = "default",
                         className = "staffing-action-button",
                         onClick = ((event: ReactEvent) =>
-                          confirmAndSaveStaffing(viewingDate, timeSlots, props, state, scope)(event).runNow()
-                        ): js.Function1[ReactEvent, Unit]
+                          confirmAndSaveStaffing(
+                            viewingDate,
+                            timeSlots,
+                            props,
+                            state,
+                            scope
+                          )(event).runNow()): js.Function1[ReactEvent, Unit]
                       ))
                     )
                   )

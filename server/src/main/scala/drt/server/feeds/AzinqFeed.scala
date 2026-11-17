@@ -62,13 +62,17 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
               else {
                 arrival.invalidReason.foreach { reason =>
                   Metrics.counter(s"feeds.azinq.arrivals.skipped.$reason", 1)
-                  log.warn(s"[AzinqFeed][apply] Skipping Azinq arrival: reason=$reason, flight=${arrival.AirlineIATA}${arrival.FlightNumber}, scheduled=${arrival.ScheduledDateTime}")
+                  log.warn(
+                    s"[AzinqFeed][apply] Skipping Azinq arrival: reason=$reason, flight=${arrival.AirlineIATA}${arrival.FlightNumber}, scheduled=${arrival.ScheduledDateTime}"
+                  )
                 }
                 None
               }
             } catch {
               case ex: Exception =>
-                log.warn(s"[AzinqFeed][apply] Failed to parse JSON object: ${jsValue.prettyPrint}, error: ${ex.getMessage}")
+                log.warn(
+                  s"[AzinqFeed][apply] Failed to parse JSON object: ${jsValue.prettyPrint}, error: ${ex.getMessage}"
+                )
                 None
             }
           }.toList

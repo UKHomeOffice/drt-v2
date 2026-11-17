@@ -186,9 +186,10 @@ object SlaConfigEditor {
                         secondaryStyle = "home-office",
                         size = "small",
                         ariaLabel = s"Edit SLA change effective ${date.prettyDateTime}",
-                        onClick = ((_: ReactEvent) => scope.modState(_.copy(editing =
-                          Option(Editing(SlasUpdate(effectiveFrom, config, Option(effectiveFrom))))
-                        )).runNow()): js.Function1[ReactEvent, Unit]
+                        onClick = ((_: ReactEvent) =>
+                          scope.modState(_.copy(editing =
+                            Option(Editing(SlasUpdate(effectiveFrom, config, Option(effectiveFrom))))
+                          )).runNow()): js.Function1[ReactEvent, Unit]
                       )),
                       Button(ButtonProps(
                         children = <.span(MuiIcons(Delete)(fontSize = "small")).rawNode,
@@ -196,7 +197,8 @@ object SlaConfigEditor {
                         secondaryStyle = "home-office",
                         size = "small",
                         ariaLabel = s"Delete SLA change effective ${date.prettyDateTime}",
-                        onClick = ((_: ReactEvent) => deleteUpdates(effectiveFrom).runNow()): js.Function1[ReactEvent, Unit]
+                        onClick =
+                          ((_: ReactEvent) => deleteUpdates(effectiveFrom).runNow()): js.Function1[ReactEvent, Unit]
                       ))
                     )
                   )

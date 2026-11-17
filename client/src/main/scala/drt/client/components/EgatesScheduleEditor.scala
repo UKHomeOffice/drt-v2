@@ -182,7 +182,8 @@ object EgatesScheduleEditor {
                               size = "small",
                               className = "config-bank-remove",
                               ariaLabel = s"Remove bank ${bankIdx + 1}",
-                              onClick = ((_: ReactEvent) => removeBank(bankIdx).runNow()): js.Function1[ReactEvent, Unit]
+                              onClick =
+                                ((_: ReactEvent) => removeBank(bankIdx).runNow()): js.Function1[ReactEvent, Unit]
                             ))
                           ),
                           MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
@@ -247,9 +248,10 @@ object EgatesScheduleEditor {
                     variant = "secondary",
                     secondaryStyle = "home-office",
                     className = "config-add-change",
-                    onClick = ((_: ReactEvent) => scope.modState(_.copy(editing =
-                      Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today))
-                    )).runNow()): js.Function1[ReactEvent, Unit]
+                    onClick = ((_: ReactEvent) =>
+                      scope.modState(_.copy(editing =
+                        Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today))
+                      )).runNow()): js.Function1[ReactEvent, Unit]
                   ))
                 )
               ),
@@ -289,7 +291,10 @@ object EgatesScheduleEditor {
                         secondaryStyle = "home-office",
                         size = "small",
                         ariaLabel = s"Delete $terminal e-Gates change effective ${date.prettyDateTime}",
-                        onClick = ((_: ReactEvent) => deleteUpdates(updates.effectiveFrom).runNow()): js.Function1[ReactEvent, Unit]
+                        onClick = ((_: ReactEvent) => deleteUpdates(updates.effectiveFrom).runNow()): js.Function1[
+                          ReactEvent,
+                          Unit
+                        ]
                       ))
                     )
                   )

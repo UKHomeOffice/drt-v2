@@ -68,7 +68,16 @@ object DeskAndSimulationSecondaryButtonsTest extends TestSuite {
 
     test("simulation update only runs for valid fields") {
       val validForm = SimulationFormFields(
-        Terminal("T1"), LocalDate(2020, 2, 2), Some(1.0), Map(), Map(), 0, IndexedSeq(), Map(), 0, Seq()
+        Terminal("T1"),
+        LocalDate(2020, 2, 2),
+        Some(1.0),
+        Map(),
+        Map(),
+        0,
+        IndexedSeq(),
+        Map(),
+        0,
+        Seq()
       )
       var updates = 0
       withContainer { container =>

@@ -5,10 +5,10 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.ports.{
   AclFeedSource,
   ApiFeedSource,
+  FeedSource,
   ForecastFeedSource,
   LiveBaseFeedSource,
-  LiveFeedSource,
-  FeedSource
+  LiveFeedSource
 }
 
 class FeedSourceDisplayTest extends AnyWordSpec with Matchers {
@@ -56,4 +56,3 @@ class FeedSourceDisplayTest extends AnyWordSpec with Matchers {
     }
   }
 }
-

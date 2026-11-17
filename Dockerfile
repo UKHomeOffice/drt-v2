@@ -1,4 +1,4 @@
-FROM openjdk:24-ea-17-slim-bookworm as stage0
+FROM eclipse-temurin:17-jre-noble as stage0
 LABEL snp-multi-stage="intermediate"
 LABEL snp-multi-stage-id="1b9d58c2-d90d-45d5-825f-be1cd93f3935"
 WORKDIR /opt/docker
@@ -13,9 +13,9 @@ RUN ["chmod", "-R", "u=rX,g=rX", "/2/opt/docker"]
 RUN ["chmod", "-R", "u=rX,g=rX", "/4/opt/docker"]
 RUN ["chmod", "u+x,g+x", "/4/opt/docker/bin/drt"]
 
-FROM openjdk:24-ea-17-slim-bookworm as mainstage
+FROM eclipse-temurin:17-jre-noble as mainstage
 USER root
-RUN id -u drt 1>/dev/null 2>&1 || (( getent group 0 1>/dev/null 2>&1 || ( type groupadd 1>/dev/null 2>&1 && groupadd -g 0 root || addgroup -g 0 -S root )) && ( type useradd 1>/dev/null 2>&1 && useradd --system --create-home --uid 1000 --gid 0 drt || adduser -S -u 1000 -G root drt ))
+RUN userdel ubuntu && (getent group 1000 || groupadd -g 1000 drt) && useradd --system --create-home --uid 1000 --gid 0 drt
 WORKDIR /opt/docker
 COPY --from=stage0 --chown=drt:root /1/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /2/opt/docker /opt/docker

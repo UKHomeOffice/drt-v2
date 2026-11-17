@@ -19,16 +19,16 @@ object BigSummaryBoxTests extends TestSuite {
   val paxFeedSourceOrder = List(ApiFeedSource, LiveFeedSource)
 
   def tests = Tests {
-    "Summary for the next 3 hours" - {
-      "Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards" - {
-        "Given 0 flights" - {
+    test("Summary for the next 3 hours") {
+      test("Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards") {
+        test("Given 0 flights") {
           val rootModel = RootModel(portStatePot = Ready(PortState.empty))
 
-          "AND a current time of 2017-05-01T12:00" - {
+          test("AND a current time of 2017-05-01T12:00") {
             val now = SDate(2016, 5, 1, 12)
             val nowPlus3Hours = now.addHours(3)
 
-            "Then we can get a number of flights arriving in that period" - {
+            test("Then we can get a number of flights arriving in that period") {
               val countOfFlights = rootModel.portStatePot.map(_.flights.values.count(f => {
                 val flightDt = SDate(f.apiFlight.Scheduled)
                 now.millisSinceEpoch <= flightDt.millisSinceEpoch &&
@@ -38,7 +38,7 @@ object BigSummaryBoxTests extends TestSuite {
             }
           }
         }
-        "Given 3 flights" - {
+        test("Given 3 flights") {
 
           val apiFlight1 = ArrivalGenerator.arrival(
             schDt = "2017-05-01T12:05Z",
@@ -71,22 +71,22 @@ object BigSummaryBoxTests extends TestSuite {
             ))
           )
 
-          "AND a current time of 2017-05-01T12:00" - {
+          test("AND a current time of 2017-05-01T12:00") {
             val now = SDate("2017-05-01T12:00Z")
             val nowPlus3Hours = now.addHours(3)
 
-            "Then we can get a number of flights arriving in that period" - {
+            test("Then we can get a number of flights arriving in that period") {
               val countOfFlights = countFlightsInPeriod(rootModel, now, nowPlus3Hours)
               val expected = Ready(3)
               assert(countOfFlights == expected)
             }
-            "And we can get the total pax to the PCP" - {
+            test("And we can get the total pax to the PCP") {
               val countOfPax = countPaxInPeriod(rootModel, now, nowPlus3Hours, paxFeedSourceOrder)
               assert(countOfPax == Ready(200 + 300 + 40))
             }
           }
         }
-        "Given 3 flights with a nonZero PcpTime we use the pcpTime " - {
+        test("Given 3 flights with a nonZero PcpTime we use the pcpTime ") {
           val apiFlightPcpBeforeNow =
             ArrivalGenerator.live(schDt = "2017-05-01T11:40Z", terminal = T1, totalPax = Option(7))
               .toArrival(LiveFeedSource).copy(PcpTime = Option(mkMillis("2017-05-01T11:40Z")))
@@ -114,16 +114,16 @@ object BigSummaryBoxTests extends TestSuite {
             ))
           )
 
-          "AND a current time of 2017-05-01T12:00" - {
+          test("AND a current time of 2017-05-01T12:00") {
             val now = SDate("2017-05-01T12:00Z")
             val nowPlus3Hours = now.addHours(3)
 
-            "Then we can get a number of flights arriving in that period" - {
+            test("Then we can get a number of flights arriving in that period") {
               val countOfFlights = countFlightsInPeriod(rootModel, now, nowPlus3Hours)
               val expected = Ready(3)
               assert(countOfFlights == expected)
             }
-            "And we can get the total pax to the PCP" - {
+            test("And we can get the total pax to the PCP") {
               val countOfPax = countPaxInPeriod(rootModel, now, nowPlus3Hours, paxFeedSourceOrder)
               assert(countOfPax == Ready(200 + 300 + 40))
             }
@@ -132,8 +132,8 @@ object BigSummaryBoxTests extends TestSuite {
 
         val terminal1 = T1
 
-        "Given 3 flights with a nonZero PcpTime we use the pcpTime " - {
-          "AND we can filter by Terminal - we're interested in T1" - {
+        test("Given 3 flights with a nonZero PcpTime we use the pcpTime ") {
+          test("AND we can filter by Terminal - we're interested in T1") {
             val apiFlight1 = ArrivalGenerator.arrival(
               schDt = "2017-05-01T12:05Z",
               terminal = T1,
@@ -159,11 +159,11 @@ object BigSummaryBoxTests extends TestSuite {
               ApiFlightWithSplits(notOurTerminal, Set())
             )
 
-            "AND a current time of 2017-05-01T12:00" - {
+            test("AND a current time of 2017-05-01T12:00") {
               val now = SDate("2017-05-01T12:00Z")
               val nowPlus3Hours = now.addHours(3)
 
-              "Then we can get a number of flights arriving in that period" - {
+              test("Then we can get a number of flights arriving in that period") {
                 val flightsPcp = flightsInPeriod(flights, now, nowPlus3Hours)
                 val flightsInTerminal = flightsAtTerminal(flightsPcp, T1)
                 val countOfFlights = flightsInTerminal.length
@@ -173,9 +173,9 @@ object BigSummaryBoxTests extends TestSuite {
             }
           }
         }
-        "Given 3 flights " - {
-          "And they have splits" - {
-            "Then we can aggregate the splits for a graph" - {
+        test("Given 3 flights ") {
+          test("And they have splits") {
+            test("Then we can aggregate the splits for a graph") {
               val apiFlight1 = ArrivalGenerator.arrival(
                 schDt = "2017-05-01T12:05Z",
                 terminal = terminal1,
@@ -227,9 +227,11 @@ object BigSummaryBoxTests extends TestSuite {
             }
           }
         }
-        "Given 2 flights " - {
-          "And they have percentage splits" - {
-            "Then we can aggregate the splits by multiply the % against the bestPax so that we can show them in a graph" - {
+        test("Given 2 flights ") {
+          test("And they have percentage splits") {
+            test(
+              "Then we can aggregate the splits by multiply the % against the bestPax so that we can show them in a graph"
+            ) {
               val flights = List(
                 ApiFlightWithSplits(
                   ArrivalGenerator.arrival(
@@ -278,11 +280,11 @@ object BigSummaryBoxTests extends TestSuite {
             }
           }
         }
-        "Given 2 flights " - {
-          "And we're using the LHR tranPax aware bestpax" - {
-            "And they have API PaxNo splits including a transfer split" - {
-              "And they have tranpax" - {
-                "Then we can aggregate the splits by adding them up - we also filter out the transfer split" - {
+        test("Given 2 flights ") {
+          test("And we're using the LHR tranPax aware bestpax") {
+            test("And they have API PaxNo splits including a transfer split") {
+              test("And they have tranpax") {
+                test("Then we can aggregate the splits by adding them up - we also filter out the transfer split") {
                   val flights = List(
                     ApiFlightWithSplits(
                       ArrivalGenerator.arrival(

@@ -100,7 +100,12 @@ class AzinqEdiFeedSpec extends Specification {
         "",
         "",
         "",
-        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A", "null"))))
+        _ =>
+          Future.successful(HttpResponse(
+            OK,
+            Seq(),
+            HttpEntity(ContentTypes.`application/json`, json("T1", "A", "null"))
+          ))
       )
 
       Await.result(feed(), 1.second) === List()
@@ -115,7 +120,12 @@ class AzinqEdiFeedSpec extends Specification {
         "",
         "",
         "",
-        _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A", "\"   \""))))
+        _ =>
+          Future.successful(HttpResponse(
+            OK,
+            Seq(),
+            HttpEntity(ContentTypes.`application/json`, json("T1", "A", "\"   \""))
+          ))
       )
 
       Await.result(feed(), 1.second) === List()

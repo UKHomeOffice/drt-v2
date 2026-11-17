@@ -62,7 +62,8 @@ object TerminalExportComponent extends WithScalaCssImplicits {
             variant = "secondary",
             dataToggle = "modal",
             dataTarget = "#terminals-export",
-            onClick = ((_: ReactEvent) => scope.modState(_.copy(showDialogue = true)).runNow()): js.Function1[ReactEvent, Unit]
+            onClick =
+              ((_: ReactEvent) => scope.modState(_.copy(showDialogue = true)).runNow()): js.Function1[ReactEvent, Unit]
           )),
           <.div(
             ^.className := s"terminals-export modal " + showClass,

@@ -316,7 +316,10 @@ object MonthlyShifts {
                                 size = "default",
                                 className = "staffing-action-button",
                                 dataCy = "edit-staff-button",
-                                onClick = ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[ReactEvent, Unit]
+                                onClick = ((event: ReactEvent) => handleShiftEditForm(event).runNow()): js.Function1[
+                                  ReactEvent,
+                                  Unit
+                                ]
                               )),
                               if (shifts.isEmpty)
                                 MonthlyStaffingBar.shiftActionButton(
@@ -335,8 +338,13 @@ object MonthlyShifts {
                                 size = "default",
                                 className = "staffing-action-button",
                                 onClick = ((event: ReactEvent) =>
-                                  confirmAndSaveShifts(shiftSummaries, state.changedAssignments, props, state, scope)(event).runNow()
-                                ): js.Function1[ReactEvent, Unit]
+                                  confirmAndSaveShifts(
+                                    shiftSummaries,
+                                    state.changedAssignments,
+                                    props,
+                                    state,
+                                    scope
+                                  )(event).runNow()): js.Function1[ReactEvent, Unit]
                               ))
                             )
                           )
