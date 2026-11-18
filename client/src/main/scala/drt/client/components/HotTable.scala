@@ -36,8 +36,8 @@ object HotTable {
 
       val props = (new js.Object).asInstanceOf[RawProps]
 
-      val afterChangesCallback = (changes: js.Array[js.Array[Any]], _: String) => {
-        Option(changes).filter(_.nonEmpty).foreach { validChanges =>
+      val afterChangesCallback = (changes: js.Array[js.Array[Any]], source: String) => {
+        Option(changes).filter(_ => source != "loadData").filter(_.nonEmpty).foreach { validChanges =>
           val parsedChanges = validChanges.toList.collect {
             case jsArray: js.Array[Any] if jsArray.length == 4 =>
               Try(
