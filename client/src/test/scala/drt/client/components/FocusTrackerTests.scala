@@ -205,10 +205,13 @@ object FocusTrackerTests extends TestSuite {
       val original = button("keydown-handler-focus-target")
 
       original.focus()
-      original.addEventListener("keydown", (event: dom.KeyboardEvent) => {
-        event.stopPropagation()
-        remove(original)
-      })
+      original.addEventListener(
+        "keydown",
+        (event: dom.KeyboardEvent) => {
+          event.stopPropagation()
+          remove(original)
+        }
+      )
       keydown(original, "Enter")
       val replacement = button("keydown-handler-focus-target")
 
@@ -227,11 +230,14 @@ object FocusTrackerTests extends TestSuite {
         try {
           keydown(dom.document, "Tab")
           previous.focus()
-          clicked.addEventListener(eventType, (event: dom.Event) => {
-            event.stopPropagation()
-            previous.blur()
-            FocusTracker.restore()
-          })
+          clicked.addEventListener(
+            eventType,
+            (event: dom.Event) => {
+              event.stopPropagation()
+              previous.blur()
+              FocusTracker.restore()
+            }
+          )
           dispatch(eventType, clicked)
 
           assert(dom.document.activeElement == dom.document.body)

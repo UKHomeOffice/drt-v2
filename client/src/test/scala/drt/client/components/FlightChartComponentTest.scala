@@ -5,8 +5,8 @@ import drt.client.components.charts.DataFormat.jsonString
 import drt.client.services.JSDateConversions.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.models.{FlightManifestSummary, ManifestKey, PaxAgeRange}
-import uk.gov.homeoffice.drt.ports.{PaxType, PaxTypes, PortCode}
+import uk.gov.homeoffice.drt.models.{ FlightManifestSummary, ManifestKey, PaxAgeRange }
+import uk.gov.homeoffice.drt.ports.{ PaxType, PaxTypes, PortCode }
 import utest._
 
 import scala.collection.SortedMap
@@ -17,16 +17,16 @@ object FlightChartComponentTest extends TestSuite {
   private val eligibilityChangeMillis = SDate("2026-07-08T09:00Z").millisSinceEpoch
 
   private def summary(
-    scheduled: Long = eligibilityChangeMillis - 1,
-    ageRanges: SortedMap[PaxAgeRange, Int] = SortedMap.empty[PaxAgeRange, Int],
-    nationalities: Map[Nationality, Int] = Map.empty,
-    paxTypes: Map[PaxType, Int] = Map.empty,
+      scheduled: Long = eligibilityChangeMillis - 1,
+      ageRanges: SortedMap[PaxAgeRange, Int] = SortedMap.empty[PaxAgeRange, Int],
+      nationalities: Map[Nationality, Int] = Map.empty,
+      paxTypes: Map[PaxType, Int] = Map.empty
   ): FlightManifestSummary =
     FlightManifestSummary(
       ManifestKey(PortCode("JFK"), VoyageNumber(1), scheduled),
       ageRanges,
       nationalities,
-      paxTypes,
+      paxTypes
     )
 
   def tests: Tests = Tests {
@@ -35,8 +35,8 @@ object FlightChartComponentTest extends TestSuite {
         nationalities = Map(
           Nationality("USA") -> 5,
           Nationality("GBR") -> 1,
-          Nationality("FRA") -> 3,
-        ),
+          Nationality("FRA") -> 3
+        )
       ))
 
       assert(result.labels == List("GBR", "FRA", "USA"))
@@ -50,7 +50,7 @@ object FlightChartComponentTest extends TestSuite {
       val ageRanges = SortedMap(
         PaxAgeRange.parse("0 to 7") -> 2,
         PaxAgeRange.parse("8 to 17") -> 4,
-        PaxAgeRange.parse("18 to 24") -> 1,
+        PaxAgeRange.parse("18 to 24") -> 1
       )
 
       val result = ageSeries(summary(ageRanges = ageRanges))
@@ -66,7 +66,7 @@ object FlightChartComponentTest extends TestSuite {
       val paxTypes: Map[PaxType, Int] = Map(
         PaxTypes.VisaNational -> 2,
         PaxTypes.GBRNational -> 5,
-        PaxTypes.Transit -> 1,
+        PaxTypes.Transit -> 1
       )
       val result = paxTypeSeries(summary(paxTypes = paxTypes))
 
@@ -80,7 +80,7 @@ object FlightChartComponentTest extends TestSuite {
     test("pax-type child labels are pre-change strictly before the eligibility instant") {
       val result = paxTypeSeries(summary(
         scheduled = eligibilityChangeMillis - 1,
-        paxTypes = Map(PaxTypes.GBRNationalBelowEgateAge -> 1),
+        paxTypes = Map(PaxTypes.GBRNationalBelowEgateAge -> 1)
       ))
 
       assert(result.labels == List("GBR U10"))
@@ -89,11 +89,11 @@ object FlightChartComponentTest extends TestSuite {
     test("pax-type child labels are post-change at and after the eligibility instant") {
       val atBoundary = paxTypeSeries(summary(
         scheduled = eligibilityChangeMillis,
-        paxTypes = Map(PaxTypes.GBRNationalBelowEgateAge -> 1),
+        paxTypes = Map(PaxTypes.GBRNationalBelowEgateAge -> 1)
       ))
       val afterBoundary = paxTypeSeries(summary(
         scheduled = eligibilityChangeMillis + 1,
-        paxTypes = Map(PaxTypes.GBRNationalBelowEgateAge -> 1),
+        paxTypes = Map(PaxTypes.GBRNationalBelowEgateAge -> 1)
       ))
 
       assert(atBoundary.labels == List("GBR U8"))
@@ -102,7 +102,7 @@ object FlightChartComponentTest extends TestSuite {
 
     test("zero-only and empty series have no renderable maximum") {
       val zeroOnly = nationalitySeries(summary(
-        nationalities = Map(Nationality("GBR") -> 0, Nationality("FRA") -> 0),
+        nationalities = Map(Nationality("GBR") -> 0, Nationality("FRA") -> 0)
       ))
       val empty = ageSeries(summary())
 
@@ -121,7 +121,7 @@ object FlightChartComponentTest extends TestSuite {
       val result = chartDefinitions(summary(
         nationalities = Map(Nationality("GBR") -> 2),
         paxTypes = Map(PaxTypes.GBRNational -> 3),
-        ageRanges = SortedMap(PaxAgeRange.parse("0 to 7") -> 4),
+        ageRanges = SortedMap(PaxAgeRange.parse("0 to 7") -> 4)
       ))
 
       assert(result.map(_.key) == List("pax-chart", "age-chart", "nat-chart"))
@@ -129,7 +129,7 @@ object FlightChartComponentTest extends TestSuite {
       assert(result.map(_.chartClassName) == List(
         "arrivals__table__flight__chart-box__chart arrivals__table__flight__chart-box__chart--pax",
         "arrivals__table__flight__chart-box__chart arrivals__table__flight__chart-box__chart--age",
-        "arrivals__table__flight__chart-box__chart arrivals__table__flight__chart-box__chart--nat",
+        "arrivals__table__flight__chart-box__chart arrivals__table__flight__chart-box__chart--nat"
       ))
       assert(result.map(_.allowAutoSkipX) == List(true, true, false))
       assert(result.map(_.isNationalityChart) == List(false, false, true))
@@ -141,7 +141,7 @@ object FlightChartComponentTest extends TestSuite {
       val result = chartDefinitions(summary(
         nationalities = Map(Nationality("GBR") -> 0),
         paxTypes = Map(PaxTypes.GBRNational -> 0),
-        ageRanges = SortedMap(PaxAgeRange.parse("0 to 7") -> 0),
+        ageRanges = SortedMap(PaxAgeRange.parse("0 to 7") -> 0)
       ))
 
       assert(result.map(_.series.sum) == List(0, 0, 0))
@@ -157,8 +157,10 @@ object FlightChartComponentTest extends TestSuite {
       assert(layout.ageChartWidth == "310px")
       assert(layout.stackedContentWidth == "310px")
       assert(!layout.shouldScaleNationalityToFit)
-      assert(layout.wrapperClassName == "arrivals__table__flight__chart-wrapper arrivals__table__flight__chart-wrapper--single-row")
-      assert(layout.chartBoxClassName == "arrivals__table__flight__chart-box arrivals__table__flight__chart-box--single-row")
+      assert(layout.wrapperClassName ==
+        "arrivals__table__flight__chart-wrapper arrivals__table__flight__chart-wrapper--single-row")
+      assert(layout.chartBoxClassName ==
+        "arrivals__table__flight__chart-box arrivals__table__flight__chart-box--single-row")
       assert(layout.natScrollerClassName == "arrivals__table__flight__chart-nat-scroller")
     }
 
@@ -176,9 +178,16 @@ object FlightChartComponentTest extends TestSuite {
       assert(layout.twoRowContentWidth == "580px")
       assert(layout.stackedContentWidth == "330px")
       assert(!layout.shouldScaleNationalityToFit)
-      assert(layout.wrapperClassName == "arrivals__table__flight__chart-wrapper arrivals__table__flight__chart-wrapper--two-rows arrivals__table__flight__chart-wrapper--two-rows--compact")
-      assert(layout.chartBoxClassName == "arrivals__table__flight__chart-box arrivals__table__flight__chart-box--two-rows arrivals__table__flight__chart-box--two-rows--compact")
-      assert(layout.natScrollerClassName == "arrivals__table__flight__chart-nat-scroller arrivals__table__flight__chart-nat-scroller--enabled")
+      assert(
+        layout.wrapperClassName ==
+          "arrivals__table__flight__chart-wrapper arrivals__table__flight__chart-wrapper--two-rows arrivals__table__flight__chart-wrapper--two-rows--compact"
+      )
+      assert(
+        layout.chartBoxClassName ==
+          "arrivals__table__flight__chart-box arrivals__table__flight__chart-box--two-rows arrivals__table__flight__chart-box--two-rows--compact"
+      )
+      assert(layout.natScrollerClassName ==
+        "arrivals__table__flight__chart-nat-scroller arrivals__table__flight__chart-nat-scroller--enabled")
     }
 
     test("presentation scales nationality charts above twenty entries without changing the two-row height") {
@@ -192,9 +201,16 @@ object FlightChartComponentTest extends TestSuite {
       assert(layout.twoRowContentWidth == "630px")
       assert(layout.stackedContentWidth == "630px")
       assert(layout.shouldScaleNationalityToFit)
-      assert(layout.wrapperClassName == "arrivals__table__flight__chart-wrapper arrivals__table__flight__chart-wrapper--two-rows arrivals__table__flight__chart-wrapper--two-rows--expanded")
-      assert(layout.chartBoxClassName == "arrivals__table__flight__chart-box arrivals__table__flight__chart-box--two-rows arrivals__table__flight__chart-box--two-rows--expanded")
-      assert(layout.natScrollerClassName == "arrivals__table__flight__chart-nat-scroller arrivals__table__flight__chart-nat-scroller--enabled")
+      assert(
+        layout.wrapperClassName ==
+          "arrivals__table__flight__chart-wrapper arrivals__table__flight__chart-wrapper--two-rows arrivals__table__flight__chart-wrapper--two-rows--expanded"
+      )
+      assert(
+        layout.chartBoxClassName ==
+          "arrivals__table__flight__chart-box arrivals__table__flight__chart-box--two-rows arrivals__table__flight__chart-box--two-rows--expanded"
+      )
+      assert(layout.natScrollerClassName ==
+        "arrivals__table__flight__chart-nat-scroller arrivals__table__flight__chart-nat-scroller--enabled")
     }
 
     test("presentation caps top charts while allowing low-category charts to use less space") {
@@ -211,7 +227,8 @@ object FlightChartComponentTest extends TestSuite {
     }
 
     test("presentation reserves equal x-axis space for aligned chart baselines") {
-      val options = FlightChartPresentation.chartOptions("Passenger types", 5, allowAutoSkipX = true).toJs.asInstanceOf[js.Dynamic]
+      val options =
+        FlightChartPresentation.chartOptions("Passenger types", 5, allowAutoSkipX = true).toJs.asInstanceOf[js.Dynamic]
       val axis = js.Dynamic.literal()
       val afterFit = options.selectDynamic("scales").selectDynamic("x").selectDynamic("afterFit")
         .asInstanceOf[js.Function1[js.Dynamic, Unit]]

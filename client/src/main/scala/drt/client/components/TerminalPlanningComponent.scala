@@ -141,7 +141,9 @@ object TerminalPlanningComponent {
                     buttonWithProgress(
                       "Export Headlines",
                       state.downloadingHeadlines,
-                      createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b))(headlineFiguresExportUrl)
+                      createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b))(
+                        headlineFiguresExportUrl
+                      )
                     )
                   )
                 )
@@ -233,7 +235,9 @@ object TerminalPlanningComponent {
                   buttonWithProgress(
                     "Export Staff Requirements",
                     state.downloadingStaff,
-                    createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b))(staffRecommendationsExportUrl)
+                    createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b))(
+                      staffRecommendationsExportUrl
+                    )
                   )
                 )
               ),

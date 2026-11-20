@@ -1,14 +1,20 @@
 package drt.client.components.scenarios
 
+import drt.shared.SimulationParams
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ PaxTypesAndQueues, Queues }
 import uk.gov.homeoffice.drt.time.LocalDate
 import utest.{ TestSuite, _ }
 
+import scala.util.Success
+
 class SimulationFormFieldsSpec extends TestSuite {
+  private def queryParams(query: String): Map[String, Seq[String]] =
+    query.split("&").map(_.split("=", 2)).map(parts => parts(0) -> Seq(parts(1))).toMap
+
   val tests: Tests = Tests {
-    "Given I am converting simulation params into a query string with a minimal data set" - {
-      val simulationParams = SimulationFormFields(
+    test("serializing a minimal simulation") {
+      val fields = SimulationFormFields(
         Terminal("T1"),
         LocalDate(2020, 2, 2),
         Option(1.0),
@@ -20,76 +26,54 @@ class SimulationFormFieldsSpec extends TestSuite {
         0,
         Seq(1)
       )
+      val query = fields.toQueryStringParams
+      val params = queryParams(query)
 
-      val result = simulationParams.toQueryStringParams
-
-      "Then I should see the correct terminal in the query string" - {
-        val expected = "terminal=T1"
-
-        assert(result.contains(expected))
+      test("includes the expected parameters without duplicates") {
+        assert(query.split("&").length == params.size)
+        assert(params("passengerWeighting").head.toDouble == 1.0)
+        assert((params - "passengerWeighting") == Map(
+          "terminal" -> Seq("T1"),
+          "date" -> Seq("2020-02-02"),
+          "crunchOffsetMinutes" -> Seq("0"),
+          "eGateOpenHours" -> Seq("1"),
+          "eGateBankSizes" -> Seq("5,5,5,5,5"),
+          "terminalDesks" -> Seq("0")
+        ))
       }
 
-      "Then I should see the correct date in the query string" - {
-        val expected = "date=2020-02-02"
-
-        assert(result.contains(expected))
+      test("can be parsed by the simulation endpoint") {
+        val expected = SimulationParams(
+          terminal = Terminal("T1"),
+          date = LocalDate(2020, 2, 2),
+          passengerWeighting = 1.0,
+          processingTimes = Map(),
+          minDesksByQueue = Map(),
+          maxDesks = 0,
+          eGateBankSizes = IndexedSeq(5, 5, 5, 5, 5),
+          slaByQueue = Map(),
+          crunchOffsetMinutes = 0,
+          eGateOpenHours = Seq(1)
+        )
+        assert(SimulationParams.fromQueryStringParams(params) == Success(expected))
       }
 
-      "Then I should see the correct passenger weighting in the query string" - {
-        val expected = "passengerWeighting=1.0"
-
-        assert(result.contains(expected))
-      }
-
-      "Then I should see the correct egate bank sizes in the query string" - {
-        val expected = "eGateBankSizes=5,5,5,5,5"
-
-        assert(result.contains(expected))
-      }
-
-      "Then I should see the correct crunch offset in the query string" - {
-        val expected = "crunchOffsetMinutes=0"
-
-        assert(result.contains(expected))
-      }
-
-      "Then I should not see an entry for minDesks" - {
-        val expectedNot = "minDesks"
-
-        assert(!result.contains(expectedNot))
-      }
-
-      "Then I should not see an entry for maxDesks" - {
-        val expectedNot = "maxDesks"
-
-        assert(!result.contains(expectedNot))
-      }
-
-      "Then I should not see an entry for processingTimes" - {
-        val expectedNot = "processingTimes"
-
-        assert(!result.contains(expectedNot))
-      }
-
-      "Then I should not see an entry for slaByQueue" - {
-        val expectedNot = "slaByQueue"
-
-        assert(!result.contains(expectedNot))
-      }
-
-      "Then I should get a valid query string back" - {
-        val expected =
-          "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1"
-
-        assert(result == expected)
+      test("serializes closed eGates without bank sizes") {
+        val closedFields = fields.copy(eGateBankSizes = IndexedSeq.empty, eGateOpenHours = Seq.empty)
+        val closedParams = queryParams(closedFields.toQueryStringParams)
+        assert(!closedParams.contains("eGateBankSizes"))
+        assert(closedParams("eGateOpenHours") == Seq(""))
+        val parsed = SimulationParams.fromQueryStringParams(closedParams)
+        assert(parsed.map(p => (p.eGateBankSizes, p.eGateOpenHours)) ==
+          Success((IndexedSeq.empty[Int], Seq.empty[Int])))
       }
     }
 
-    "Given I am converting simulation params into a query string with queue data" - {
-      val simulationParams = SimulationFormFields(
+    test("serializing a simulation with queue data") {
+      val fields = SimulationFormFields(
         Terminal("T1"),
         LocalDate(2020, 2, 2),
-        Option(1.0),
+        Option(1.25),
         Map(
           PaxTypesAndQueues.eeaMachineReadableToDesk -> Option(60),
           PaxTypesAndQueues.eeaMachineReadableToEGate -> Option(30)
@@ -98,45 +82,48 @@ class SimulationFormFieldsSpec extends TestSuite {
         6,
         IndexedSeq.fill(5)(Option(5)),
         Map(Queues.EGate -> Option(10), Queues.EeaDesk -> Option(15)),
-        0,
+        15,
         Seq(1, 2)
       )
+      val query = fields.toQueryStringParams
+      val params = queryParams(query)
 
-      val result = simulationParams.toQueryStringParams
-
-      "Then I should see the processing times in the query string" - {
-        val expected = "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30"
-
-        assert(result.contains(expected))
+      test("includes the expected parameters without duplicates") {
+        assert(query.split("&").length == params.size)
+        assert(params("passengerWeighting").head.toDouble == 1.25)
+        assert((params - "passengerWeighting") == Map(
+          "terminal" -> Seq("T1"),
+          "date" -> Seq("2020-02-02"),
+          "crunchOffsetMinutes" -> Seq("15"),
+          "eGateOpenHours" -> Seq("1,2"),
+          "eGateBankSizes" -> Seq("5,5,5,5,5"),
+          "EeaMachineReadable_EeaDesk" -> Seq("60"),
+          "EeaMachineReadable_EGate" -> Seq("30"),
+          "EGate_min" -> Seq("1"),
+          "NonEeaDesk_min" -> Seq("1"),
+          "terminalDesks" -> Seq("6"),
+          "EGate_sla" -> Seq("10"),
+          "EeaDesk_sla" -> Seq("15")
+        ))
       }
 
-      "Then I should see the min desks in the query string" - {
-        val expected = "EGate_min=1&NonEeaDesk_min=1"
-
-        assert(result.contains(expected))
-      }
-
-      "Then I should see the max desks in the query string" - {
-        val expected = "EGate_max=3&NonEeaDesk_max=3"
-
-        assert(result.contains(expected))
-      }
-
-      "Then I should see the SLA in the query string" - {
-        val expected = "EGate_sla=10&EeaDesk_sla=15"
-
-        assert(result.contains(expected))
-      }
-
-      "The I should get a valid query string back" - {
-        val expected =
-          "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
-            "eGateOpenHours=1,2&" +
-            "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
-            "EGate_min=1&NonEeaDesk_min=1&" +
-            "EGate_max=3&NonEeaDesk_max=3&" +
-            "EGate_sla=10&EeaDesk_sla=15"
-        assert(result == expected)
+      test("can be parsed by the simulation endpoint") {
+        val expected = SimulationParams(
+          terminal = Terminal("T1"),
+          date = LocalDate(2020, 2, 2),
+          passengerWeighting = 1.25,
+          processingTimes = Map(
+            PaxTypesAndQueues.eeaMachineReadableToDesk -> 60,
+            PaxTypesAndQueues.eeaMachineReadableToEGate -> 30
+          ),
+          minDesksByQueue = Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
+          maxDesks = 6,
+          eGateBankSizes = IndexedSeq(5, 5, 5, 5, 5),
+          slaByQueue = Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
+          crunchOffsetMinutes = 15,
+          eGateOpenHours = Seq(1, 2)
+        )
+        assert(SimulationParams.fromQueryStringParams(params) == Success(expected))
       }
     }
   }

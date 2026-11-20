@@ -13,10 +13,14 @@ object FocusTracker {
     if (!initialised) {
       initialised = true
       // Capture before component handlers can replace the focused control or stop propagation.
-      dom.document.addEventListener("keydown", (_: dom.KeyboardEvent) => {
-        lastInteractionWasKeyboard = true
-        recordFocus(dom.document.activeElement)
-      }, useCapture = true)
+      dom.document.addEventListener(
+        "keydown",
+        (_: dom.KeyboardEvent) => {
+          lastInteractionWasKeyboard = true
+          recordFocus(dom.document.activeElement)
+        },
+        useCapture = true
+      )
       dom.document.addEventListener("pointerdown", (_: dom.PointerEvent) => clearFocusTarget(), useCapture = true)
       dom.document.addEventListener("mousedown", (_: dom.MouseEvent) => clearFocusTarget(), useCapture = true)
       dom.document.addEventListener("touchstart", (_: dom.TouchEvent) => clearFocusTarget(), useCapture = true)

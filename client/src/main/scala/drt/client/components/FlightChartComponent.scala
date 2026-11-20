@@ -74,7 +74,10 @@ object FlightChartComponent {
     )
 
     private def topChartWidth(labelCount: Int): Int =
-      math.max(MinTopChartWidthPx, math.min(MaxTopChartWidthPx, TopChartSideAllowancePx + (TopChartWidthPerEntryPx * labelCount)))
+      math.max(
+        MinTopChartWidthPx,
+        math.min(MaxTopChartWidthPx, TopChartSideAllowancePx + (TopChartWidthPerEntryPx * labelCount))
+      )
 
     def layout(nationalitiesTotal: Int, paxTypeLabelsTotal: Int, ageLabelsTotal: Int): Layout = {
       val shouldBreakIntoTwoRows = nationalitiesTotal > TwoRowNationalityThreshold
@@ -118,7 +121,8 @@ object FlightChartComponent {
              else " arrivals__table__flight__chart-wrapper--single-row"),
         chartBoxClassName =
           "arrivals__table__flight__chart-box" +
-            (if (shouldBreakIntoTwoRows) " arrivals__table__flight__chart-box--two-rows" + twoRowVariantClassName.replace("chart-wrapper", "chart-box")
+            (if (shouldBreakIntoTwoRows) " arrivals__table__flight__chart-box--two-rows" +
+               twoRowVariantClassName.replace("chart-wrapper", "chart-box")
              else " arrivals__table__flight__chart-box--single-row"),
         natScrollerClassName =
           "arrivals__table__flight__chart-nat-scroller" +
@@ -239,7 +243,8 @@ object FlightChartComponent {
       }
 
       val charts = chartDefinitions(props.manifestSummary)
-      val renderedLabelCount = (key: String) => charts.find(_.key == key).filter(_.series.sum > 0).fold(0)(_.series.labels.size)
+      val renderedLabelCount =
+        (key: String) => charts.find(_.key == key).filter(_.series.sum > 0).fold(0)(_.series.labels.size)
       val layout = FlightChartPresentation.layout(
         props.manifestSummary.nationalities.size,
         renderedLabelCount("pax-chart"),
@@ -272,7 +277,6 @@ object FlightChartComponent {
                 ^.className := layout.wrapperClassName,
                 charts.map(renderChart(_, layout)).toTagMod
               )
-
             )
         )
       )
