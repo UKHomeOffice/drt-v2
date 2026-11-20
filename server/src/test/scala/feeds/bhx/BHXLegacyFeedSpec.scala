@@ -7,8 +7,8 @@ import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
-import uk.co.bhx.online.flightinformation._
-import uk.gov.homeoffice.drt.arrivals.{ FlightCode, ForecastArrival, LiveArrival }
+import uk.co.bhx.online.flightinformation.{ ArrayOfFlightRecord, FlightInformation, FlightInformationSoap, FlightRecord }
+import uk.gov.homeoffice.drt.arrivals.{ FlightCode, LiveArrival }
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -18,28 +18,6 @@ import javax.xml.datatype.DatatypeFactory
 class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
   sequential
   isolated
-
-  trait WithScheduledFlightRecord {
-
-    def getScheduledFlightRecord: ScheduledFlightRecord = {
-      val gregorianCalendar = new GregorianCalendar
-      gregorianCalendar.set(2012, 5, 2, 6, 46, 53)
-      gregorianCalendar.set(Calendar.MILLISECOND, 123)
-      gregorianCalendar.setTimeZone(TimeZone.getTimeZone("UTC"))
-      val xmlGregorianCalendar = DatatypeFactory.newInstance.newXMLGregorianCalendar(gregorianCalendar)
-
-      val scheduledFlightRecord = new ScheduledFlightRecord
-      scheduledFlightRecord.setFlightNumber("AF1164")
-      scheduledFlightRecord.setOrigin("CPH")
-      scheduledFlightRecord.setScheduledTime(xmlGregorianCalendar)
-      scheduledFlightRecord.setTerminal("1")
-      scheduledFlightRecord.setPassengers(40)
-      scheduledFlightRecord.setTransits(35)
-      scheduledFlightRecord.setCapacity(80)
-      scheduledFlightRecord
-
-    }
-  }
 
   trait WithLiveFlightRecord {
     def getFlightRecord: FlightRecord = {
@@ -69,17 +47,13 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
     }
   }
 
-  trait Context extends Scope with WithLiveFlightRecord with WithScheduledFlightRecord {
+  trait Context extends Scope with WithLiveFlightRecord {
 
     val serviceSoap: FlightInformationSoap = mock[FlightInformationSoap]
 
     val arrayOfFlightRecord = new ArrayOfFlightRecord
     arrayOfFlightRecord.getFlightRecord.add(getFlightRecord)
     serviceSoap.bfGetFlights returns arrayOfFlightRecord
-
-    val arrayOfScheduledFlightRecords = new ArrayOfScheduledFlightRecord
-    arrayOfScheduledFlightRecords.getScheduledFlightRecord.add(getScheduledFlightRecord)
-    serviceSoap.bfGetScheduledFlights() returns arrayOfScheduledFlightRecords
   }
 
   "Given a BHX feed exists" should {
@@ -112,29 +86,6 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         stand = Some("57R"),
         runway = Some("R1"),
         baggageReclaim = Some("7A")
-      )
-    }
-
-    "we can read forecast flight data with seconds dropped from timestamps" in new Context {
-      val feed: BHXFeed = BHXFeed(serviceSoap)
-      val arrivals = feed.getForecastArrivals
-      verify(serviceSoap).bfGetScheduledFlights()
-      arrivals.size mustEqual 1
-
-      val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts("AF1164")
-
-      arrivals.head mustEqual ForecastArrival(
-        operator = None,
-        maxPax = Some(80),
-        totalPax = Some(40),
-        transPax = Some(35),
-        terminal = T1,
-        voyageNumber = voyageNumber.numeric,
-        carrierCode = carrierCode.code,
-        flightCodeSuffix = suffix.map(_.suffix),
-        origin = "CPH",
-        previousPort = None,
-        scheduled = 1338623160000L
       )
     }
 
