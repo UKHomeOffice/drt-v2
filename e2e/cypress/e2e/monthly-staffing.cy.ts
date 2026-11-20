@@ -130,4 +130,80 @@ describe('Monthly Staffing', () => {
       });
     });
   });
+
+  describe('Unsaved staffing changes', () => {
+    const cell = ".htCore tbody :nth-child(1) :nth-child(2)";
+
+    beforeEach(() => {
+      cy.asABorderForcePlanningOfficer().request('/').then((response) => {
+        const csrf: any = Cypress.$(response.body).filter('input:hidden[name="csrfToken"]').val()
+        cy.saveShifts(shifts(), csrf)
+        cy.visit('#terminal/T1/shifts/viewShifts/')
+      })
+      cy.get(cell).should('contain', '1')
+    })
+
+    const editCell = () => {
+      cy.get(cell).dblclick()
+      cy.get('.handsontableInput:visible').clear().type('7{enter}')
+      cy.get(cell).should('contain', '7')
+    }
+
+    it('does not warn when a cell is left unchanged', () => {
+      cy.get(cell).dblclick()
+      cy.get('.handsontableInput:visible').type('{enter}')
+      cy.get('.staffing-controls-select select').first().select('weekly')
+      cy.get('.staffing-controls-select select').first().should('have.value', 'weekly')
+      cy.contains('Continue without saving changes?').should('not.be.visible')
+    })
+
+    it('keeps edits and the selected filter when the user returns to staffing', () => {
+      editCell()
+      cy.get('.staffing-controls-select select').first().select('weekly')
+      cy.contains('Continue without saving changes?').should('be.visible')
+      cy.contains('Return to staffing page').click()
+      cy.get('.staffing-controls-select select').first().should('have.value', 'monthly')
+      cy.get(cell).should('contain', '7')
+    })
+
+    it('discards edits and applies the requested display filter on confirmation', () => {
+      editCell()
+      cy.get('.staffing-controls-select select').last().select('30')
+      cy.contains('Continue without saving changes?').should('be.visible')
+      cy.contains('button', 'Continue without saving').click()
+      cy.location('hash').should('contain', 'timeInterval=30')
+      cy.get('.staffing-controls-select select').last().should('have.value', '30')
+      cy.get(cell).should('contain', '1')
+    })
+
+    it('keeps edits when cancelling navigation to another tab', () => {
+      editCell()
+      cy.get('a[href*="/current/"]').filter(':visible').first().click()
+      cy.contains('Continue without saving changes?').should('be.visible')
+      cy.contains('Return to staffing page').click()
+      cy.location('hash').should('contain', '/shifts/')
+      cy.get(cell).should('contain', '7')
+    })
+
+    it('does not warn when navigating after a successful save', () => {
+      editCell()
+      cy.intercept('POST', '**/staff-assignments').as('saveStaff')
+      cy.on('window:confirm', () => true)
+      cy.contains('button', 'Save staff updates').first().click()
+      cy.wait('@saveStaff').its('response.statusCode').should('be.oneOf', [200, 202])
+      cy.get('.staffing-controls-select select').first().select('weekly')
+      cy.get('.staffing-controls-select select').first().should('have.value', 'weekly')
+      cy.contains('Continue without saving changes?').should('not.be.visible')
+    })
+
+    it('still warns if the user cancels the save confirmation', () => {
+      editCell()
+      cy.on('window:confirm', () => false)
+      cy.contains('button', 'Save staff updates').first().click()
+      cy.get('.staffing-controls-select select').first().select('weekly')
+      cy.contains('Continue without saving changes?').should('be.visible')
+      cy.contains('Return to staffing page').click()
+      cy.get(cell).should('contain', '7')
+    })
+  })
 });

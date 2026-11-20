@@ -8,7 +8,7 @@ import drt.client.components.StaffingUtil.navigationDates
 import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
+import drt.client.services.{ SPACircuit, StaffingChangesGuard }
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.shared.StaffAssignment
 import io.kinoplan.scalajs.react.material.ui.core.{ MuiFormControl, MuiSwitch, MuiTypography }
@@ -81,6 +81,7 @@ case class ConfirmAndSaveForMonthlyStaffing(
           SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
         else
           SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
+        StaffingChangesGuard.markSaved()
       }
     }
 }
@@ -118,6 +119,7 @@ case class ConfirmAndSaveForMonthlyShifts(
           s"updated staff for ${MonthlyStaffingBar.whatDayChanged(changedAssignments)} $updatedMonth"
         )
         SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
+        StaffingChangesGuard.markSaved()
         scope.modState(state => state.copy(changedAssignments = Seq.empty[StaffTableEntry])).runNow()
       }
     }
@@ -210,7 +212,7 @@ object MonthlyStaffingBar {
     val valueNames = values.zip(names)
     <.select(
       ^.className := "form-control dynamic-width",
-      ^.defaultValue := defaultValue,
+      ^.value := defaultValue,
       ^.onChange ==> callback,
       valueNames.map {
         case (value, name) => <.option(^.value := value, s"$name")
@@ -220,7 +222,7 @@ object MonthlyStaffingBar {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MonthlyStaffingBar")
     .render_P { props =>
-      def handleShiftViewToggle(): Callback = {
+      def toggleShiftView: Callback = {
         Callback(GoogleEventTracker.sendEvent(
           s"${props.terminalPageTab.terminal}",
           "Shift View Toggle",
@@ -230,6 +232,8 @@ object MonthlyStaffingBar {
             !props.userPreferences.showStaffingShiftView
           ))))
       }
+
+      def handleShiftViewToggle(): Callback = StaffingChangesGuard.request(toggleShiftView)
 
       <.div(
         ^.className := "staffing-bar",
@@ -298,7 +302,7 @@ object MonthlyStaffingBar {
                   MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
                     MuiFormControl(sx = SxProps(Map("paddingBottom" -> "10px")))(
                       MuiSwitch(
-                        defaultChecked = props.userPreferences.showStaffingShiftView,
+                        checked = props.userPreferences.showStaffingShiftView,
                         color = Color.primary,
                         inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox")
                       )(^.onChange --> handleShiftViewToggle)
