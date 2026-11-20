@@ -28,7 +28,6 @@ import drt.server.feeds.cwl.{ CWLClient, CWLFeed }
 import drt.server.feeds.edi.EdiFeed
 import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{ LCYClient, LCYFeed }
-import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
 import drt.server.feeds.lgw.{ LGWAzureClient, LGWFeed, LgwForecastFeed }
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
@@ -469,15 +468,6 @@ case class ProdFeedService(
         Feed(LgwForecastFeed(), initialDelay, interval)
       case PortCode("LHR") | PortCode("STN") =>
         Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
-      case PortCode("BHX") =>
-        Feed(
-          BHXForecastFeedLegacy(
-            params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")),
-            Feed.actorRefSource
-          ),
-          5.seconds,
-          30.seconds
-        )
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
