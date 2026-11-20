@@ -54,6 +54,8 @@ class FeedsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterf
             case AclFeedSource =>
               log.info(s"Sending adhoc feed request to the base forecast feed actor")
               ctrl.feedService.fcstBaseFeedPollingActor ! AdhocCheck
+            case ForecastFeedSource if !airportConfig.feedSources.contains(ForecastFeedSource) =>
+              BadRequest("Port forecast feed is not enabled for this port")
             case ForecastFeedSource =>
               log.info(s"Sending adhoc feed request to the forecast feed actor")
               ctrl.feedService.fcstFeedPollingActor ! AdhocCheck
@@ -103,15 +105,8 @@ class FeedsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterf
         .map(maybeFeedSources => Ok(write(maybeFeedSources)))
     }
 
-  private val arrivalActorPersistenceIds = Seq(
-    (CiriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
-    (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
-    (AclForecastArrivalsActor.persistenceId, AclFeedSource),
-    (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
-  )
-
   private def getArrivalSources(pit: Long, ua: UniqueArrival): Future[Seq[Option[FeedSourceArrival]]] =
-    Future.sequence(arrivalActorPersistenceIds.map {
+    Future.sequence(FeedsController.arrivalActorPersistenceIdsFor(airportConfig.feedSources).map {
       case (id, source) =>
         val scheduled = SDate(ua.scheduled)
         val actor = actorSystem.actorOf(
@@ -148,4 +143,16 @@ class FeedsController @Inject() (cc: ControllerComponents, ctrl: DrtSystemInterf
               Future.successful(None)
           }
     })
+}
+
+object FeedsController {
+  private val arrivalActorPersistenceIds = Seq(
+    (CiriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
+    (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
+    (AclForecastArrivalsActor.persistenceId, AclFeedSource),
+    (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
+  )
+
+  private[application] def arrivalActorPersistenceIdsFor(feedSources: Seq[FeedSource]): Seq[(String, FeedSource)] =
+    arrivalActorPersistenceIds.filter { case (_, source) => feedSources.contains(source) }
 }

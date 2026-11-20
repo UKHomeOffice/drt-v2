@@ -31,6 +31,10 @@ object FeedPoller {
           timers.startTimerAtFixedRate("polling", ScheduledCheck, feed.initialDelay, feed.interval)
           enabled(feed, timers)
 
+        case Shutdown =>
+          timers.cancelAll()
+          Behaviors.stopped
+
         case unexpected =>
           log.warn(s"Received $unexpected, but still in pre-enabled state")
           Behaviors.same

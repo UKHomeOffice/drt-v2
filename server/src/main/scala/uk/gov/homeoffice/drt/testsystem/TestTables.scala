@@ -150,7 +150,6 @@ case class MockDrtParameters @Inject() () extends DrtParameters {
   override val bhxIataUsername: String = ""
   override val cwlIataEndPointUrl: String = ""
   override val cwlIataUsername: String = ""
-  override val maybeBhxSoapEndPointUrl: Option[String] = None
   override val maybeLtnLiveFeedUrl: Option[String] = None
   override val maybeLtnLiveFeedUsername: Option[String] = None
   override val maybeLtnLiveFeedPassword: Option[String] = None

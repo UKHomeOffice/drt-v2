@@ -2,7 +2,7 @@ package drt.server.feeds.legacy.bhx
 
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{ DateTime, DateTimeZone }
-import uk.co.bhx.online.flightinformation.{ FlightRecord, ScheduledFlightRecord }
+import uk.co.bhx.online.flightinformation.FlightRecord
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
@@ -20,14 +20,6 @@ sealed trait BHXArrivals {
         val datetime = new DateTime(date.getTime).withMillisOfSecond(0).withSecondOfMinute(0)
         Some(datetime.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime))
     }
-  }
-
-  def convertToUTCPlusOneHour(feedDate: XMLGregorianCalendar): String = {
-    val utcDatePlusOneHour = new DateTime(feedDate.toGregorianCalendar.getTimeInMillis, DateTimeZone.UTC)
-      .plusHours(1)
-      .withMillisOfSecond(0)
-      .withSecondOfMinute(0)
-    utcDatePlusOneHour.toString(ISODateTimeFormat.dateTime)
   }
 }
 
@@ -59,30 +51,6 @@ trait BHXLiveArrivals extends BHXArrivals {
       stand = if (flightRecord.getStand.isBlank) None else Option(flightRecord.getStand),
       runway = if (flightRecord.getRunway.isBlank) None else Option(flightRecord.getRunway),
       baggageReclaim = Option(flightRecord.getBelt)
-    )
-  }
-}
-
-trait BHXForecastArrivals extends BHXArrivals {
-
-  def toForecastArrival(flightRecord: ScheduledFlightRecord): ForecastArrival = {
-    val maxPax = flightRecord.getCapacity
-    val actPax = flightRecord.getPassengers
-    val transPax = flightRecord.getTransits
-    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(flightRecord.getFlightNumber)
-
-    ForecastArrival(
-      operator = None,
-      maxPax = if (maxPax == 0) None else Option(maxPax),
-      totalPax = Option(actPax),
-      transPax = Option(transPax),
-      terminal = Terminal(s"T${flightRecord.getTerminal}"),
-      voyageNumber = voyageNumber.numeric,
-      carrierCode = carrierCode.code,
-      flightCodeSuffix = suffix.map(_.suffix),
-      origin = flightRecord.getOrigin,
-      previousPort = None,
-      scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch
     )
   }
 }
