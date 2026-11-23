@@ -9,7 +9,7 @@ import drt.client.components.StaffingUtil.{ consecutiveDayForWeek, consecutiveDa
 import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
+import drt.client.services.{ SPACircuit, StaffingChangesGuard }
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.util.DateRange
 import drt.shared._
@@ -35,6 +35,10 @@ object MonthlyStaffingComponent {
   case class TimeSlotDay(timeSlot: Int, day: Int) {
     def key: (Int, Int) = (timeSlot, day)
   }
+
+  // Handsontable reports a cell as changed when it is re-entered, even if the number is the same.
+  def hasChanged(oldValue: Any, newValue: Any): Boolean =
+    s"$oldValue".trim != s"$newValue".trim
 
   case class ColumnHeader(day: String, dayOfWeek: String)
 
@@ -248,6 +252,8 @@ object MonthlyStaffingComponent {
                           ),
                           rowHeadings = state.rowHeadings,
                           afterChanges = (changes: Seq[(Int, Int, Any, Any)]) => {
+                            if (changes.exists { case (_, _, oldValue, newValue) => hasChanged(oldValue, newValue) })
+                              StaffingChangesGuard.markEdited()
                             tempChanges = changes.collect {
                               case (row, col, _, newVal: String) if newVal.forall(_.isDigit) =>
                                 TimeSlotDay(row, col).key -> newVal.toInt
@@ -354,6 +360,7 @@ object MonthlyStaffingComponent {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
+    .componentWillUnmount(_ => Callback(StaffingChangesGuard.abandon()))
     .build
 
   def updatedShiftAssignments(

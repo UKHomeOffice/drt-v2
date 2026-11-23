@@ -24,6 +24,7 @@ import drt.client.components.{
   NotFoundPage,
   PortConfigPage,
   PortDashboardPage,
+  StaffingChangesDialog,
   TerminalComponent,
   TrainingHubComponent,
   UserDashboardPage
@@ -37,7 +38,8 @@ import drt.client.spa.TerminalPageModes.{ Current, Shifts, Staffing }
 import drt.client.spa.{ TerminalPageMode, TerminalPageModes }
 import drt.shared.DrtPortConfigs
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
-import japgolly.scalajs.react.Callback
+import japgolly.scalajs.react.{ Callback, ReactMouseEventFromHtml }
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 import org.scalajs.dom.{ console, window }
@@ -383,7 +385,13 @@ object SPAMain {
 
       rule.notFound(redirectToPage(NotFoundLoc)(SetRouteVia.HistoryReplace))
     }
-    .renderWith(Layout(_, _))
+    .renderWith { (ctl, resolution) =>
+      <.div(
+        ^.onClickCapture ==> guardStaffingLink,
+        Layout(guardStaffingNavigation(ctl), resolution),
+        StaffingChangesDialog()
+      )
+    }
     .setPostRender { (maybePrevLoc, currentLoc) =>
       val title = BrowserTitle.forNotFound(currentLoc == NotFoundLoc)
       dom.document.title = title
@@ -400,6 +408,33 @@ object SPAMain {
             case _ =>
           }
         ) >> Callback(FocusTracker.restore())
+    }
+
+  private def guardStaffingLink(event: ReactMouseEventFromHtml): Callback = Callback {
+    if (StaffingChangesGuard.hasChanges && event.button == 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+      event.target match {
+        case element: dom.Element =>
+          Option(element.closest("a[href]")).collect { case anchor: dom.html.Anchor => anchor }.foreach { anchor =>
+            val isSameDocument = anchor.href.takeWhile(_ != '#') ==
+              dom.window.location.href.takeWhile(_ != '#')
+            if (!isSameDocument && (anchor.target.isEmpty || anchor.target == "_self") && !anchor.hasAttribute("download")) {
+              val navigate = Callback(dom.window.location.assign(anchor.href))
+              event.preventDefault()
+              StaffingChangesGuard.request(navigate).runNow()
+            }
+          }
+        case _ => ()
+      }
+    }
+  }
+
+  private def guardStaffingNavigation(ctl: RouterCtl[Loc]): RouterCtl[Loc] =
+    ctl.onSet { (destination, continue) =>
+      if (ctl.urlFor(destination).value == dom.window.location.href) continue
+      else StaffingChangesGuard.request(
+        continue,
+        continue >> Callback(dom.window.location.reload())
+      )
     }
 
   private def sendReportProblemGaEvent(portCode: String) = {
@@ -462,7 +497,7 @@ object SPAMain {
         "" ~ queryToMap).caseClass[TerminalPageTabLoc]
     ) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
-        val props = TerminalComponent.Props(terminalPageTab = page, router)
+        val props = TerminalComponent.Props(terminalPageTab = page, guardStaffingNavigation(router))
         ThemeProvider(DrtReactTheme)(TerminalComponent(props))
       }
   }

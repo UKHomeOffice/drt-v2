@@ -11,7 +11,7 @@ import drt.client.components.govuk.{ Button, ButtonProps }
 import drt.client.logger.{ Logger, LoggerFactory }
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
+import drt.client.services.{ SPACircuit, StaffingChangesGuard }
 import drt.client.services.handlers.{ GetShifts, UpdateUserPreferences }
 import drt.client.util.DateRange
 import drt.shared.CrunchApi.{ ForecastPeriod, ForecastPeriodWithHeadlines, MillisSinceEpoch }
@@ -37,6 +37,13 @@ import scala.scalajs.js
 import scala.util.Try
 
 object MonthlyShifts {
+
+  // The shared shift table mutates entries before calling handleSaveChanges, so values are captured beforehand.
+  def staffNumbers(shifts: Seq[ShiftSummaryStaffing]): Map[StaffTableEntry, Int] =
+    shifts.flatMap(_.staffTableEntries.toSeq).map(entry => entry -> entry.staffNumber).toMap
+
+  def hasEdits(previous: Map[StaffTableEntry, Int], entries: Seq[StaffTableEntry]): Boolean =
+    entries.exists(entry => !previous.get(entry).contains(entry.staffNumber))
 
   case class State(
       showEditStaffForm: Boolean,
@@ -262,6 +269,7 @@ object MonthlyShifts {
                           <.h3(staffPlanningHeading(viewingDate, props.terminalPageTab.dayRangeType))
                         ),
                         state.shiftSummariesPot.renderReady { shiftSummaries =>
+                          val previousStaffNumbers = staffNumbers(shiftSummaries)
                           <.div(
                             ^.className := "shifts-table",
                             <.div(
@@ -277,6 +285,7 @@ object MonthlyShifts {
                                 shiftSummaries = shiftSummaries,
                                 handleSaveChanges =
                                   (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
+                                    if (hasEdits(previousStaffNumbers, changedAssignments)) StaffingChangesGuard.markEdited()
                                     val updatedTableEntries =
                                       updateTableEntries(state.changedAssignments, changedAssignments)
                                     val updatedShiftSummaries = updateShiftSummaries(shifts, updatedTableEntries, 15)
@@ -432,6 +441,7 @@ object MonthlyShifts {
         intervalMinutes
       )))
     }
+    .componentWillUnmount(_ => Callback(StaffingChangesGuard.abandon()))
     .build
 
   def updatedConvertedShiftAssignments(
