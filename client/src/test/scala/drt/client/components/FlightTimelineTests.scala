@@ -5,9 +5,9 @@ import utest._
 
 object FlightTimelineTests extends TestSuite {
   def tests = Tests {
-    test("TimelineTests") - {
-      "Given a scheduled DT string and an actual datetime string" - {
-        "we can calculate the delta where act > sch" - {
+    test("TimelineTests") {
+      test("Given a scheduled DT string and an actual datetime string") {
+        test("we can calculate the delta where act > sch") {
           val schS = "2017-04-21T06:40:00Z"
           val actS = "2017-04-21T06:45:00Z"
           val sch = SDate(schS)
@@ -18,7 +18,7 @@ object FlightTimelineTests extends TestSuite {
           assert(delta == expected)
         }
 
-        "we can calculate the delta where sch < act" - {
+        test("we can calculate the delta where sch < act") {
           val actS = "2017-04-21T06:40:00Z"
           val schS = "2017-04-21T06:45:00Z"
           val sch = SDate(schS)

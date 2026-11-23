@@ -7,10 +7,10 @@ object FeedSourceDisplay {
 
   def displayName(feedSource: FeedSource, hasOperatorLiveFeed: Boolean): String =
     feedSource match {
-      case LiveBaseFeedSource                            => CiriumLiveArrivals
-      case LiveFeedSource if !hasOperatorLiveFeed        => CiriumLiveArrivals
-      case LiveFeedSource                                => "Port live"
-      case _                                             => feedSource.displayName
+      case LiveBaseFeedSource                     => CiriumLiveArrivals
+      case LiveFeedSource if !hasOperatorLiveFeed => CiriumLiveArrivals
+      case LiveFeedSource                         => "Port live"
+      case _                                      => feedSource.displayName
     }
 
   def description(feedSource: FeedSource, hasOperatorLiveFeed: Boolean): String =

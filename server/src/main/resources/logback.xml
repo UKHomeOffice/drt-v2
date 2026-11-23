@@ -1,16 +1,19 @@
 <configuration>
     <variable name="ENV_LOG_LEVEL" value="${ENV_LOG_LEVEL:-INFO}"/>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <if condition='isDefined("NO_JSON_LOGGING")'>
-            <then>
+    <condition class="ch.qos.logback.core.boolex.ExpressionPropertyCondition">
+        <expression>isDefined("NO_JSON_LOGGING")</expression>
+    </condition>
+    <if>
+        <then>
+            <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
                 <encoder>
                     <pattern>[%date{ISO8601}] [%level] [%logger] [%thread] [%X{akkaSource}] - %msg%n</pattern>
                 </encoder>
-            </then>
-            <else>
-                <!-- encoders are assigned the type
-                     ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+            </appender>
+        </then>
+        <else>
+            <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
                 <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
                     <layout class="ch.qos.logback.contrib.json.classic.JsonLayout">
                         <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSX</timestampFormat>
@@ -20,9 +23,9 @@
                         <appendLineSeparator>true</appendLineSeparator>
                     </layout>
                 </encoder>
-            </else>
-        </if>
-    </appender>
+            </appender>
+        </else>
+    </if>
 
     <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>8192</queueSize>

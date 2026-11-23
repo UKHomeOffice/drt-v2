@@ -98,7 +98,10 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
               variant = "secondary",
               dataToggle = "modal",
               dataTarget = "#multi-day-export",
-              onClick = ((_: ReactEvent) => scope.modState(_.copy(showDialogue = true)).runNow()): js.Function1[ReactEvent, Unit]
+              onClick = ((_: ReactEvent) => scope.modState(_.copy(showDialogue = true)).runNow()): js.Function1[
+                ReactEvent,
+                Unit
+              ]
             )),
             <.div(
               ^.className := "multi-day-export modal " + showClass,

@@ -7,9 +7,9 @@ import utest._
 object StaffingUtilSpec extends TestSuite {
 
   def tests = Tests {
-    "When StaffingUtilSpec" - {
-      "Given consecutiveDayForWeek" - {
-        "Then handle the date 2024-10-30 correctly" - {
+    test("When StaffingUtilSpec") {
+      test("Given consecutiveDayForWeek") {
+        test("Then handle the date 2024-10-30 correctly") {
           val viewingDate = SDate("2024-10-30T00:00:00Z")
           val result = StaffingUtil.consecutiveDayForWeek(viewingDate)
 
@@ -25,8 +25,8 @@ object StaffingUtilSpec extends TestSuite {
         }
       }
 
-      "Given consecutiveDay" - {
-        "Then handle the date 2024-10-30 correctly" - {
+      test("Given consecutiveDay") {
+        test("Then handle the date 2024-10-30 correctly") {
           val startDay = SDate("2024-10-30T00:00:00Z")
           val result = dateRangeDays(startDay, 1)
 
@@ -36,9 +36,9 @@ object StaffingUtilSpec extends TestSuite {
         }
       }
     }
-    "Given navigationDates" - {
-      "When isWeekly is true" - {
-        "Then handle the date 2024-10-30 correctly for weekly view" - {
+    test("Given navigationDates") {
+      test("When isWeekly is true") {
+        test("Then handle the date 2024-10-30 correctly for weekly view") {
           val viewingDate = SDate("2024-10-30T00:00:00Z")
 
           val (previousWeekDate, nextWeekDate) =
@@ -47,7 +47,7 @@ object StaffingUtilSpec extends TestSuite {
           assert(nextWeekDate.millisSinceEpoch == SDate("2024-11-06T00:00:00Z").millisSinceEpoch)
         }
 
-        "Then handle the date 2024-03-29 correctly when view date is in 6th month ahead for weekly view" - {
+        test("Then handle the date 2024-03-29 correctly when view date is in 6th month ahead for weekly view") {
           val viewingDate = SDate("2025-03-29T23:00:00Z")
 
           val (previousWeekDate, nextWeekDate) =
@@ -57,8 +57,8 @@ object StaffingUtilSpec extends TestSuite {
         }
       }
 
-      "When isDaily is true" - {
-        "Then handle the date 2024-10-30 correctly for daily view" - {
+      test("When isDaily is true") {
+        test("Then handle the date 2024-10-30 correctly for daily view") {
           val viewingDate = SDate("2024-10-30T00:00:00Z")
 
           val (previousDayDate, nextDayDate) =
@@ -68,7 +68,7 @@ object StaffingUtilSpec extends TestSuite {
           assert(nextDayDate == SDate("2024-10-31T00:00:00Z"))
         }
 
-        "Then handle the date 2024-03-29 correctly when view date is in 6th month ahead for daily view" - {
+        test("Then handle the date 2024-03-29 correctly when view date is in 6th month ahead for daily view") {
           val viewingDate = SDate("2025-03-29T00:00:00Z")
 
           val (previousWeekDate, nextWeekDate) =
@@ -79,8 +79,8 @@ object StaffingUtilSpec extends TestSuite {
         }
       }
 
-      "When neither isWeekly nor isDaily is true" - {
-        "Then handle the date 2024-10-01 correctly" - {
+      test("When neither isWeekly nor isDaily is true") {
+        test("Then handle the date 2024-10-01 correctly") {
           val viewingDate = SDate("2024-10-01T00:00:00Z")
 
           val (previousMonthDate, nextMonthDate) =
@@ -89,7 +89,7 @@ object StaffingUtilSpec extends TestSuite {
           assert(nextMonthDate == SDate("2024-11-01T01:00:00.00Z"))
         }
 
-        "Then handle the date 2024-03-01 correctly when view date is in 6th month ahead" - {
+        test("Then handle the date 2024-03-01 correctly when view date is in 6th month ahead") {
           val viewingDate = SDate("2025-03-01T00:00:00Z")
 
           val (previousWeekDate, nextWeekDate) =

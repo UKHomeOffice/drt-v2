@@ -406,13 +406,16 @@ object TerminalContentComponent {
   ): VdomTagOf[Div] = {
     <.div(
       // The shared Button does not forward onClick to its anchor branch.
-      ^.onClick ==> ((event: ReactEventFromHtml) => Callback {
-        event.target match {
-          case element: org.scalajs.dom.Element if element.closest("a") != null =>
-            GoogleEventTracker.sendEvent(terminalName, s"Export ${exportType.linkLabel}", exportDay.toISODateOnly)
-          case _ => ()
-        }
-      }),
+      ^.onClick ==>
+        ((event: ReactEventFromHtml) =>
+          Callback {
+            event.target match {
+              case element: org.scalajs.dom.Element if element.closest("a") != null =>
+                GoogleEventTracker.sendEvent(terminalName, s"Export ${exportType.linkLabel}", exportDay.toISODateOnly)
+              case _ => ()
+            }
+          }
+        ),
       Button(ButtonProps(
         children = s" ${exportType.linkLabel}",
         variant = "secondary",

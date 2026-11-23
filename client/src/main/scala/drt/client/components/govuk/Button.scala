@@ -5,7 +5,7 @@ import japgolly.scalajs.react.vdom.html_<^.VdomElement
 import japgolly.scalajs.react.{ Children, JsFnComponent, ReactEvent }
 
 import scala.scalajs.js
-import scala.scalajs.js.annotation.{JSImport, JSName}
+import scala.scalajs.js.annotation.{ JSImport, JSName }
 
 @js.native
 @JSImport("@drt/drt-react", "Button")
