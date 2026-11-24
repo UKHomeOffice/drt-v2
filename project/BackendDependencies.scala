@@ -109,12 +109,15 @@ object BackendDependencies {
   val all: Seq[ModuleID] = compileDependencies ++ testDependencies
 
   // Spark 4.3.0 pulls Netty 4.2.13.Final, which predates the fix for GHSA-5pvg-856g-cp85 (fixed in 4.2.15.Final).
+  // Match tcnative to Netty 4.2.20.Final to avoid missing native TLS methods.
   // org.bouncycastle 1.86 is required to fix CVE-2026-8763, which is a vulnerability in 1.85 and earlier.
   val dependencyOverrides: Seq[ModuleID] = Seq(
-    "io.netty"                % "netty-all"                % "4.2.20.Final",
-    "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
-    "org.bouncycastle"        % "bcprov-jdk18on"           % "1.86",
-    "org.bouncycastle"        % "bcpkix-jdk18on"           % "1.86",
-    "org.bouncycastle"        % "bcutil-jdk18on"           % "1.86"
+    "io.netty"                % "netty-all"                       % "4.2.20.Final",
+    "io.netty"                % "netty-tcnative-boringssl-static" % "2.0.85.Final",
+    "io.netty"                % "netty-tcnative-classes"          % "2.0.85.Final",
+    "org.scala-lang.modules" %% "scala-parser-combinators"        % "2.4.0",
+    "org.bouncycastle"        % "bcprov-jdk18on"                  % "1.86",
+    "org.bouncycastle"        % "bcpkix-jdk18on"                  % "1.86",
+    "org.bouncycastle"        % "bcutil-jdk18on"                  % "1.86"
   )
 }
