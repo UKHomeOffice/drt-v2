@@ -36,12 +36,7 @@ object AirportConfigProvider {
   def apply(config: Configuration): AirportConfig = {
     val portCode = PortCode(config.get[String]("portcode").toUpperCase)
     val airportConfig = DrtPortConfigs.confByPort(portCode)
-    val configuredFeedSources = portCode match {
-      case PortCode("BHX") => airportConfig.feedSources.filterNot(_ == ForecastFeedSource)
-      case _               => airportConfig.feedSources
-    }
     val configForPort = airportConfig.copy(
-      feedSources = configuredFeedSources,
       contactEmail = config.getOptional[String]("contact-email"),
       outOfHoursContactPhone = config.getOptional[String]("ooh-phone"),
       useTimePredictions = true,

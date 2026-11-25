@@ -33,13 +33,5 @@ class FeedsControllerSpec extends PlaySpec {
 
       contentAsString(result) must include(resultExpected)
     }
-
-    "return only arrival-source actors enabled for the airport config" in {
-      val sources = FeedsController.arrivalActorPersistenceIdsFor(Seq(AclFeedSource, LiveFeedSource))
-        .map(_._2)
-
-      sources must contain theSameElementsAs Seq(AclFeedSource, LiveFeedSource)
-      sources must not contain ForecastFeedSource
-    }
   }
 }

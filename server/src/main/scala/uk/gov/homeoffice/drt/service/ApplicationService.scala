@@ -551,8 +551,7 @@ case class ApplicationService(
         )
 
         feedService.fcstBaseFeedPollingActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
-        if (airportConfig.feedSources.contains(ForecastFeedSource))
-          feedService.fcstFeedPollingActor ! Enable(crunchInputs.forecastArrivalsResponse)
+        feedService.fcstFeedPollingActor ! Enable(crunchInputs.forecastArrivalsResponse)
         feedService.liveBaseFeedPollingActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
         feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
