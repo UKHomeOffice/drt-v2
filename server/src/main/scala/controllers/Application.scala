@@ -4,6 +4,7 @@ import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
+import spray.json.{ enrichAny, JsValue }
 import drt.shared.DrtPortConfigs
 import org.apache.pekko.event.Logging
 import org.apache.pekko.http.scaladsl.Http

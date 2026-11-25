@@ -4,7 +4,6 @@ import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.OK
 import play.api.test.Helpers._
 import play.api.test.{ FakeRequest, Helpers }
-import uk.gov.homeoffice.drt.ports.{ AclFeedSource, ForecastFeedSource, LiveFeedSource }
 
 class FeedsControllerSpec extends PlaySpec {
 
