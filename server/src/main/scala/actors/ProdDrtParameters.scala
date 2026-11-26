@@ -25,7 +25,6 @@ trait DrtParameters {
 
   val bhxIataEndPointUrl: String
   val bhxIataUsername: String
-  val maybeBhxSoapEndPointUrl: Option[String]
 
   val cwlIataEndPointUrl: String
   val cwlIataUsername: String
@@ -111,8 +110,6 @@ case class ProdDrtParameters @Inject() (config: Configuration) extends DrtParame
 
   override val cwlIataEndPointUrl: String = config.get[String]("feeds.cwl.iata.endPointUrl")
   override val cwlIataUsername: String = config.get[String]("feeds.cwl.iata.username")
-
-  override val maybeBhxSoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.bhx.soap.endPointUrl")
 
   override val maybeLtnLiveFeedUrl: Option[String] = config.getOptional[String]("feeds.ltn.live.url")
   override val maybeLtnLiveFeedUsername: Option[String] = config.getOptional[String]("feeds.ltn.live.username")
