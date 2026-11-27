@@ -1,7 +1,9 @@
 package drt.client.components
 
+import drt.shared.FeedSourceArrival
 import org.scalajs.dom
 import org.scalajs.dom.html
+import uk.gov.homeoffice.drt.ports._
 import utest._
 
 object ArrivalInfoTests extends TestSuite {
@@ -133,6 +135,58 @@ object ArrivalInfoTests extends TestSuite {
         val result = ArrivalInfo.shouldWrapFocus(container, newButton, shiftKey = false)
 
         assert(result.contains(first))
+      }
+    }
+
+    test("rowsFor") {
+      val portLive = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2024-06-01T10:00", feedSource = LiveFeedSource)
+      val api = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2024-06-01T10:00", feedSource = ApiFeedSource)
+      val configured = Seq(LiveFeedSource, ApiFeedSource, LiveBaseFeedSource, AclFeedSource, ForecastFeedSource)
+
+      test("should give a row per configured feed in preference order, with None for feeds that sent no data") {
+        val sources = Seq(
+          Option(FeedSourceArrival(LiveFeedSource, portLive)),
+          None,
+          Option(FeedSourceArrival(ApiFeedSource, api))
+        )
+
+        val result = ArrivalInfo.rowsFor(sources, configured)
+
+        assert(result == Seq(
+          (AclFeedSource, None),
+          (ForecastFeedSource, None),
+          (LiveBaseFeedSource, None),
+          (ApiFeedSource, Option(api)),
+          (LiveFeedSource, Option(portLive))
+        ))
+      }
+
+      test("should omit feeds the port isn't configured for") {
+        val result = ArrivalInfo.rowsFor(Seq(Option(FeedSourceArrival(ApiFeedSource, api))), Seq(ApiFeedSource, LiveFeedSource))
+
+        assert(result == Seq((ApiFeedSource, Option(api)), (LiveFeedSource, None)))
+      }
+    }
+
+    test("FeedSourceRow cell values") {
+      test("should show a dash for missing or blank values") {
+        assert(FeedSourceRow.orDash(None) == "-")
+        assert(FeedSourceRow.orDash(Option(" ")) == "-")
+        assert(FeedSourceRow.orDash(Option("4")) == "4")
+      }
+
+      test("should show a single dash when there is neither gate nor stand, and dash the missing half otherwise") {
+        val noGateOrStand = ArrivalGenerator.arrival(feedSource = LiveFeedSource)
+        val blankGateAndStand = ArrivalGenerator.arrival(gate = Option(" "), stand = Option(""), feedSource = LiveFeedSource)
+        val standOnly = ArrivalGenerator.arrival(stand = Option("1a"), feedSource = LiveFeedSource)
+        val gateOnly = ArrivalGenerator.arrival(gate = Option("A1"), feedSource = LiveFeedSource)
+        val gateAndStand = ArrivalGenerator.arrival(gate = Option("A1"), stand = Option("1a"), feedSource = LiveFeedSource)
+
+        assert(FeedSourceRow.gateStand(noGateOrStand) == "-")
+        assert(FeedSourceRow.gateStand(blankGateAndStand) == "-")
+        assert(FeedSourceRow.gateStand(standOnly) == "- / 1a")
+        assert(FeedSourceRow.gateStand(gateOnly) == "A1 / -")
+        assert(FeedSourceRow.gateStand(gateAndStand) == "A1 / 1a")
       }
     }
   }
