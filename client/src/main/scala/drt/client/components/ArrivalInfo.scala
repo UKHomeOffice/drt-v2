@@ -10,7 +10,8 @@ import japgolly.scalajs.react.vdom.{ TagMod, TagOf }
 import japgolly.scalajs.react.{ CtorType, _ }
 import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
-import uk.gov.homeoffice.drt.ports.{ AirportConfig, FeedSource }
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.{ AirportConfig, ApiFeedSource, FeedSource }
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 
 object ArrivalInfo {
@@ -57,15 +58,25 @@ object ArrivalInfo {
       }
     } else Callback.empty
 
+  /** One row per configured feed, in display order, so feeds that sent nothing still appear (as dashes). */
+  def rowsFor(
+               sources: Seq[Option[FeedSourceArrival]],
+               configuredFeedSources: Seq[FeedSource]
+             ): Seq[(FeedSource, Option[Arrival])] = {
+    val arrivalsBySource = sources.flatten.map(fsa => (fsa.feedSource, fsa.arrival)).toMap
+    FeedSourceArrival.orderedSourcesFor(configuredFeedSources).map(source => (source, arrivalsBySource.get(source)))
+  }
+
   private def tableContent(props: Props): VdomNode = props.arrivalSources match {
     case Ready(sources) =>
       <.table(
         ^.className := "arrivals-table table-striped",
         tableHead,
         <.tbody(
-          sources.collect { case Some(sourceArrival) =>
+          rowsFor(sources, props.airportConfig.feedSources).map { case (feedSource, maybeArrival) =>
             FeedSourceRow.component(FeedSourceRow.Props(
-              sourceArrival,
+              feedSource,
+              maybeArrival,
               props.airportConfig,
               props.paxFeedSourceOrder
             ))
@@ -114,25 +125,25 @@ object ArrivalInfo {
     )
     .build
 
-  def tableHead: TagOf[TableSection] = {
-    val columns = List(
-      ("Feed", None),
-      ("Flight", None),
-      ("Origin", None),
-      ("Previous Port", None),
-      ("Terminal", None),
-      ("Gate / Stand", Option("gate-stand")),
-      ("Baggage", None),
-      ("Status", Option("status")),
-      ("Scheduled", None),
-      ("Estimated", None),
-      ("Act", None),
-      ("Est Chocks", None),
-      ("Act Chocks", None),
-      ("Total Pax", None),
-      ("Trans Pax", None)
-    )
+  val columns: List[(String, Option[String])] = List(
+    ("Feed", None),
+    ("Flight", None),
+    ("Origin", None),
+    ("Previous Port", None),
+    ("Terminal", None),
+    ("Gate / Stand", Option("gate-stand")),
+    ("Baggage", None),
+    ("Status", Option("status")),
+    ("Scheduled", None),
+    ("Estimated", None),
+    ("Act", None),
+    ("Est Chocks", None),
+    ("Act Chocks", None),
+    ("Total Pax", None),
+    ("Trans Pax", None)
+  )
 
+  def tableHead: TagOf[TableSection] = {
     val portColumnThs = columns
       .map {
         case (label, None)            => <.th(label)
@@ -145,43 +156,63 @@ object ArrivalInfo {
 }
 
 object FeedSourceRow {
+  val noData: String = "-"
 
   case class Props(
-      feedSourceArrival: FeedSourceArrival,
-      airportConfig: AirportConfig,
-      paxFeedSourceOrder: List[FeedSource]
-  ) extends UseValueEq
+                    feedSource: FeedSource,
+                    maybeArrival: Option[Arrival],
+                    airportConfig: AirportConfig,
+                    paxFeedSourceOrder: List[FeedSource]
+                  ) extends UseValueEq
+
+  private def nonBlank(maybeValue: Option[String]): Option[String] = maybeValue.filter(_.trim.nonEmpty)
+
+  def orDash(maybeValue: Option[String]): String = nonBlank(maybeValue).getOrElse(noData)
+
+  def gateStand(arrival: Arrival): String =
+    (nonBlank(arrival.Gate), nonBlank(arrival.Stand)) match {
+      case (None, None)  => noData
+      case (gate, stand) => s"${orDash(gate)} / ${orDash(stand)}"
+    }
+
+  private def timeOrDash(maybeMillis: Option[Long]): TagMod =
+    maybeMillis.fold[TagMod](noData)(millis => maybeLocalTimeWithPopup(Option(millis)))
+
+  private def dataCells(feedSource: FeedSource, arrival: Arrival, paxFeedSourceOrder: List[FeedSource]): List[TagMod] = {
+    val isMobile = dom.window.innerWidth < 800
+    // API data doesn't supply terminal or status, so those come from other feeds and shouldn't be shown against API
+    val isApi = feedSource == ApiFeedSource
+    val pax = arrival.bestPaxEstimate(paxFeedSourceOrder).passengers
+    val status = if (isMobile) arrival.displayStatusMobile.description else arrival.displayStatus.description
+    List[TagMod](
+      <.td(arrival.flightCodeString),
+      <.td(arrival.Origin.toString),
+      <.td(orDash(arrival.PreviousPort.map(_.iata))),
+      <.td(if (isApi) noData else arrival.Terminal.toString),
+      <.td(gateStand(arrival)),
+      <.td(orDash(arrival.BaggageReclaimId)),
+      <.td(if (isApi) noData else status),
+      <.td(maybeLocalTimeWithPopup(Option(arrival.Scheduled))),
+      <.td(timeOrDash(arrival.Estimated)),
+      <.td(timeOrDash(arrival.Actual)),
+      <.td(timeOrDash(arrival.EstimatedChox)),
+      <.td(timeOrDash(arrival.ActualChox)),
+      <.td(orDash(pax.actual.map(_.toString))),
+      <.td(orDash(pax.transit.map(_.toString)))
+    )
+  }
+
+  private val dataColumnCount: Int = ArrivalInfo.columns.size - 1
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedSourceRow")
     .render_P { props =>
-      val isMobile = dom.window.innerWidth < 800
-      val feedSource = props.feedSourceArrival.feedSource
-      val arrival = props.feedSourceArrival.arrival
       val hasOperatorLiveFeed = !props.airportConfig.noLivePortFeed
-      val paxTotal: String =
-        arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse("-")
-      val paxTrans: String =
-        arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.transit.map(_.toString).getOrElse("-")
-      val prevPort: String = arrival.PreviousPort.map(_.iata).getOrElse("n/a")
-      val flightFields = List[TagMod](
-        <.td(FeedSourceDisplay.displayName(feedSource, hasOperatorLiveFeed)),
-        <.td(arrival.flightCodeString),
-        <.td(arrival.Origin.toString),
-        <.td(prevPort),
-        <.td(arrival.Terminal.toString),
-        <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
-        <.td(s"${arrival.BaggageReclaimId.getOrElse("")}"),
-        <.td(if (isMobile) arrival.displayStatusMobile.description else arrival.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Option(arrival.Scheduled))),
-        <.td(maybeLocalTimeWithPopup(arrival.Estimated)),
-        <.td(maybeLocalTimeWithPopup(arrival.Actual)),
-        <.td(maybeLocalTimeWithPopup(arrival.EstimatedChox)),
-        <.td(maybeLocalTimeWithPopup(arrival.ActualChox)),
-        <.td(paxTotal),
-        <.td(paxTrans)
-      )
+      val cells = props.maybeArrival match {
+        case Some(arrival) => dataCells(props.feedSource, arrival, props.paxFeedSourceOrder)
+        case None          => List.fill[TagMod](dataColumnCount)(<.td(noData))
+      }
 
-      <.tr(flightFields.toTagMod)
+      <.tr((<.td(FeedSourceDisplay.displayName(props.feedSource, hasOperatorLiveFeed)) :: cells).toTagMod)
     }
     .build
 
